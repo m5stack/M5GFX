@@ -1107,6 +1107,7 @@ namespace lgfx
     bool begin(void)              { return init_impl(true , true); };
     bool init_without_reset(void) { return init_impl(false, false); };
     void initBus(void);
+    void releaseBus(void);
     void setPanel(Panel_Device* panel);
 
     void setEpdMode(epd_mode_t epd_mode) { _panel->setEpdMode(epd_mode); }

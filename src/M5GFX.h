@@ -9,6 +9,10 @@
 #include <FS.h>
 #endif
 
+#ifdef setFont
+#undef setFont
+#endif
+
 #define LGFX_USE_V1
 #include "lgfx/v1/gitTagVersion.h"
 #include "lgfx/v1/platforms/device.hpp"
@@ -185,11 +189,5 @@ using namespace m5gfx::ili9341_colors;
 using namespace m5gfx::tft_command;
 using M5GFX = m5gfx::M5GFX;
 using M5Canvas = m5gfx::M5Canvas;
-
-// For compatibility
-using TFT_eSPI = m5gfx::M5GFX;
-
-// For compatibility
-using TFT_eSprite = m5gfx::M5Canvas;
 
 #undef LGFX_NS

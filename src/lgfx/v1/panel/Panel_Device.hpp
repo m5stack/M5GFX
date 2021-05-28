@@ -108,7 +108,8 @@ namespace lgfx
     const config_t& config(void) const { return _cfg; }
     void config(const config_t& cfg) { _cfg = cfg; }
 
-    void initBus(void);
+    virtual void initBus(void);
+    virtual void releaseBus(void);
     void setBus(IBus* bus);
     void bus(IBus* bus) { setBus(bus); };
     IBus* getBus(void) const { return _bus; }
@@ -202,6 +203,9 @@ namespace lgfx
   struct Panel_NULL : public Panel_Device
   {
     Panel_NULL(void) = default;
+
+    void initBus(void) override {}
+    void releaseBus(void) override {}
 
     void beginTransaction(void) override {}
     void endTransaction(void) override {}

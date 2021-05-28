@@ -92,6 +92,16 @@ namespace lgfx
       return false;
     }
 
+    _bus->beginRead();
+    std::uint8_t buf;
+    bool res = _bus->readBytes(&buf, 1, true);
+    _bus->endTransaction();
+
+    if (!res)
+    {
+      return false;
+    }
+
     startWrite(true);
 
     for (std::size_t i = 0; auto cmds = getInitCommands(i); i++)
@@ -397,20 +407,12 @@ namespace lgfx
       return false;
     }
 
-    _bus->beginRead();
-    std::uint8_t buf;
-    bool res = _bus->readBytes(&buf, 1, true);
-    _bus->endTransaction();
+    startWrite(true);
+    _bus->writeCommand(CMD_SETMULTIPLEX | (((_cfg.panel_width-1) & 0x7F) << 8), 16);
+    _bus->writeCommand(CMD_SETDISPLAYOFFSET | ((uint8_t)(-_cfg.offset_x) << 8), 16);
+    endWrite();
 
-    if (res)
-    {
-      startWrite(true);
-      _bus->writeCommand(CMD_SETMULTIPLEX | (((_cfg.panel_width-1) & 0x7F) << 8), 16);
-      _bus->writeCommand(CMD_SETDISPLAYOFFSET | ((uint8_t)(-_cfg.offset_x) << 8), 16);
-      endWrite();
-    }
-
-    return res;
+    return true;
   }
 
   void Panel_SH110x::beginTransaction(void)

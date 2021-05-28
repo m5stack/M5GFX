@@ -2840,6 +2840,11 @@ namespace lgfx
     panel()->initBus();
   };
 
+  void LGFX_Device::releaseBus(void)
+  {
+    panel()->releaseBus();
+  };
+
   void LGFX_Device::setPanel(Panel_Device* panel)
   {
     static Panel_NULL nullobj;

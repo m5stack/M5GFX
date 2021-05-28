@@ -49,6 +49,11 @@ namespace lgfx
     _bus->init();
   }
 
+  void Panel_Device::releaseBus(void)
+  {
+    _bus->release();
+  }
+
   bool Panel_Device::init(bool use_reset)
   {
     _bus->init();
