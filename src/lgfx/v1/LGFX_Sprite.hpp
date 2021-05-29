@@ -40,7 +40,6 @@ namespace lgfx
 
     void beginTransaction(void) override {}
     void endTransaction(void) override {}
-    bool init(bool use_reset) override { return true; }
     void setInvert(bool invert) override {}
     void setSleep(bool flg_sleep) override {}
     void setPowerSave(bool flg_partial) override {}

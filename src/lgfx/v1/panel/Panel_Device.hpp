@@ -108,13 +108,15 @@ namespace lgfx
     const config_t& config(void) const { return _cfg; }
     void config(const config_t& cfg) { _cfg = cfg; }
 
+    virtual bool init(bool use_reset);
+    virtual bool initTouch(void);
+
     virtual void initBus(void);
     virtual void releaseBus(void);
     void setBus(IBus* bus);
     void bus(IBus* bus) { setBus(bus); };
     IBus* getBus(void) const { return _bus; }
     IBus* bus(void) const { return _bus; }
-
 
     void setLight(ILight* light) { _light = light; }
     void light(ILight* light) { _light = light; }
@@ -138,7 +140,6 @@ namespace lgfx
     bool isReadable(void) const override { return _cfg.readable; }
     bool isBusShared(void) const override { return _cfg.bus_shared; }
 
-    bool init(bool use_reset) override;
     void initDMA(void) override;
     void waitDMA(void) override;
     bool dmaBusy(void) override;
@@ -207,9 +208,10 @@ namespace lgfx
     void initBus(void) override {}
     void releaseBus(void) override {}
 
+    bool init(bool use_reset) override { return false; }
+
     void beginTransaction(void) override {}
     void endTransaction(void) override {}
-    bool init(bool use_reset) override { return false; }
 
     color_depth_t setColorDepth(color_depth_t depth) override { return depth; }
 

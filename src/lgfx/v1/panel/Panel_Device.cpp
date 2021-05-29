@@ -63,16 +63,21 @@ namespace lgfx
     {
       _light->init(0);
     }
-    if (_touch)
-    {
-      _touch->init();
-    }
     if (use_reset)
     {
       reset();
       delay(50);
     }
     return true;
+  }
+
+  bool Panel_Device::initTouch(void)
+  {
+    if (_touch)
+    {
+      return _touch->init();
+    }
+    return false;
   }
 
   void Panel_Device::initDMA(void)

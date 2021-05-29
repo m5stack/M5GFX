@@ -2862,7 +2862,7 @@ namespace lgfx
         setBaseColor(TFT_WHITE);
         setTextColor(TFT_BLACK, TFT_WHITE);
       }
-      if (_panel->init(use_reset))
+      if (getPanel()->init(use_reset))
       {
         startWrite();
         invertDisplay(_panel->getInvert());
@@ -2875,6 +2875,7 @@ namespace lgfx
         setPivot(width()>>1, height()>>1);
         endWrite();
         setBrightness(_brightness);
+        getPanel()->initTouch();
         return true;
       }
     }

@@ -70,7 +70,12 @@ namespace lgfx
       lgfx::pinMode(_cfg.pin_int, pin_mode_t::input_pullup);
     }
 
-    return true;
+    if (_check_init())
+    {
+      _write_reg(FT5x06_INTMODE_REG, 0x00); // INT Polling mode
+      return true;
+    }
+    return false;
   }
 
   void Touch_FT5x06::wakeup(void)

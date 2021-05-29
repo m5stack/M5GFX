@@ -1,3 +1,5 @@
+#if defined (ESP32) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S2) || defined (ESP_PLATFORM)
+
 #include "M5GFX.h"
 
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
@@ -540,6 +542,7 @@ namespace m5gfx
         // AXP192_LDO2 = LCD PWR
         // AXP192_DC3  = LCD BL
         // AXP192_IO4  = LCD RST
+
         if (use_reset) lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x96, 0, ~0x02, axp_i2c_freq); // GPIO4 LOW (LCD RST)
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x28, 0xF0, ~0, axp_i2c_freq);   // set LDO2 3300mv // LCD PWR
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x12, 0x06, ~0, axp_i2c_freq);   // LDO2 and DC3 enable (DC3 = LCD BL)
@@ -642,3 +645,5 @@ ESP_LOGI("nvs_board","_board:%d", board);
   }
 
 }
+
+#endif
