@@ -1947,34 +1947,38 @@ namespace lgfx
     return write(floatToStr(number, buf, len, digits));
   }
 
-#if !defined (ARDUINO)
-  std::size_t LGFXBase::printf(const char * format, ...)
+  std::size_t LGFXBase::vprintf(const char *format, va_list arg)
   {
     char loc_buf[64];
     char * temp = loc_buf;
-    va_list arg;
     va_list copy;
-    va_start(arg, format);
     va_copy(copy, arg);
     std::size_t len = vsnprintf(temp, sizeof(loc_buf), format, copy);
-    va_end(copy);
-
     if (len >= sizeof(loc_buf)){
       temp = (char*) malloc(len+1);
       if (temp == nullptr) {
-        va_end(arg);
         return 0;
       }
       len = vsnprintf(temp, len+1, format, arg);
     }
-    va_end(arg);
     len = write((std::uint8_t*)temp, len);
     if (temp != loc_buf){
       free(temp);
     }
     return len;
   }
-#endif
+
+  #if !defined (ARDUINO)
+  std::size_t LGFXBase::printf(const char * format, ...) 
+  {
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    std::size_t len = vprintf(format, arg_ptr);
+    va_end(arg_ptr);
+
+    return len;
+  }
+  #endif
 
   void LGFXBase::setFont(const IFont* font)
   {
