@@ -35,11 +35,11 @@ void setup(void)
   {
     display.setRotation(display.getRotation() ^ 1);
   }
-  if (display.getBoard() == m5display::board_t::board_M5StackCoreInk)
+  if (display.getBoard() == m5gfx::boards::board_t::board_M5StackCoreInk)
   {
     zoom = 2;
   }
-  else if (display.getBoard() == m5display::board_t::board_M5Paper)
+  else if (display.getBoard() == m5gfx::boards::board_t::board_M5Paper)
   {
     zoom = 3;
   }
