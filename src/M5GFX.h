@@ -9,6 +9,11 @@
 #include <FS.h>
 #endif
 
+/// Use of std::min instead of macro definitions is recommended.
+#ifdef min
+#undef min
+#endif
+
 #ifdef setFont
 #undef setFont
 #endif
@@ -189,5 +194,3 @@ using namespace m5gfx::ili9341_colors;
 using namespace m5gfx::tft_command;
 using M5GFX = m5gfx::M5GFX;
 using M5Canvas = m5gfx::M5Canvas;
-
-#undef LGFX_NS

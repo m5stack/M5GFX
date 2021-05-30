@@ -33,6 +33,8 @@ namespace lgfx
   #define SAFE_I2S_FIFO_WR_REG(i) (0x3FF4F000 + ((i)*0x1E000))
   #define SAFE_I2S_FIFO_RD_REG(i) (0x3FF4F004 + ((i)*0x1E000))
 
+  static constexpr std::size_t CACHE_THRESH = 256;
+
   static constexpr std::uint32_t _conf_reg_default = I2S_TX_MSB_RIGHT | I2S_TX_RIGHT_FIRST | I2S_RX_RIGHT_FIRST;
   static constexpr std::uint32_t _conf_reg_start   = _conf_reg_default | I2S_TX_START;
   static constexpr std::uint32_t _conf_reg_reset   = _conf_reg_default | I2S_TX_RESET;

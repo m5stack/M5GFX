@@ -2850,7 +2850,7 @@ namespace lgfx
     static Panel_NULL nullobj;
     _panel = (nullptr == panel)
            ? &nullobj
-           : reinterpret_cast<IPanel*>(panel); 
+           : panel;
   }
 
   bool LGFX_Device::init_impl(bool use_reset, bool use_clear)
@@ -2862,7 +2862,7 @@ namespace lgfx
         setBaseColor(TFT_WHITE);
         setTextColor(TFT_BLACK, TFT_WHITE);
       }
-      if (_panel->init(use_reset))
+      if (getPanel()->init(use_reset))
       {
         startWrite();
         invertDisplay(_panel->getInvert());
@@ -2875,6 +2875,7 @@ namespace lgfx
         setPivot(width()>>1, height()>>1);
         endWrite();
         setBrightness(_brightness);
+        getPanel()->initTouch();
         return true;
       }
     }

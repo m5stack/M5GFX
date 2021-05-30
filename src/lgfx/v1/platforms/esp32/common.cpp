@@ -486,15 +486,13 @@ namespace lgfx
     cpp::result<void, error_t> init(int i2c_port, int pin_sda, int pin_scl)
     {
       if (i2c_port >= I2C_NUM_MAX) { return cpp::fail(error_t::invalid_arg); }
-
-      if (i2c_context[i2c_port].pin_scl >= 0 || i2c_context[i2c_port].pin_sda >= 0)
-      {
-        release(i2c_port);
-      }
-
+      auto dev = (i2c_port == 0) ? &I2C0 : &I2C1;
+      i2c_context[i2c_port].save_reg(dev);
+      release(i2c_port);
       i2c_context[i2c_port].pin_scl = (gpio_num_t)pin_scl;
       i2c_context[i2c_port].pin_sda = (gpio_num_t)pin_sda;
       i2c_stop(i2c_port);
+      i2c_context[i2c_port].load_reg(dev);
 
       return {};
     }
@@ -503,11 +501,14 @@ namespace lgfx
     {
       if (i2c_port >= I2C_NUM_MAX) { return cpp::fail(error_t::invalid_arg); }
 
-      periph_module_disable(i2c_port == 0 ? PERIPH_I2C0_MODULE : PERIPH_I2C1_MODULE);
-      pinMode(i2c_context[i2c_port].pin_scl, pin_mode_t::input);
-      pinMode(i2c_context[i2c_port].pin_sda, pin_mode_t::input);
-      i2c_context[i2c_port].pin_scl = (gpio_num_t)-1;
-      i2c_context[i2c_port].pin_sda = (gpio_num_t)-1;
+      if (i2c_context[i2c_port].pin_scl >= 0 || i2c_context[i2c_port].pin_sda >= 0)
+      {
+        periph_module_disable(i2c_port == 0 ? PERIPH_I2C0_MODULE : PERIPH_I2C1_MODULE);
+        pinMode(i2c_context[i2c_port].pin_scl, pin_mode_t::input);
+        pinMode(i2c_context[i2c_port].pin_sda, pin_mode_t::input);
+        i2c_context[i2c_port].pin_scl = (gpio_num_t)-1;
+        i2c_context[i2c_port].pin_sda = (gpio_num_t)-1;
+      }
 
       return {};
     }

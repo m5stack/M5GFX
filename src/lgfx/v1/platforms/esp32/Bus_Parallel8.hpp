@@ -98,7 +98,6 @@ namespace lgfx
   private:
 
     static constexpr std::size_t CACHE_SIZE = 260;
-    static constexpr std::size_t CACHE_THRESH = 256;
     // static constexpr std::size_t CACHE_SIZE = 68;
     // static constexpr std::size_t CACHE_THRESH = 64;
 

@@ -1142,11 +1142,10 @@ namespace lgfx
     inline std::uint8_t getBrightness(void) const { return _brightness; }
 
     inline ITouch* touch(void) const { return _panel ? panel()->touch() : nullptr; }
+    inline void convertRawXY(std::int32_t *x, std::int32_t *y) { panel()->convertRawXY(x, y); }
     std::uint_fast8_t getTouchRaw(touch_point_t *tp, std::uint_fast8_t number = 0) { return panel()->getTouchRaw(tp, number); }
     std::uint_fast8_t getTouch(touch_point_t *tp, std::uint_fast8_t number = 0) { return panel()->getTouch(tp, number); }
-    inline void convertRawXY(std::int32_t *x, std::int32_t *y) { panel()->convertRawXY(x, y); }
-
-    touch_point_t getTouch(std::uint_fast8_t number = 0)
+    touch_point_t getTouch(std::int_fast8_t number = 0)
     {
       touch_point_t res;
       getTouch(&res, number);

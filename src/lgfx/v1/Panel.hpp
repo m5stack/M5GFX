@@ -71,7 +71,6 @@ namespace lgfx
 
     virtual void beginTransaction(void) = 0;
     virtual void endTransaction(void) = 0;
-    virtual bool init(bool use_reset) = 0;
 
     virtual void setBrightness(std::uint8_t brightness) {};
 
