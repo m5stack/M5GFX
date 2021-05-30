@@ -9,6 +9,7 @@
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
 
 #if defined ( ARDUINO )
+ #include <Arduino.h>
  static constexpr std::uint8_t M5_UNIT_OLED_SDA = SDA;
  static constexpr std::uint8_t M5_UNIT_OLED_SCL = SCL;
 #else
@@ -57,7 +58,8 @@ public:
 
     {
       auto cfg = _bus_instance.config();
-      cfg.freq = i2c_freq;
+      cfg.freq_write = i2c_freq;
+      cfg.freq_read = i2c_freq;
       cfg.pin_scl = pin_scl;
       cfg.pin_sda = pin_sda;
       cfg.i2c_port = i2c_port;

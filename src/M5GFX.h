@@ -9,9 +9,12 @@
 #include <FS.h>
 #endif
 
-/// Use of std::min instead of macro definitions is recommended.
+/// Use of std::min and std::max instead of macro definitions is recommended.
 #ifdef min
 #undef min
+#endif
+#ifdef max
+#undef max
 #endif
 
 #ifdef setFont

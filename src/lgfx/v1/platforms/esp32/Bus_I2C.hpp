@@ -31,7 +31,7 @@ namespace lgfx
   public:
     struct config_t
     {
-      std::uint32_t freq = 400000;
+      std::uint32_t freq_write = 400000;
       std::uint32_t freq_read = 400000;
       std::int16_t pin_scl = 22;
       std::int16_t pin_sda = 21;
