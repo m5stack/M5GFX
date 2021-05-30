@@ -2850,7 +2850,7 @@ namespace lgfx
     static Panel_NULL nullobj;
     _panel = (nullptr == panel)
            ? &nullobj
-           : reinterpret_cast<IPanel*>(panel); 
+           : panel;
   }
 
   bool LGFX_Device::init_impl(bool use_reset, bool use_clear)

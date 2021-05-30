@@ -53,6 +53,7 @@ namespace lgfx
     std::uint8_t tmp[2] = { 0 };
     _inited = _write_reg(0x00, 0x00)
           && _read_reg(FT5x06_VENDID_REG, tmp, 1)
+          && _write_reg(FT5x06_INTMODE_REG, 0x00) // INT Polling mode
           && tmp[0]
           ;
 
@@ -70,12 +71,7 @@ namespace lgfx
       lgfx::pinMode(_cfg.pin_int, pin_mode_t::input_pullup);
     }
 
-    if (_check_init())
-    {
-      _write_reg(FT5x06_INTMODE_REG, 0x00); // INT Polling mode
-      return true;
-    }
-    return false;
+    return _check_init();
   }
 
   void Touch_FT5x06::wakeup(void)
