@@ -163,7 +163,7 @@ namespace m5gfx
 
   static void _pin_level(std::int_fast16_t pin, bool level)
   {
-    lgfx::pinMode(pin, lgfx::pin_mode_t::output); // M5Stack TF card CS
+    lgfx::pinMode(pin, lgfx::pin_mode_t::output);
     if (level) lgfx::gpio_hi(pin);
     else       lgfx::gpio_lo(pin);
   }
@@ -246,24 +246,24 @@ namespace m5gfx
 #endif
     }
 
-    _board = (board_t)nvs_board;
+    auto board = (board_t)nvs_board;
 
     int retry = 4;
     do
     {
       if (retry == 1) use_reset = true;
-      _board = autodetect(use_reset, _board);
+      board = autodetect(use_reset, board);
       //ESP_LOGI("M5GFX","autodetect _board:%d", _board);
-    } while (board_t::board_unknown == _board && --retry >= 0);
-
+    } while (board_t::board_unknown == board && --retry >= 0);
+    _board = board;
     /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。
     /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効
     bool res = LGFX_Device::init_impl(false, use_clear);
 
-    if (nvs_board != _board) {
+    if (nvs_board != board) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
-        ESP_LOGW(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", _board);
-        nvs_set_u32(nvs_handle, NVS_KEY, _board);
+        ESP_LOGW(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", board);
+        nvs_set_u32(nvs_handle, NVS_KEY, board);
         nvs_close(nvs_handle);
       }
     }
@@ -547,6 +547,8 @@ namespace m5gfx
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x28, 0xF0, ~0, axp_i2c_freq);   // set LDO2 3300mv // LCD PWR
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x12, 0x06, ~0, axp_i2c_freq);   // LDO2 and DC3 enable (DC3 = LCD BL)
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x96, 0x02, ~0, axp_i2c_freq);   // GPIO4 HIGH (LCD RST)
+
+        ets_delay_us(128); // AXP 起動後、LCDがアクセス可能になるまで少し待機
 
         bus_cfg.pin_mosi = 23;
         bus_cfg.pin_miso = 38;

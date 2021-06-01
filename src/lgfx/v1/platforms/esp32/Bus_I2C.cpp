@@ -57,7 +57,7 @@ namespace lgfx
     {
       lgfx::i2c::endTransaction(_cfg.i2c_port);
     }
-    lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq, false);
+    lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq_write, false);
     _state = state_t::state_write_none;
   }
 
@@ -120,7 +120,7 @@ namespace lgfx
     if (_state == state_t::state_none)
     {
       _state = state_t::state_write_none;
-      lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq, false);
+      lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq_write, false);
     }
 
     // DCプリフィクスなしの場合は後の処理は不要
@@ -134,7 +134,7 @@ namespace lgfx
     if (_state != state_t::state_write_none)
     {
       lgfx::i2c::endTransaction(_cfg.i2c_port);
-      lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq, false);
+      lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq_write, false);
     }
     lgfx::i2c::writeBytes(_cfg.i2c_port, (std::uint8_t*)(dc ? &_cfg.prefix_data : &_cfg.prefix_cmd), _cfg.prefix_len);
     _state = st;
