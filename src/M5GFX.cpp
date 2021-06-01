@@ -548,6 +548,8 @@ namespace m5gfx
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x12, 0x06, ~0, axp_i2c_freq);   // LDO2 and DC3 enable (DC3 = LCD BL)
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x96, 0x02, ~0, axp_i2c_freq);   // GPIO4 HIGH (LCD RST)
 
+        ets_delay_us(128); // AXP 起動後、LCDがアクセス可能になるまで少し待機
+
         bus_cfg.pin_mosi = 23;
         bus_cfg.pin_miso = 38;
         bus_cfg.pin_sclk = 18;
