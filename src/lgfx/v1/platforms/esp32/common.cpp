@@ -33,6 +33,7 @@ Contributors:
 #if defined ( ARDUINO )
  #include <SPI.h>
  #include <Wire.h>
+ #include <soc/dport_reg.h>
 #else
  #include <driver/spi_master.h>
  #include <esp_log.h>
@@ -113,12 +114,12 @@ namespace lgfx
     static spi_device_handle_t _spi_handle[SOC_SPI_PERIPH_NUM] = {nullptr};
 #endif
 
-    void init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi)
+    cpp::result<void, error_t> init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi)
     {
-      init(spi_host, spi_sclk, spi_miso, spi_mosi, 0);
+      return init(spi_host, spi_sclk, spi_miso, spi_mosi, 0);
     }
 
-    void init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi, int dma_channel)
+    cpp::result<void, error_t> init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi, int dma_channel)
     {
 //ESP_LOGI("LGFX","spi::init host:%d, sclk:%d, miso:%d, mosi:%d, dma:%d", spi_host, spi_sclk, spi_miso, spi_mosi, dma_channel);
       std::uint32_t spi_port = (spi_host + 1);
@@ -182,11 +183,10 @@ namespace lgfx
           .intr_flags = 0,
       };
 
-      if (ESP_OK != spi_bus_initialize(static_cast<spi_host_device_t>(spi_host), &buscfg, dma_channel)) {
-        ESP_LOGE("LGFX", "Failed to spi_bus_initialize. ");
-      }
+      if (_spi_handle[spi_host] == nullptr)
+      {
+        spi_bus_initialize(static_cast<spi_host_device_t>(spi_host), &buscfg, dma_channel);
 
-      if (_spi_handle[spi_host] == nullptr) {
         spi_device_interface_config_t devcfg = {
             .command_bits = 0,
             .address_bits = 0,
@@ -209,6 +209,8 @@ namespace lgfx
 
 #endif
       WRITE_PERI_REG(SPI_CTRL1_REG(spi_port), 0);
+
+      return {};
     }
 
     void release(int spi_host)
@@ -407,7 +409,8 @@ namespace lgfx
       gpio_set_direction(scl_io, GPIO_MODE_OUTPUT_OD);
 
       auto mod = i2c_port == 0 ? PERIPH_I2C0_MODULE : PERIPH_I2C1_MODULE;
-      periph_module_disable(mod);
+      // ESP-IDF環境でperiph_module_disableを使うと、後でenableできなくなる問題が起きたためコメントアウト
+      //periph_module_disable(mod);
       gpio_set_level(scl_io, 0);
 
       // SDAがHIGHになるまでクロック送出しながら待機する。
@@ -503,7 +506,8 @@ namespace lgfx
 
       if (i2c_context[i2c_port].pin_scl >= 0 || i2c_context[i2c_port].pin_sda >= 0)
       {
-        periph_module_disable(i2c_port == 0 ? PERIPH_I2C0_MODULE : PERIPH_I2C1_MODULE);
+      // ESP-IDF環境でperiph_module_disableを使うと、後でenableできなくなる問題が起きたためコメントアウト
+//        periph_module_disable(i2c_port == 0 ? PERIPH_I2C0_MODULE : PERIPH_I2C1_MODULE);
         pinMode(i2c_context[i2c_port].pin_scl, pin_mode_t::input);
         pinMode(i2c_context[i2c_port].pin_sda, pin_mode_t::input);
         i2c_context[i2c_port].pin_scl = (gpio_num_t)-1;

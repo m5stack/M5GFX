@@ -70,9 +70,10 @@ namespace m5gfx
 
   struct Light_M5StackCore2 : public lgfx::ILight
   {
-    void init(std::uint8_t brightness) override
+    bool init(std::uint8_t brightness) override
     {
       setBrightness(brightness);
+      return true;
     }
 
     void setBrightness(std::uint8_t brightness) override
@@ -120,11 +121,12 @@ namespace m5gfx
 
   struct Light_M5StickC : public lgfx::ILight
   {
-    void init(std::uint8_t brightness) override
+    bool init(std::uint8_t brightness) override
     {
       lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
       lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x12, 0x4D, ~0, axp_i2c_freq);
       setBrightness(brightness);
+      return true;
     }
 
     void setBrightness(std::uint8_t brightness) override
@@ -264,7 +266,6 @@ namespace m5gfx
 #elif defined ( ARDUINO_M5Stack-Timer-CAM )
 #endif
     }
-nvs_board = 0;  /// DEBUG
 
     auto board = (board_t)nvs_board;
 
@@ -473,7 +474,7 @@ nvs_board = 0;  /// DEBUG
           do
           {
             vTaskDelay(1);
-            if (millis() - id > 192) { break; }
+            if (lgfx::millis() - id > 192) { break; }
           } while (!lgfx::gpio_in(27));
           lgfx::gpio_lo(15);
           _bus_spi.writeData(__builtin_bswap16(0x1000), 16);

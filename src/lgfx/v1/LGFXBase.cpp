@@ -1968,7 +1968,7 @@ namespace lgfx
     int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
     va_end(copy);
     if (len < 0) { return 0; }
-    if (len >= sizeof(loc_buf))
+    if ((std::size_t)len >= sizeof(loc_buf))
     {
       temp = (char*) malloc(len + 1);
       if (temp == nullptr)
@@ -2950,7 +2950,7 @@ namespace lgfx
         orig[i*2  ] = x_touch >> 4;
         orig[i*2+1] = y_touch >> 4;
         draw_calibrate_point( px, py, size, bg_rawcolor, bg_rawcolor);
-        while (getTouchRaw());
+        do { delay(1); } while (getTouchRaw());
       }
       if (nullptr != parameters) {
         memcpy(parameters, orig, sizeof(std::uint16_t) * 8);

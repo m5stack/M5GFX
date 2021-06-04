@@ -39,7 +39,7 @@ namespace lgfx
   __attribute__ ((unused)) static inline void delay(std::uint32_t ms)
   {
     std::uint32_t time = micros();
-    vTaskDelay( (ms >= portTICK_PERIOD_MS) ? (ms / portTICK_PERIOD_MS - 1) : 0);
+    vTaskDelay( std::max<std::uint32_t>(2u, ms / portTICK_PERIOD_MS) - 1 );
     if (ms != 0 && ms < portTICK_PERIOD_MS*8)
     {
       ms *= 1000;
@@ -212,8 +212,8 @@ public:
 
   namespace spi
   {
-    void init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi, int dma_channel);
-    void init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi);
+    cpp::result<void, error_t> init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi, int dma_channel);
+    cpp::result<void, error_t> init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi);
     void release(int spi_host);
     void beginTransaction(int spi_host, std::uint32_t freq, int spi_mode = 0);
     void beginTransaction(int spi_host);
