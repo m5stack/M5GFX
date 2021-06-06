@@ -755,7 +755,7 @@ namespace lgfx
   TYPECHECK(std::uint16_t) constexpr std::uint32_t convert_to_rgb888(T c) { return convert_rgb565_to_rgb888(c); }
   TYPECHECK(std::int16_t ) constexpr std::uint32_t convert_to_rgb888(T c) { return convert_rgb565_to_rgb888(c); }
   TYPECHECK(std::int32_t ) constexpr std::uint32_t convert_to_rgb888(T c) { return convert_rgb565_to_rgb888(c); }
-  TYPECHECK(std::uint32_t) constexpr std::uint32_t convert_to_rgb888(T c) { return c; }
+  TYPECHECK(std::uint32_t) constexpr std::uint32_t convert_to_rgb888(T c) { return c & 0xFFFFFF; }
   __attribute__ ((always_inline)) inline constexpr std::uint32_t convert_to_rgb888(const argb8888_t& c) { return c.R8()<<16|c.G8()<<8|c.B8(); }
   __attribute__ ((always_inline)) inline constexpr std::uint32_t convert_to_rgb888(const rgb888_t&   c) { return c.R8()<<16|c.G8()<<8|c.B8(); }
   __attribute__ ((always_inline)) inline constexpr std::uint32_t convert_to_rgb888(const rgb565_t&   c) { return c.R8()<<16|c.G8()<<8|c.B8(); }
