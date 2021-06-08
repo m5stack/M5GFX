@@ -35,8 +35,8 @@ namespace lgfx
       startWrite(true);
       _bus->writeCommand(CMD_RESET | 0x77 << 8 | 0x89 << 16 | CMD_RESET << 24, 32);
       endWrite();
-      // リセットコマンド後は150msec待つ
-      lgfx::delay(150);
+      // リセットコマンド後は200msec待つ
+      lgfx::delay(200);
     }
 
     startWrite(true);
@@ -314,6 +314,13 @@ namespace lgfx
     std::uint8_t buf[10];
     std::size_t idx = 0;
     bool flg_large = (_cfg.memory_width >= 256) || (_cfg.memory_height >= 256);
+    if (!flg_large)
+    {
+      ys = std::min<std::uint_fast16_t>(ys, 255u);
+      ye = std::min<std::uint_fast16_t>(ye, 255u);
+      xs = std::min<std::uint_fast16_t>(xs, 255u);
+      xe = std::min<std::uint_fast16_t>(xe, 255u);
+    }
     if (xs != _xs || xe != _xe)
     {
       _xs = xs;

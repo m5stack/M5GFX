@@ -60,10 +60,10 @@ namespace lgfx
     if (_adjust_abs(x, w)||_adjust_abs(y, h)) return;
     if (x < 0) { w += x; x = 0; }
     if (w > width() - x)  w = width()  - x;
-    if (w < 1) { x = 0; w = 0; }
+    if (w < 1) { x += w; w = 0; }
     if (y < 0) { h += y; y = 0; }
     if (h > height() - y) h = height() - y;
-    if (h < 1) { y = 0; h = 0; }
+    if (h < 1) { y += h; h = 0; }
 
     startWrite();
     setWindow(x, y, x + w - 1, y + h - 1);
