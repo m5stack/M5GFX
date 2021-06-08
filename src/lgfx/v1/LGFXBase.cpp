@@ -2187,8 +2187,8 @@ namespace lgfx
         scale_y = scale_x;
       }
     }
-    if (maxWidth  <= 0) maxWidth  = INT16_MAX;
-    if (maxHeight <= 0) maxHeight = INT16_MAX;
+    if (maxWidth  <= 0) maxWidth  = (cr - cl) - x;
+    if (maxHeight <= 0) maxHeight = (cb - ct) - y;
 
     auto clip_x = x;
     auto clip_y = y;
@@ -2418,8 +2418,8 @@ namespace lgfx
         scale_y = scale_x;
       }
     }
-    if (maxWidth  <= 0) maxWidth  = INT16_MAX;
-    if (maxHeight <= 0) maxHeight = INT16_MAX;
+    if (maxWidth  <= 0) maxWidth  = (cr - cl) - x;
+    if (maxHeight <= 0) maxHeight = (cb - ct) - y;
 
     if (datum)
     {
@@ -2663,8 +2663,8 @@ namespace lgfx
         p->zoom_y = p->zoom_x;
       }
     }
-    if (p->maxWidth  <= 0) p->maxWidth  = INT16_MAX;
-    if (p->maxHeight <= 0) p->maxHeight = INT16_MAX;
+    if (p->maxWidth  <= 0) p->maxWidth  = cw - (p->x);
+    if (p->maxHeight <= 0) p->maxHeight = ch - (p->y);
 
     w = ceilf(w * p->zoom_x);
     h = ceilf(h * p->zoom_y);

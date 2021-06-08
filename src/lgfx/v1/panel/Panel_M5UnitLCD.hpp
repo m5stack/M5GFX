@@ -67,14 +67,10 @@ namespace lgfx
     static constexpr std::uint8_t CMD_NOP          = 0x00; // 1Byte 何もしない
     static constexpr std::uint8_t CMD_READ_ID      = 0x04; // 1Byte ID読出し  スレーブからの回答は4Byte (0x77 0x89 0x01 0x?? (最後の1バイトはファームウェアバージョン))
     static constexpr std::uint8_t CMD_READ_BUFCOUNT= 0x09; // 1Byte コマンドバッファの空き取得。回答は1Byte
-//    static constexpr std::uint8_t CMD_SLPIN        = 0x10; // 1Byte
-//    static constexpr std::uint8_t CMD_SLPOUT       = 0x11; // 1Byte
     static constexpr std::uint8_t CMD_INVOFF       = 0x20; // 1Byte 色反転を解除
     static constexpr std::uint8_t CMD_INVON        = 0x21; // 1Byte 色反転を有効
     static constexpr std::uint8_t CMD_BRIGHTNESS   = 0x22; // 2Byte バックライト data[1]==明るさ 0~255
     static constexpr std::uint8_t CMD_COPYRECT     = 0x23; // 13Byte 矩形範囲コピー [1~2]==XS [3~4]==YS [5~6]==XE [7~8]==YE [9~10]==DST_X [11~12]==DST_Y
-    // static constexpr std::uint8_t CMD_DISPLAY_OFF  = 0x28; // 1Byte 画面消灯
-    // static constexpr std::uint8_t CMD_DISPLAY_ON   = 0x29; // 1Byte 画面点灯
     static constexpr std::uint8_t CMD_CASET        = 0x2A; // 5Byte X方向の範囲選択 data[1~2]==XS  data[3~4]==XE
     static constexpr std::uint8_t CMD_RASET        = 0x2B; // 5Byte Y方向の範囲選択 data[1~2]==YS  data[3~4]==YE
     static constexpr std::uint8_t CMD_ROTATE       = 0x36; // 2Byte 回転処理 [1]==回転方向 0:通常 1:右90度 2:180度 3:270度 4~7は0~3の上下反転
@@ -88,12 +84,14 @@ namespace lgfx
     static constexpr std::uint8_t CMD_WR_RAW_16    = 0x42; // 不定長 RGB565   2Byteのピクセルデータを連続送信
     static constexpr std::uint8_t CMD_WR_RAW_24    = 0x43; // 不定長 RGB888   3Byteのピクセルデータを連続送信
     static constexpr std::uint8_t CMD_WR_RAW_32    = 0x44; // 不定長 ARGB8888 4Byteのピクセルデータを連続送信
+    static constexpr std::uint8_t CMD_WR_RAW_A     = 0x45; // 不定長 A8       1Byteのピクセルデータを連続送信(アルファチャネルのみ、描画色は最後に使用したものを再利用する)
 
     static constexpr std::uint8_t CMD_WR_RLE       = 0x48;
     static constexpr std::uint8_t CMD_WR_RLE_8     = 0x49; // 不定長 RGB332   1Byteのピクセルデータを連続送信(RLE圧縮)
     static constexpr std::uint8_t CMD_WR_RLE_16    = 0x4A; // 不定長 RGB565   2Byteのピクセルデータを連続送信(RLE圧縮)
     static constexpr std::uint8_t CMD_WR_RLE_24    = 0x4B; // 不定長 RGB888   3Byteのピクセルデータを連続送信(RLE圧縮)
     static constexpr std::uint8_t CMD_WR_RLE_32    = 0x4C; // 不定長 ARGB8888 4Byteのピクセルデータを連続送信(RLE圧縮)
+    static constexpr std::uint8_t CMD_WR_RLE_A     = 0x4D; // 不定長 A8       1Byteのピクセルデータを連続送信(RLE圧縮 アルファチャネルのみ、描画色は最後に使用したものを再利用する)
 
     static constexpr std::uint8_t CMD_RAM_FILL     = 0x50; // 1Byte 現在の描画色で選択範囲全塗り
     static constexpr std::uint8_t CMD_SET_COLOR    = 0x50;

@@ -104,8 +104,8 @@ namespace lgfx
     , _parent(parent)
 //    , _bitwidth(0)
     {
-      _read_conv = _write_conv;
       _panel = &_panel_sprite;
+      setColorDepth(_write_conv.depth);
     }
 
     __attribute__ ((always_inline)) inline void* getBuffer(void) const { return _panel_sprite.getBuffer(); }
@@ -140,7 +140,9 @@ namespace lgfx
 
     void setPsram( bool enabled )
     {
+      if (_psram == enabled) return;
       _psram = enabled;
+      deleteSprite();
     }
 
     void setBuffer(void* buffer, std::int32_t w, std::int32_t h, std::uint8_t bpp = 0)
