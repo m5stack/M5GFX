@@ -60,10 +60,10 @@ namespace lgfx
     if (_adjust_abs(x, w)||_adjust_abs(y, h)) return;
     if (x < 0) { w += x; x = 0; }
     if (w > width() - x)  w = width()  - x;
-    if (w < 1) { x = 0; w = 0; }
+    if (w < 1) { x += w; w = 0; }
     if (y < 0) { h += y; y = 0; }
     if (h > height() - y) h = height() - y;
-    if (h < 1) { y = 0; h = 0; }
+    if (h < 1) { y += h; h = 0; }
 
     startWrite();
     setWindow(x, y, x + w - 1, y + h - 1);
@@ -1968,7 +1968,7 @@ namespace lgfx
     int len = vsnprintf(temp, sizeof(loc_buf), format, copy);
     va_end(copy);
     if (len < 0) { return 0; }
-    if (len >= sizeof(loc_buf))
+    if ((std::size_t)len >= sizeof(loc_buf))
     {
       temp = (char*) malloc(len + 1);
       if (temp == nullptr)
@@ -2187,8 +2187,8 @@ namespace lgfx
         scale_y = scale_x;
       }
     }
-    if (maxWidth  <= 0) maxWidth  = INT16_MAX;
-    if (maxHeight <= 0) maxHeight = INT16_MAX;
+    if (maxWidth  <= 0) maxWidth  = (cr - cl) - x;
+    if (maxHeight <= 0) maxHeight = (cb - ct) - y;
 
     auto clip_x = x;
     auto clip_y = y;
@@ -2418,8 +2418,8 @@ namespace lgfx
         scale_y = scale_x;
       }
     }
-    if (maxWidth  <= 0) maxWidth  = INT16_MAX;
-    if (maxHeight <= 0) maxHeight = INT16_MAX;
+    if (maxWidth  <= 0) maxWidth  = (cr - cl) - x;
+    if (maxHeight <= 0) maxHeight = (cb - ct) - y;
 
     if (datum)
     {
@@ -2663,8 +2663,8 @@ namespace lgfx
         p->zoom_y = p->zoom_x;
       }
     }
-    if (p->maxWidth  <= 0) p->maxWidth  = INT16_MAX;
-    if (p->maxHeight <= 0) p->maxHeight = INT16_MAX;
+    if (p->maxWidth  <= 0) p->maxWidth  = cw - (p->x);
+    if (p->maxHeight <= 0) p->maxHeight = ch - (p->y);
 
     w = ceilf(w * p->zoom_x);
     h = ceilf(h * p->zoom_y);
@@ -2950,7 +2950,7 @@ namespace lgfx
         orig[i*2  ] = x_touch >> 4;
         orig[i*2+1] = y_touch >> 4;
         draw_calibrate_point( px, py, size, bg_rawcolor, bg_rawcolor);
-        while (getTouchRaw());
+        do { delay(1); } while (getTouchRaw());
       }
       if (nullptr != parameters) {
         memcpy(parameters, orig, sizeof(std::uint16_t) * 8);

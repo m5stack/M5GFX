@@ -60,8 +60,8 @@ void loop(void)
                  , ~0u  // data_length (~0u = auto)
                  , 0    // X position
                  , 0    // Y position
-                 , 0    // Width  (0 = panel width)
-                 , 0    // Height (0 = panel height)
+                 , display.width()  // Width
+                 , display.height() // Height
                  , 0    // X offset
                  , 0    // Y offset
                  , 1.0  // X magnification(default = 1.0 , 0 = fitsize , -1 = follow the Y magni)
@@ -78,8 +78,8 @@ void loop(void)
                  , ~0u  // data_length (~0u = auto)
                  , 0    // X position
                  , 0    // Y position
-                 , 0    // Width  (0 = panel width)
-                 , 0    // Height (0 = panel height)
+                 , display.width()  // Width
+                 , display.height() // Height
                  , 0    // X offset
                  , 0    // Y offset
                  , 0    // X magnification(default = 1.0 , 0 = fitsize , -1 = follow the Y magni)
@@ -159,8 +159,8 @@ void loop(void)
                   , ~0u
                   , 0
                   , 0
-                  , 0
-                  , 0
+                  , display.width()  // Width
+                  , display.height() // Height
                   , 0
                   , 0
                   , 0.1 + (float)i / 50

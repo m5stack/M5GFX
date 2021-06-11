@@ -34,75 +34,84 @@ namespace lgfx
 
     lgfx::gpio_hi(_cfg.pin_cs);
     lgfx::pinMode(_cfg.pin_cs, lgfx::pin_mode_t::output);
-    lgfx::spi::init(_cfg.spi_host, _cfg.pin_sclk, _cfg.pin_miso, _cfg.pin_mosi);
+    if (lgfx::spi::init(_cfg.spi_host, _cfg.pin_sclk, _cfg.pin_miso, _cfg.pin_mosi).has_error())
+    {
+      return false;
+    }
+
+    if (_cfg.pin_int >= 0)
+    {
+      lgfx::pinMode(_cfg.pin_int, pin_mode_t::input);
+    }
 
     _inited = true;
     return true;
   }
 
-  void Touch_XPT2046::wakeup(void)
-  {
-    if (!_inited) return;
-  }
-
-  void Touch_XPT2046::sleep(void)
-  {
-    if (!_inited) return;
-  }
-
-  std::uint_fast8_t Touch_XPT2046::getTouchRaw(touch_point_t *tp, std::uint_fast8_t number)
+  std::uint_fast8_t Touch_XPT2046::getTouchRaw(touch_point_t* __restrict__ tp, std::uint_fast8_t number)
   {
     tp->size = 0;
 
     if (!_inited || number != 0) return 0;
-    if (!isSPI()) return 0;
 
-    int xt[24], yt[24], size[21];
-    uint8_t data[61];
-    for (int i = 0; i < 3; ++i)
+    if (_cfg.pin_int >= 0 && lgfx::gpio_in(_cfg.pin_int))
     {
-      memset(data, 0, 61);
-      data[ 0] = 0xD1;
-      data[ 2] = 0x91;
-      data[ 4] = 0xB1;
-      data[ 6] = 0xC1;
-      memcpy(&data[ 8], data,  8);
-      memcpy(&data[16], data, 16);
-      memcpy(&data[32], data, 28);
-
-      spi::beginTransaction(_cfg.spi_host, _cfg.freq, 0);
-      lgfx::gpio_lo(_cfg.pin_cs);
-      spi::readBytes(_cfg.spi_host, data, 61);
-      spi::endTransaction(_cfg.spi_host);
-      lgfx::gpio_hi(_cfg.pin_cs);
-
-      for (std::size_t j = 0; j < 7; ++j)
-      {
-        int tmp = 0xFFF
-                + (data[5 + j * 8] << 5 | data[6 + j * 8] >> 3)
-                - (data[7 + j * 8] << 5 | data[8 + j * 8] >> 3);
-        size[i * 7 + j] = std::max(0, tmp);
-      }
-      for (std::size_t j = 0; j < 8; ++j)
-      {
-        xt[i * 8 + j] = data[1 + j * 8] << 5 | data[2 + j * 8] >> 3;
-        yt[i * 8 + j] = data[3 + j * 8] << 5 | data[4 + j * 8] >> 3;
-      }
+      return 0;
     }
 
-    std::sort(xt, xt+24);
-    tp->x = (xt[10]+xt[11]+xt[12]+xt[13]) >> 2;
+    std::uint8_t data[57];
 
-    std::sort(yt, yt+24);
-    tp->y = (yt[10]+yt[11]+yt[12]+yt[13]) >> 2;
+    memset(data, 0, 8);
+    data[ 0] = 0x91;
+    data[ 2] = 0xB1;
+    data[ 4] = 0xD1;
+    data[ 6] = 0xC1;
+    data[56] = 0x80; // last power off.
+    memcpy(&data[ 8], data,  8);
+    memcpy(&data[16], data, 16);
+    memcpy(&data[32], data, 24);
 
-    std::sort(size, size+21);
-    tp->size = std::max<std::uint16_t>(0,
-                        0
-                        + size[10]
-                        + (tp->y * ((_cfg.x_max - tp->x) >> 4) >> 9) // 座標による感度の差を補正(LoLIN D32 Proで調整)
-                        - threshold
-                        ) >> 8;
+    spi::beginTransaction(_cfg.spi_host, _cfg.freq, 0);
+    lgfx::gpio_lo(_cfg.pin_cs);
+    spi::readBytes(_cfg.spi_host, data, 57);
+    spi::endTransaction(_cfg.spi_host);
+    lgfx::gpio_hi(_cfg.pin_cs);
+
+    std::size_t ix = 0, iy = 0, iz = 0;
+    std::uint_fast16_t xt[7], yt[7], zt[7];
+    for (std::size_t j = 0; j < 7; ++j)
+    {
+      auto d = &data[j * 8];
+      int x = (d[5] << 8 | d[6]) >> 3;
+      int y = (d[1] << 8 | d[2]) >> 3;
+      int z = 0x3200 + y - x
+            + (((d[3] << 8 | d[4])
+              - (d[7] << 8 | d[8])) >> 1);
+      if (x > 128 && x <= 3968)
+      {
+        xt[ix++] = x;
+      }
+      if (y > 128 && y <= 3968)
+      {
+        yt[iy++] = y;
+      }
+      if (z > 0)
+      {
+        zt[iz++] = z;
+      }
+    }
+    if (ix < 3 || iy < 3 || iz < 3)
+    {
+      return 0;
+    }
+
+    std::sort(xt, xt + ix);
+    std::sort(yt, yt + iy);
+    std::sort(zt, zt + iz);
+
+    tp->x    = xt[ix>>1];
+    tp->y    = yt[iy>>1];
+    tp->size = zt[iz>>1] >> 8;
 
     return tp->size ? 1 : 0;
   }
