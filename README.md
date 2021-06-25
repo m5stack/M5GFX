@@ -10,6 +10,7 @@ Support device
 - M5Stick C
 - M5Stick C Plus
 - M5Paper
+- M5Tough
 
 - M5UnitOLED
 
