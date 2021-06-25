@@ -141,6 +141,7 @@ namespace m5gfx
     , board_M5StickCPlus
     , board_M5StackCoreInk
     , board_M5Paper
+    , board_M5Tough
     };
   }
   using board_t = boards::board_t;

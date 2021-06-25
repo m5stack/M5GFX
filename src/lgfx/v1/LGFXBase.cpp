@@ -53,6 +53,7 @@ namespace lgfx
   {
     if (_panel) _panel->setRotation(rotation);
     clearClipRect();
+    clearScrollRect();
   }
 
   void LGFXBase::setAddrWindow(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h)
@@ -1709,14 +1710,15 @@ namespace lgfx
   {
     FontMetrics fm;
     font->getDefaultMetric(&fm);
-    return fm.height * _text_style.size_y;
+    std::int32_t sy = 65536 * _text_style.size_y;
+    return (fm.height * sy) >> 16;
   }
 
   std::int32_t LGFXBase::textLength(const char *string, std::int32_t width)
   {
     if (!string || !string[0]) return 0;
 
-    auto sx = _text_style.size_x;
+    std::int32_t sx = 65536 * _text_style.size_x;
 
     std::int32_t left = 0;
     std::int32_t right = 0;
@@ -1732,20 +1734,36 @@ namespace lgfx
 
       //if (!_font->updateFontMetric(&_font_metrics, uniCode)) continue;
       _font->updateFontMetric(&_font_metrics, uniCode);
-      if (left == 0 && right == 0 && _font_metrics.x_offset < 0) left = right = - (int)(_font_metrics.x_offset * sx);
-      right = left + std::max<int>(_font_metrics.x_advance * sx, int(_font_metrics.width * sx) + int(_font_metrics.x_offset * sx));
+      if (left == 0 && right == 0 && _font_metrics.x_offset < 0) left = right = - ((_font_metrics.x_offset * sx) >> 16);
+      std::int32_t sxadvance = (_font_metrics.x_advance * sx) >> 16;
+      right = left + std::max<int>(sxadvance, ((_font_metrics.width * sx) >> 16) + ((_font_metrics.x_offset * sx) >> 16));
       //right = left + (int)(std::max<int>(_font_metrics.x_advance, _font_metrics.width + _font_metrics.x_offset) * sx);
-      left += (int)(_font_metrics.x_advance * sx);
+      left += sxadvance;
       if (width <= right) return string - str;
     } while (*(++string));
     return string - str;
   }
 
-  std::int32_t LGFXBase::textWidth(const char *string)
+  std::int32_t LGFXBase::textWidth(const char *string, const IFont* font)
+  {
+    auto metrics = _font_metrics;
+    if (font == nullptr)
+    {
+      font = _font;
+    }
+    else
+    if (font != _font)
+    {
+      font->getDefaultMetric(&metrics);
+    }
+    return text_width(string, font, &metrics);
+  }
+
+  std::int32_t LGFXBase::text_width(const char *string, const IFont* font, FontMetrics* metrics)
   {
     if (!string || !string[0]) return 0;
 
-    auto sx = _text_style.size_x;
+    std::int32_t sx = 65536 * _text_style.size_x;
 
     std::int32_t left = 0;
     std::int32_t right = 0;
@@ -1758,43 +1776,58 @@ namespace lgfx
         if (uniCode < 0x20) break;
       }
 
-      //if (!_font->updateFontMetric(&_font_metrics, uniCode)) continue;
-      _font->updateFontMetric(&_font_metrics, uniCode);
-      if (left == 0 && right == 0 && _font_metrics.x_offset < 0) left = right = - (int)(_font_metrics.x_offset * sx);
-      right = left + std::max<int>(_font_metrics.x_advance*sx, int(_font_metrics.width*sx) + int(_font_metrics.x_offset * sx));
-      //right = left + (int)(std::max<int>(_font_metrics.x_advance, _font_metrics.width + _font_metrics.x_offset) * sx);
-      left += (int)(_font_metrics.x_advance * sx);
+      //if (!_font->updateFontMetric(&metrics, uniCode)) continue;
+      font->updateFontMetric(metrics, uniCode);
+      std::int32_t sxoffset = (metrics->x_offset * sx) >> 16;
+      if (left == 0 && right == 0 && metrics->x_offset < 0) left = right = - sxoffset;
+      std::int32_t sxadvance = (metrics->x_advance * sx) >> 16;
+      right = left + std::max<int>(sxadvance, ((metrics->width * sx) >> 16) + sxoffset);
+      //right = left + (int)(std::max<int>(metrics->x_advance, metrics->width + metrics->x_offset) * sx);
+      left += sxadvance;
     } while (*(++string));
     return right;
   }
 
 
-  std::size_t LGFXBase::drawNumber(long long_num, std::int32_t poX, std::int32_t poY)
+  std::size_t LGFXBase::drawNumber(long long_num, std::int32_t poX, std::int32_t poY, const IFont* font)
   {
     constexpr std::size_t len = 8 * sizeof(long) + 1;
     char buf[len];
-    return drawString(numberToStr(long_num, buf, len, 10), poX, poY);
+    return drawString(numberToStr(long_num, buf, len, 10), poX, poY, font);
   }
 
-  std::size_t LGFXBase::drawFloat(float floatNumber, std::uint8_t dp, std::int32_t poX, std::int32_t poY)
+  std::size_t LGFXBase::drawFloat(float floatNumber, std::uint8_t dp, std::int32_t poX, std::int32_t poY, const IFont* font)
   {
     std::size_t len = 14 + dp;
     char buf[len];
-    return drawString(floatToStr(floatNumber, buf, len, dp), poX, poY);
+    return drawString(floatToStr(floatNumber, buf, len, dp), poX, poY, font);
   }
 
-  std::size_t LGFXBase::drawChar(std::uint16_t uniCode, std::int32_t x, std::int32_t y, std::uint8_t font) {
-    if (_font == fontdata[font]) return drawChar(uniCode, x, y);
-    _filled_x = 0;
-    return fontdata[font]->drawChar(this, x, y, uniCode, &_text_style);
-  }
-
-
-  std::size_t LGFXBase::draw_string(const char *string, std::int32_t x, std::int32_t y, textdatum_t datum)
+  std::size_t LGFXBase::drawChar(std::uint16_t uniCode, std::int32_t x, std::int32_t y, std::uint8_t font)
   {
+    if (_font == fontdata[font]) return drawChar(uniCode, x, y);
+    std::int32_t dummy_filled_x = 0;
+    FontMetrics metrics;
+    fontdata[font]->getDefaultMetric(&metrics);
+    return fontdata[font]->drawChar(this, x, y, uniCode, &_text_style, &metrics, dummy_filled_x);
+  }
+
+  std::size_t LGFXBase::draw_string(const char *string, std::int32_t x, std::int32_t y, textdatum_t datum, const IFont* font)
+  {
+    auto metrics = _font_metrics;
+    if (font == nullptr)
+    {
+      font = _font;
+    }
+    else
+    if (font != _font)
+    {
+      font->getDefaultMetric(&metrics);
+    }
     std::int16_t sumX = 0;
-    std::int32_t cwidth = textWidth(string); // Find the pixel width of the string in the font
-    std::int32_t cheight = _font_metrics.height * _text_style.size_y;
+    std::int32_t cwidth = text_width(string, font, &metrics); // Find the pixel width of the string in the font
+    std::int32_t sy = 65536 * _text_style.size_y;
+    std::int32_t cheight = (metrics.height * sy) >> 16;
 
     if (string && string[0]) {
       auto tmp = string;
@@ -1806,10 +1839,14 @@ namespace lgfx
           } while (uniCode < 0x20 && *++tmp);
           if (uniCode < 0x20) break;
         }
-        //if (_font->updateFontMetric(&_font_metrics, uniCode))
+
         {
-          _font->updateFontMetric(&_font_metrics, uniCode);
-          if (_font_metrics.x_offset < 0) sumX = - _font_metrics.x_offset * _text_style.size_x;
+          font->updateFontMetric(&metrics, uniCode);
+          if (metrics.x_offset < 0)
+          {
+            std::int32_t sx = 65536 * _text_style.size_x;
+            sumX = - (metrics.x_offset * sx) >> 16;
+          }
           break;
         }
       } while (*++tmp);
@@ -1819,7 +1856,7 @@ namespace lgfx
     } else if (datum & bottom_left) {   // vertical: bottom
       y -= cheight;
     } else if (datum & baseline_left) { // vertical: baseline
-      y -= (int)(_font_metrics.baseline * _text_style.size_y);
+      y -= (metrics.baseline * sy) >> 16;
     }
 
     this->startWrite();
@@ -1846,9 +1883,9 @@ namespace lgfx
       x -= cwidth;
     }
 
-    y -= int(_font_metrics.y_offset * _text_style.size_y);
+    y -= (metrics.y_offset * sy) >> 16;
 
-    _filled_x = 0;
+    std::int32_t dummy_filled_x = 0;
     if (string && string[0]) {
       do {
         std::uint16_t uniCode = *string;
@@ -1858,8 +1895,7 @@ namespace lgfx
           } while (uniCode < 0x20 && *++string);
           if (uniCode < 0x20) break;
         }
-//          sumX += (fpDrawChar)(this, x + sumX, y, uniCode, &_text_style, _font);
-        sumX += _font->drawChar(this, x + sumX, y, uniCode, &_text_style);
+        sumX += font->drawChar(this, x + sumX, y, uniCode, &_text_style, &metrics, dummy_filled_x);
       } while (*(++string));
     }
     this->endWrite();
@@ -1870,10 +1906,11 @@ namespace lgfx
   std::size_t LGFXBase::write(std::uint8_t utf8)
   {
     if (utf8 == '\r') return 1;
+    std::int32_t sy = 65536 * _text_style.size_y;
     if (utf8 == '\n') {
       _filled_x = (_textscroll) ? this->_sx : 0;
       _cursor_x = _filled_x;
-      _cursor_y += _font_metrics.y_advance * _text_style.size_y;
+      _cursor_y += (_font_metrics.y_advance * sy) >> 16;
     } else {
       std::uint16_t uniCode = utf8;
       if (_text_style.utf8) {
@@ -1884,20 +1921,21 @@ namespace lgfx
       //if (!_font->updateFontMetric(&_font_metrics, uniCode)) return 1;
       _font->updateFontMetric(&_font_metrics, uniCode);
 
-      std::int32_t xo = _font_metrics.x_offset  * _text_style.size_x;
-      std::int32_t w  = std::max(xo + _font_metrics.width * _text_style.size_x, _font_metrics.x_advance * _text_style.size_x);
+      std::int32_t sx = 65536 * _text_style.size_x;
+      std::int32_t xo = (_font_metrics.x_offset * sx) >> 16;
+      std::int32_t w  = std::max(xo + ((_font_metrics.width * sx) >> 16), (_font_metrics.x_advance * sx) >> 16);
       if (_textscroll || _textwrap_x) {
         std::int32_t llimit = _textscroll ? this->_sx : this->_clip_l;
         std::int32_t rlimit = _textscroll ? this->_sx + this->_sw : (this->_clip_r + 1);
         if (_cursor_x + w > rlimit) {
           _filled_x = llimit;
           _cursor_x = llimit - std::min<std::int32_t>(0, xo);
-          _cursor_y += _font_metrics.y_advance * _text_style.size_y;
+          _cursor_y += (_font_metrics.y_advance * sy) >> 16;
         }
         if (_cursor_x < llimit - xo) _cursor_x = llimit - xo;
       }
 
-      std::int32_t h  = _font_metrics.height * _text_style.size_y;
+      std::int32_t h  = (_font_metrics.height * sy) >> 16;
 
       std::int32_t ydiff = 0;
       if (_text_style.datum & middle_left) {          // vertical: middle
@@ -1905,7 +1943,7 @@ namespace lgfx
       } else if (_text_style.datum & bottom_left) {   // vertical: bottom
         ydiff -= h;
       } else if (_text_style.datum & baseline_left) { // vertical: baseline
-        ydiff -= (int)(_font_metrics.baseline * _text_style.size_y);
+        ydiff -= (_font_metrics.baseline * sy) >> 16;
       }
       std::int32_t y = _cursor_y + ydiff;
 
@@ -1925,9 +1963,18 @@ namespace lgfx
         if (y < this->_clip_t) y = this->_clip_t;
       }
       _cursor_y = y - ydiff;
-      y -= int(_font_metrics.y_offset  * _text_style.size_y);
-      //_cursor_x += (fpDrawChar)(this, _cursor_x, y, uniCode, &_text_style, _font);
-      _cursor_x += _font->drawChar(this, _cursor_x, y, uniCode, &_text_style);
+      y -= (_font_metrics.y_offset * sy) >> 16;
+
+      if (y <= _clip_b)
+      {
+        _cursor_x += _font->drawChar(this, _cursor_x, y, uniCode, &_text_style, &_font_metrics, _filled_x);
+      }
+      else
+      {
+        std::int32_t sx = 65536 * _text_style.size_x;
+        _font->updateFontMetric(&_font_metrics, uniCode);
+        _cursor_x += (_font_metrics.x_advance * sx) >> 16;
+      }
     }
 
     return 1;
@@ -1996,14 +2043,6 @@ namespace lgfx
 
     font->getDefaultMetric(&_font_metrics);
 
-    //switch (font->getType()) {
-    //default:
-    //case IFont::font_type_t::ft_glcd: fpDrawChar = drawCharGLCD;  break;
-    //case IFont::font_type_t::ft_bmp:  fpDrawChar = drawCharBMP;   break;
-    //case IFont::font_type_t::ft_rle:  fpDrawChar = drawCharRLE;   break;
-    //case IFont::font_type_t::ft_bdf:  fpDrawChar = drawCharBDF;   break;
-    //case IFont::font_type_t::ft_gfx:  fpDrawChar = drawCharGFXFF; break;
-    //}
   }
 
   /// load VLW font

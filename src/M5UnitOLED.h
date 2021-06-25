@@ -1,3 +1,4 @@
+
 #pragma once
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
@@ -17,6 +18,7 @@
  static constexpr std::uint8_t M5_UNIT_OLED_SCL = 22;
 #endif
 static constexpr std::uint8_t M5_UNIT_OLED_ADDR = 0x3C;
+static constexpr std::uint32_t M5_UNIT_OLED_FREQ = 400000;
 
 class M5UnitOLED : public lgfx::LGFX_Device
 {
@@ -25,19 +27,19 @@ class M5UnitOLED : public lgfx::LGFX_Device
 
 public:
 
-  M5UnitOLED(std::uint8_t pin_sda = M5_UNIT_OLED_SDA, std::uint8_t pin_scl = M5_UNIT_OLED_SCL, std::uint32_t i2c_freq = 400000, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
+  M5UnitOLED(std::uint8_t pin_sda = M5_UNIT_OLED_SDA, std::uint8_t pin_scl = M5_UNIT_OLED_SCL, std::uint32_t i2c_freq = M5_UNIT_OLED_FREQ, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
   {
     setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
   }
 
   using lgfx::LGFX_Device::init;
-  bool init(std::uint8_t pin_sda, std::uint8_t pin_scl, std::uint32_t i2c_freq = 400000, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
+  bool init(std::uint8_t pin_sda, std::uint8_t pin_scl, std::uint32_t i2c_freq = M5_UNIT_OLED_FREQ, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
   {
     setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
     return init();
   }
 
-  void setup(std::uint8_t pin_sda = M5_UNIT_OLED_SDA, std::uint8_t pin_scl = M5_UNIT_OLED_SCL, std::uint32_t i2c_freq = 400000, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
+  void setup(std::uint8_t pin_sda = M5_UNIT_OLED_SDA, std::uint8_t pin_scl = M5_UNIT_OLED_SCL, std::uint32_t i2c_freq = M5_UNIT_OLED_FREQ, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
   {
     if (i2c_port < 0)
     {

@@ -565,12 +565,21 @@ if (bytelen != rleDecode(dest, res, bytes)*bytes) {
     } while (--h);
     _raw_color = ~0u;
   }
-//*/
-/*
+
   void Panel_M5UnitLCD::writeImageARGB(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, pixelcopy_t* param)
   {
+    _set_window(x, y, x + w - 1, y);
+    auto buf = (std::uint32_t*)param->src_data;
+    if (!_check_repeat(CMD_WRITE_RAW_32))
+    {
+      writeCommand(CMD_WRITE_RAW_32, 1);
+    }
+    for (std::size_t i = 0; i < w; ++i)
+    {
+      _bus->writeCommand(__builtin_bswap32(buf[i]), 32);
+    }
+    _raw_color = ~0u;
   }
-//*/
 
   void Panel_M5UnitLCD::readRect(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, void* dst, pixelcopy_t* param)
   {

@@ -18,10 +18,18 @@ Contributors:
 #pragma once
 
 #include "../../misc/DataWrapper.hpp"
+#include "../../misc/enum.hpp"
+#include "../../../utility/result.hpp"
 
 #include <malloc.h>
 
-#include <Arduino.h>
+#if defined ( ARDUINO )
+
+ #include <sam.h>
+ #include <delay.h>
+ #include <Arduino.h>
+
+#endif
 
 namespace lgfx
 {
@@ -29,24 +37,25 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-  namespace stm32
+  namespace samd21
   {
-    static constexpr int PORT_SHIFT = 4;
+    static constexpr int PORT_SHIFT = 5;
+    static constexpr int PIN_MASK = (1 << PORT_SHIFT) - 1;
     enum pin_port
     {
       PORT_A =  0 << PORT_SHIFT,
       PORT_B =  1 << PORT_SHIFT,
-      PORT_C =  2 << PORT_SHIFT,
-      PORT_D =  3 << PORT_SHIFT,
-      PORT_E =  4 << PORT_SHIFT,
-      PORT_F =  5 << PORT_SHIFT,
-      PORT_G =  6 << PORT_SHIFT,
-      PORT_H =  7 << PORT_SHIFT,
-      PORT_I =  8 << PORT_SHIFT,
-      PORT_J =  9 << PORT_SHIFT,
-      PORT_K = 10 << PORT_SHIFT,
     };
+
+    struct sercom_data_t {
+      std::uintptr_t sercomPtr;
+      uint8_t   clock;
+      IRQn_Type irqn;
+    };
+    const sercom_data_t* getSercomData(std::size_t sercom_number);
   }
+
+#if defined ( ARDUINO )
 
   __attribute__ ((unused))
   static inline unsigned long millis(void)
@@ -69,26 +78,40 @@ namespace lgfx
     ::delayMicroseconds(us);
   }
 
+#else
+
+  static inline void delay(std::size_t milliseconds)
+  {
+    vTaskDelay(pdMS_TO_TICKS(milliseconds));
+  }
+
+  static void delayMicroseconds(unsigned int us)
+  {
+    uint32_t start, elapsed;
+    uint32_t count;
+
+    if (us == 0)
+      return;
+
+    count = us * (VARIANT_MCK / 1000000) - 20;  // convert us to cycles.
+    start = DWT->CYCCNT;  //CYCCNT is 32bits, takes 37s or so to wrap.
+    while (1) {
+      elapsed = DWT->CYCCNT - start;
+      if (elapsed >= count)
+        return;
+    }
+  }
+
+#endif
+
   static inline void* heap_alloc(      size_t length) { return malloc(length); }
   static inline void* heap_alloc_psram(size_t length) { return malloc(length); }
   static inline void* heap_alloc_dma(  size_t length) { return memalign(16, length); }
   static inline void heap_free(void* buf) { free(buf); }
 
-  static inline volatile std::uint32_t* get_gpio_out_reg(std::int_fast8_t pin)
-  {
-    static constexpr std::size_t _offset_bsrr = 0x18;
-    return (volatile uint32_t*)( AHB1PERIPH_BASE + _offset_bsrr + (0x0400UL * ((pin >> 4)&0x0F)));
-  }
-
-  static inline volatile std::uint32_t* get_gpio_in_reg(std::int_fast8_t pin)
-  {
-    static constexpr std::size_t _offset_idr = 0x10;
-    return (volatile uint32_t*)( AHB1PERIPH_BASE + _offset_idr + (0x0400UL * ((pin >> 4)&0x0F)));
-  }
-
-  static inline void gpio_hi(std::int_fast8_t pin) { if (pin >= 0) *get_gpio_out_reg(pin) = 1ul <<  (pin & 15); }
-  static inline void gpio_lo(std::int_fast8_t pin) { if (pin >= 0) *get_gpio_out_reg(pin) = 1ul << ((pin & 15) + 16); }
-  static inline bool gpio_in(std::int_fast8_t pin) {         return *get_gpio_in_reg(pin) & (1ul << (pin & 0x0F));  }
+  static inline void gpio_hi(std::uint32_t pin) { if (pin > 255) return;              PORT->Group[pin >> samd21::PORT_SHIFT].OUTSET.reg = (1ul << (pin & samd21::PIN_MASK)); }
+  static inline void gpio_lo(std::uint32_t pin) { if (pin > 255) return;              PORT->Group[pin >> samd21::PORT_SHIFT].OUTCLR.reg = (1ul << (pin & samd21::PIN_MASK)); }
+  static inline bool gpio_in(std::uint32_t pin) { if (pin > 255) return false; return PORT->Group[pin >> samd21::PORT_SHIFT].IN.reg     & (1ul << (pin & samd21::PIN_MASK)); }
 
   enum pin_mode_t
   { output
@@ -102,6 +125,7 @@ namespace lgfx
   {
     pinMode(pin, mode);
   }
+  void pinAssignPeriph(int pin_and_port, int type = PIO_SERCOM);
 
 //----------------------------------------------------------------------------
   struct FileWrapper : public DataWrapper
@@ -141,7 +165,7 @@ namespace lgfx
     void skip(std::int32_t offset) override { seek(offset, SeekCur); }
     bool seek(std::uint32_t offset) override { return seek(offset, SeekSet); }
     bool seek(std::uint32_t offset, SeekMode mode) { return _fp->seek(offset, mode); }
-    void close() override { _fp->close(); }
+    void close(void) override { if (_fp) _fp->close(); }
     std::int32_t tell(void) override { return _fp->position(); }
 
 #else  // dummy.

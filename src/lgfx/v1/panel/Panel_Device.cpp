@@ -93,6 +93,11 @@ namespace lgfx
     return _bus->busy();
   }
 
+  void Panel_Device::display(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h)
+  {
+    _bus->flush();
+  }
+
   void Panel_Device::writeCommand(std::uint32_t data, std::uint_fast8_t length)
   {
     if (_cfg.dlen_16bit)
@@ -140,17 +145,18 @@ namespace lgfx
   {
     for (;;)
     {                // For each command...
-      if (*reinterpret_cast<const std::uint16_t*>(addr) == 0xFFFF) break;
-      writeCommand(*addr++, 1);  // Read, issue command
-      std::uint_fast8_t numArgs = *addr++;  // Number of args to follow
-      std::uint_fast8_t ms = numArgs & CMD_INIT_DELAY;       // If hibit set, delay follows args
-      numArgs &= ~CMD_INIT_DELAY;          // Mask out delay bit
-      if (numArgs)
+      std::uint8_t cmd = *addr++;
+      std::uint8_t num = *addr++;   // Number of args to follow
+      if (cmd == 0xFF && num == 0xFF) break;
+      writeCommand(cmd, 1);  // Read, issue command
+      std::uint_fast8_t ms = num & CMD_INIT_DELAY;       // If hibit set, delay follows args
+      num &= ~CMD_INIT_DELAY;          // Mask out delay bit
+      if (num)
       {
         do
         {                   // For each argument...
           writeData(*addr++, 1);  // Read, issue argument
-        } while (--numArgs);
+        } while (--num);
       }
       if (ms)
       {
