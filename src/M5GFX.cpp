@@ -644,7 +644,7 @@ namespace m5gfx
         // AXP192_IO1  = TP RST (Tough)
         if (use_reset) lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x96, 0, ~0x02, axp_i2c_freq); // GPIO4 LOW (LCD RST)
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x28, 0xF0, ~0, axp_i2c_freq);   // set LDO2 3300mv // LCD PWR
-          lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x12, 0x04, ~0, axp_i2c_freq);   // LDO2 enable
+        lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x12, 0x04, ~0, axp_i2c_freq);   // LDO2 enable
         lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x96, 0x02, ~0, axp_i2c_freq);   // GPIO4 HIGH (LCD RST)
 
         ets_delay_us(128); // AXP 起動後、LCDがアクセス可能になるまで少し待機
@@ -697,14 +697,14 @@ namespace m5gfx
           }
           else
           {
-            p->setRotation(0);
-            _set_backlight(new Light_M5StackTough());
             // AXP192のGPIO1 = タッチコントローラRST
             lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x92, 0, 0xF8, axp_i2c_freq);   // GPIO1 OpenDrain
             lgfx::i2c::registerWrite8(axp_i2c_port, axp_i2c_addr, 0x94, 0, ~0x02, axp_i2c_freq);  // GPIO1 LOW  (TOUCH RST)
 
             ESP_LOGW(LIBRARY_NAME, "[Autodetect] M5Tough");
             board = board_t::board_M5Tough;
+
+            _set_backlight(new Light_M5StackTough());
 
             auto t = new Touch_M5Tough();
             _touch_last = t;
