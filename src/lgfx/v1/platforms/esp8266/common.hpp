@@ -21,11 +21,11 @@ Contributors:
 #include "../../misc/enum.hpp"
 #include "../../../utility/result.hpp"
 
-#include <cstdint>
+#include <malloc.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <driver/gpio.h>
+#if defined ( ARDUINO )
+ #include <Arduino.h>
+#endif
 
 namespace lgfx
 {
@@ -33,28 +33,51 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-  __attribute__ ((unused)) static inline unsigned long millis(void) { return (unsigned long) (esp_timer_get_time() / 1000ULL); }
-  __attribute__ ((unused)) static inline unsigned long micros(void) { return (unsigned long) (esp_timer_get_time()); }
-  __attribute__ ((unused)) static inline void delayMicroseconds(std::uint32_t us) { ets_delay_us(us); }
-  __attribute__ ((unused)) static inline void delay(std::uint32_t ms)
+#if defined ( ARDUINO )
+  __attribute__ ((unused))
+  static inline unsigned long millis(void)
   {
-    std::uint32_t time = micros();
-    vTaskDelay( std::max<std::uint32_t>(2u, ms / portTICK_PERIOD_MS) - 1 );
-    if (ms != 0 && ms < portTICK_PERIOD_MS*8)
-    {
-      ms *= 1000;
-      time = micros() - time;
-      if (time < ms)
-      {
-        ets_delay_us(ms - time);
-      }
-    }
+    return ::millis();
+  }
+  __attribute__ ((unused))
+  static inline unsigned long micros(void)
+  {
+    return ::micros();
+  }
+  __attribute__ ((unused))
+  static inline void delay(unsigned long milliseconds)
+  {
+    ::delay(milliseconds);
   }
 
-  static inline void* heap_alloc(      size_t length) { return heap_caps_malloc(length, MALLOC_CAP_8BIT);  }
-  static inline void* heap_alloc_dma(  size_t length) { return heap_caps_malloc((length + 3) & ~3, MALLOC_CAP_DMA);  }
-  static inline void* heap_alloc_psram(size_t length) { return heap_caps_malloc(length, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);  }
-  static inline void heap_free(void* buf) { heap_caps_free(buf); }
+#else
+
+  unsigned long millis(void);
+  unsigned long micros(void);
+  void delay(unsigned long ms);
+
+#endif
+
+  __attribute__ ((unused))
+  static void delayMicroseconds(unsigned int us)
+  {
+    ets_delay_us(us);
+  }
+
+  static inline void* heap_alloc(      size_t length) { return malloc(length); }
+  static inline void* heap_alloc_psram(size_t length) { return malloc(length); }
+  static inline void* heap_alloc_dma(  size_t length) { return malloc(length); } // aligned_alloc(16, length);
+  static inline void heap_free(void* buf) { free(buf); }
+
+  static inline void gpio_hi(std::int_fast8_t pin) { if (pin & 16) { if (pin == 16) *(volatile uint32_t*)(0x60000768) |=  1; } else { *(volatile uint32_t*)(0x60000304) = 1 << (pin & 15); } }
+  static inline void gpio_lo(std::int_fast8_t pin) { if (pin & 16) { if (pin == 16) *(volatile uint32_t*)(0x60000768) &= ~1; } else { *(volatile uint32_t*)(0x60000308) = 1 << (pin & 15); } }
+  static inline bool gpio_in(std::int_fast8_t pin)
+  {
+    return *(volatile uint32_t*)((pin & 16)
+         ? 0x6000078C // GP16I
+         : 0x60000318 // GPI
+         ) & (1 << (pin & 15));
+  }
 
   enum pin_mode_t
   { output
@@ -68,17 +91,6 @@ namespace lgfx
   {
     pinMode(pin, mode);
   }
-
-  static inline volatile std::uint32_t* get_gpio_hi_reg(std::int_fast8_t pin) { return (pin & 32) ? &GPIO.out1_w1ts.val : &GPIO.out_w1ts; }
-//static inline volatile std::uint32_t* get_gpio_hi_reg(std::int_fast8_t pin) { return (volatile uint32_t*)((pin & 32) ? 0x60004014 : 0x60004008) ; } // workaround Eratta
-  static inline volatile std::uint32_t* get_gpio_lo_reg(std::int_fast8_t pin) { return (pin & 32) ? &GPIO.out1_w1tc.val : &GPIO.out_w1tc; }
-//static inline volatile std::uint32_t* get_gpio_lo_reg(std::int_fast8_t pin) { return (volatile uint32_t*)((pin & 32) ? 0x60004018 : 0x6000400C) ; }
-  static inline void gpio_hi(std::int_fast8_t pin) { if (pin >= 0) *get_gpio_hi_reg(pin) = 1 << (pin & 31); } // ESP_LOGI("LGFX", "gpio_hi: %d", pin); }
-  static inline void gpio_lo(std::int_fast8_t pin) { if (pin >= 0) *get_gpio_lo_reg(pin) = 1 << (pin & 31); } // ESP_LOGI("LGFX", "gpio_lo: %d", pin); }
-  static inline bool gpio_in(std::int_fast8_t pin) { return ((pin & 32) ? GPIO.in1.data : GPIO.in) & (1 << (pin & 31)); }
-
-  std::uint32_t getApbFrequency(void);
-  std::uint32_t FreqToClockDiv(std::uint32_t fapb, std::uint32_t hz);
 
 //----------------------------------------------------------------------------
 
@@ -187,7 +199,7 @@ public:
 
   struct StreamWrapper : public DataWrapper
   {
-    void set(Stream* src, std::uint32_t length = ~0) { _stream = src; _length = length; _index = 0; }
+    void set(Stream* src, std::uint32_t length = ~0u) { _stream = src; _length = length; _index = 0; }
 
     int read(std::uint8_t *buf, std::uint32_t len) override {
       len = std::min<std::uint32_t>(len, _stream->available());
@@ -207,14 +219,6 @@ public:
   };
 
 #endif
-
-//----------------------------------------------------------------------------
-
-  namespace spi
-  {
-    cpp::result<void, error_t> init(int spi_host, int spi_sclk, int spi_miso, int spi_mosi, int dma_channel);
-    void beginTransaction(int spi_host);
-  }
 
 //----------------------------------------------------------------------------
  }

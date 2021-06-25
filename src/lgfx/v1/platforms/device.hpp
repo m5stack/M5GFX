@@ -24,6 +24,15 @@ Contributors:
 #include "esp32/Bus_I2C.hpp"
 #include "esp32/Bus_Parallel8.hpp"
 
+#elif defined ( ESP8266 )
+
+#include "esp8266/Bus_SPI.hpp"
+
+#elif defined (__SAMD21__)
+
+#include "samd21/Bus_SPI.hpp"
+#include "samd21/Bus_I2C.hpp"
+
 #elif defined (__SAMD51__)
 
 #include "samd51/Bus_SPI.hpp"
