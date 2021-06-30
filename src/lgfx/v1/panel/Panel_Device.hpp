@@ -129,9 +129,9 @@ namespace lgfx
     void touch(ITouch* touch) { setTouch(touch); }
     ITouch* getTouch(void) const { return _touch; }
     ITouch* touch(void) const { return _touch; }
-    std::uint_fast8_t getTouchRaw(touch_point_t* tp, std::int_fast8_t number);
-    std::uint_fast8_t getTouch(touch_point_t* tp, std::int_fast8_t number);
-    void convertRawXY(std::int32_t *x, std::int32_t *y);
+    std::uint_fast8_t getTouchRaw(touch_point_t* tp, std::uint_fast8_t count);
+    std::uint_fast8_t getTouch(touch_point_t* tp, std::uint_fast8_t count);
+    void convertRawXY(touch_point_t *tp, std::uint_fast8_t count);
     void touchCalibrate(void);
     void setCalibrateAffine(float affine[6]);
     void setCalibrate(std::uint16_t *parameters);
@@ -147,6 +147,7 @@ namespace lgfx
 
     void writeCommand(std::uint32_t data, std::uint_fast8_t length) override;
     void writeData(std::uint32_t data, std::uint_fast8_t length) override;
+    //void writePixelsDMA(const std::uint8_t* data, std::uint32_t length) override;
     void writeImageARGB(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, pixelcopy_t* param) override;
     void copyRect(std::uint_fast16_t dst_x, std::uint_fast16_t dst_y, std::uint_fast16_t w, std::uint_fast16_t h, std::uint_fast16_t src_x, std::uint_fast16_t src_y) override;
 
@@ -239,7 +240,7 @@ namespace lgfx
     void writeFillRectPreclipped(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, std::uint32_t rawcolor) override {}
     void writeImage(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, pixelcopy_t* param, bool use_dma) override {}
     void writeImageARGB(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, pixelcopy_t* param) override {}
-    void writePixels(pixelcopy_t* param, std::uint32_t len) override {}
+    void writePixels(pixelcopy_t* param, std::uint32_t len, bool use_dma) override {}
 
     std::uint32_t readCommand(std::uint_fast8_t cmd, std::uint_fast8_t index = 0, std::uint_fast8_t length = 4) override { return 0; }
     std::uint32_t readData(std::uint_fast8_t index = 0, std::uint_fast8_t length = 4) override { return 0; }
