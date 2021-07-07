@@ -33,6 +33,7 @@
 
 namespace m5gfx
 {
+  using namespace lgfx;
 //----------------------------------------------------------------------------
 
   namespace ili9341_colors  // Color definitions for backwards compatibility with old sketches

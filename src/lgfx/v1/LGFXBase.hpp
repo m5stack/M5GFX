@@ -65,7 +65,7 @@ namespace lgfx
     LGFX_INLINE_T void setColor(T color) { setRawColor(_write_conv.convert(color)); }
     LGFX_INLINE   void setRawColor(std::uint32_t c) { *((std::uint32_t*)&_color) = c; }
     LGFX_INLINE   std::uint32_t getRawColor(void) const { return *((std::uint32_t*)&_color); }
-    LGFX_INLINE_T void setBaseColor(T c) { _base_rgb888 = convert_to_rgb888(c); }
+    LGFX_INLINE_T void setBaseColor(T c) { _base_rgb888 = hasPalette() ? c : convert_to_rgb888(c); }
     LGFX_INLINE   std::uint32_t getBaseColor(void) const { return _base_rgb888; }
     LGFX_INLINE   color_conv_t* getColorConverter(void) { return &_write_conv; }
     LGFX_INLINE   color_depth_t getColorDepth(void) const { return _write_conv.depth; }
@@ -182,13 +182,21 @@ namespace lgfx
 
     LGFX_INLINE_T void setScrollRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, const T& color) { setBaseColor(color); setScrollRect(x, y, w, h); }
 
-    LGFX_INLINE_T void writePixels(const T *data, std::int32_t len)                        { auto pc = create_pc_fast(data      ); _panel->writePixels(&pc, len); }
-    LGFX_INLINE   void writePixels(const std::uint16_t* data, std::int32_t len, bool swap) { auto pc = create_pc_fast(data, swap); _panel->writePixels(&pc, len); }
-    LGFX_INLINE   void writePixels(const void*          data, std::int32_t len, bool swap) { auto pc = create_pc_fast(data, swap); _panel->writePixels(&pc, len); }
+    LGFX_INLINE_T void writePixels(const T *data, std::int32_t len)                        { auto pc = create_pc_fast(data      ); _panel->writePixels(&pc, len, false); }
+    LGFX_INLINE   void writePixels(const std::uint16_t* data, std::int32_t len, bool swap) { auto pc = create_pc_fast(data, swap); _panel->writePixels(&pc, len, false); }
+    LGFX_INLINE   void writePixels(const void*          data, std::int32_t len, bool swap) { auto pc = create_pc_fast(data, swap); _panel->writePixels(&pc, len, false); }
+
+    LGFX_INLINE_T void writePixelsDMA(const T *data, std::int32_t len)                        { auto pc = create_pc_fast(data      ); _panel->writePixels(&pc, len, true); }
+    LGFX_INLINE   void writePixelsDMA(const std::uint16_t* data, std::int32_t len, bool swap) { auto pc = create_pc_fast(data, swap); _panel->writePixels(&pc, len, true); }
+    LGFX_INLINE   void writePixelsDMA(const void*          data, std::int32_t len, bool swap) { auto pc = create_pc_fast(data, swap); _panel->writePixels(&pc, len, true); }
 
     LGFX_INLINE_T void pushPixels(T*                   data, std::int32_t len           ) { startWrite(); writePixels(data, len      ); endWrite(); }
     LGFX_INLINE   void pushPixels(const std::uint16_t* data, std::int32_t len, bool swap) { startWrite(); writePixels(data, len, swap); endWrite(); }
     LGFX_INLINE   void pushPixels(const void*          data, std::int32_t len, bool swap) { startWrite(); writePixels(data, len, swap); endWrite(); }
+
+    LGFX_INLINE_T void pushPixelsDMA(T*                   data, std::int32_t len           ) { startWrite(); writePixelsDMA(data, len      ); endWrite(); }
+    LGFX_INLINE   void pushPixelsDMA(const std::uint16_t* data, std::int32_t len, bool swap) { startWrite(); writePixelsDMA(data, len, swap); endWrite(); }
+    LGFX_INLINE   void pushPixelsDMA(const void*          data, std::int32_t len, bool swap) { startWrite(); writePixelsDMA(data, len, swap); endWrite(); }
 
     template<typename TFunc>
     void effect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, TFunc&& effector)
@@ -596,7 +604,7 @@ namespace lgfx
     void unloadFont(void);
 
     /// show VLW font
-    void showFont(std::uint32_t td);
+    void showFont(std::uint32_t td = 2000);
 
     void cp437(bool enable = true) { _text_style.cp437 = enable; }  // AdafruitGFX compatible.
 
@@ -1141,41 +1149,41 @@ namespace lgfx
     inline std::uint8_t getBrightness(void) const { return _brightness; }
 
     inline ITouch* touch(void) const { return _panel ? panel()->touch() : nullptr; }
-    inline void convertRawXY(std::int32_t *x, std::int32_t *y) { panel()->convertRawXY(x, y); }
-    std::uint_fast8_t getTouchRaw(touch_point_t *tp, std::uint_fast8_t number = 0) { return panel()->getTouchRaw(tp, number); }
-    std::uint_fast8_t getTouch(touch_point_t *tp, std::uint_fast8_t number = 0) { return panel()->getTouch(tp, number); }
-    touch_point_t getTouch(std::int_fast8_t number = 0)
-    {
-      touch_point_t res;
-      getTouch(&res, number);
-      return res;
-    }
+    inline std::uint_fast8_t getTouchRaw(touch_point_t *tp, std::uint_fast8_t count = 1) { return panel()->getTouchRaw(tp, count); }
+    inline std::uint_fast8_t getTouch(touch_point_t *tp, std::uint_fast8_t count = 1) { return panel()->getTouch(tp, count); }
+    inline void convertRawXY(touch_point_t *tp, std::uint_fast8_t count = 1) { panel()->convertRawXY(tp, count); }
 
-    std::uint_fast8_t getTouchRaw(std::int32_t *x = nullptr, std::int32_t *y = nullptr, std::uint_fast8_t number = 0)
+    template <typename T>
+    std::uint_fast8_t getTouchRaw(T *x, T *y, std::uint_fast8_t index = 0)
     {
-      touch_point_t tp;
-      auto res = getTouchRaw(&tp, number);
-      if (x) *x = tp.x;
-      if (y) *y = tp.y;
-      return res;
+      touch_point_t tp[index + 1];
+      auto count = getTouchRaw(tp, index + 1);
+      if (index >= count) return 0;
+      if (x) *x = tp[index].x;
+      if (y) *y = tp[index].y;
+      return index;
     }
 
     template <typename T>
-    std::uint_fast8_t getTouch(T *x, T *y, std::uint_fast8_t number = 0)
+    std::uint_fast8_t getTouch(T *x, T *y, std::uint_fast8_t index = 0)
     {
-      touch_point_t tp;
-      auto res = getTouch(&tp, number);
-      if (x) *x = tp.x;
-      if (y) *y = tp.y;
-      return res;
+      touch_point_t tp[index + 1];
+      auto count = getTouch(tp, index + 1);
+      if (index >= count) return 0;
+      if (x) *x = tp[index].x;
+      if (y) *y = tp[index].y;
+      return index;
     }
 
-    void convertRawXY(std::uint16_t *x, std::uint16_t *y)
+    template <typename T>
+    void convertRawXY(T *x, T *y)
     {
-      std::int32_t tx = *x, ty = *y;
-      convertRawXY(&tx, &ty);
-      *x = tx;
-      *y = ty;
+      touch_point_t tp;
+      tp.x = *x;
+      tp.y = *y;
+      panel()->convertRawXY(&tp, 1);
+      *x = tp.x;
+      *y = tp.y;
     }
 
     /// This requires a uint16_t array with 8 elements. ( or nullptr )
