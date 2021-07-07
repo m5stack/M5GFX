@@ -6,6 +6,7 @@ M5GFX display;
 void setup(void)
 {
   display.init();
+  display.setFont(&fonts::Font4);
 
   if (!display.touch())
   {
@@ -22,12 +23,27 @@ void loop(void)
   static bool drawed = false;
   lgfx::touch_point_t tp[3];
 
-  int nums = display.getTouch(tp, 3);
+  int nums = display.getTouchRaw(tp, 3);
   if (nums)
   {
     for (int i = 0; i < nums; ++i)
     {
-      display.setColor(display.isEPD() ? TFT_BLACK : TFT_WHITE);
+      display.setCursor(16, 16 + i * 24);
+      display.printf("Raw X:%03d  Y:%03d", tp[i].x, tp[i].y);
+    }
+
+    display.convertRawXY(tp, nums);
+
+    for (int i = 0; i < nums; ++i)
+    {
+      display.setCursor(16, 128 + i * 24);
+      display.printf("Convert X:%03d  Y:%03d", tp[i].x, tp[i].y);
+    }
+    display.display();
+
+    display.setColor(display.isEPD() ? TFT_BLACK : TFT_WHITE);
+    for (int i = 0; i < nums; ++i)
+    {
       int s = tp[i].size + 3;
       switch (tp[i].id)
       {
@@ -53,5 +69,5 @@ void loop(void)
     display.clear();
     display.display();
   }
-  delay(1);
+  vTaskDelay(1);
 }
