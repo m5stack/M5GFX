@@ -19,6 +19,7 @@ Contributors:
 
 #include <cstdint>
 #include <memory>
+#include <alloca.h>
 
 #include "misc/enum.hpp"
 #include "misc/pixelcopy.hpp"
@@ -73,7 +74,7 @@ namespace lgfx
     virtual void beginTransaction(void) = 0;
     virtual void endTransaction(void) = 0;
 
-    virtual void setBrightness(std::uint8_t brightness) {};
+    virtual void setBrightness(__attribute__((unused)) std::uint8_t brightness) {};
 
     virtual color_depth_t setColorDepth(color_depth_t depth) = 0;
 
@@ -116,7 +117,7 @@ namespace lgfx
     void effect(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, TFunc&& effector)
     {
       auto ye = y + h;
-      RGBColor buf[w];
+      auto buf = (RGBColor*)alloca(w * sizeof(RGBColor));
       pixelcopy_t pc_write(buf    ,_write_depth, RGBColor::depth, false);
       pixelcopy_t pc_read( nullptr, RGBColor::depth, _read_depth, false);
       startWrite();

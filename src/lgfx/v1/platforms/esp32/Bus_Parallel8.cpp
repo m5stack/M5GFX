@@ -15,12 +15,15 @@ Contributors:
  [mongonta0716](https://github.com/mongonta0716)
  [tobozo](https://github.com/tobozo)
 /----------------------------------------------------------------------------*/
-#if defined (ESP32) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S2) || defined (ESP_PLATFORM)
+#if defined (ESP_PLATFORM)
+#include <sdkconfig.h>
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
 #include "Bus_Parallel8.hpp"
 #include "../../misc/pixelcopy.hpp"
 
 #include <soc/dport_reg.h>
+#include <soc/i2s_struct.h>
 
 namespace lgfx
 {
@@ -45,11 +48,20 @@ namespace lgfx
 
   static __attribute__ ((always_inline)) inline volatile std::uint32_t* reg(std::uint32_t addr) { return (volatile std::uint32_t *)ETS_UNCACHED_ADDR(addr); }
 
+  static i2s_dev_t* getDev(i2s_port_t port)
+  {
+#if defined (CONFIG_IDF_TARGET_ESP32S2)
+    return &I2S0;
+#else
+    return (port == 0) ? &I2S0 : &I2S1;
+#endif
+  }
+
   void Bus_Parallel8::config(const config_t& cfg)
   {
     _cfg = cfg;
     auto port = cfg.i2s_port;
-    _dev = (port == 0) ? &I2S0 : &I2S1;
+    _dev = getDev(port);
 
     _i2s_fifo_wr_reg = reg(SAFE_I2S_FIFO_WR_REG(port));
     
@@ -107,7 +119,11 @@ namespace lgfx
     gpio_set_direction((gpio_num_t)_cfg.pin_wr, GPIO_MODE_OUTPUT);
     gpio_set_direction((gpio_num_t)_cfg.pin_rs, GPIO_MODE_OUTPUT);
 
+#if defined (CONFIG_IDF_TARGET_ESP32S2)
+    auto idx_base = I2S0O_DATA_OUT8_IDX;
+#else
     auto idx_base = (_cfg.i2s_port == I2S_NUM_0) ? I2S0O_DATA_OUT8_IDX : I2S1O_DATA_OUT8_IDX;
+#endif
     gpio_matrix_out(_cfg.pin_rs, idx_base + 8, 0, 0);
     gpio_matrix_out(_cfg.pin_d7, idx_base + 7, 0, 0);
     gpio_matrix_out(_cfg.pin_d6, idx_base + 6, 0, 0);
@@ -125,11 +141,15 @@ namespace lgfx
       idx_base = I2S0O_WS_OUT_IDX;
       dport_clk_en = DPORT_I2S0_CLK_EN;
       dport_rst = DPORT_I2S0_RST;
-    } else {
+    }
+#if !defined (CONFIG_IDF_TARGET_ESP32S2)
+    else
+    {
       idx_base = I2S1O_WS_OUT_IDX;
       dport_clk_en = DPORT_I2S1_CLK_EN;
       dport_rst = DPORT_I2S1_RST;
     }
+#endif
     gpio_matrix_out(_cfg.pin_wr, idx_base, 1, 0); // WR (Write-strobe in 8080 mode, Active-low)
 
     DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, dport_clk_en);
@@ -604,4 +624,5 @@ namespace lgfx
  }
 }
 
+#endif
 #endif
