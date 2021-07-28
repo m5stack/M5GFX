@@ -35,7 +35,7 @@ namespace lgfx
 
     startWrite(true);
 
-    for (std::uint8_t i = 0; auto cmds = getInitCommands(i); i++)
+    for (uint8_t i = 0; auto cmds = getInitCommands(i); i++)
     {
       command_list(cmds);
     }
@@ -112,7 +112,7 @@ namespace lgfx
 
     return _write_depth;
   }
-  void Panel_LCD::setRotation(std::uint_fast8_t r)
+  void Panel_LCD::setRotation(uint_fast8_t r)
   {
     r &= 7;
     _rotation = r;
@@ -157,7 +157,7 @@ namespace lgfx
     }
   }
 
-  void Panel_LCD::write_command(std::uint32_t data)
+  void Panel_LCD::write_command(uint32_t data)
   {
     if (!_cfg.dlen_16bit)
     {
@@ -174,7 +174,7 @@ namespace lgfx
     }
   }
 
-  std::uint32_t Panel_LCD::readCommand(std::uint_fast8_t cmd, std::uint_fast8_t index, std::uint_fast8_t len)
+  uint32_t Panel_LCD::readCommand(uint_fast8_t cmd, uint_fast8_t index, uint_fast8_t len)
   {
     startWrite();
     write_command(cmd);
@@ -185,7 +185,7 @@ namespace lgfx
     return res;
   }
 
-  std::uint32_t Panel_LCD::readData(std::uint_fast8_t index, std::uint_fast8_t len)
+  uint32_t Panel_LCD::readData(uint_fast8_t index, uint_fast8_t len)
   {
     startWrite();
     auto res = read_bits(index << 3, len << 3);
@@ -194,7 +194,7 @@ namespace lgfx
     return res;
   }
 
-  std::uint32_t Panel_LCD::read_bits(std::uint_fast8_t bit_index, std::uint_fast8_t bit_len)
+  uint32_t Panel_LCD::read_bits(uint_fast8_t bit_index, uint_fast8_t bit_len)
   {
     _bus->beginRead();
     if (bit_index) { _bus->readData(bit_index); } // dummy read
@@ -204,7 +204,7 @@ namespace lgfx
     return res;
   }
 
-  void Panel_LCD::setWindow(std::uint_fast16_t xs, std::uint_fast16_t ys, std::uint_fast16_t xe, std::uint_fast16_t ye)
+  void Panel_LCD::setWindow(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye)
   {
     if (!_cfg.dlen_16bit)
     {
@@ -216,7 +216,7 @@ namespace lgfx
     }
   }
 
-  void Panel_LCD::drawPixelPreclipped(std::uint_fast16_t x, std::uint_fast16_t y, std::uint32_t rawcolor)
+  void Panel_LCD::drawPixelPreclipped(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor)
   {
     bool tr = _in_transaction;
     if (!tr) begin_transaction();
@@ -228,18 +228,18 @@ namespace lgfx
     if (!tr) end_transaction();
   }
 
-  void Panel_LCD::writeFillRectPreclipped(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, std::uint32_t rawcolor)
+  void Panel_LCD::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)
   {
-    std::uint32_t len = w * h;
-    std::uint_fast16_t xe = w + x - 1;
-    std::uint_fast16_t ye = y + h - 1;
+    uint32_t len = w * h;
+    uint_fast16_t xe = w + x - 1;
+    uint_fast16_t ye = y + h - 1;
 
     setWindow(x,y,xe,ye);
     if (_cfg.dlen_16bit) { _align_data = (_write_bits & 15) && (len & 1); }
     _bus->writeDataRepeat(rawcolor, _write_bits, len);
   }
 
-  void Panel_LCD::writeBlock(std::uint32_t rawcolor, std::uint32_t len)
+  void Panel_LCD::writeBlock(uint32_t rawcolor, uint32_t len)
   {
     _bus->writeDataRepeat(rawcolor, _write_bits, len);
     if (_cfg.dlen_16bit && (_write_bits & 15) && (len & 1))
@@ -248,11 +248,11 @@ namespace lgfx
     }
   }
 
-  void Panel_LCD::writePixels(pixelcopy_t* param, std::uint32_t len, bool use_dma)
+  void Panel_LCD::writePixels(pixelcopy_t* param, uint32_t len, bool use_dma)
   {
     if (param->no_convert)
     {
-      _bus->writeBytes(reinterpret_cast<const std::uint8_t*>(param->src_data), len * _write_bits >> 3, true, use_dma);
+      _bus->writeBytes(reinterpret_cast<const uint8_t*>(param->src_data), len * _write_bits >> 3, true, use_dma);
     }
     else
     {
@@ -264,7 +264,7 @@ namespace lgfx
     }
   }
 
-  void Panel_LCD::writeImage(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, pixelcopy_t* param, bool use_dma)
+  void Panel_LCD::writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool use_dma)
   {
     auto bytes = param->dst_bits >> 3;
     auto src_x = param->src_x;
@@ -274,8 +274,8 @@ namespace lgfx
       if (param->no_convert)
       {
         auto wb = w * bytes;
-        std::uint32_t i = (src_x + param->src_y * param->src_bitwidth) * bytes;
-        auto src = &((const std::uint8_t*)param->src_data)[i];
+        uint32_t i = (src_x + param->src_y * param->src_bitwidth) * bytes;
+        auto src = &((const uint8_t*)param->src_data)[i];
         setWindow(x, y, x + w - 1, y + h - 1);
         if (param->src_bitwidth == w || h == 1)
         {
@@ -309,42 +309,41 @@ namespace lgfx
       }
       else
       {
-/*
-        if (!_bus->busy() && (h == 1 || (param->src_bitwidth == w && w * h <= INT16_MAX)))
+        if (!_bus->busy())
         {
+          static constexpr uint32_t WRITEPIXELS_MAXLEN = 32767;
+
           setWindow(x, y, x + w - 1, y + h - 1);
-          writePixels(param, w * h);
-        }
-//
-        if (h == 1 || (param->src_bitwidth == w && w * h <= INT16_MAX))
-        {
-          std::size_t length = w * h;
-          std::size_t limit = (bytes == 2) ? 64 : 48;
-//        std::size_t len = ((wh - 1) % limit) + 1;
-          std::size_t len = (limit << 1) <= length ? limit : length;
-          limit <<= 1;
-          auto buf = _bus->getDMABuffer(len * bytes);
-          param->fp_copy(buf, 0, len, param);
-          setWindow(x, y, x + w - 1, y + h - 1);
-          write_bytes(buf, len * bytes, true);
-          while (length -= len)
+          bool nogap = (param->src_bitwidth == w || h == 1);
+          if (nogap && (w * h <= WRITEPIXELS_MAXLEN))
+          { 
+            writePixels(param, w * h, use_dma);
+          }
+          else
           {
-//            len = ((wh - 1) % limit) + 1;
-            len = (limit << 1) <= length ? limit : length;
-            if (limit <= 256) limit <<= 1;
-            auto buf = _bus->getDMABuffer(len * bytes);
-            param->fp_copy(buf, 0, len, param);
-            write_bytes(buf, len * bytes, true);
+            uint_fast16_t h_step = nogap ? WRITEPIXELS_MAXLEN / w : 1;
+            uint_fast16_t h_len = (h_step > 1) ? ((h - 1) % h_step) + 1 : 1;
+            writePixels(param, w * h_len, use_dma);
+            if (h -= h_len)
+            {
+              param->src_y += h_len;
+              do
+              {
+                param->src_x = src_x;
+                writePixels(param, w * h_step, use_dma);
+                param->src_y += h_step;
+              } while (h -= h_step);
+            }
           }
         }
         else
-//*/
         {
-          std::size_t wb = w * bytes;
+          size_t wb = w * bytes;
           auto buf = _bus->getDMABuffer(wb);
           param->fp_copy(buf, 0, w, param);
           setWindow(x, y, x + w - 1, y + h - 1);
           write_bytes(buf, wb, true);
+          _align_data = (_cfg.dlen_16bit && (_write_bits & 15) && (w & h & 1));
           while (--h)
           {
             param->src_x = src_x;
@@ -359,14 +358,14 @@ namespace lgfx
     else
     {
       h += y;
-      std::uint32_t wb = w * bytes;
+      uint32_t wb = w * bytes;
       do
       {
-        std::uint32_t i = 0;
+        uint32_t i = 0;
         while (w != (i = param->fp_skip(i, w, param)))
         {
           auto buf = _bus->getDMABuffer(wb);
-          std::int32_t len = param->fp_copy(buf, 0, w - i, param);
+          int32_t len = param->fp_copy(buf, 0, w - i, param);
           setWindow(x + i, y, x + i + len - 1, y);
           write_bytes(buf, len * bytes, true);
           if (w == (i += len)) break;
@@ -377,7 +376,7 @@ namespace lgfx
     }
   }
 
-  void Panel_LCD::write_bytes(const std::uint8_t* data, std::uint32_t len, bool use_dma)
+  void Panel_LCD::write_bytes(const uint8_t* data, uint32_t len, bool use_dma)
   {
     _bus->writeBytes(data, len, true, use_dma);
     if (_cfg.dlen_16bit && (_write_bits & 15) && (len & 1))
@@ -386,9 +385,9 @@ namespace lgfx
     }
   }
 
-  void Panel_LCD::readRect(std::uint_fast16_t x, std::uint_fast16_t y, std::uint_fast16_t w, std::uint_fast16_t h, void* dst, pixelcopy_t* param)
+  void Panel_LCD::readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param)
   {
-    std::uint_fast16_t bytes = param->dst_bits >> 3;
+    uint_fast16_t bytes = param->dst_bits >> 3;
     auto len = w * h;
     if (!_cfg.readable)
     {
@@ -409,7 +408,7 @@ namespace lgfx
 
     if (param->no_convert)
     {
-      _bus->readBytes((std::uint8_t*)dst, len * bytes);
+      _bus->readBytes((uint8_t*)dst, len * bytes);
     }
     else
     {
@@ -423,7 +422,7 @@ namespace lgfx
     if (_in_transaction) { cs_control(false); }
   }
 
-  void Panel_LCD::set_window_8(std::uint_fast16_t xs, std::uint_fast16_t ys, std::uint_fast16_t xe, std::uint_fast16_t ye, std::uint32_t cmd)
+  void Panel_LCD::set_window_8(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye, uint32_t cmd)
   {
     if (xs != _xs || xe != _xe)
     {
@@ -446,7 +445,7 @@ namespace lgfx
     _bus->writeCommand(cmd, 8);
   }
 
-  void Panel_LCD::set_window_16(std::uint_fast16_t xs, std::uint_fast16_t ys, std::uint_fast16_t xe, std::uint_fast16_t ye, std::uint32_t cmd)
+  void Panel_LCD::set_window_16(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye, uint32_t cmd)
   {
     if (_align_data)
     {

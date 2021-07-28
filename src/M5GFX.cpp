@@ -772,7 +772,6 @@ ESP_LOGI("nvs_board","_board:%d", board);
     s.metrics = _font_metrics;
     s.cursor_x = _cursor_x;
     s.cursor_y = _cursor_y;
-    s.padX = _padding_x;
     _displayStateStack.push_back(s);
   }
 
@@ -784,7 +783,6 @@ ESP_LOGI("nvs_board","_board:%d", board);
     _font = s.gfxFont;
     _text_style = s.style;
     _font_metrics = s.metrics;
-    _padding_x = s.padX;
     _cursor_x = s.cursor_x;
     _cursor_y = s.cursor_y;
   }

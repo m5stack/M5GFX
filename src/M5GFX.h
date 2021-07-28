@@ -157,7 +157,7 @@ namespace m5gfx
       const lgfx::IFont *gfxFont;
       lgfx::TextStyle style;
       lgfx::FontMetrics metrics;
-      int32_t cursor_x, cursor_y, padX;
+      int32_t cursor_x, cursor_y;
     };
 
     lgfx::Bus_SPI _bus_spi;
