@@ -361,7 +361,7 @@ namespace m5gfx
       nvs_board = board_t::board_M5Tough;
 
 #elif defined ( ARDUINO_M5Stack_ATOM )
-#elif defined ( ARDUINO_M5Stack-Timer-CAM )
+#elif defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
     }
 
