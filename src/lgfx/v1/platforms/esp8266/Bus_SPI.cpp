@@ -65,17 +65,19 @@ namespace lgfx
 
   void Bus_SPI::beginRead(void)
   {
+    uint32_t user = (SPI1U & ~(SPIUMOSI | SPIUSIO)) | SPIUMISO | (_cfg.spi_3wire ? SPIUSIO : 0);
+
     dc_control(true);
     spi::endTransaction(0);
     spi::beginTransaction(0, _cfg.freq_read, _cfg.spi_mode);
-    SPI1U = (SPI1U & ~SPIUMOSI) | SPIUMISO;
+    SPI1U = user;
   }
 
   void Bus_SPI::endRead(void)
   {
     spi::endTransaction(0);
     spi::beginTransaction(0, _cfg.freq_write, _cfg.spi_mode);
-    SPI1U = (SPI1U & ~SPIUMISO) | SPIUMOSI;
+    SPI1U = (SPI1U & ~(SPIUMISO | SPIUSIO)) | SPIUMOSI;
   }
 
   void Bus_SPI::wait(void)
@@ -179,68 +181,43 @@ namespace lgfx
   void Bus_SPI::writePixels(pixelcopy_t* param, uint32_t length)
   {
     const uint8_t bytes = param->dst_bits >> 3;
-    const uint32_t limit = (bytes == 2) ? 16 : 10; //  limit = 32/bytes (bytes==2 is 16   bytes==3 is 10)
+    const uint32_t limit = (bytes == 2) ? 32 : 20; //  limit = 64/bytes (4Byte aligned) (bytes==2 is 32   bytes==3 is 20)
     uint32_t len = (length - 1) / limit;
     uint32_t highpart = (len & 1) << 3;
     len = length - (len * limit);
-    uint32_t regbuf[8];
+    uint32_t regbuf[16];
     param->fp_copy(regbuf, 0, len, param);
 
-    auto spi_w0_reg = reinterpret_cast<volatile uint32_t*>(&SPI1W0);
-
-    uint32_t user_reg = SPI1U;
+    auto spi_w0_reg = (void*)reinterpret_cast<volatile uint32_t*>(&SPI1W0);
 
     dc_control(true);
     set_write_len(len * bytes << 3);
 
-    memcpy((void*)&spi_w0_reg[highpart], regbuf, (len * bytes + 3) & (~3));
-    if (highpart) SPI1U = user_reg | SPIUMOSIH;
+    memcpy(spi_w0_reg, regbuf, (len * bytes + 3) & (~3));
     exec_spi();
     if (0 == (length -= len)) return;
+
+    if (len != limit)
+    {
+      param->fp_copy(regbuf, 0, limit, param);
+      wait_spi();
+      memcpy(spi_w0_reg, regbuf, limit * bytes);
+      set_write_len(limit * bytes << 3);
+      exec_spi();
+      if (0 == (length -= limit)) return;
+    }
 
     for (; length; length -= limit)
     {
       param->fp_copy(regbuf, 0, limit, param);
-      memcpy((void*)&spi_w0_reg[highpart ^= 0x08], regbuf, limit * bytes);
-      uint32_t user = user_reg;
-      if (highpart) user |= SPIUMOSIH;
-      if (len == limit)
-      {
-        wait_spi();
-        SPI1U = user;
-        exec_spi();
-      }
-      else
-      {
-        len = limit;
-        wait_spi();
-        set_write_len(limit * bytes << 3);
-        SPI1U = user;
-        exec_spi();
-      }
+      wait_spi();
+      memcpy(spi_w0_reg, regbuf, limit * bytes);
+      exec_spi();
     }
   }
 
   void Bus_SPI::writeBytes(const uint8_t* data, uint32_t length, bool dc, bool use_dma)
   {
-/*
-    if (reinterpret_cast<const uintptr_t>(data) & 3)
-    {
-      auto len = reinterpret_cast<const uintptr_t>(data) & 3;
-      length -= len;
-      uint32_t val = 0;
-      size_t i = 0;
-      do
-      {
-        val = pgm_read_byte(data++) << (i * 8);
-      } while (++i != len);
-      dc_control(dc);
-      set_write_len(len << 3);
-      SPI1W0 = val;
-      exec_spi();
-      if (!length) return;
-    }
-//*/
     if (length <= 64)
     {
       auto aligned_len = (length + 3) & (~3);
@@ -252,42 +229,43 @@ namespace lgfx
       return;
     }
 
-    constexpr uint32_t limit = 32;
+    static constexpr uint32_t limit = 32;
     uint32_t len = ((length - 1) & 0x1F) + 1;
-    uint32_t highpart = ((length - 1) & limit) >> 2; // 8 or 0
+    uint32_t highpart = ((length - 1) & limit) ? 8 : 0;
 
     auto spi_w0_reg = reinterpret_cast<volatile uint32_t*>(&SPI1W0);
 
-    uint32_t user_reg = SPI1U;
+    uint32_t user_reg_0 = SPI1U;
+    uint32_t user_reg_1 = user_reg_0 | SPIUMOSIH;
     dc_control(dc);
     set_write_len(len << 3);
-
     memcpy((void*)&spi_w0_reg[highpart], data, (len + 3) & (~3));
-    if (highpart) SPI1U = user_reg | SPIUMOSIH;
+    if (highpart) SPI1U = user_reg_1;
     exec_spi();
-    if (0 == (length -= len)) return;
+    length -= len;
 
-    for (; length; length -= limit)
+    if (len != limit)
     {
       data += len;
       memcpy((void*)&spi_w0_reg[highpart ^= 0x08], data, limit);
-      uint32_t user = user_reg;
-      if (highpart) user |= SPIUMOSIH;
-      if (len == limit)
-      {
-        wait_spi();
-        SPI1U = user;
-        exec_spi();
-      }
-      else
-      {
-        len = limit;
-        wait_spi();
-        set_write_len(limit << 3);
-        SPI1U = user;
-        exec_spi();
-      }
+      uint32_t user = highpart ? user_reg_1 : user_reg_0;
+      wait_spi();
+      set_write_len(limit << 3);
+      SPI1U = user;
+      exec_spi();
+      if (0 == (length -= limit)) return;
     }
+
+    length >>= 5;
+    do
+    {
+      data += limit;
+      memcpy((void*)&spi_w0_reg[highpart ^= 0x08], data, limit);
+      uint32_t user = highpart ? user_reg_1 : user_reg_0;
+      wait_spi();
+      SPI1U = user;
+      exec_spi();
+    } while (--length);
   }
 
   uint32_t Bus_SPI::readData(uint_fast8_t bit_length)

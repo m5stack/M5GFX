@@ -196,7 +196,6 @@ namespace lgfx
 
       if (spi_host == default_spi_host)
       {
-ESP_LOGW("LGFX","SPI host:%d  mosi:%d miso:%d sclk:%d", spi_host, spi_mosi, spi_miso, spi_sclk);
         SPI.end();
         SPI.begin(spi_sclk, spi_miso, spi_mosi);
         _spi_handle[spi_host] = SPI.bus();
@@ -725,6 +724,11 @@ ESP_LOGW("LGFX","SPI host:%d  mosi:%d miso:%d sclk:%d", spi_host, spi_mosi, spi_
 
         auto cycle = std::min<uint32_t>(32767u, std::max(MIN_I2C_CYCLE, (src_clock / (freq + 1) + 1)));
         freq = src_clock / cycle;
+
+#if defined (CONFIG_IDF_TARGET_ESP32S2)
+        dev->ctr.ref_always_on = 1;
+#endif
+
 #if defined ( I2C_FILTER_CFG_REG )
         dev->filter_cfg.scl_en = cycle > 64;
         dev->filter_cfg.scl_thres = 0;
@@ -905,7 +909,7 @@ ESP_LOGW("LGFX","SPI host:%d  mosi:%d miso:%d sclk:%d", spi_host, spi_mosi, spi_
       if (!length) return res;
 
       static constexpr uint32_t intmask = I2C_ACK_ERR_INT_RAW_M | I2C_TIME_OUT_INT_RAW_M | I2C_END_DETECT_INT_RAW_M | I2C_ARBITRATION_LOST_INT_RAW_M;
-
+      auto fifo_addr = getFifoAddr(i2c_port);
       auto dev = getDev(i2c_port);
       size_t len = 0;
 
@@ -936,7 +940,7 @@ ESP_LOGW("LGFX","SPI host:%d  mosi:%d miso:%d sclk:%d", spi_host, spi_mosi, spi_
           if (0 != dev->status_reg.rx_fifo_cnt)
 #endif
           {
-            *readdata++ = dev->fifo_data.data;
+            *readdata++ = *fifo_addr; //dev->fifo_data.data;
           }
           else
           {

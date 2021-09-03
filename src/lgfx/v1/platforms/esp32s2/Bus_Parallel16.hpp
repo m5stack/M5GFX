@@ -41,33 +41,48 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-  class Bus_Parallel8 : public IBus
+  class Bus_Parallel16 : public IBus
   {
   public:
     struct config_t
     {
       i2s_port_t i2s_port = I2S_NUM_0;
 
-      // max 20MHz , 16MHz , 13.3MHz , 11.43MHz , 10MHz , 8.9MHz  and more ...
+      // max 40MHz , 27MHz , 20MHz , 16MHz , 13.3MHz , 11.43MHz , 10MHz , 8.9MHz  and more ...
       uint32_t freq_write = 16000000;
-      int8_t pin_d0 = -1;
-      int8_t pin_d1 = -1;
-      int8_t pin_d2 = -1;
-      int8_t pin_d3 = -1;
-      int8_t pin_d4 = -1;
-      int8_t pin_d5 = -1;
-      int8_t pin_d6 = -1;
-      int8_t pin_d7 = -1;
       int8_t pin_wr = -1;
       int8_t pin_rd = -1;
       int8_t pin_rs = -1;  // D/C
+      union
+      {
+        int8_t pin_data[16];
+        struct
+        {
+          int8_t pin_d0;
+          int8_t pin_d1;
+          int8_t pin_d2;
+          int8_t pin_d3;
+          int8_t pin_d4;
+          int8_t pin_d5;
+          int8_t pin_d6;
+          int8_t pin_d7;
+          int8_t pin_d8;
+          int8_t pin_d9;
+          int8_t pin_d10;
+          int8_t pin_d11;
+          int8_t pin_d12;
+          int8_t pin_d13;
+          int8_t pin_d14;
+          int8_t pin_d15;
+        };
+      };
     };
 
 
     const config_t& config(void) const { return _cfg; }
     void config(const config_t& config);
 
-    bus_type_t busType(void) const override { return bus_type_t::bus_parallel8; }
+    bus_type_t busType(void) const override { return bus_type_t::bus_parallel16; }
 
     bool init(void) override;
     void release(void) override;
@@ -97,26 +112,56 @@ namespace lgfx
 
   private:
 
+    void dc_control(bool flg)
+    {
+      auto reg = _gpio_reg_dc[flg];
+      auto mask = _mask_reg_dc;
+      auto i2s_dev = (i2s_dev_t*)_dev;
+      if (i2s_dev->out_link.val)
+      {
+#if defined (CONFIG_IDF_TARGET_ESP32S2)
+        while (!(i2s_dev->lc_state0.out_empty)) {}
+#else
+        while (!(i2s_dev->lc_state0 & 0x80000000)) {} // I2S_OUT_EMPTY
+#endif
+        i2s_dev->out_link.val = 0;
+      }
+      while (!i2s_dev->state.tx_idle) {}
+      *reg = mask;
+    }
+
     static constexpr size_t CACHE_SIZE = 132;
 
     config_t _cfg;
     SimpleBuffer _flip_buffer;
     size_t _div_num;
     size_t _cache_index;
-    uint16_t _cache[2][CACHE_SIZE];
-    uint16_t* _cache_flip;
-    
+    uint32_t _cache[2][CACHE_SIZE];
+    uint32_t* _cache_flip;
+
+    bool _has_align_data;
+    uint8_t _align_data;
+
+    uint32_t _pin_mask_h, _pin_mask_l, _pin_index_h, _pin_index_l;
+
     void _wait(void);
-    void _init_pin(void);
-    size_t _flush(size_t idx, bool force = false);
+    void _init_pin(bool read = false);
+    size_t _flush(size_t idx, bool dc = true);
     void _read_bytes(uint8_t* dst, uint32_t length);
+
+    void _alloc_dmadesc(size_t len);
+    void _setup_dma_desc_links(const uint8_t *data, int32_t len);
+
+    volatile uint32_t* _gpio_reg_dc[2] = { nullptr, nullptr };
+    uint32_t _mask_reg_dc = 0;
+    bool _direct_dc;
 
     uint32_t _last_freq_apb;
     uint32_t _clkdiv_write;
     volatile void *_dev;
-    lldesc_t _dmadesc;
 
-    volatile uint32_t* _i2s_fifo_wr_reg;
+    lldesc_t* _dmadesc = nullptr;
+    uint32_t _dmadesc_size = 0;
   };
 
 //----------------------------------------------------------------------------

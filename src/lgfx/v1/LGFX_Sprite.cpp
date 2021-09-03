@@ -460,10 +460,15 @@ namespace lgfx
     {
       auto sx = param->src_x;
       auto bits = param->src_bits;
-      uint_fast8_t mask = (bits == 1) ? 7
-                             : (bits == 2) ? 3
-                                           : 1;
-      if (0 == (bits & 7) || ((sx & mask) == (x & mask) && (w == this->_panel_width || 0 == (w & mask))))
+      bool flg_memcpy = (0 == (bits & 7));
+      if (!flg_memcpy)
+      {
+        uint_fast8_t mask = (bits == 1) ? 7
+                          : (bits == 2) ? 3
+                                        : 1;
+        flg_memcpy = (sx & mask) == (x & mask) && (w == this->_panel_width || 0 == (w & mask));
+      }
+      if (flg_memcpy)
       {
         auto bw = _bitwidth * bits >> 3;
         auto dst = &_img[bw * y];

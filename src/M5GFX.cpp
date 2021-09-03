@@ -730,10 +730,16 @@ namespace m5gfx
             cfg.i2c_port = I2C_NUM_1;// I2C port number
             cfg.freq = 400000;   // I2C freq
             cfg.x_min = 0;
+            cfg.x_max = 319;
+            cfg.y_min = 0;
+            cfg.y_max = 239;
+/*
+            cfg.x_min = 0;
             cfg.x_max = 239;
             cfg.y_min = 0;
             cfg.y_max = 319;
             cfg.offset_rotation = 2;
+*/
             t->config(cfg);
             p->touch(t);
             lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x94, 0x02, ~0, axp_i2c_freq);  // GPIO1 HIGH (TOUCH RST)
