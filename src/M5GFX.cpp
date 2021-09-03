@@ -361,7 +361,7 @@ namespace m5gfx
       nvs_board = board_t::board_M5Tough;
 
 #elif defined ( ARDUINO_M5Stack_ATOM )
-#elif defined ( ARDUINO_M5Stack_Timer_CAM )
+//#elif defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
     }
 
@@ -473,8 +473,8 @@ namespace m5gfx
       {  //  check panel (ST7789)
         board = board_t::board_M5StickCPlus;
         ESP_LOGW(LIBRARY_NAME, "[Autodetect] M5StickCPlus");
-        bus_cfg.freq_write = 80000000;
-        bus_cfg.freq_read  = 16000000;
+        bus_cfg.freq_write = 40000000;
+        bus_cfg.freq_read  = 15000000;
         _bus_spi.config(bus_cfg);
         auto p = new Panel_M5StickCPlus();
         p->bus(&_bus_spi);
@@ -730,10 +730,9 @@ namespace m5gfx
             cfg.i2c_port = I2C_NUM_1;// I2C port number
             cfg.freq = 400000;   // I2C freq
             cfg.x_min = 0;
-            cfg.x_max = 239;
+            cfg.x_max = 319;
             cfg.y_min = 0;
-            cfg.y_max = 319;
-            cfg.offset_rotation = 2;
+            cfg.y_max = 239;
             t->config(cfg);
             p->touch(t);
             lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x94, 0x02, ~0, axp_i2c_freq);  // GPIO1 HIGH (TOUCH RST)
@@ -772,7 +771,6 @@ ESP_LOGI("nvs_board","_board:%d", board);
     s.metrics = _font_metrics;
     s.cursor_x = _cursor_x;
     s.cursor_y = _cursor_y;
-    s.padX = _padding_x;
     _displayStateStack.push_back(s);
   }
 
@@ -784,7 +782,6 @@ ESP_LOGI("nvs_board","_board:%d", board);
     _font = s.gfxFont;
     _text_style = s.style;
     _font_metrics = s.metrics;
-    _padding_x = s.padX;
     _cursor_x = s.cursor_x;
     _cursor_y = s.cursor_y;
   }

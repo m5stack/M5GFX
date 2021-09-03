@@ -143,6 +143,7 @@ namespace m5gfx
     , board_M5StackCoreInk
     , board_M5Paper
     , board_M5Tough
+    , board_M5ATOM
     };
   }
   using board_t = boards::board_t;
@@ -156,7 +157,7 @@ namespace m5gfx
       const lgfx::IFont *gfxFont;
       lgfx::TextStyle style;
       lgfx::FontMetrics metrics;
-      int32_t cursor_x, cursor_y, padX;
+      int32_t cursor_x, cursor_y;
     };
 
     lgfx::Bus_SPI _bus_spi;
@@ -182,6 +183,18 @@ namespace m5gfx
     void progressBar(int x, int y, int w, int h, uint8_t val);
     void pushState(void);
     void popState(void);
+
+    /// draw RGB565 format image.
+    void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data)
+    {
+      pushImage(x, y, w, h, (const rgb565_t*)data);
+    }
+
+    /// draw RGB565 format image, with transparent color.
+    void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data, uint16_t transparent)
+    {
+      pushImage(x, y, w, h, (const rgb565_t*)data, transparent);
+    }
   };
 
 
