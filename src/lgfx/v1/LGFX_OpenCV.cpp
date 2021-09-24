@@ -16,7 +16,11 @@ Contributors:
  [tobozo](https://github.com/tobozo)
 /----------------------------------------------------------------------------*/
 
-#include "LGFX_Sprite.hpp"
+#if __has_include(<opencv2/opencv.hpp>)
+
+#include "LGFX_OpenCV.hpp"
+
+#include <opencv2/opencv.hpp>
 
 #ifdef min
 #undef min
@@ -73,7 +77,40 @@ namespace lgfx
     }
   }
 
-  void Panel_Sprite::setBuffer(void* buffer, int32_t w, int32_t h, color_conv_t* conv)
+  volatile int LGFX_OpenCV::latestUpdated;
+  cv::Mat* LGFX_OpenCV::latestDisplayMat = nullptr;
+  const char* LGFX_OpenCV::latestDisplayName = nullptr;
+
+  void Panel_OpenCVtest::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
+  {
+    if (h == 0)
+    {
+      y = 0;
+      h = _panel_height;
+    }
+    else
+    {
+      uint_fast8_t r = _rotation;
+      if (r)
+      {
+        if ((1u << r) & 0b10010110) { y = _height - (y + h); }
+        if (r & 2)                  { x = _width  - (x + w); }
+        if (r & 1) { std::swap(x, y);  std::swap(w, h); }
+      }
+    }
+    memcpy(&((uint8_t*)_cvmat->data)[y * _panel_width * 3], &(_img.img8()[y * _panel_width * 3]), _panel_width * h * 3);
+//*
+    LGFX_OpenCV::latestDisplayName = _window_name;
+    LGFX_OpenCV::latestDisplayMat = _cvmat;
+    LGFX_OpenCV::latestUpdated++;
+/*/
+    cv::cvtColor(*_cvmat, *_cvmat, cv::COLOR_BGR2RGB);
+  	cv::imshow(_window_name, *_cvmat);
+    cv::pollKey();
+//*/
+  }
+
+  void Panel_OpenCVtest::setBuffer(void* buffer, int32_t w, int32_t h, color_conv_t* conv)
   {
     deleteSprite();
 
@@ -87,20 +124,51 @@ namespace lgfx
     setRotation(_rotation);
   }
 
-  void Panel_Sprite::deleteSprite(void)
+  void Panel_OpenCVtest::deleteSprite(void)
   {
     _bitwidth = _panel_width = _panel_height = _width = _height = 0;
     setRotation(_rotation);
     _img.release();
   }
 
-  void* Panel_Sprite::createSprite(int32_t w, int32_t h, color_conv_t* conv, bool psram)
+  void* LGFX_OpenCV::createSprite(int32_t w, int32_t h)
+  {
+    _img = _Panel_OpenCVtest.createSprite(w, h, &_write_conv, _psram);
+    if (_img) {
+      if (!_palette && 0 == _write_conv.bytes)
+      {
+        createPalette();
+      }
+    }
+    static int _window_count = 0;
+    sprintf(_window_name, "LGFX_OpenCV_%d", ++_window_count);
+    _cvmat = cv::Mat(h, w, CV_8UC3);
+
+//      _bitwidth = (w + _write_conv.x_mask) & (~(uint32_t)_write_conv.x_mask);
+    setRotation(getRotation());
+
+    _sw = width();
+    _clip_r = _sw - 1;
+    _xpivot = _sw >> 1;
+
+    _sh = height();
+    _clip_b = _sh - 1;
+    _ypivot = _sh >> 1;
+
+    _clip_l = _clip_t = _sx = _sy = 0;
+
+
+    return _img;
+  }
+
+  void* Panel_OpenCVtest::createSprite(int32_t w, int32_t h, color_conv_t* conv, bool psram)
   {
     if (w < 1 || h < 1)
     {
       deleteSprite();
       return nullptr;
     }
+    
     if (!_img || (uint_fast16_t)w != _panel_width || (uint_fast16_t)h != _panel_height)
     {
       _panel_width = w;
@@ -123,7 +191,7 @@ namespace lgfx
     return _img;
   }
 
-  color_depth_t Panel_Sprite::setColorDepth(color_depth_t depth)
+  color_depth_t Panel_OpenCVtest::setColorDepth(color_depth_t depth)
   {
     _write_depth = depth;
     _read_depth = depth;
@@ -132,7 +200,7 @@ namespace lgfx
     return depth;
   }
 
-  void Panel_Sprite::setRotation(uint_fast8_t r)
+  void Panel_OpenCVtest::setRotation(uint_fast8_t r)
   {
     r &= 7;
     _rotation = r;
@@ -150,7 +218,7 @@ namespace lgfx
     _ys = 0;
   }
 
-  void Panel_Sprite::setWindow(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye)
+  void Panel_OpenCVtest::setWindow(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye)
   {
     xs = std::max(0u, std::min<uint_fast16_t>(_width  - 1, xs));
     xe = std::max(0u, std::min<uint_fast16_t>(_width  - 1, xe));
@@ -164,42 +232,16 @@ namespace lgfx
     _ye = ye;
   }
 
-  void Panel_Sprite::drawPixelPreclipped(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor)
+  void Panel_OpenCVtest::drawPixelPreclipped(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor)
   {
-    uint_fast8_t r = _rotation;
-    if (r)
+    writeFillRectPreclipped(x, y, 1, 1, rawcolor);
+    if (_start_count == 0)
     {
-      if ((1u << r) & 0b10010110) { y = _height - (y + 1); }
-      if (r & 2)                  { x = _width  - (x + 1); }
-      if (r & 1) { std::swap(x, y); }
-    }
-    auto bits = _write_bits;
-    uint32_t index = x + y * _bitwidth;
-    if (bits >= 8)
-    {
-      if (bits == 8)
-      {
-        _img.img8()[index] = rawcolor;
-      }
-      else if (bits == 16)
-      {
-        _img.img16()[index] = rawcolor;
-      }
-      else
-      {
-        _img.img24()[index] = rawcolor;
-      }
-    }
-    else
-    {
-      index *= bits;
-      uint8_t* dst = &_img.img8()[index >> 3];
-      uint8_t mask = (uint8_t)(~(0xFF >> bits)) >> (index & 7);
-      *dst = (*dst & ~mask) | (rawcolor & mask);
+      display(x, y, 1, 1);
     }
   }
 
-  void Panel_Sprite::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)
+  void Panel_OpenCVtest::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)
   {
     uint_fast8_t r = _rotation;
     if (r)
@@ -303,7 +345,7 @@ namespace lgfx
     }
   }
 
-  void Panel_Sprite::writeBlock(uint32_t rawcolor, uint32_t length)
+  void Panel_OpenCVtest::writeBlock(uint32_t rawcolor, uint32_t length)
   {
     do
     {
@@ -321,7 +363,7 @@ namespace lgfx
     } while (length);
   }
 
-  void Panel_Sprite::_rotate_pixelcopy(uint_fast16_t& x, uint_fast16_t& y, uint_fast16_t& w, uint_fast16_t& h, pixelcopy_t* param, uint32_t& nextx, uint32_t& nexty)
+  void Panel_OpenCVtest::_rotate_pixelcopy(uint_fast16_t& x, uint_fast16_t& y, uint_fast16_t& w, uint_fast16_t& h, pixelcopy_t* param, uint32_t& nextx, uint32_t& nexty)
   {
     uint32_t addx = param->src_x32_add;
     uint32_t addy = param->src_y32_add;
@@ -356,7 +398,7 @@ namespace lgfx
     param->src_y32_add = addy;
   }
 
-  void Panel_Sprite::writePixels(pixelcopy_t* param, uint32_t length, bool use_dma)
+  void Panel_OpenCVtest::writePixels(pixelcopy_t* param, uint32_t length, bool use_dma)
   {
     (void)use_dma;
     uint_fast16_t xs = _xs;
@@ -460,7 +502,7 @@ namespace lgfx
     _ypos = y;
   }
 
-  void Panel_Sprite::writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool)
+  void Panel_OpenCVtest::writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool)
   {
     uint_fast8_t r = _rotation;
     if (r == 0 && param->transp == pixelcopy_t::NON_TRANSP && param->no_convert && _img.use_memcpy())
@@ -520,7 +562,7 @@ namespace lgfx
     } while (--h);
   }
 
-  void Panel_Sprite::writeImageARGB(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param)
+  void Panel_OpenCVtest::writeImageARGB(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param)
   {
     uint32_t nextx = 0;
     uint32_t nexty = 1 << pixelcopy_t::FP_SCALE;
@@ -544,7 +586,7 @@ namespace lgfx
     }
   }
 
-  uint32_t Panel_Sprite::readPixelValue(uint_fast16_t x, uint_fast16_t y)
+  uint32_t Panel_OpenCVtest::readPixelValue(uint_fast16_t x, uint_fast16_t y)
   {
     uint_fast8_t r = _rotation;
     if (r)
@@ -574,7 +616,7 @@ namespace lgfx
     return (_img.img8()[index >> 3] >> (-(int32_t)(index + bits) & 7)) & mask;
   }
 
-  void Panel_Sprite::readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param)
+  void Panel_OpenCVtest::readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param)
   {
     uint_fast8_t r = _rotation;
     if (0 == r && param->no_convert && _write_bits >= 8)
@@ -583,10 +625,9 @@ namespace lgfx
       auto bytes = _write_bits >> 3;
       auto bw = _bitwidth;
       auto d = (uint8_t*)dst;
-      w *= bytes;
       do {
-        memcpy(d, &_img[(x + y * bw) * bytes], w);
-        d += w;
+        memcpy(d, &_img[(x + y * bw) * bytes], w * bytes);
+        d += w * bytes;
       } while (++y != h);
     }
     else
@@ -639,7 +680,7 @@ namespace lgfx
     }
   }
 
-  void Panel_Sprite::copyRect(uint_fast16_t dst_x, uint_fast16_t dst_y, uint_fast16_t w, uint_fast16_t h, uint_fast16_t src_x, uint_fast16_t src_y)
+  void Panel_OpenCVtest::copyRect(uint_fast16_t dst_x, uint_fast16_t dst_y, uint_fast16_t w, uint_fast16_t h, uint_fast16_t src_x, uint_fast16_t src_y)
   {
     uint_fast8_t r = _rotation;
     if (r)
@@ -718,3 +759,4 @@ namespace lgfx
  }
 }
 
+#endif

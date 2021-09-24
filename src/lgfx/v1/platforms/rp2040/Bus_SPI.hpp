@@ -17,20 +17,10 @@ Contributors:
 /----------------------------------------------------------------------------*/
 #pragma once
 
-#include <vector>
-#include <string.h>
-
-#if __has_include(<esp32/rom/lldesc.h>)
- #include <esp32/rom/lldesc.h>
-#else
- #include <rom/lldesc.h>
-#endif
-
-#if __has_include(<freertos/FreeRTOS.h>)
- #include <freertos/FreeRTOS.h>
-#endif
-
-#include <driver/i2s.h>
+#include <stdint.h>
+#include <SPI.h>
+#include <drivers/SPIMaster.h>
+#include <hardware/structs/spi.h>
 
 #include "../../Bus.hpp"
 #include "../common.hpp"
@@ -41,40 +31,27 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-  class Bus_Parallel8 : public IBus
+  class Bus_SPI : public IBus
   {
   public:
     struct config_t
     {
-      i2s_port_t i2s_port = I2S_NUM_0;
-
-      // max 20MHz , 16MHz , 13.3MHz , 11.43MHz , 10MHz , 8.9MHz  and more ...
       uint32_t freq_write = 16000000;
-      int8_t pin_wr = -1;
-      int8_t pin_rd = -1;
-      int8_t pin_rs = -1;  // D/C
-      union
-      {
-        int8_t pin_data[8];
-        struct
-        {
-          int8_t pin_d0;
-          int8_t pin_d1;
-          int8_t pin_d2;
-          int8_t pin_d3;
-          int8_t pin_d4;
-          int8_t pin_d5;
-          int8_t pin_d6;
-          int8_t pin_d7;
-        };
-      };
+      uint32_t freq_read  =  8000000;
+      //bool spi_3wire = true;
+      //bool use_lock = true;
+      int16_t pin_sclk = -1;
+      int16_t pin_miso = -1;
+      int16_t pin_mosi = -1;
+      int16_t pin_dc   = -1;
+      uint8_t spi_mode = 0;
     };
 
-
     const config_t& config(void) const { return _cfg; }
+
     void config(const config_t& config);
 
-    bus_type_t busType(void) const override { return bus_type_t::bus_parallel8; }
+    bus_type_t busType(void) const override { return bus_type_t::bus_spi; }
 
     bool init(void) override;
     void release(void) override;
@@ -84,16 +61,16 @@ namespace lgfx
     void wait(void) override;
     bool busy(void) const override;
 
-    void flush(void) override;
     bool writeCommand(uint32_t data, uint_fast8_t bit_length) override;
     void writeData(uint32_t data, uint_fast8_t bit_length) override;
     void writeDataRepeat(uint32_t data, uint_fast8_t bit_length, uint32_t count) override;
     void writePixels(pixelcopy_t* param, uint32_t length) override;
     void writeBytes(const uint8_t* data, uint32_t length, bool dc, bool use_dma) override;
 
-    void initDMA(void) override {}
+    void initDMA(void) {}
+    void flush(void) {}
     void addDMAQueue(const uint8_t* data, uint32_t length) override { writeBytes(data, length, true, true); }
-    void execDMAQueue(void) override { flush(); };
+    void execDMAQueue(void) {}
     uint8_t* getDMABuffer(uint32_t length) override { return _flip_buffer.getBuffer(length); }
 
     void beginRead(void) override;
@@ -103,27 +80,37 @@ namespace lgfx
     void readPixels(void* dst, pixelcopy_t* param, uint32_t length) override;
 
   private:
+    static constexpr uint32_t SPI_SR_TFE = 0x01;
+    static constexpr uint32_t SPI_SR_TNF = 0x02;
+    static constexpr uint32_t SPI_SR_RNE = 0x04;
+    static constexpr uint32_t SPI_SR_RFF = 0x08;
+    static constexpr uint32_t SPI_SR_BSY = 0x10;
 
-    static constexpr size_t CACHE_SIZE = 132;
+    mbed::SPI _spi = { (PinName)11, (PinName)12, (PinName)10 };
+    arduino::MbedSPI SPI = { 11, 12, 10 };
+
+    __attribute__ ((always_inline)) inline void dc_h(void) {
+      while (*_spi_reg_sr & SPI_SR_BSY) {}
+      gpio_hi(_cfg.pin_dc);
+    }
+    __attribute__ ((always_inline)) inline void dc_l(void) {
+      while (*_spi_reg_sr & SPI_SR_BSY) {}
+      gpio_lo(_cfg.pin_dc);
+    }
 
     config_t _cfg;
-    SimpleBuffer _flip_buffer;
-    size_t _div_num;
-    size_t _cache_index;
-    uint16_t _cache[2][CACHE_SIZE];
-    uint16_t* _cache_flip;
-    
-    void _wait(void);
-    void _init_pin(void);
-    size_t _flush(size_t idx, bool force = false);
-    void _read_bytes(uint8_t* dst, uint32_t length);
-
-    uint32_t _last_freq_apb;
+    FlipBuffer _flip_buffer;
+    bool _need_wait;
+    uint32_t _mask_reg_dc;
+    uint32_t _last_apb_freq = -1;
     uint32_t _clkdiv_write;
-    volatile void *_dev;
-    lldesc_t _dmadesc;
-
-    volatile uint32_t* _i2s_fifo_wr_reg;
+    uint32_t _clkdiv_read;
+    uint32_t _cr0;
+    volatile uint32_t* _gpio_reg_dc_h;
+    volatile uint32_t* _gpio_reg_dc_l;
+    volatile uint32_t* _spi_reg_sr;
+    volatile uint32_t* _spi_reg_dr;
+    uintptr_t _spibase;
   };
 
 //----------------------------------------------------------------------------

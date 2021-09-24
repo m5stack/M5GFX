@@ -17,6 +17,9 @@ Contributors:
 /----------------------------------------------------------------------------*/
 #pragma once
 
+#if __has_include(<opencv2/opencv.hpp>)
+#include <opencv2/opencv.hpp>
+
 #include <assert.h>
 
 #include "LGFXBase.hpp"
@@ -36,16 +39,16 @@ namespace lgfx
 #endif
 
 //----------------------------------------------------------------------------
-  class LGFX_Sprite;
+  class LGFX_OpenCV;
 
-  struct Panel_Sprite : public IPanel
+  struct Panel_OpenCVtest : public IPanel
   {
-    friend LGFX_Sprite;
+    friend LGFX_OpenCV;
 
-    Panel_Sprite(void) { _start_count = INT32_MAX; }
+    Panel_OpenCVtest(cv::Mat* mat, const char* name) : _cvmat( mat ) , _window_name(name) {};
 
     void beginTransaction(void) override {}
-    void endTransaction(void) override {}
+    void endTransaction(void) override { display(0,0,0,0); }
     void setInvert(bool) override {}
     void setSleep(bool) override {}
     void setPowerSave(bool) override {}
@@ -56,7 +59,7 @@ namespace lgfx
     bool dmaBusy(void) override { return false; }
     void waitDisplay(void) override {}
     bool displayBusy(void) override { return false; }
-    void display(uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast16_t) override {}
+    void display(uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast16_t) override;
     bool isReadable(void) const override { return true; }
     bool isBusShared(void) const override { return false; }
 
@@ -92,6 +95,8 @@ namespace lgfx
   protected:
     void _rotate_pixelcopy(uint_fast16_t& x, uint_fast16_t& y, uint_fast16_t& w, uint_fast16_t& h, pixelcopy_t* param, uint32_t& nextx, uint32_t& nexty);
 
+    cv::Mat* _cvmat;
+    const char* _window_name;
     SpriteBuffer _img;
 
     uint_fast16_t _xpos;
@@ -101,30 +106,32 @@ namespace lgfx
     uint_fast16_t _bitwidth;
   };
 
-  class LGFX_Sprite : public LovyanGFX
+  class LGFX_OpenCV : public LGFX_Device
   {
   public:
 
-    LGFX_Sprite(LovyanGFX* parent)
-    : LovyanGFX()
+    static volatile int latestUpdated;
+    static cv::Mat* latestDisplayMat;
+    static const char* latestDisplayName;
+
+    LGFX_OpenCV(LovyanGFX* parent)
+    : LGFX_Device()
+    , _Panel_OpenCVtest(&_cvmat, _window_name)
     , _parent(parent)
-//    , _bitwidth(0)
     {
-      _panel = &_panel_sprite;
+      _panel = &_Panel_OpenCVtest;
       setColorDepth(_write_conv.depth);
     }
 
-    LGFX_INLINE void* getBuffer(void) const { return _panel_sprite.getBuffer(); }
-    uint32_t bufferLength(void) const { return _panel_sprite.bufferLength(); }
+    LGFX_OpenCV(void) : LGFX_OpenCV(nullptr) {};
 
-    LGFX_Sprite()
-    : LGFX_Sprite(nullptr)
-    {}
-
-    virtual ~LGFX_Sprite() {
+    virtual ~LGFX_OpenCV() {
       deleteSprite();
       deletePalette();
     }
+
+    LGFX_INLINE void* getBuffer(void) const { return _Panel_OpenCVtest.getBuffer(); }
+    uint32_t bufferLength(void) const { return _Panel_OpenCVtest.bufferLength(); }
 
     void deletePalette(void)
     {
@@ -140,7 +147,7 @@ namespace lgfx
       _clip_r = -1;
       _clip_b = -1;
 
-      _panel_sprite.deleteSprite();
+      _Panel_OpenCVtest.deleteSprite();
       _img = nullptr;
     }
 
@@ -156,8 +163,8 @@ namespace lgfx
       deleteSprite();
       if (bpp != 0) _write_conv.setColorDepth((color_depth_t)bpp, hasPalette());
 
-      _panel_sprite.setBuffer(buffer, w, h, &_write_conv);
-      _img = _panel_sprite.getBuffer();
+      _Panel_OpenCVtest.setBuffer(buffer, w, h, &_write_conv);
+      _img = _Panel_OpenCVtest.getBuffer();
 
 //      _bitwidth = (w + _write_conv.x_mask) & (~(uint32_t)_write_conv.x_mask);
       _sw = w;
@@ -169,31 +176,7 @@ namespace lgfx
       _ypivot = h >> 1;
     }
 
-    void* createSprite(int32_t w, int32_t h)
-    {
-      _img = _panel_sprite.createSprite(w, h, &_write_conv, _psram);
-      if (_img) {
-        if (!_palette && 0 == _write_conv.bytes)
-        {
-          createPalette();
-        }
-      }
-//      _bitwidth = (w + _write_conv.x_mask) & (~(uint32_t)_write_conv.x_mask);
-      setRotation(getRotation());
-
-      _sw = width();
-      _clip_r = _sw - 1;
-      _xpivot = _sw >> 1;
-
-      _sh = height();
-      _clip_b = _sh - 1;
-      _ypivot = _sh >> 1;
-
-      _clip_l = _clip_t = _sx = _sy = 0;
-
-
-      return _img;
-    }
+    void* createSprite(int32_t w, int32_t h);
 
 #if defined (SdFat_h)
 
@@ -324,20 +307,20 @@ namespace lgfx
     LGFX_INLINE void* setColorDepth(uint8_t bpp) { return setColorDepth((color_depth_t)bpp); }
     void* setColorDepth(color_depth_t depth)
     {
-      _panel_sprite.setColorDepth(depth);
+      _Panel_OpenCVtest.setColorDepth(depth);
 
       _write_conv.setColorDepth(depth, hasPalette());
       _read_conv = _write_conv;
 
-      if (_panel_sprite.getBuffer() == nullptr) return nullptr;
-      auto w = _panel_sprite._panel_width;
-      auto h = _panel_sprite._panel_height;
+      if (_Panel_OpenCVtest.getBuffer() == nullptr) return nullptr;
+      auto w = _Panel_OpenCVtest._panel_width;
+      auto h = _Panel_OpenCVtest._panel_height;
       deleteSprite();
       deletePalette();
       return createSprite(w, h);
     }
 
-    uint32_t readPixelValue(int32_t x, int32_t y) { return _panel_sprite.readPixelValue(x, y); }
+    uint32_t readPixelValue(int32_t x, int32_t y) { return _Panel_OpenCVtest.readPixelValue(x, y); }
 
     template<typename T>
     LGFX_INLINE void fillSprite (const T& color) { fillScreen(color); }
@@ -392,7 +375,11 @@ namespace lgfx
 
   protected:
 
-    Panel_Sprite _panel_sprite;
+    Panel_OpenCVtest _Panel_OpenCVtest;
+    LovyanGFX* _parent;
+
+    cv::Mat	_cvmat;
+    char _window_name[32];
     union
     {
       void* _img;
@@ -400,8 +387,6 @@ namespace lgfx
       uint16_t* _img16;
       lgfx::bgr888_t* _img24;
     };
-
-    LovyanGFX* _parent;
 
     SpriteBuffer _palette;
 //    int32_t _bitwidth;
@@ -469,7 +454,7 @@ namespace lgfx
 
       data->seek(seekOffset);
 
-      auto bitwidth = _panel_sprite._bitwidth;
+      auto bitwidth = _Panel_OpenCVtest._bitwidth;
 
       size_t buffersize = ((w * bpp + 31) >> 5) << 2;  // readline 4Byte align.
       auto lineBuffer = (uint8_t*)alloca(buffersize);
@@ -524,27 +509,27 @@ namespace lgfx
     void push_sprite(LovyanGFX* dst, int32_t x, int32_t y, uint32_t transp = pixelcopy_t::NON_TRANSP)
     {
       pixelcopy_t p(_img, dst->getColorDepth(), getColorDepth(), dst->hasPalette(), _palette, transp);
-      dst->pushImage(x, y, _panel_sprite._panel_width, _panel_sprite._panel_height, &p, _panel_sprite.getSpriteBuffer()->use_dma()); // DMA disable with use SPIRAM
+      dst->pushImage(x, y, _Panel_OpenCVtest._panel_width, _Panel_OpenCVtest._panel_height, &p, _Panel_OpenCVtest.getSpriteBuffer()->use_dma()); // DMA disable with use SPIRAM
     }
 
     void push_rotate_zoom(LovyanGFX* dst, float x, float y, float angle, float zoom_x, float zoom_y, uint32_t transp = pixelcopy_t::NON_TRANSP)
     {
-      dst->pushImageRotateZoom(x, y, _xpivot, _ypivot, angle, zoom_x, zoom_y, _panel_sprite._panel_width, _panel_sprite._panel_height, _img, transp, getColorDepth(), _palette.img24());
+      dst->pushImageRotateZoom(x, y, _xpivot, _ypivot, angle, zoom_x, zoom_y, _Panel_OpenCVtest._panel_width, _Panel_OpenCVtest._panel_height, _img, transp, getColorDepth(), _palette.img24());
     }
 
     void push_rotate_zoom_aa(LovyanGFX* dst, float x, float y, float angle, float zoom_x, float zoom_y, uint32_t transp = pixelcopy_t::NON_TRANSP)
     {
-      dst->pushImageRotateZoomWithAA(x, y, _xpivot, _ypivot, angle, zoom_x, zoom_y, _panel_sprite._panel_width, _panel_sprite._panel_height, _img, transp, getColorDepth(), _palette.img24());
+      dst->pushImageRotateZoomWithAA(x, y, _xpivot, _ypivot, angle, zoom_x, zoom_y, _Panel_OpenCVtest._panel_width, _Panel_OpenCVtest._panel_height, _img, transp, getColorDepth(), _palette.img24());
     }
 
     void push_affine(LovyanGFX* dst, float matrix[6], uint32_t transp = pixelcopy_t::NON_TRANSP)
     {
-      dst->pushImageAffine(matrix, _panel_sprite._panel_width, _panel_sprite._panel_height, _img, transp, getColorDepth(), _palette.img24());
+      dst->pushImageAffine(matrix, _Panel_OpenCVtest._panel_width, _Panel_OpenCVtest._panel_height, _img, transp, getColorDepth(), _palette.img24());
     }
 
     void push_affine_aa(LovyanGFX* dst, float matrix[6], uint32_t transp = pixelcopy_t::NON_TRANSP)
     {
-      dst->pushImageAffineWithAA(matrix, _panel_sprite._panel_width, _panel_sprite._panel_height, _img, transp, getColorDepth(), _palette.img24());
+      dst->pushImageAffineWithAA(matrix, _Panel_OpenCVtest._panel_width, _Panel_OpenCVtest._panel_height, _img, transp, getColorDepth(), _palette.img24());
     }
 
     RGBColor* getPalette_impl(void) const override { return _palette.img24(); }
@@ -557,4 +542,6 @@ namespace lgfx
  }
 }
 
-using LGFX_Sprite = lgfx::LGFX_Sprite;
+using LGFX_OpenCV = lgfx::LGFX_OpenCV;
+
+#endif
