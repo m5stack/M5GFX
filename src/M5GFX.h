@@ -146,6 +146,7 @@ namespace m5gfx
     , board_M5ATOM
     , board_M5Camera
     , board_M5TimerCam
+    , board_M5Station
     };
   }
   using board_t = boards::board_t;
