@@ -9,14 +9,6 @@
 #include <FS.h>
 #endif
 
-/// Use of std::min and std::max instead of macro definitions is recommended.
-#ifdef min
-#undef min
-#endif
-#ifdef max
-#undef max
-#endif
-
 #ifdef setFont
 #undef setFont
 #endif
@@ -28,6 +20,7 @@
 #include "lgfx/v1/lgfx_filesystem_support.hpp"
 #include "lgfx/v1/LGFXBase.hpp"
 #include "lgfx/v1/LGFX_Sprite.hpp"
+#include "lgfx/v1/LGFX_Button.hpp"
 
 #include <vector>
 
@@ -146,6 +139,7 @@ namespace m5gfx
     , board_M5ATOM
     , board_M5Camera
     , board_M5TimerCam
+    , board_M5Station
     };
   }
   using board_t = boards::board_t;

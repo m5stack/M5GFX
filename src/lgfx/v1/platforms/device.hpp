@@ -62,6 +62,7 @@ Contributors:
 #elif defined (STM32F2xx) || defined (STM32F4xx) || defined (STM32F7xx)
 
 #include "stm32/Bus_SPI.hpp"
+#include "stm32/Panel_LTDC.hpp"
 
 #elif defined (ARDUINO_ARCH_SPRESENSE)
 
