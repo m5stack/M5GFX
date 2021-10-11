@@ -1,3 +1,6 @@
+// Copyright (c) M5Stack. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #pragma once
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
