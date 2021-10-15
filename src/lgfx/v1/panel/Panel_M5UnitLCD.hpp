@@ -76,6 +76,7 @@ namespace lgfx
     static constexpr uint8_t CMD_ROTATE       = 0x36; // 2Byte 回転処理 [1]==回転方向 0:通常 1:右90度 2:180度 3:270度 4~7は0~3の上下反転;
     static constexpr uint8_t CMD_SET_POWER    = 0x38; // 2Byte data[1] 0:低速ローパワー / 1:通常 / 2:高速ハイパワー;
     static constexpr uint8_t CMD_SET_SLEEP    = 0x39; // 2Byte data[1] 0:スリープ解除 / 1:スリープ開始;
+    static constexpr uint8_t CMD_SET_BYTESWAP = 0x3A; // 2Byte data[1] 色データのバイトスワップ転送の有無を指定。デフォルトは0 / 0:バイトスワップなし / 1:バイトスワップあり;
 
     static constexpr uint8_t CMD_WRITE_RAW    = 0x40;
     static constexpr uint8_t CMD_WRITE_RAW_8  = 0x41; // 不定長 RGB332   1Byteのピクセルデータを連続送信;
