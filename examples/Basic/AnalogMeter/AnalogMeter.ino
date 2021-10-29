@@ -12,6 +12,9 @@ M5GFX display;
 //M5UnitLCD display;  // default setting
 //M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
 
+//#include <M5AtomDisplay.h>
+//M5AtomDisplay display;
+
 
 static constexpr float deg_to_rad = 0.017453292519943295769236907684886;
 static constexpr int TFT_GREY = 0x5AEB;

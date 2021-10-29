@@ -1,13 +1,23 @@
 
-#include <M5GFX.h>
-
 #include <Arduino.h>
-
 #include <vector>
 
-#define LINE_COUNT 6
-
+#include <M5GFX.h>
 M5GFX display;
+
+//#include <M5UnitOLED.h>
+//M5UnitOLED display; // default setting
+//M5UnitOLED display ( 21, 22, 400000 ); // SDA, SCL, FREQ
+
+//#include <M5UnitLCD.h>
+//M5UnitLCD display;  // default setting
+//M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
+
+//#include <M5AtomDisplay.h>
+//M5AtomDisplay display;
+
+
+#define LINE_COUNT 6
 
 std::vector<int> points[LINE_COUNT];
 int colors[] = { TFT_RED, TFT_GREEN, TFT_BLUE, TFT_CYAN, TFT_MAGENTA, TFT_YELLOW };
@@ -42,6 +52,10 @@ void setup(void)
   else if (display.getBoard() == m5gfx::boards::board_t::board_M5Paper)
   {
     zoom = 3;
+  }
+  else
+  {
+    zoom = (display.width() / 480) + 1;
   }
   virtual_width  = display.width() / zoom;
   virtual_height = display.height()/ zoom;

@@ -20,6 +20,7 @@ Support device
 - M5Station
 - UnitOLED
 - UnitLCD
+- AtomDisplay
 
 
 License

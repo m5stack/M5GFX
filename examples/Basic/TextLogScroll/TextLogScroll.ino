@@ -10,6 +10,9 @@ M5GFX display;
 //M5UnitLCD display;  // default setting
 //M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
 
+//#include <M5AtomDisplay.h>
+//M5AtomDisplay display;
+
 M5Canvas canvas(&display);
 
 static constexpr char text0[] = "hello world";

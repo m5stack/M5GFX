@@ -26,6 +26,8 @@ class M5UnitOLED : public lgfx::LGFX_Device
 
 public:
 
+  m5gfx::board_t getBoard(void) const { return m5gfx::board_t::board_M5UnitOLED; }
+
   M5UnitOLED(std::uint8_t pin_sda = M5_UNIT_OLED_SDA, std::uint8_t pin_scl = M5_UNIT_OLED_SCL, std::uint32_t i2c_freq = M5_UNIT_OLED_FREQ, std::int8_t i2c_port = -1, std::uint8_t i2c_addr = M5_UNIT_OLED_ADDR)
   {
     setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
