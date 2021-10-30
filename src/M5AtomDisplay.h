@@ -30,10 +30,10 @@ public:
     int spi_mosi = 19;
     int spi_miso = 22;
 
-    int spi_sclk =  5; // ←for SuperATOM
+    int spi_sclk =  5; // for ATOM PSRAM
     if (esp_efuse_get_pkg_ver() == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)
     {
-      spi_sclk = 23; // ←for NormalATOM
+      spi_sclk = 23;  // for ATOM Lite / Matrix
     }
 
     {
@@ -76,6 +76,7 @@ public:
       cfg.offset_x         =     0;
       cfg.offset_y         =     0;
       cfg.offset_rotation  =     0;
+      cfg.readable   = false;
       cfg.bus_shared = false;
 
       _panel_instance.config(cfg);
