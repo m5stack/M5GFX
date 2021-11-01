@@ -15,6 +15,8 @@ M5GFX display;
 //M5UnitLCD display;  // default setting
 //M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
 
+//#include <M5AtomDisplay.h>
+//M5AtomDisplay display;
 
 extern const uint8_t jpg[];
 

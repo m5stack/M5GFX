@@ -15,11 +15,15 @@ M5GFX display;
 //M5UnitLCD display;  // default setting
 //M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
 
+//#include <M5AtomDisplay.h>
+//M5AtomDisplay display;
+
 M5Canvas canvas[2];
 
 void setup(void)
 {
   display.begin();
+  display.setColorDepth(8);
   display.setEpdMode(epd_mode_t::epd_fastest);
 
   if (display.width() < display.height())
@@ -28,10 +32,24 @@ void setup(void)
     display.setPivot(display.width() /2 -0.5, display.height() /2 - 0.5);
   }
 
+  int z = 0;
+  int width;
+  do
+  {
+    width = display.width() / ++z;
+  } while (width > 192);
+
+  z = 0;
+  int height;
+  do
+  {
+    height = display.height() / ++z;
+  } while (height > 160);
+
   for (int i = 0; i < 2; i++)
   {
     canvas[i].setColorDepth(8);
-    canvas[i].createSprite(std::min(192, display.width()>>1), std::min(160, display.height()>>1));
+    canvas[i].createSprite(width, height);
     canvas[i].createPalette();
     canvas[i].setPaletteColor(1, TFT_WHITE);
     canvas[i].setPivot(canvas[i].width() /2 -0.5, canvas[i].height() /2 - 0.5);
@@ -42,7 +60,8 @@ void setup(void)
   canvas[0].setTextDatum(textdatum_t::top_center);
   canvas[0].drawString("Game of Life", canvas[0].width() >> 1, canvas[0].height() >> 1);
   canvas[0].pushRotateZoom(&display, 0,  (float)display.width() / canvas[0].width(), (float)display.height() / canvas[0].height());
-  delay(1000);
+  delay(2000);
+  display.clear();
 }
 
 void loop(void)
@@ -50,6 +69,8 @@ void loop(void)
   bool flip = false;
   int width = canvas[flip].width();
   int height = canvas[flip].height();
+  int xz = display.width() / width;
+  int yz = display.height() / height;
 
   int y = 1;
   do
@@ -62,6 +83,7 @@ void loop(void)
   } while (++y < height - 1);
 
   int diff;
+  display.startWrite();
   do
   {
     flip = !flip;
@@ -101,12 +123,15 @@ void loop(void)
         bool flg = (neighbors == 3) || (neighbors == 2 && old_buf[idx]);
         if (flg != new_buf[idx])
         {
+          display.fillRect(x * xz, y * yz, xz, yz, flg ? TFT_WHITE : TFT_BLACK);
           new_buf[idx] = flg;
           ++diff;
         }
       } while (nx);
     } while (ny);
 
-    canvas[flip].pushRotateZoom(&display, 0,  (float)display.width() / width, (float)display.height() / height);
+    display.display();
+    // canvas[flip].pushRotateZoom(&display, 0,  (float)display.width() / width, (float)display.height() / height);
   } while (diff);
+  display.endWrite();
 }

@@ -26,6 +26,7 @@ Contributors:
   #include "esp32/Light_PWM.hpp"
   #include "esp32/Bus_SPI.hpp"
   #include "esp32/Bus_I2C.hpp"
+  #include "esp32c3/Bus_Parallel8.hpp"
 
  #elif defined (CONFIG_IDF_TARGET_ESP32S2)
 
@@ -62,7 +63,6 @@ Contributors:
 #elif defined (STM32F2xx) || defined (STM32F4xx) || defined (STM32F7xx)
 
 #include "stm32/Bus_SPI.hpp"
-#include "stm32/Panel_LTDC.hpp"
 
 #elif defined (ARDUINO_ARCH_SPRESENSE)
 
