@@ -427,7 +427,7 @@ namespace lgfx
     ESP_LOGI(TAG, "Reading FPGA ID... ");
 
     cs_control(false);
-    _bus->writeData(0x01, 8); // READ_ID
+    _bus->writeData(CMD_READ_ID, 8); // READ_ID
     _bus->beginRead();
     uint32_t data;
     do {
@@ -485,19 +485,19 @@ namespace lgfx
     if (_need_delay)
     {
       auto us = lgfx::micros() - _last_us;
-      if (us < _need_delay)
+      if (_need_delay > us)
       {
         us = _need_delay - us;
-        if (us > 8)
-        {
-          delayMicroseconds(us - 8);
-        }
-        _bus->beginRead();
-        while (_bus->readData(8) == 0x00);
-        cs_control(true);
-        _bus->endRead();
-        cs_control(false);
+        delayMicroseconds(us);
       }
+      _bus->beginRead();
+      while (_bus->readData(8) == 0x00)
+      {
+        delayMicroseconds(1);
+      }
+      cs_control(true);
+      _bus->endRead();
+      cs_control(false);
       _need_delay = 0;
     }
     return false;
@@ -597,15 +597,11 @@ namespace lgfx
     }
     _check_repeat();
     _bus->writeBytes(((uint8_t*)buf)+3, bytes, false, false);
-    if (rect)
+    if (w > 7 || h > 1)
     {
-      --w;
       uint32_t us = ((21 + (w >> 4) * 36 + (w & 15)) * h) >> 5;
-      if (us)
-      {
-        _need_delay = us;
-        _last_us = lgfx::micros();
-      }
+      _need_delay = 1 + us;
+      _last_us = lgfx::micros();
     }
   }
 
@@ -706,7 +702,6 @@ namespace lgfx
     uint_fast16_t ye = _ye;
     uint_fast16_t x = _xpos;
     uint_fast16_t y = _ypos;
-    const size_t bits = _write_bits;
     auto bytes = (_write_bits >> 3);
     uint32_t cmd = CMD_WRITE_RAW + bytes;
 

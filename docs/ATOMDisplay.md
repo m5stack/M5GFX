@@ -5,12 +5,15 @@
 
 
 ### Notes.
-
+- The HDMI output resolution is fixed at 1280x720 60Hz.  
 - If the image does not appear, reinsert the USB cable and wait a few seconds.  
+- Audio output function is not included.  
 - When inserting or removing the USB cable, please hold the ATOM itself. Repeatedly inserting and removing the USB cable while holding the docking base side may cause stress on the pin headers and result in poor contact.  
 
 ### 注意事項  
-- 画像が表示されない場合はUSBケーブルを挿しなおして数秒待ちます。  
+- HDMIの出力解像度は 1280x720 60Hz 固定です。  
+- 音声出力機能は含まれません。  
+- 画像が表示されない場合はUSBケーブルを挿し直し、数秒待機してください。  
 - USBケーブルを挿抜する際はATOM本体を保持してください。ドッキングベース側を保持した状態でUSB挿抜を行うと、ピンヘッダに応力が掛かり接触不良を引き起こす可能性があります。  
 
 
@@ -19,15 +22,17 @@ Sample Code:
 #include <M5AtomDisplay.h>
 
 // Create an instance of M5AtomDisplay
+// Set the resolution in the argument (width, height).  default : 1280, 720.
 // M5AtomDisplay のインスタンスを用意
+// 引数で解像度(幅,高さ)を設定できます。 省略時は 1280, 720
 
 M5AtomDisplay display ( 640, 360 );
 
-// Set the resolution in the argument. ( default : 1280, 720 )
-// 引数で解像度を設定できます。 省略時は 1280, 720
-
-// By lowering the resolution, you can enlarge the image.
+// ※ By lowering the resolution, you can enlarge the image.
+//    If the resolution after enlargement is less than 1280x720
+//    , there will be a gap around the periphery.
 // ※ 解像度を下げることで、拡大表示することができます。
+//    拡大後の解像度が1280x720に満たない場合は外周に隙間が生じます。
 // width scale:
 // ~ 1280 = x1
 // ~ 640  = x2
@@ -72,6 +77,13 @@ void setup(void)
     }
   }
   display.endWrite();
+
+  for (int i = 0; i < 16; ++i)
+  {
+    int x = rand() % display.width();
+    int y = rand() % display.height();
+    display.drawCircle(x, y, 16, rand());
+  }
 }
 
 void loop(void)
