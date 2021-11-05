@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __M5GFX_M5ATOMDISPLAY__
+#define __M5GFX_M5ATOMDISPLAY__
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
 //  please include <SD.h>,<SPIFFS.h>,<HTTPClient.h> before <M5GFX.h>
@@ -98,3 +99,5 @@ public:
     setPanel(&_panel_instance);
   }
 };
+
+#endif

@@ -397,19 +397,19 @@ namespace m5gfx
       //ESP_LOGI(LIBRARY_NAME,"autodetect board:%d", board);
     } while (board_t::board_unknown == board && --retry >= 0);
     _board = board;
-    /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。
-    /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効
-    bool res = LGFX_Device::init_impl(false, use_clear);
 
 #if defined ( ARDUINO_M5Stack_ATOM )
 
-    if (res == board_t::board_unknown)
+    if (board == board_t::board_unknown || board == board_t::board_M5ATOM)
     {
-      res = board_t::board_M5ATOM;
+      return false;
     }
-    else
 
 #endif
+
+    /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。
+    /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効
+    bool res = LGFX_Device::init_impl(false, use_clear);
 
     if (nvs_board != board) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {

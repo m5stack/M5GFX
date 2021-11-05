@@ -27,6 +27,11 @@
 
 #include <vector>
 
+namespace m5
+{
+  class M5Unified;
+}
+
 namespace m5gfx
 {
   using namespace lgfx;
@@ -152,6 +157,8 @@ namespace m5gfx
 
   class M5GFX : public lgfx::LGFX_Device
   {
+  friend m5::M5Unified;
+
     static M5GFX* _instance;
 
     struct DisplayState
@@ -173,6 +180,12 @@ namespace m5gfx
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
     void _set_backlight(lgfx::ILight* bl);
     void _set_pwm_backlight(std::int16_t pin, std::uint8_t ch, std::uint32_t freq = 12000, bool invert = false);
+    void _set_board(board_t board) { _board = board; }
+    bool _init_with_panel(lgfx::Panel_Device* panel)
+    {
+      setPanel(panel);
+      return LGFX_Device::init_impl(true, true);
+    }
 
   public:
     M5GFX(void);
