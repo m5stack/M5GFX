@@ -711,7 +711,7 @@ namespace lgfx
       auto linebuf = (uint8_t*)alloca((xe - xs + 1) * bytes);
 
       pixelcopy_t pc((void*)linebuf, _write_depth, _write_depth);
-      pc.src_x32_add = -1 << pixelcopy_t::FP_SCALE;
+      pc.src_x32_add = ~0u << pixelcopy_t::FP_SCALE;
 
       x = _width  - (x + 1);
       xs = _width - (xs + 1);
