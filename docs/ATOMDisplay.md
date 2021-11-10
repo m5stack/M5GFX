@@ -51,11 +51,11 @@ M5AtomDisplay display;
 
 // Depending on the supported resolution of the display, it may not be displayed correctly.
 // You may be able to display it by setting the resolution (width and height) to be output to the display with the  arguments 3 and 4.
-// You can also set the scaling factor for width and height with arguments 4 and 5.
+// You can also set the scaling factor for width and height with arguments 5 and 6.
 // If the enlarged resolution is less than the output resolution, there will be a gap around the perimeter of the screen.
 // ディスプレイの対応解像度によっては正しく表示できない場合があります。
 // 引数3と4でディスプレイに出力する解像度(幅,高さ)を設定することで表示できる場合があります。
-// また、引数4と5で幅と高さの拡大倍率を設定できます。
+// また、引数5と6で幅と高さの拡大倍率を設定できます。
 // なお拡大後の解像度が出力解像度に満たない場合、画面外周に隙間が生じます。
 
 // M5AtomDisplay display ( 512, 384, 1280, 800, 2, 2 );
