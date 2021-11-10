@@ -380,6 +380,9 @@ namespace m5gfx
       nvs_board = board_t::board_M5Tough;
 
 #elif defined ( ARDUINO_M5Stack_ATOM )
+
+      nvs_board = board_t::board_M5ATOM;
+
 //#elif defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
     }
@@ -394,6 +397,16 @@ namespace m5gfx
       //ESP_LOGI(LIBRARY_NAME,"autodetect board:%d", board);
     } while (board_t::board_unknown == board && --retry >= 0);
     _board = board;
+
+#if defined ( ARDUINO_M5Stack_ATOM )
+
+    if (board == board_t::board_unknown || board == board_t::board_M5ATOM)
+    {
+      return false;
+    }
+
+#endif
+
     /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。
     /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効
     bool res = LGFX_Device::init_impl(false, use_clear);
@@ -523,6 +536,11 @@ namespace m5gfx
 
 /// LCD / EPD 検出失敗の場合はATOM 判定
 
+    }
+    else if (pkg_ver == 6)  // PICOV3_02 (ATOM PSRAM)
+    {
+      board = board_t::board_M5ATOM;
+      goto init_clear;
     }
     else /// not PICO-D4
     {
