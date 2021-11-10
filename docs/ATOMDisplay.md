@@ -5,13 +5,11 @@
 
 
 ### Notes.
-- The HDMI output resolution is fixed at 1280x720 60Hz.  
-- If the image does not appear, reinsert the USB cable and wait a few seconds.  
 - Audio output function is not included.  
+- If the image does not appear, reinsert the USB cable and wait a few seconds.  
 - When inserting or removing the USB cable, please hold the ATOM itself. Repeatedly inserting and removing the USB cable while holding the docking base side may cause stress on the pin headers and result in poor contact.  
 
 ### 注意事項  
-- HDMIの出力解像度は 1280x720 60Hz 固定です。  
 - 音声出力機能は含まれません。  
 - 画像が表示されない場合はUSBケーブルを挿し直し、数秒待機してください。  
 - USBケーブルを挿抜する際はATOM本体を保持してください。ドッキングベース側を保持した状態でUSB挿抜を行うと、ピンヘッダに応力が掛かり接触不良を引き起こす可能性があります。  
@@ -22,33 +20,51 @@ Sample Code:
 #include <M5AtomDisplay.h>
 
 // Create an instance of M5AtomDisplay
-// Set the resolution in the argument (width, height).  default : 1280, 720.
 // M5AtomDisplay のインスタンスを用意
+M5AtomDisplay display;
+
+
+// Set the resolution in the argument (width, height).  default : 1280, 720.
 // 引数で解像度(幅,高さ)を設定できます。 省略時は 1280, 720
 
-M5AtomDisplay display ( 640, 360 );
+// M5AtomDisplay display( 480, 1920);
+// M5AtomDisplay display(1920, 480);
+// M5AtomDisplay display(1280, 720);
+// M5AtomDisplay display(1024, 768);
+// M5AtomDisplay display( 960, 540);
+// M5AtomDisplay display( 800, 600);
+// M5AtomDisplay display( 640, 480);
+// M5AtomDisplay display( 640, 400);
+// M5AtomDisplay display( 640, 360);
+// M5AtomDisplay display( 512, 212);
+// M5AtomDisplay display( 256, 192);
+// M5AtomDisplay display( 320, 240);
+// M5AtomDisplay display( 240, 320);
+// M5AtomDisplay display( 200, 200);
+// M5AtomDisplay display( 240, 135);
+// M5AtomDisplay display( 135, 240);
+// M5AtomDisplay display( 160, 160);
+// M5AtomDisplay display( 160,  80);
+// M5AtomDisplay display(  80, 160);
+// M5AtomDisplay display(  80,  80);
 
-// ※ By lowering the resolution, you can enlarge the image.
-//    If the resolution after enlargement is less than 1280x720
-//    , there will be a gap around the periphery.
-// ※ 解像度を下げることで、拡大表示することができます。
-//    拡大後の解像度が1280x720に満たない場合は外周に隙間が生じます。
-// width scale:
-// ~ 1280 = x1
-// ~ 640  = x2
-// ~ 320  = x4
-// ~ 256  = x5
-// ~ 160  = x8
 
-// height scale:
-// ~ 720 = x1
-// ~ 360 = x2
-// ~ 240 = x3
-// ~ 180 = x4
-// ~ 144 = x5
-// ~ 120 = x6
-// ~ 102 = x7
-// ~  90 = x8
+// Depending on the supported resolution of the display, it may not be displayed correctly.
+// You may be able to display it by setting the resolution (width and height) to be output to the display with the  arguments 3 and 4.
+// You can also set the scaling factor for width and height with arguments 4 and 5.
+// If the enlarged resolution is less than the output resolution, there will be a gap around the perimeter of the screen.
+// ディスプレイの対応解像度によっては正しく表示できない場合があります。
+// 引数3と4でディスプレイに出力する解像度(幅,高さ)を設定することで表示できる場合があります。
+// また、引数4と5で幅と高さの拡大倍率を設定できます。
+// なお拡大後の解像度が出力解像度に満たない場合、画面外周に隙間が生じます。
+
+// M5AtomDisplay display ( 512, 384, 1280, 800, 2, 2 );
+
+// ※ The width scaling factor must be a number that is divisible by the width of the output resolution.
+// ※ 幅の拡大倍率は、出力解像度の幅を割り切れる数である必要があります。
+// ex: M5AtomDisplay display ( 400, 250, 1280, 800, 3, 3 );
+//  In this example, 1280 is not divisible by 3, so the horizontal scaling factor will be changed to 2.
+//  この例は 1280 を 3で割り切れないため、横方向の拡大倍率は2に変更されます。
 
 
 void setup(void)
@@ -114,7 +130,7 @@ void loop(void)
 
 #### PSRAMは必須ですか？ATOM LiteやATOM Matrixで使えますか？  
 - PSRAMは必須ではありません。ATOM LiteやATOM Matrixでも動作します。製品のラベルに記載されている "FOR ATOM PSRAM ONLY" という表記は誤りです。  
-- 実は開発初期段階では、ESP32のPSRAMに1280x720のフレームバッファを構築して画像を出力する想定でした。開発が進むにつれ、フレームバッファはFPGA側に持つようになり、最終製品ではにESP32側でフレームバッファを持つ必要がなくなりました。  
+- 実は開発初期段階では、ESP32のPSRAMに1280x720のフレームバッファを構築して画像を出力する想定でした。開発が進むにつれ、フレームバッファはFPGA側に持つようになり、最終製品ではESP32側にフレームバッファを持つ必要がなくなりました。  
 
 #### ATOM LiteとATOM PSRAMの違いは？  
 - ATOM Liteには ESP32 PICO D4が搭載されています。ATOM PSRAMには ESP32 PICO V3-02 が搭載されています。 
