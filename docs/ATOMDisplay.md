@@ -24,10 +24,14 @@ Sample Code:
 M5AtomDisplay display;
 
 
-// Set the resolution in the argument (width, height).  default : 1280, 720.
-// 引数で解像度(幅,高さ)を設定できます。 省略時は 1280, 720
+// Set the resolution in the argument (width, height, refresh rate).  default : 1280, 720, 60 .
+// The value of width x height x refresh rate must be within 55,296,000.
+// If the display does not match the supported resolution or frequency of the display, it will not be displayed correctly.
 
-// M5AtomDisplay display( 480, 1920);
+// 引数で解像度(幅,高さ,リフレッシュレート)を設定できます。 省略時は 1280, 720, 60
+// 幅 × 高さ × リフレッシュレート の値が 55,296,000 以下である必要があります。
+// また、ディスプレイが指定の解像度や周波数に対応していない場合は正しく表示されません。
+
 // M5AtomDisplay display(1920, 480);
 // M5AtomDisplay display(1280, 720);
 // M5AtomDisplay display(1024, 768);
@@ -47,22 +51,26 @@ M5AtomDisplay display;
 // M5AtomDisplay display( 160,  80);
 // M5AtomDisplay display(  80, 160);
 // M5AtomDisplay display(  80,  80);
+// M5AtomDisplay display( 480, 1920);
+
+// M5AtomDisplay display(1920, 1080, 24);
+// M5AtomDisplay display(1920, 960, 30);
 
 
 // Depending on the supported resolution of the display, it may not be displayed correctly.
-// You may be able to display it by setting the resolution (width and height) to be output to the display with the  arguments 3 and 4.
-// You can also set the scaling factor for width and height with arguments 5 and 6.
+// You may be able to display it by setting the resolution (width and height) to be output to the display with the  arguments 4 and 5.
+// You can also set the scaling factor for width and height with arguments 6 and 7.
 // If the enlarged resolution is less than the output resolution, there will be a gap around the perimeter of the screen.
 // ディスプレイの対応解像度によっては正しく表示できない場合があります。
-// 引数3と4でディスプレイに出力する解像度(幅,高さ)を設定することで表示できる場合があります。
-// また、引数5と6で幅と高さの拡大倍率を設定できます。
+// 引数4と5でディスプレイに出力する解像度(幅,高さ)を設定することで表示できる場合があります。
+// また、引数6と7で幅と高さの拡大倍率を設定できます。
 // なお拡大後の解像度が出力解像度に満たない場合、画面外周に隙間が生じます。
 
-// M5AtomDisplay display ( 512, 384, 1280, 800, 2, 2 );
+// M5AtomDisplay display ( 512, 384, 60, 1280, 800, 2, 2 );
 
 // ※ The width scaling factor must be a number that is divisible by the width of the output resolution.
 // ※ 幅の拡大倍率は、出力解像度の幅を割り切れる数である必要があります。
-// ex: M5AtomDisplay display ( 400, 250, 1280, 800, 3, 3 );
+// ex: M5AtomDisplay display ( 400, 250, 60, 1280, 800, 3, 3 );
 //  In this example, 1280 is not divisible by 3, so the horizontal scaling factor will be changed to 2.
 //  この例は 1280 を 3で割り切れないため、横方向の拡大倍率は2に変更されます。
 
