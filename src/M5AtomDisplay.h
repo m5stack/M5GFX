@@ -7,6 +7,7 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
+#include <sdkconfig.h>
 #include <esp_efuse.h>
 #include <soc/efuse_reg.h>
 
@@ -24,6 +25,8 @@ public:
 
   M5AtomDisplay(uint16_t logical_width = 0, uint16_t logical_height = 0, float refresh_rate = 60.0f, uint16_t output_width = 0, uint16_t output_height = 0, uint_fast8_t scale_w = 0, uint_fast8_t scale_h = 0)
   {
+#if defined (CONFIG_IDF_TARGET_ESP32)
+
     static constexpr int i2c_port =  1;
     static constexpr int i2c_sda  = 25;
     static constexpr int i2c_scl  = 21;
@@ -157,6 +160,7 @@ public:
       _panel_instance.config(cfg, scale_w, scale_h, refresh_rate);
     }
     setPanel(&_panel_instance);
+#endif
   }
 };
 

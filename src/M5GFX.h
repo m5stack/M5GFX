@@ -148,6 +148,7 @@ namespace m5gfx
     , board_M5Camera
     , board_M5TimerCam
     , board_M5Station
+    , board_M5StampC3
     , board_M5AtomDisplay
     , board_M5UnitLCD
     , board_M5UnitOLED
