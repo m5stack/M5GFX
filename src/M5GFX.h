@@ -144,13 +144,19 @@ namespace m5gfx
     , board_M5StackCoreInk
     , board_M5Paper
     , board_M5Tough
-    , board_M5ATOM
+    , board_M5Station
+
+/// non display boards 
+    , board_M5Atom
+    , board_M5ATOM = board_M5Atom
     , board_M5Camera
     , board_M5TimerCam
-    , board_M5Station
     , board_M5StampPico
     , board_M5StampC3
+
+/// external displays
     , board_M5AtomDisplay
+    , board_M5ATOMDisplay = board_M5AtomDisplay
     , board_M5UnitLCD
     , board_M5UnitOLED
     };
