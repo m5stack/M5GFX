@@ -237,3 +237,4 @@ using namespace m5gfx::ili9341_colors;
 using namespace m5gfx::tft_command;
 using M5GFX = m5gfx::M5GFX;
 using M5Canvas = m5gfx::M5Canvas;
+using RGBColor = m5gfx::bgr888_t;
