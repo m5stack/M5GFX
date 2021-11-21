@@ -1,8 +1,7 @@
 // Copyright (c) M5Stack. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#if defined (ESP32) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S2) || defined (ESP_PLATFORM)
-
+#include <sdkconfig.h>
 #include "M5GFX.h"
 
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
@@ -16,19 +15,21 @@
 #include <nvs.h>
 #include <esp_log.h>
 #include <driver/i2c.h>
+#include <esp_efuse.h>
 #include <soc/efuse_reg.h>
 
 namespace m5gfx
 {
   static constexpr char LIBRARY_NAME[] = "M5GFX";
 
+  M5GFX* M5GFX::_instance = nullptr;
+
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
   static constexpr std::int32_t axp_i2c_freq = 400000;
   static constexpr std::uint_fast8_t axp_i2c_addr = 0x34;
   static constexpr std::int_fast16_t axp_i2c_port = I2C_NUM_1;
   static constexpr std::int_fast16_t axp_i2c_sda = 21;
   static constexpr std::int_fast16_t axp_i2c_scl = 22;
-
-  M5GFX* M5GFX::_instance = nullptr;
 
   struct Panel_M5Stack : public lgfx::Panel_ILI9342
   {
@@ -260,11 +261,6 @@ namespace m5gfx
     }
   };
 
-  M5GFX::M5GFX(void) : LGFX_Device()
-  {
-    if (_instance == nullptr) _instance = this;
-  }
-
   static void _pin_level(std::int_fast16_t pin, bool level)
   {
     lgfx::pinMode(pin, lgfx::pin_mode_t::output);
@@ -309,13 +305,11 @@ namespace m5gfx
     return res;
   }
 
-  static std::uint32_t _get_chip_ver_pkg(void)
-  {
-    std::uint32_t res = REG_GET_FIELD(EFUSE_BLK0_RDATA3_REG, EFUSE_RD_CHIP_VER_PKG);
-#if defined ( EFUSE_RD_CHIP_VER_PKG_4BIT )
-    res |= REG_GET_FIELD(EFUSE_BLK0_RDATA3_REG, EFUSE_RD_CHIP_VER_PKG_4BIT) << 3;
 #endif
-    return res;
+
+  M5GFX::M5GFX(void) : LGFX_Device()
+  {
+    if (_instance == nullptr) _instance = this;
   }
 
   void M5GFX::_set_backlight(lgfx::ILight* bl)
@@ -423,6 +417,7 @@ namespace m5gfx
 
   board_t M5GFX::autodetect(bool use_reset, board_t board)
   {
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
     auto bus_cfg = _bus_spi.config();
 
     panel(nullptr);
@@ -452,7 +447,7 @@ namespace m5gfx
 
     std::uint32_t id;
 
-    std::uint32_t pkg_ver = _get_chip_ver_pkg();
+    std::uint32_t pkg_ver = esp_efuse_get_pkg_ver();
 
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)  /// check PICO-D4 (M5StickC,CPlus,T,T2 / CoreInk / ATOM )
     {
@@ -843,9 +838,10 @@ namespace m5gfx
       }
 
     }
+#endif
 
     board = board_t::board_unknown;
-
+    goto init_clear;
 init_clear:
 
 ESP_LOGI("nvs_board","_board:%d", board);
@@ -885,5 +881,3 @@ ESP_LOGI("nvs_board","_board:%d", board);
   }
 
 }
-
-#endif
