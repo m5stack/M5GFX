@@ -13,7 +13,8 @@ M5GFX display;
 //M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
 
 //#include <M5AtomDisplay.h>
-//M5AtomDisplay display;
+//M5AtomDisplay display;  // default setting
+//M5AtomDisplay display ( 320, 180 ); // width, height
 
 
 static constexpr float deg_to_rad = 0.017453292519943295769236907684886;
@@ -178,11 +179,10 @@ void setup(void)
 
 void loop(void)
 {
-  if (updateTime <= millis())
+  auto msec = millis();
+  if (updateTime <= msec)
   {
-    updateTime = millis() + LOOP_PERIOD;
-
-    d += 4; if (d >= 360) d = 0;
+    d = (msec >> 3) % 360;
 
     // Create a Sine wave for testing
     value[0] = 50 + roundf(50 * sinf((d +   0) * deg_to_rad));
@@ -196,6 +196,7 @@ void loop(void)
 
     if (!display.displayBusy())
     {
+      updateTime = msec + LOOP_PERIOD;
     //unsigned long t = millis();
       display.startWrite();
       plotPointer();

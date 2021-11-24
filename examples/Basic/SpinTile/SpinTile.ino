@@ -10,8 +10,9 @@ M5GFX display;
 //M5UnitLCD display;  // default setting
 //M5UnitLCD display  ( 21, 22, 400000 ); // SDA, SCL, FREQ
 
-// #include <M5AtomDisplay.h>
-// M5AtomDisplay display;
+//#include <M5AtomDisplay.h>
+//M5AtomDisplay display;  // default setting
+//M5AtomDisplay display ( 320, 180 ); // width, height
 
 static constexpr const int qsintab[256]={
     0x8000,0x80c9,0x8192,0x825b,0x8324,0x83ee,0x84b7,0x8580,
@@ -189,4 +190,3 @@ void loop(void)
   p_dyx = dyx;
   p_dyy = dyy;
 }
-
