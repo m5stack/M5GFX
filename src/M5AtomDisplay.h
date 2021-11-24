@@ -7,12 +7,12 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
+#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
+#include "M5GFX.h"
+
 #include <sdkconfig.h>
 #include <esp_efuse.h>
 #include <soc/efuse_reg.h>
-
-#include "M5GFX.h"
-#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
 
 #ifndef M5ATOMDISPLAY_LOGICAL_WIDTH
 #define M5ATOMDISPLAY_LOGICAL_WIDTH 1280
@@ -42,8 +42,6 @@ class M5AtomDisplay : public lgfx::LGFX_Device
   lgfx::Bus_SPI      _bus_instance;
 
 public:
-
-  m5gfx::board_t getBoard(void) const { return m5gfx::board_t::board_M5AtomDisplay; }
 
   M5AtomDisplay( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH
                , uint16_t logical_height = M5ATOMDISPLAY_LOGICAL_HEIGHT
@@ -117,6 +115,7 @@ public:
     _panel_instance.config_resolution(cfg_reso);
 
     setPanel(&_panel_instance);
+    _board = lgfx::board_t::board_M5AtomDisplay;
   }
 
   bool setResolution( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH

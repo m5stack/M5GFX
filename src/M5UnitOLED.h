@@ -6,8 +6,9 @@
 // #include <SD.h>
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
-#include "M5GFX.h"
+
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
+#include "M5GFX.h"
 
 #if defined ( ARDUINO )
  #include <Arduino.h>
@@ -49,8 +50,6 @@ class M5UnitOLED : public lgfx::LGFX_Device
   lgfx::Panel_SH110x _panel_instance;
 
 public:
-
-  m5gfx::board_t getBoard(void) const { return m5gfx::board_t::board_M5UnitOLED; }
 
   M5UnitOLED(uint8_t pin_sda = M5UNITOLED_SDA, uint8_t pin_scl = M5UNITOLED_SCL, uint32_t i2c_freq = M5UNITOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITOLED_ADDR)
   {
@@ -99,6 +98,7 @@ public:
     }
 
     setPanel(&_panel_instance);
+    _board = lgfx::board_t::board_M5UnitOLED;
   }
 };
 

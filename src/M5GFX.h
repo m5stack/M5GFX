@@ -132,37 +132,6 @@ namespace m5gfx
     static constexpr int TFT_SLPOUT  = 0x11;
   }
 
-  namespace boards
-  {
-    enum board_t
-    { board_unknown
-    , board_Non_Panel
-    , board_M5Stack
-    , board_M5StackCore2
-    , board_M5StickC
-    , board_M5StickCPlus
-    , board_M5StackCoreInk
-    , board_M5Paper
-    , board_M5Tough
-    , board_M5Station
-
-/// non display boards 
-    , board_M5Atom
-    , board_M5ATOM = board_M5Atom
-    , board_M5Camera
-    , board_M5TimerCam
-    , board_M5StampPico
-    , board_M5StampC3
-
-/// external displays
-    , board_M5AtomDisplay
-    , board_M5ATOMDisplay = board_M5AtomDisplay
-    , board_M5UnitLCD
-    , board_M5UnitOLED
-    };
-  }
-  using board_t = boards::board_t;
-
   class M5GFX : public lgfx::LGFX_Device
   {
   friend m5::M5Unified;
@@ -181,7 +150,6 @@ namespace m5gfx
     lgfx::Panel_Device* _panel_last;
     lgfx::ILight* _light_last;
     lgfx::ITouch* _touch_last;
-    board_t _board;
     std::vector<DisplayState> _displayStateStack;
 
     bool init_impl(bool use_reset, bool use_clear) override;
@@ -200,8 +168,6 @@ namespace m5gfx
 
     static M5GFX* getInstance(void) { return _instance; }
 
-    inline board_t getBoard(void) const { return _board; }
-
     void clearDisplay(int32_t color = TFT_BLACK) { fillScreen(color); }
     void progressBar(int x, int y, int w, int h, uint8_t val);
     void pushState(void);
@@ -217,6 +183,32 @@ namespace m5gfx
     void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data, uint16_t transparent)
     {
       pushImage(x, y, w, h, (const rgb565_t*)data, transparent);
+    }
+
+    bool setResolution( uint16_t logical_width  = 0
+                      , uint16_t logical_height = 0
+                      , float refresh_rate      = 0
+                      , uint16_t output_width   = 0
+                      , uint16_t output_height  = 0
+                      , uint_fast8_t scale_w    = 0
+                      , uint_fast8_t scale_h    = 0
+                      )
+    {
+#ifdef __M5GFX_M5ATOMDISPLAY__
+      if (getBoard() == board_t::board_M5AtomDisplay)
+      {
+        return ((Panel_M5HDMI*)panel())->setResolution
+          ( logical_width
+          , logical_height
+          , refresh_rate
+          , output_width
+          , output_height
+          , scale_w
+          , scale_h
+          );
+      }
+#endif
+      return false;
     }
   };
 
