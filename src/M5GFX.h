@@ -197,7 +197,7 @@ namespace m5gfx
 #ifdef __M5GFX_M5ATOMDISPLAY__
       if (getBoard() == board_t::board_M5AtomDisplay)
       {
-        return ((Panel_M5HDMI*)panel())->setResolution
+        bool res = ((Panel_M5HDMI*)panel())->setResolution
           ( logical_width
           , logical_height
           , refresh_rate
@@ -206,6 +206,8 @@ namespace m5gfx
           , scale_w
           , scale_h
           );
+        setRotation(getRotation());
+        return res;
       }
 #endif
       return false;
