@@ -27,10 +27,12 @@
 
 #include <vector>
 
+#ifdef __M5UNIFIED_HPP__
 namespace m5
 {
   class M5Unified;
 }
+#endif
 
 namespace m5gfx
 {
@@ -134,7 +136,9 @@ namespace m5gfx
 
   class M5GFX : public lgfx::LGFX_Device
   {
+#ifdef __M5UNIFIED_HPP__
   friend m5::M5Unified;
+#endif
 
     static M5GFX* _instance;
 
