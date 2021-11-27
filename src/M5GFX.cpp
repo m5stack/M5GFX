@@ -15,7 +15,6 @@
 #include <nvs.h>
 #include <esp_log.h>
 #include <driver/i2c.h>
-#include <esp_efuse.h>
 #include <soc/efuse_reg.h>
 
 namespace m5gfx
