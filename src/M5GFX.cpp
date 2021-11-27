@@ -447,7 +447,7 @@ namespace m5gfx
 
     std::uint32_t id;
 
-    std::uint32_t pkg_ver = esp_efuse_get_pkg_ver();
+    std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
 
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)  /// check PICO-D4 (M5StickC,CPlus,T,T2 / CoreInk / ATOM )
     {
