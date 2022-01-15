@@ -11,7 +11,6 @@
 #include "M5GFX.h"
 
 #include <sdkconfig.h>
-#include <esp_efuse.h>
 #include <soc/efuse_reg.h>
 
 #ifndef M5ATOMDISPLAY_LOGICAL_WIDTH

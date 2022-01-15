@@ -15,7 +15,6 @@
 #include <nvs.h>
 #include <esp_log.h>
 #include <driver/i2c.h>
-#include <esp_efuse.h>
 #include <soc/efuse_reg.h>
 
 namespace m5gfx
@@ -537,7 +536,8 @@ namespace m5gfx
       board = board_t::board_M5ATOM;
       goto init_clear;
     }
-    else /// not PICO-D4
+    else
+    if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32D0WDQ6)
     {
 
       /// AXP192の有無を最初に判定し、分岐する。;
