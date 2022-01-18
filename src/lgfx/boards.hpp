@@ -24,6 +24,7 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5TimerCam
     , board_M5StampPico
     , board_M5StampC3
+    , board_M5StampC3U
 
 /// external displays
     , board_M5AtomDisplay
