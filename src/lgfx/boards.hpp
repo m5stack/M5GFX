@@ -20,6 +20,8 @@ namespace lgfx // これはm5gfxに変更してはならない;
 /// non display boards 
     , board_M5Atom
     , board_M5ATOM = board_M5Atom
+    , board_M5AtomPsram
+    , board_M5AtomU
     , board_M5Camera
     , board_M5TimerCam
     , board_M5StampPico
