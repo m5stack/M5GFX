@@ -374,7 +374,7 @@ namespace m5gfx
 
 #elif defined ( ARDUINO_M5Stack_ATOM )
 
-      nvs_board = board_t::board_M5ATOM;
+      nvs_board = board_t::board_M5Atom;
 
 //#elif defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
@@ -393,15 +393,15 @@ namespace m5gfx
 
 #if defined ( ARDUINO_M5Stack_ATOM )
 
-    if (board == board_t::board_unknown || board == board_t::board_M5ATOM)
+    if (board == board_t::board_unknown || board == board_t::board_M5Atom)
     {
       return false;
     }
 
 #endif
 
-    /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。
-    /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効
+    /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。;
+    /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効;
     bool res = LGFX_Device::init_impl(false, use_clear);
 
     if (nvs_board != board) {
@@ -533,7 +533,7 @@ namespace m5gfx
     }
     else if (pkg_ver == 6)  // PICOV3_02 (ATOM PSRAM)
     {
-      board = board_t::board_M5ATOM;
+      board = board_t::board_M5AtomPsram;
       goto init_clear;
     }
     else
