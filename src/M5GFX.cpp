@@ -650,6 +650,7 @@ namespace m5gfx
                   cfg.x_max = 319;
                   cfg.y_min = 0;
                   cfg.y_max = 279;
+                  cfg.bus_shared = false;
                   t->config(cfg);
                   p->touch(t);
                   float affine[6] = { 1, 0, 0, 0, 1, 0 };
@@ -679,6 +680,7 @@ namespace m5gfx
                   cfg.x_max = 319;
                   cfg.y_min = 0;
                   cfg.y_max = 239;
+                  cfg.bus_shared = false;
                   t->config(cfg);
                   p->touch(t);
                   lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x94, 0x02, ~0, axp_i2c_freq);  // GPIO1 HIGH (TOUCH RST)
@@ -817,6 +819,7 @@ namespace m5gfx
                 cfg.y_min = 0;
                 cfg.y_max = 959;
                 cfg.offset_rotation = 1;
+                cfg.bus_shared = false;
                 t->config(cfg);
                 if (!t->init())
                 {
