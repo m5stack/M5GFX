@@ -18,6 +18,11 @@ Contributors:
 #if defined (ESP_PLATFORM)
 #include <sdkconfig.h>
 
+/// ESP32-S3をターゲットにした際にREG_SPI_BASEが定義されていなかったので応急処置 ; 
+#if defined ( CONFIG_IDF_TARGET_ESP32S3 )
+ #define REG_SPI_BASE(i)   (DR_REG_SPI1_BASE + (((i)>1) ? (((i)* 0x1000) + 0x20000) : (((~(i)) & 1)* 0x1000 )))
+#endif
+
 #include "../common.hpp"
 
 #include <algorithm>
@@ -206,6 +211,25 @@ namespace lgfx
       uint32_t spi_port = (spi_host + 1);
       (void)spi_port;
 
+// ※ ESP-IDFのSPIドライバの準備後に ArduinoESP32のSPIClassを準備した場合、
+// ESP32-S3環境でMOSIピンでのデータ読出し(半二重動作)ができなくなる問題があったため、
+// ArduinoESP32のSPIClassを先に準備しておく。
+
+#if defined (ARDUINO) // Arduino ESP32
+
+      if (spi_host == default_spi_host)
+      {
+        SPI.end();
+        SPI.begin(spi_sclk, spi_miso, spi_mosi);
+        _spi_handle[spi_host] = SPI.bus();
+      }
+      if (_spi_handle[spi_host] == nullptr)
+      {
+        _spi_handle[spi_host] = spiStartBus(spi_port, SPI_CLK_EQU_SYSCLK, 0, 0);
+      }
+
+#endif
+
  // バスの設定にはESP-IDFのSPIドライバを使用する。;
       if (_spi_dev_handle[spi_host] == nullptr)
       {
@@ -243,50 +267,6 @@ namespace lgfx
         }
       }
 
-#if defined (ARDUINO) // Arduino ESP32
-
-      if (spi_host == default_spi_host)
-      {
-        SPI.end();
-        SPI.begin(spi_sclk, spi_miso, spi_mosi);
-        _spi_handle[spi_host] = SPI.bus();
-      }
-      if (_spi_handle[spi_host] == nullptr)
-      {
-        _spi_handle[spi_host] = spiStartBus(spi_port, SPI_CLK_EQU_SYSCLK, 0, 0);
-      }
-/*
-      periph_module_enable(spi_periph_signal[spi_host].module);
-      if (spi_mosi >= 0) {
-        gpio_lo(spi_mosi);
-        pinMode(spi_mosi, pin_mode_t::output);
-        gpio_matrix_out(spi_mosi, spi_periph_signal[spi_host].spid_out, false, false);
-        gpio_matrix_in(spi_mosi, spi_periph_signal[spi_host].spid_in, false);
-      }
-      if (spi_miso >= 0) {
-        pinMode(spi_miso, pin_mode_t::input);
-      //gpio_matrix_out(spi_miso, spi_periph_signal[spi_host].spiq_out, false, false);
-        gpio_matrix_in(spi_miso, spi_periph_signal[spi_host].spiq_in, false);
-      }
-      if (spi_sclk >= 0) {
-        gpio_lo(spi_sclk); // ここでLOWにしておくことで、pinMode変更によるHIGHパルスが出力されるのを防止する (CSなしパネル対策);
-        pinMode(spi_sclk, pin_mode_t::output);
-        //gpio_set_direction((gpio_num_t)_spi_sclk, GPIO_MODE_INPUT_OUTPUT);
-        gpio_matrix_out(spi_sclk, spi_periph_signal[spi_host].spiclk_out, false, false);
-        gpio_matrix_in(spi_sclk, spi_periph_signal[spi_host].spiclk_in, false);
-      }
-      if (dma_channel) {
-        periph_module_enable( PERIPH_SPI_DMA_MODULE );
-    //Select DMA channel.
-        DPORT_SET_PERI_REG_BITS(DPORT_SPI_DMA_CHAN_SEL_REG, 3, dma_channel, (spi_host * 2));
-      //Reset DMA
-        *reg(SPI_DMA_CONF_REG(spi_port)) = *reg(SPI_DMA_CONF_REG(spi_port)) | SPI_OUT_RST|SPI_IN_RST|SPI_AHBM_RST|SPI_AHBM_FIFO_RST;
-        *reg(SPI_DMA_IN_LINK_REG(spi_port)) = 0;
-        *reg(SPI_DMA_OUT_LINK_REG(spi_port)) = 0;
-        *reg(SPI_DMA_CONF_REG(spi_port)) = *reg(SPI_DMA_CONF_REG(spi_port)) & ~(SPI_OUT_RST|SPI_IN_RST|SPI_AHBM_RST|SPI_AHBM_FIFO_RST);
-      }
-//*/
-#endif
       *reg(SPI_USER_REG(spi_port)) = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN;  // need SD card access (full duplex setting)
       *reg(SPI_CTRL_REG(spi_port)) = 0;
 #if defined ( SPI_CTRL1_REG )
@@ -730,6 +710,7 @@ namespace lgfx
       {
         return cpp::fail(error_t::invalid_arg);
       }
+
       auto dev = getDev(i2c_port);
       i2c_context[i2c_port].save_reg(dev);
       release(i2c_port);
@@ -737,6 +718,13 @@ namespace lgfx
       i2c_context[i2c_port].pin_sda = (gpio_num_t)pin_sda;
       i2c_stop(i2c_port);
       i2c_context[i2c_port].load_reg(dev);
+
+#if defined ( ARDUINO )
+
+      auto twowire = ((i2c_port == 1) ? &Wire1 : &Wire);
+      twowire->begin(pin_sda, pin_scl);
+
+#endif
 
 //ESP_LOGI("LGFX", "i2c_set_pin : %d", res);
       // i2c_set_pin((i2c_port_t)i2c_port, pin_sda, pin_scl, gpio_pullup_t::GPIO_PULLUP_ENABLE, gpio_pullup_t::GPIO_PULLUP_ENABLE, I2C_MODE_MASTER);
@@ -748,6 +736,15 @@ namespace lgfx
     cpp::result<void, error_t> release(int i2c_port)
     {
       if (i2c_port >= I2C_NUM_MAX) { return cpp::fail(error_t::invalid_arg); }
+
+#if defined ( ARDUINO )
+ #if defined (ESP_IDF_VERSION_VAL)
+  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+      auto twowire = ((i2c_port == 1) ? &Wire1 : &Wire);
+      twowire->end();
+  #endif
+ #endif
+#endif
 
       if (i2c_context[i2c_port].pin_scl >= 0 || i2c_context[i2c_port].pin_sda >= 0)
       {
