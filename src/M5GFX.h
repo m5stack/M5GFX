@@ -163,6 +163,8 @@ namespace m5gfx
   public:
     M5GFX(void);
 
+    using LGFXBase::drawBitmap;
+
     static M5GFX* getInstance(void) { return _instance; }
 
     void clearDisplay(int32_t color = TFT_BLACK) { fillScreen(color); }
