@@ -499,15 +499,17 @@ namespace lgfx
         *spi_dma_out_link_reg = 0;
         _setup_dma_desc_links(data, length);
 #if defined ( SOC_GDMA_SUPPORTED )
+        uint32_t len = ((length - 1) & ((SPI_MS_DATA_BITLEN)>>3)) + 1;
         *spi_dma_out_link_reg = DMA_OUTLINK_START_CH0 | ((int)(&_dmadesc[0]) & 0xFFFFF);
         auto dma = reg(SPI_DMA_CONF_REG(_spi_port));
         *dma = SPI_DMA_TX_ENA;
         _clear_dma_reg = dma;
 #else
+        uint32_t len = length;
         *spi_dma_out_link_reg = SPI_OUTLINK_START | ((int)(&_dmadesc[0]) & 0xFFFFF);
         _clear_dma_reg = spi_dma_out_link_reg;
 #endif
-        set_write_len(length << 3);
+        set_write_len(len << 3);
         *_gpio_reg_dc[dc] = _mask_reg_dc;
 
         // DMA準備完了待ち;
@@ -519,6 +521,21 @@ namespace lgfx
         spicommon_dmaworkaround_transfer_active(_cfg.dma_channel);
 #endif
         exec_spi();
+
+#if defined ( SOC_GDMA_SUPPORTED )
+        if (length -= len)
+        {
+          while (*cmd & SPI_USR) {}
+          set_write_len(SPI_MS_DATA_BITLEN + 1);
+          goto label_start;
+          do
+          {
+            while (*cmd & SPI_USR) {}
+label_start:
+            exec_spi();
+          } while (length -= ((SPI_MS_DATA_BITLEN + 1) >> 3));
+        }
+#endif
         return;
       }
     }
@@ -672,13 +689,15 @@ namespace lgfx
     auto dma = reg(SPI_DMA_CONF_REG(_spi_port));
     *dma = SPI_DMA_TX_ENA;
     _clear_dma_reg = dma;
+    uint32_t len = ((_dma_queue_bytes - 1) & ((SPI_MS_DATA_BITLEN)>>3)) + 1;
 #else
     *_spi_dma_out_link_reg = SPI_OUTLINK_START | ((int)(&_dmadesc[0]) & 0xFFFFF);
     _clear_dma_reg = _spi_dma_out_link_reg;
+    uint32_t len = _dma_queue_bytes;
+    _dma_queue_bytes = 0;
 #endif
 
-    set_write_len(_dma_queue_bytes << 3);
-    _dma_queue_bytes = 0;
+    set_write_len(len << 3);
     // DMA準備完了待ち;
 #if defined ( SOC_GDMA_SUPPORTED )
     while (*_spi_dma_outstatus_reg & DMA_OUTFIFO_EMPTY_CH0 ) {}
@@ -689,6 +708,23 @@ namespace lgfx
 #endif
 
     exec_spi();
+
+#if defined ( SOC_GDMA_SUPPORTED )
+    uint32_t length = _dma_queue_bytes - len;
+    _dma_queue_bytes = 0;
+    if (length)
+    {
+      wait_spi();
+      set_write_len(SPI_MS_DATA_BITLEN + 1);
+      goto label_start;
+      do
+      {
+        wait_spi();
+label_start:
+        exec_spi();
+      } while (length -= ((SPI_MS_DATA_BITLEN + 1) >> 3));
+    }
+#endif
   }
 
   void Bus_SPI::beginRead(uint_fast8_t dummy_bits)
@@ -780,7 +816,7 @@ namespace lgfx
         if (0 == (length -= len1)) {
           len2 = len1;
           wait_spi();
-          memcpy(dst, (void*)spi_w0_reg, len2);
+          memcpy(dst, (void*)spi_w0_reg, (len2 + 3) & ~3u);
         } else {
           if (length < len1) {
             len1 = length;
@@ -789,7 +825,7 @@ namespace lgfx
           } else {
             wait_spi();
           }
-          memcpy(dst, (void*)spi_w0_reg, len2);
+          memcpy(dst, (void*)spi_w0_reg, (len2 + 3) & ~3u);
           exec_spi();
         }
         dst += len2;
@@ -848,7 +884,7 @@ namespace lgfx
       if (0 == (length -= len1)) {
         len2 = len1;
         wait_spi();
-        memcpy(regbuf, (void*)spi_w0_reg, len2 * len_read_pixel >> 3);
+        memcpy(regbuf, (void*)spi_w0_reg, ((len2 * len_read_pixel >> 3) + 3) & ~3);
       } else {
         if (length < len1) {
           len1 = length;
@@ -857,7 +893,7 @@ namespace lgfx
         } else {
           wait_spi();
         }
-        memcpy(regbuf, (void*)spi_w0_reg, len2 * len_read_pixel >> 3);
+        memcpy(regbuf, (void*)spi_w0_reg, ((len2 * len_read_pixel >> 3) + 3) & ~3);
         exec_spi();
       }
       param->src_x = 0;
