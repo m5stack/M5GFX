@@ -286,19 +286,33 @@ namespace m5gfx
     } while (lgfx::millis() - time < 10);
   }
 
+  /// TF card dummy clock送信 ;
+  static void _send_sd_dummy_clock(int_fast16_t pin_cs)
+  {
+    static constexpr uint32_t dummy_clock[] = { ~0u, ~0u, ~0u, ~0u, ~0u };
+    _pin_level(pin_cs, true);
+    m5gfx::spi::writeBytes(VSPI_HOST, (const uint8_t*)dummy_clock, sizeof(dummy_clock));
+    _pin_level(pin_cs, false);
+  }
+
   /// TF card をSPIモードに移行する ;
   static void _set_sd_spimode(int_fast16_t pin_cs)
   {
-    _pin_level(pin_cs, true);
     m5gfx::spi::beginTransaction(VSPI_HOST, 400000, 0);
-    static constexpr uint32_t dummy_clock[] = { ~0u, ~0u, ~0u, ~0u, ~0u };
-    m5gfx::spi::writeBytes(VSPI_HOST, (const uint8_t*)dummy_clock, sizeof(dummy_clock));
+    _send_sd_dummy_clock(pin_cs);
 
-    _pin_level(pin_cs, false);
-    static constexpr uint8_t sd_cmd0[] = { 0x40, 0, 0, 0, 0, 0x95, 0xFF, 0xFF };
-    m5gfx::spi::writeBytes(VSPI_HOST, sd_cmd0, sizeof(sd_cmd0));
-    m5gfx::spi::endTransaction(VSPI_HOST);
+    uint8_t sd_cmd58[] = { 0x7A, 0, 0, 0, 0, 0xFD, 0xFF, 0xFF }; // READ_OCR command.
+    m5gfx::spi::readBytes(VSPI_HOST, sd_cmd58, sizeof(sd_cmd58));
+
+    if (sd_cmd58[6] == sd_cmd58[7])  // not SPI mode
+    {
+      _send_sd_dummy_clock(pin_cs);
+
+      static constexpr uint8_t sd_cmd0[] = { 0x40, 0, 0, 0, 0, 0x95, 0xFF, 0xFF }; // GO_IDLE_STATE command.
+      m5gfx::spi::writeBytes(VSPI_HOST, sd_cmd0, sizeof(sd_cmd0));
+    }
     _pin_level(pin_cs, true);
+    m5gfx::spi::endTransaction(VSPI_HOST);
   }
 
   static std::uint32_t _read_panel_id(lgfx::Bus_SPI* bus, std::int32_t pin_cs, std::uint32_t cmd = 0x04, std::uint8_t dummy_read_bit = 1) // 0x04 = RDDID command

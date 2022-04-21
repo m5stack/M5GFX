@@ -17,8 +17,15 @@ Contributors:
 /----------------------------------------------------------------------------*/
 #pragma once
 
+#if __has_include (<esp_lcd_panel_io.h>)
+#include <esp_lcd_panel_io.h>
+#include <esp_private/gdma.h>
+#include <hal/dma_types.h>
+
 #include "../../Bus.hpp"
 #include "../common.hpp"
+
+struct lcd_cam_dev_t;
 
 namespace lgfx
 {
@@ -26,27 +33,41 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-  class Bus_I2C : public IBus
+  class Bus_Parallel8 : public IBus
   {
   public:
     struct config_t
     {
-      uint32_t freq_write = 400000;
-      uint32_t freq_read = 400000;
-      int16_t pin_scl ;
-      int16_t pin_sda ;
-      uint8_t i2c_port ;
-      uint8_t i2c_addr ;
-      uint32_t prefix_cmd = 0x00;
-      uint32_t prefix_data = 0x40;
-      uint32_t prefix_len = 1;
+      // LCD_CAM peripheral number. No need to change (only 0 for ESP32-S3.)
+      int port = 0;
+
+      // max 80MHz.
+      uint32_t freq_write = 16000000;
+      int8_t pin_wr = -1;
+      int8_t pin_rd = -1;
+      int8_t pin_rs = -1;  // D/C
+      union
+      {
+        int8_t pin_data[8];
+        struct
+        {
+          int8_t pin_d0;
+          int8_t pin_d1;
+          int8_t pin_d2;
+          int8_t pin_d3;
+          int8_t pin_d4;
+          int8_t pin_d5;
+          int8_t pin_d6;
+          int8_t pin_d7;
+        };
+      };
     };
 
-    const config_t& config(void) const { return _cfg; }
 
+    const config_t& config(void) const { return _cfg; }
     void config(const config_t& config);
 
-    bus_type_t busType(void) const override { return bus_type_t::bus_i2c; }
+    bus_type_t busType(void) const override { return bus_type_t::bus_parallel8; }
 
     bool init(void) override;
     void release(void) override;
@@ -56,16 +77,16 @@ namespace lgfx
     void wait(void) override;
     bool busy(void) const override;
 
-    void flush(void) override {}
+    void flush(void) override {};
     bool writeCommand(uint32_t data, uint_fast8_t bit_length) override;
     void writeData(uint32_t data, uint_fast8_t bit_length) override;
     void writeDataRepeat(uint32_t data, uint_fast8_t bit_length, uint32_t count) override;
     void writePixels(pixelcopy_t* param, uint32_t length) override;
     void writeBytes(const uint8_t* data, uint32_t length, bool dc, bool use_dma) override;
 
-    void initDMA(void) {}
+    void initDMA(void) override {}
     void addDMAQueue(const uint8_t* data, uint32_t length) override { writeBytes(data, length, true, true); }
-    void execDMAQueue(void) {}
+    void execDMAQueue(void) override { flush(); };
     uint8_t* getDMABuffer(uint32_t length) override { return _flip_buffer.getBuffer(length); }
 
     void beginRead(void) override;
@@ -74,24 +95,31 @@ namespace lgfx
     bool readBytes(uint8_t* dst, uint32_t length, bool use_dma) override;
     void readPixels(void* dst, pixelcopy_t* param, uint32_t length) override;
 
-  protected:
+  private:
+
+    static constexpr size_t CACHE_SIZE = 256;
 
     config_t _cfg;
-    SimpleBuffer _flip_buffer;
-    bool _need_wait;
-    enum state_t
-    {
-      state_none,
-      state_write_none,
-      state_write_cmd,
-      state_write_data,
-      state_read,
-    };
-    state_t _state = state_none;
+    FlipBuffer _flip_buffer;
+    uint32_t _clock_reg_value;
+    uint32_t _cache[2][CACHE_SIZE / sizeof(uint32_t)];
+    uint32_t* _cache_flip;
 
-    void dc_control(bool dc);
+    void _init_pin(bool read = false);
+    void _read_bytes(uint8_t* dst, uint32_t length);
+
+    void _alloc_dmadesc(size_t len);
+    void _setup_dma_desc_links(const uint8_t *data, int32_t len);
+
+    volatile lcd_cam_dev_t* _dev;
+
+    uint32_t _dmadesc_size = 0;
+    dma_descriptor_t* _dmadesc = nullptr;
+    gdma_channel_handle_t _dma_chan;
+    esp_lcd_i80_bus_handle_t _i80_bus = nullptr;
   };
 
 //----------------------------------------------------------------------------
  }
 }
+#endif

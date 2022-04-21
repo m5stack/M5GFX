@@ -17,15 +17,15 @@ Contributors:
 /----------------------------------------------------------------------------*/
 #pragma once
 
-#if defined (ARDUINO)
-  #include <Adafruit_ZeroDMA.h>
-#endif
-
-#include <vector>
-#include <string.h>
+#if __has_include (<esp_lcd_panel_io.h>)
+#include <esp_lcd_panel_io.h>
+#include <esp_private/gdma.h>
+#include <hal/dma_types.h>
 
 #include "../../Bus.hpp"
 #include "../common.hpp"
+
+struct lcd_cam_dev_t;
 
 namespace lgfx
 {
@@ -33,32 +33,49 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-  class Bus_SPI : public IBus
+  class Bus_Parallel16 : public IBus
   {
   public:
     struct config_t
     {
-      uint8_t sercom_index = 7;
-      int8_t  sercom_clksrc = 0;   // -1=notchange / 0=select GCLK0
-      uint32_t sercom_clkfreq = F_CPU;
+      // LCD_CAM peripheral number. No need to change (only 0 for ESP32-S3.)
+      int port = 0;
 
+      // max 40MHz.
       uint32_t freq_write = 16000000;
-      uint32_t freq_read  =  8000000;
-      //bool spi_3wire = true;
-      //bool use_lock = true;
-      int16_t pin_sclk = samd51::PORT_B | 20;
-      int16_t pin_miso = samd51::PORT_B | 18;
-      int16_t pin_mosi = samd51::PORT_B | 19;
-      int16_t pin_dc   = -1;
-      uint8_t spi_mode = 0;
+      int8_t pin_wr = -1;
+      int8_t pin_rd = -1;
+      int8_t pin_rs = -1;  // D/C
+      union
+      {
+        int8_t pin_data[16];
+        struct
+        {
+          int8_t pin_d0;
+          int8_t pin_d1;
+          int8_t pin_d2;
+          int8_t pin_d3;
+          int8_t pin_d4;
+          int8_t pin_d5;
+          int8_t pin_d6;
+          int8_t pin_d7;
+          int8_t pin_d8;
+          int8_t pin_d9;
+          int8_t pin_d10;
+          int8_t pin_d11;
+          int8_t pin_d12;
+          int8_t pin_d13;
+          int8_t pin_d14;
+          int8_t pin_d15;
+        };
+      };
     };
 
 
     const config_t& config(void) const { return _cfg; }
-
     void config(const config_t& config);
 
-    bus_type_t busType(void) const override { return bus_type_t::bus_spi; }
+    bus_type_t busType(void) const override { return bus_type_t::bus_parallel16; }
 
     bool init(void) override;
     void release(void) override;
@@ -68,16 +85,16 @@ namespace lgfx
     void wait(void) override;
     bool busy(void) const override;
 
-    void flush(void) override {}
+    void flush(void) override {};
     bool writeCommand(uint32_t data, uint_fast8_t bit_length) override;
     void writeData(uint32_t data, uint_fast8_t bit_length) override;
     void writeDataRepeat(uint32_t data, uint_fast8_t bit_length, uint32_t count) override;
     void writePixels(pixelcopy_t* param, uint32_t length) override;
     void writeBytes(const uint8_t* data, uint32_t length, bool dc, bool use_dma) override;
 
-    void initDMA(void) {}
+    void initDMA(void) override {}
     void addDMAQueue(const uint8_t* data, uint32_t length) override { writeBytes(data, length, true, true); }
-    void execDMAQueue(void) {}
+    void execDMAQueue(void) override { flush(); };
     uint8_t* getDMABuffer(uint32_t length) override { return _flip_buffer.getBuffer(length); }
 
     void beginRead(void) override;
@@ -88,38 +105,34 @@ namespace lgfx
 
   private:
 
-    uint32_t FreqToClockDiv(uint32_t freq);
-    void setFreqDiv(uint32_t div);
-
-    __attribute__ ((always_inline)) inline void set_clock_write(void) { setFreqDiv(_clkdiv_write); }
-    __attribute__ ((always_inline)) inline void set_clock_read(void)  { setFreqDiv(_clkdiv_read ); }
-    __attribute__ ((always_inline)) inline void wait_spi(void) { if (_need_wait != true) return; auto *intflag = &_sercom->SPI.INTFLAG.bit; while (intflag->TXC == 0); }
-    __attribute__ ((always_inline)) inline void dc_control(bool flg)
-    {
-      auto mask_reg_dc = _mask_reg_dc;
-      auto gpio_reg_dc = flg ? _gpio_reg_dc_h : _gpio_reg_dc_l;
-      wait_spi();
-      *gpio_reg_dc = mask_reg_dc;
-    }      
+    static constexpr size_t CACHE_SIZE = 256;
 
     config_t _cfg;
     FlipBuffer _flip_buffer;
-    bool _need_wait = false;
-    Sercom* _sercom = nullptr;
-    uint32_t _mask_reg_dc;
-    uint32_t _last_apb_freq = -1;
-    uint32_t _clkdiv_write;
-    uint32_t _clkdiv_read;
-    volatile uint32_t* _gpio_reg_dc_h;
-    volatile uint32_t* _gpio_reg_dc_l;
+    uint32_t _clock_reg_value;
+    uint32_t _fast_wait = 0;
+    uint32_t _cache[2][CACHE_SIZE / sizeof(uint32_t)];
+    uint32_t* _cache_flip;
 
-#if defined (ARDUINO)
-    Adafruit_ZeroDMA _dma_adafruit;
-    DmacDescriptor* _dma_write_desc = nullptr;
-#endif
+    void _init_pin(bool read = false);
+    void _read_bytes(uint8_t* dst, uint32_t length);
 
+    void _send_align_data(void);
+    void _alloc_dmadesc(size_t len);
+    void _setup_dma_desc_links(const uint8_t *data, int32_t len);
+
+    volatile lcd_cam_dev_t* _dev;
+
+    uint32_t _dmadesc_size = 0;
+    dma_descriptor_t* _dmadesc = nullptr;
+    gdma_channel_handle_t _dma_chan;
+    esp_lcd_i80_bus_handle_t _i80_bus = nullptr;
+
+    bool _has_align_data;
+    uint8_t _align_data;
   };
 
 //----------------------------------------------------------------------------
  }
 }
+#endif
