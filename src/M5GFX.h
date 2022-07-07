@@ -149,10 +149,12 @@ namespace m5gfx
       int32_t cursor_x, cursor_y;
     };
 
-    lgfx::Bus_SPI _bus_spi;
     lgfx::Panel_Device* _panel_last;
+#if defined ( ESP_PLATFORM )
+    lgfx::Bus_SPI _bus_spi;
     lgfx::ILight* _light_last;
     lgfx::ITouch* _touch_last;
+#endif
     std::vector<DisplayState> _displayStateStack;
 
     bool init_impl(bool use_reset, bool use_clear) override;
@@ -210,6 +212,14 @@ namespace m5gfx
       }
 #endif
       return false;
+    }
+
+    using lgfx::LGFX_Device::init;
+
+    bool init(lgfx::Panel_Device* panel)
+    {
+      setPanel(panel);
+      return LGFX_Device::init_impl(true, true);
     }
   };
 
