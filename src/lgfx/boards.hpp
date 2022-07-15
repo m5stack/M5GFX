@@ -10,13 +10,13 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_Non_Panel
     , board_M5Stack
     , board_M5StackCore2
-    , board_M5StackCoreS3
     , board_M5StickC
     , board_M5StickCPlus
     , board_M5StackCoreInk
     , board_M5Paper
     , board_M5Tough
     , board_M5Station
+    , board_M5StackCoreS3
     , board_M5AtomS3LCD
 
 /// non display boards 

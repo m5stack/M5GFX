@@ -1061,8 +1061,12 @@ namespace m5gfx
           auto chk_aw  = lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, i2c_freq);
           if (chk_aw .has_value() && chk_aw .value() == 0x23)
           {
-            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x05, 0b01011000);
             m5gfx::i2c::bitOn(i2c_port, aw9523_i2c_addr, 0x03, 0b10100000);
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x04, 0b01111000);  // CONFIG_P0
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x05, 0b01011000);  // CONFIG_P1
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x11, 0b00010000);  // GCR P0 port is Push-Pull mode.
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x12, 0b11111110);  // LEDMODE_P0
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x13, 0b11111000);  // LEDMODE_P1
 
             bus_cfg.pin_mosi = GPIO_NUM_11;
             bus_cfg.pin_miso = GPIO_NUM_12;
@@ -1090,8 +1094,6 @@ namespace m5gfx
               _set_backlight(new Light_M5StackCoreS3());
 
               {
-                m5gfx::i2c::bitOn(i2c_port, aw9523_i2c_addr, 0x03, 0b10100000);
-
                 auto t = new Touch_M5StackCoreS3();
                 _touch_last = t;
                 _panel_last->touch(t);

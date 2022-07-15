@@ -175,12 +175,14 @@ namespace m5gfx
     void popState(void);
 
     /// draw RGB565 format image.
+    [[deprecated("use pushImage")]] 
     void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data)
     {
       pushImage(x, y, w, h, (const rgb565_t*)data);
     }
 
     /// draw RGB565 format image, with transparent color.
+    [[deprecated("use pushImage")]] 
     void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data, uint16_t transparent)
     {
       pushImage(x, y, w, h, (const rgb565_t*)data, transparent);
