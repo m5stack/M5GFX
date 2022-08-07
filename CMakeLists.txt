@@ -17,5 +17,11 @@ file(GLOB SRCS
 set(COMPONENT_SRCS ${SRCS})
 set(COMPONENT_REQUIRES nvs_flash efuse)
 
-register_component()
 
+### If you use arduino-esp32 components, please activate next comment line.
+# list(APPEND COMPONENT_REQUIRES arduino-esp32)
+
+
+message(STATUS "M5GFX use components = ${COMPONENT_REQUIRES}")
+
+register_component()
