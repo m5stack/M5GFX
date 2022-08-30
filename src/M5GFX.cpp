@@ -277,14 +277,14 @@ namespace m5gfx
   static constexpr int_fast16_t aw9523_i2c_addr = 0x58;  // AW9523B
   static constexpr int_fast16_t axp_i2c_addr = 0x34;     // AXP2101
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
-  static constexpr int_fast16_t i2c_sda = GPIO_NUM_34;
-  static constexpr int_fast16_t i2c_scl = GPIO_NUM_33;
+  static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
+  static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
 
   struct Panel_M5StackCoreS3 : public lgfx::Panel_ILI9342
   {
     Panel_M5StackCoreS3(void)
     {
-      _cfg.pin_cs = GPIO_NUM_36;
+      _cfg.pin_cs = GPIO_NUM_3;
       _cfg.invert = true;
       _cfg.offset_rotation = 3;
 
@@ -298,13 +298,21 @@ namespace m5gfx
       lgfx::delay(4);
       lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, (1<<5), ~0, i2c_freq);  // LCD_RST
     }
+
+    void cs_control(bool flg) override
+    {
+      lgfx::Panel_ILI9342::cs_control(flg);
+      // CS操作時にGPIO35の役割を切り替える (MISO or D/C);
+      // 0x43==FSPI MISO / 0x100==GPIO OUT
+      *(volatile uint32_t*)GPIO_FUNC35_OUT_SEL_CFG_REG = flg ? 0x43 : 0x100;
+    }
   };
 
   struct Touch_M5StackCoreS3 : public lgfx::Touch_FT5x06
   {
     Touch_M5StackCoreS3(void)
     {
-      _cfg.pin_int  = GPIO_NUM_35;
+      _cfg.pin_int  = GPIO_NUM_21;
       _cfg.pin_sda  = i2c_sda;
       _cfg.pin_scl  = i2c_scl;
       _cfg.i2c_addr = 0x38;
@@ -325,6 +333,8 @@ namespace m5gfx
         res = lgfx::Touch_FT5x06::getTouchRaw(tp, count);
         if (res == 0)
         { /// clear INT.
+          // レジスタ 0x00を読み出すとPort0のINTがクリアされ、レジスタ 0x01を読み出すとPort1のINTがクリアされる。
+          lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x00, i2c_freq);
           lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x01, i2c_freq);
         }
       }
@@ -574,6 +584,7 @@ namespace m5gfx
     std::uint32_t id;
 
     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
+//  ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", pkg_ver);
 
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)  /// check PICO-D4 (M5StickC,CPlus,T,T2 / CoreInk / ATOM )
     {
@@ -677,6 +688,7 @@ namespace m5gfx
         lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
         if (lgfx::i2c::readRegister8(axp_i2c_port, axp_i2c_addr, 0x03, 400000) == 0x03) // AXP192 found
         {
+          ESP_LOGD(LIBRARY_NAME, "AXP192 found");
           if (board == 0 || board == board_t::board_M5Station)
           {
             bus_cfg.pin_mosi = GPIO_NUM_23;
@@ -999,7 +1011,7 @@ namespace m5gfx
 
     bus_cfg.freq_write = 8000000;
     bus_cfg.freq_read  = 8000000;
-    bus_cfg.spi_host = SPI3_HOST;
+    bus_cfg.spi_host = SPI2_HOST;
     bus_cfg.spi_mode = 0;
     bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
     bus_cfg.use_lock = true;
@@ -1061,25 +1073,29 @@ namespace m5gfx
           auto chk_aw  = lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, i2c_freq);
           if (chk_aw .has_value() && chk_aw .value() == 0x23)
           {
-            m5gfx::i2c::bitOn(i2c_port, aw9523_i2c_addr, 0x03, 0b10100000);
-            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x04, 0b01111000);  // CONFIG_P0
-            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x05, 0b01011000);  // CONFIG_P1
-            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x11, 0b00010000);  // GCR P0 port is Push-Pull mode.
-            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x12, 0b11111110);  // LEDMODE_P0
-            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x13, 0b11111000);  // LEDMODE_P1
+            m5gfx::i2c::writeRegister8(i2c_port, axp_i2c_addr, 0x90, 0xBF); // LDOS ON/OFF control 0
+            m5gfx::i2c::writeRegister8(i2c_port, axp_i2c_addr, 0x95, 0x28); // ALDO3 set to 3.3v // for TF card slot
 
-            bus_cfg.pin_mosi = GPIO_NUM_11;
-            bus_cfg.pin_miso = GPIO_NUM_12;
-            bus_cfg.pin_sclk = GPIO_NUM_13;
-            bus_cfg.pin_dc   = GPIO_NUM_3;
+            m5gfx::i2c::bitOn(i2c_port, aw9523_i2c_addr, 0x02, 0b00000101); //port0 output ctrl
+            m5gfx::i2c::bitOn(i2c_port, aw9523_i2c_addr, 0x03, 0b00000011); //port1 output ctrl
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x04, 0b00011000);  // CONFIG_P0
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x05, 0b00001100);  // CONFIG_P1
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x11, 0b00010000);  // GCR P0 port is Push-Pull mode.
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x12, 0b11111111);  // LEDMODE_P0
+            m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x13, 0b11111111);  // LEDMODE_P1
+
+            bus_cfg.pin_mosi = GPIO_NUM_37;
+            bus_cfg.pin_miso = GPIO_NUM_35;
+            bus_cfg.pin_sclk = GPIO_NUM_36;
+            bus_cfg.pin_dc   = GPIO_NUM_35;// MISOとLCD D/CをGPIO35でシェアしている;
             bus_cfg.spi_mode = 0;
             bus_cfg.spi_3wire = true;
             _bus_spi.config(bus_cfg);
             _bus_spi.init();
 
-            _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_37);
+            _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
-            id = _read_panel_id(&_bus_spi, GPIO_NUM_36);
+            id = _read_panel_id(&_bus_spi, GPIO_NUM_3);
             if ((id & 0xFF) == 0xE3)
             {  //  check panel (ILI9342)
               board = board_t::board_M5StackCoreS3;
@@ -1102,8 +1118,8 @@ namespace m5gfx
               goto init_clear;
             }
             _bus_spi.release();
-            lgfx::pinMode(GPIO_NUM_37, lgfx::pin_mode_t::input); // TF card CS
-            lgfx::pinMode(GPIO_NUM_36, lgfx::pin_mode_t::input); // LCD CS
+            lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // TF card CS
+            lgfx::pinMode(GPIO_NUM_3, lgfx::pin_mode_t::input); // LCD CS
           }
         }
         lgfx::i2c::release(i2c_port);
