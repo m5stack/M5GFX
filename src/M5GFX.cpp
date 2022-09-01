@@ -1037,9 +1037,12 @@ namespace m5gfx
         {  //  check panel (GC9107)
           board = board_t::board_M5AtomS3LCD;
           ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3LCD");
+          _bus_spi.release();
+          bus_cfg.spi_host = SPI3_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
           _bus_spi.config(bus_cfg);
+          _bus_spi.init();
           auto p = new Panel_GC9107();
           p->bus(&_bus_spi);
           {

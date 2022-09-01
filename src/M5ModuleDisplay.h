@@ -1,5 +1,5 @@
-#ifndef __M5GFX_M5ATOMDISPLAY__
-#define __M5GFX_M5ATOMDISPLAY__
+#ifndef __M5GFX_M5MODULEDISPLAY__
+#define __M5GFX_M5MODULEDISPLAY__
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
 //  please include <SD.h>,<SPIFFS.h>,<HTTPClient.h> before <M5GFX.h>
@@ -13,43 +13,43 @@
 #include <sdkconfig.h>
 #include <soc/efuse_reg.h>
 
-#ifndef M5ATOMDISPLAY_LOGICAL_WIDTH
-#define M5ATOMDISPLAY_LOGICAL_WIDTH 1280
+#ifndef M5MODULEDISPLAY_LOGICAL_WIDTH
+#define M5MODULEDISPLAY_LOGICAL_WIDTH 1280
 #endif
-#ifndef M5ATOMDISPLAY_LOGICAL_HEIGHT
-#define M5ATOMDISPLAY_LOGICAL_HEIGHT 720
+#ifndef M5MODULEDISPLAY_LOGICAL_HEIGHT
+#define M5MODULEDISPLAY_LOGICAL_HEIGHT 720
 #endif
-#ifndef M5ATOMDISPLAY_REFRESH_RATE
-#define M5ATOMDISPLAY_REFRESH_RATE 0.0f
+#ifndef M5MODULEDISPLAY_REFRESH_RATE
+#define M5MODULEDISPLAY_REFRESH_RATE 0.0f
 #endif
-#ifndef M5ATOMDISPLAY_OUTPUT_WIDTH
-#define M5ATOMDISPLAY_OUTPUT_WIDTH 0
+#ifndef M5MODULEDISPLAY_OUTPUT_WIDTH
+#define M5MODULEDISPLAY_OUTPUT_WIDTH 0
 #endif
-#ifndef M5ATOMDISPLAY_OUTPUT_HEIGHT
-#define M5ATOMDISPLAY_OUTPUT_HEIGHT 0
+#ifndef M5MODULEDISPLAY_OUTPUT_HEIGHT
+#define M5MODULEDISPLAY_OUTPUT_HEIGHT 0
 #endif
-#ifndef M5ATOMDISPLAY_SCALE_W
-#define M5ATOMDISPLAY_SCALE_W 0
+#ifndef M5MODULEDISPLAY_SCALE_W
+#define M5MODULEDISPLAY_SCALE_W 0
 #endif
-#ifndef M5ATOMDISPLAY_SCALE_H
-#define M5ATOMDISPLAY_SCALE_H 0
+#ifndef M5MODULEDISPLAY_SCALE_H
+#define M5MODULEDISPLAY_SCALE_H 0
 #endif
 
-class M5AtomDisplay : public lgfx::LGFX_Device
+class M5ModuleDisplay : public lgfx::LGFX_Device
 {
   lgfx::Panel_M5HDMI _panel_instance;
   lgfx::Bus_SPI      _bus_instance;
 
 public:
 
-  M5AtomDisplay( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH
-               , uint16_t logical_height = M5ATOMDISPLAY_LOGICAL_HEIGHT
-               , float refresh_rate      = M5ATOMDISPLAY_REFRESH_RATE
-               , uint16_t output_width   = M5ATOMDISPLAY_OUTPUT_WIDTH
-               , uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT
-               , uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W
-               , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
-               )
+  M5ModuleDisplay( uint16_t logical_width  = M5MODULEDISPLAY_LOGICAL_WIDTH
+                 , uint16_t logical_height = M5MODULEDISPLAY_LOGICAL_HEIGHT
+                 , float refresh_rate      = M5MODULEDISPLAY_REFRESH_RATE
+                 , uint16_t output_width   = M5MODULEDISPLAY_OUTPUT_WIDTH
+                 , uint16_t output_height  = M5MODULEDISPLAY_OUTPUT_HEIGHT
+                 , uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W
+                 , uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H
+                 )
   {
     lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
     cfg_reso.logical_width  = logical_width;
@@ -62,22 +62,25 @@ public:
     _panel_instance.config_resolution(cfg_reso);
 
     setPanel(&_panel_instance);
-    _board = lgfx::board_t::board_M5AtomDisplay;
+    _board = lgfx::board_t::board_M5ModuleDisplay;
   }
 
   bool init_impl(bool use_reset, bool use_clear) override
   {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 
-    // for AtomS3LCD
+    // for CoreS3
     int i2c_port = 1;
-    int i2c_sda  = GPIO_NUM_38;
-    int i2c_scl  = GPIO_NUM_39;
-    int spi_cs   = GPIO_NUM_40;
-    int spi_mosi = GPIO_NUM_17;
-    int spi_miso = GPIO_NUM_14;
-    int spi_sclk = GPIO_NUM_42;
+    int i2c_sda  = GPIO_NUM_12;
+    int i2c_scl  = GPIO_NUM_11;
+    int spi_cs   = GPIO_NUM_7;
+    int spi_mosi = GPIO_NUM_37;
+    int spi_miso = GPIO_NUM_35;
+    int spi_sclk = GPIO_NUM_36;
     spi_host_device_t spi_host = SPI2_HOST;
+
+    m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
+    m5gfx::gpio_lo(GPIO_NUM_0);
 
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
@@ -95,18 +98,41 @@ public:
 
     switch (pkg_ver)
     {
-    case EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4: // for ATOM Lite / Matrix
+    case EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4: // for MODULE Lite / Matrix
       ESP_LOGD("LGFX","AtomDisplay Lite");
       spi_sclk = GPIO_NUM_23;
       break;
 
-    default:
-//  case 6: // EFUSE_RD_CHIP_VER_PKG_ESP32PICOV3_02: // ATOM PSRAM
+    case 6: // EFUSE_RD_CHIP_VER_PKG_ESP32PICOV3_02: // MODULE PSRAM
       ESP_LOGD("LGFX","AtomDisplay PSRAM");
       spi_sclk = GPIO_NUM_5;
       break;
-    }
 
+    default:
+      { // ModuleDisplay
+        if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
+        { // M5Stack Core2 / Tough
+          ESP_LOGD("LGFX","DisplayModule with Core2/Tough");
+          i2c_port =  1;
+          i2c_sda  = GPIO_NUM_21;
+          i2c_scl  = GPIO_NUM_22;
+          spi_cs   = GPIO_NUM_19;
+          spi_miso = GPIO_NUM_38;
+        }
+        else
+        { // M5Stack BASIC / FIRE / GO
+          ESP_LOGD("LGFX","DisplayModule with Core Basic/Fire/Go");
+          i2c_port =  0;
+          i2c_sda  = GPIO_NUM_21;
+          i2c_scl  = GPIO_NUM_22;
+          spi_cs   = GPIO_NUM_13;
+          spi_miso = GPIO_NUM_19;
+        }
+        spi_mosi = GPIO_NUM_23;
+        spi_sclk = GPIO_NUM_18;
+      }
+      break;
+    }
 #endif
 
     {
@@ -153,13 +179,13 @@ public:
     return LGFX_Device::init_impl(use_reset, use_clear);
   }
 
-  bool setResolution( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH
-                    , uint16_t logical_height = M5ATOMDISPLAY_LOGICAL_HEIGHT
-                    , float refresh_rate      = M5ATOMDISPLAY_REFRESH_RATE
-                    , uint16_t output_width   = M5ATOMDISPLAY_OUTPUT_WIDTH
-                    , uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT
-                    , uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W
-                    , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
+  bool setResolution( uint16_t logical_width  = M5MODULEDISPLAY_LOGICAL_WIDTH
+                    , uint16_t logical_height = M5MODULEDISPLAY_LOGICAL_HEIGHT
+                    , float refresh_rate      = M5MODULEDISPLAY_REFRESH_RATE
+                    , uint16_t output_width   = M5MODULEDISPLAY_OUTPUT_WIDTH
+                    , uint16_t output_height  = M5MODULEDISPLAY_OUTPUT_HEIGHT
+                    , uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W
+                    , uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H
                     )
   {
     bool res = _panel_instance.setResolution

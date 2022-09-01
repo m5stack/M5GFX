@@ -17,7 +17,6 @@ Contributors:
 /----------------------------------------------------------------------------*/
 #if defined (ESP_PLATFORM)
 #include <sdkconfig.h>
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
 #include "Panel_M5HDMI.hpp"
 #include "Panel_M5HDMI_FS.h"
@@ -1293,5 +1292,4 @@ namespace lgfx
  }
 }
 
-#endif
 #endif
