@@ -355,8 +355,9 @@ namespace lgfx
           ESP_LOGW("LGFX", "Failed to spi_device_acquire_bus. ");
         }
 #if defined ( SOC_GDMA_SUPPORTED )
-        uint32_t spi_port = (spi_host + 1);
-        *reg(SPI_DMA_CONF_REG(spi_port)) = 0; /// Clear previous transfer
+        // uint32_t spi_port = (spi_host + 1);
+        // *reg(SPI_DMA_CONF_REG(spi_port)) = 0; /// Clear previous transfer
+        *reg(SPI_DMA_CONF_REG((spi_host + 1))) = 0; /// Clear previous transfer
 #endif
       }
 #endif
@@ -384,7 +385,7 @@ namespace lgfx
       *reg(SPI_CLOCK_REG(spi_port)) = clkdiv;
 
 #if defined ( SPI_UPDATE )
-      *reg(SPI_CMD_REG(spi_port)) |= SPI_UPDATE;
+      *reg(SPI_CMD_REG(spi_port)) = SPI_UPDATE;
 #endif
     }
 

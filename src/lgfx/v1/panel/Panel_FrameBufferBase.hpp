@@ -39,7 +39,7 @@ namespace lgfx
     bool dmaBusy(void) override { return false; }
     void waitDisplay(void) override {}
     bool displayBusy(void) override { return false; }
-    color_depth_t setColorDepth(color_depth_t depth) override { _write_depth = rgb332_1Byte; _read_depth = rgb332_1Byte; return color_depth_t::rgb332_1Byte; }
+    color_depth_t setColorDepth(color_depth_t depth) override { _write_depth = depth; _read_depth = depth; return depth; }
 
     void setBrightness(uint8_t brightness) override {}
     void setInvert(bool invert) override { _invert = invert; }

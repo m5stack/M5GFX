@@ -291,6 +291,20 @@ namespace lgfx
 
 //----------------------------------------------------------------------------
 
+  std::uint8_t Panel_M5HDMI::HDMI_Trans::readRegister(std::uint8_t register_address)
+  {
+    std::uint8_t buffer;
+    lgfx::i2c::transactionWriteRead(this->HDMI_Trans_config.i2c_port, this->HDMI_Trans_config.i2c_addr, &register_address, 1, &buffer, 1, this->HDMI_Trans_config.freq_read);
+    return buffer;
+  }
+
+  std::uint16_t Panel_M5HDMI::HDMI_Trans::readRegister16(std::uint8_t register_address)
+  {
+    std::uint8_t buffer[2];
+    lgfx::i2c::transactionWriteRead(this->HDMI_Trans_config.i2c_port, this->HDMI_Trans_config.i2c_addr, &register_address, 1, buffer, 2, this->HDMI_Trans_config.freq_read);
+    return (static_cast<std::uint16_t>(buffer[0]) << 8) | buffer[1];
+  }
+
   bool Panel_M5HDMI::HDMI_Trans::writeRegister(uint8_t register_address, uint8_t value)
   {
     uint8_t buffer[2] = {
@@ -377,6 +391,39 @@ namespace lgfx
     return false;
   }
 
+  size_t Panel_M5HDMI::HDMI_Trans::readEDID(uint8_t* EDID, size_t len)
+  {
+    static constexpr const uint8_t data[] = { 0xff, 0x85 ,0x03, 0xc9 ,0x04, 0xA0 ,0x06, 0x20 ,0x14, 0x7f };
+    this->writeRegisterSet(data, sizeof(data));
+
+    size_t i_end = std::min<size_t>(16u, len >> 5);
+    size_t result = 0;
+    for ( size_t i = 0; i < i_end; ++i )
+    {
+      static constexpr const uint8_t data2[2][6] = { { 0x07, 0x36 ,0x07, 0x34 ,0x07, 0x37 }, { 0x07, 0x76 ,0x07, 0x74 ,0x07, 0x77 } };
+      this->writeRegister( 0x05, (i & 7) << 5 );
+      this->writeRegisterSet(data2[i >> 3], 6);
+      delay( 5 );
+      if ( 0x02 != ( 0x52 & this->readRegister( 0x40 )))
+      {
+        break;
+      }
+      uint8_t* dst = &EDID[result];
+      result += 32;
+      for ( size_t j = 0; j < 32; ++j )
+      {
+        dst[j] = this->readRegister( 0x83 );
+      }
+      if (i == 3)
+      {
+        i_end = std::min<size_t>(i_end, ((dst[30] & 0x03) + 1) << 2);
+      }
+    }
+    static constexpr const uint8_t data3[] = { 0x03, 0xc2 ,0x07, 0x1f };
+    this->writeRegisterSet(data3, sizeof(data3));
+    return result;
+  }
+
 //----------------------------------------------------------------------------
 
   bool Panel_M5HDMI::init(bool use_reset)
@@ -419,7 +466,7 @@ namespace lgfx
     _bus->readData(8); // skip 0xFF
     uint32_t data = _bus->readData(32);
     (void)data; // suppress compiler warning.
-    ESP_LOGI(TAG, "FPGA ID:%02x %02x %02x %02x", data & 0xFF, (data >> 8) & 0xFF, (data >> 16) & 0xFF, data >> 24);
+    ESP_LOGI(TAG, "FPGA ID:%02x %02x %02x %02x", (uint8_t)data, (uint8_t)(data >> 8), (uint8_t)(data >> 16), (uint8_t)(data >> 24));
     cs_control(true);
     _bus->endRead();
     cs_control(false);
@@ -961,7 +1008,11 @@ namespace lgfx
     {
       auto linebuf = (uint8_t*)alloca((xe - xs + 1) * bytes);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+      /// Not actually used uninitialized. Just grabbing a copy of the pointer before we start the loop that fills it.
       pixelcopy_t pc((void*)linebuf, _write_depth, _write_depth);
+#pragma GCC diagnostic pop
       pc.src_x32_add = ~0u << pixelcopy_t::FP_SCALE;
 
       x = _width  - (x + 1);
@@ -1286,6 +1337,12 @@ namespace lgfx
     waitDisplay();
     _bus->writeBytes(cmd.raw, sizeof(cmd_t), false, false);
     endWrite();
+  }
+
+  size_t Panel_M5HDMI::readEDID(uint8_t* EDID, size_t len)
+  {
+    HDMI_Trans driver(_HDMI_Trans_config);
+    return driver.readEDID(EDID, len);
   }
 
 //----------------------------------------------------------------------------

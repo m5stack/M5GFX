@@ -109,7 +109,13 @@ public:
       break;
 
     default:
+
+      m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
+      m5gfx::gpio_lo(GPIO_NUM_0);
+
       { // ModuleDisplay
+        spi_mosi = GPIO_NUM_23;
+        spi_sclk = GPIO_NUM_18;
         if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
         { // M5Stack Core2 / Tough
           ESP_LOGD("LGFX","DisplayModule with Core2/Tough");
@@ -128,8 +134,6 @@ public:
           spi_cs   = GPIO_NUM_13;
           spi_miso = GPIO_NUM_19;
         }
-        spi_mosi = GPIO_NUM_23;
-        spi_sclk = GPIO_NUM_18;
       }
       break;
     }

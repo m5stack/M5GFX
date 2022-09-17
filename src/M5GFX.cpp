@@ -293,7 +293,6 @@ namespace m5gfx
 
     void reset(void) override
     {
-      // AXP192 reg 0x96 = GPIO3&4 control
       lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, 0, ~(1<<5), i2c_freq);  // LCD_RST
       lgfx::delay(4);
       lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, (1<<5), ~0, i2c_freq);  // LCD_RST
@@ -305,6 +304,10 @@ namespace m5gfx
       // CS操作時にGPIO35の役割を切り替える (MISO or D/C);
       // 0x43==FSPI MISO / 0x100==GPIO OUT
       *(volatile uint32_t*)GPIO_FUNC35_OUT_SEL_CFG_REG = flg ? 0x43 : 0x100;
+      if (flg == false)
+      { // CS low の場合はD/Cとして扱うためGPIO出力を有効にする;
+        *(volatile uint32_t*)GPIO_ENABLE1_W1TS_REG = (0x1 << (GPIO_NUM_35 - 32));
+      }
     }
   };
 
