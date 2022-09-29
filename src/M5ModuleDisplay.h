@@ -91,6 +91,7 @@ public:
     int spi_mosi = GPIO_NUM_19;
     int spi_miso = GPIO_NUM_22;
     int spi_sclk = GPIO_NUM_5;
+    bool bus_shared = false;
     spi_host_device_t spi_host = VSPI_HOST;
 
     std::uint32_t pkg_ver = lgfx::get_pkg_ver();
@@ -110,6 +111,7 @@ public:
 
     default:
 
+      bus_shared = true;
       m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
       m5gfx::gpio_lo(GPIO_NUM_0);
 
@@ -175,7 +177,7 @@ public:
       cfg.offset_rotation = 3;
       cfg.pin_cs     = spi_cs;
       cfg.readable   = false;
-      cfg.bus_shared = false;
+      cfg.bus_shared = bus_shared;
       _panel_instance.config(cfg);
       _panel_instance.setRotation(1);
     }
