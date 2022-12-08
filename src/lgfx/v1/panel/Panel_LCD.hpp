@@ -49,9 +49,11 @@ namespace lgfx
     void writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor) override;
     void writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool use_dma) override;
 
-    uint32_t readCommand(uint_fast8_t cmd, uint_fast8_t index, uint_fast8_t len) override;
+    uint32_t readCommand(uint_fast16_t cmd, uint_fast8_t index, uint_fast8_t len) override;
     uint32_t readData(uint_fast8_t index, uint_fast8_t len) override;
     void readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param) override;
+
+    int32_t getScanLine(void) override;
 
   protected:
 
@@ -118,6 +120,7 @@ namespace lgfx
     static constexpr uint8_t CMD_IDMON   = 0x39;
     static constexpr uint8_t CMD_COLMOD  = 0x3A;
     static constexpr uint8_t CMD_PIXSET  = 0x3A;
+    static constexpr uint8_t CMD_GETSCANLINE= 0x45;
 
     void begin_transaction(void);
     void end_transaction(void);

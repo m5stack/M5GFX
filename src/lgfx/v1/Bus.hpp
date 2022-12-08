@@ -19,6 +19,8 @@ Contributors:
 
 #include <stdint.h>
 
+#include "misc/enum.hpp"
+
 namespace lgfx
 {
  inline namespace v1
@@ -35,6 +37,7 @@ namespace lgfx
     bus_parallel8,
     bus_parallel16,
     bus_stream,
+    bus_image_push,
   };
 
   struct IBus
@@ -52,8 +55,14 @@ namespace lgfx
     /// 通信速度を取得する。;
     virtual uint32_t getClock(void) const { return 0; }
 
+    /// 受信時の通信速度を取得する。;
+    virtual uint32_t getReadClock(void) const { return 0; }
+
     /// 通信速度を設定する。;
     virtual void setClock(uint32_t) {};
+
+    /// 受信時の通信速度を設定する。;
+    virtual void setReadClock(uint32_t) {};
 
     /// 通信トランザクションを開始する。（ペリフェラルを占有する）;
     virtual void beginTransaction(void) = 0;
@@ -133,6 +142,15 @@ namespace lgfx
     uint32_t readData(uint_fast8_t) override { return 0; }
     bool readBytes(uint8_t*, uint32_t, bool) override { return false; }
     void readPixels(void*, pixelcopy_t*, uint32_t) override {}
+  };
+
+  /// @brief コマンド体系を持たず、画面全体を送信するタイプのバスの基本形として使用する
+  struct Bus_ImagePush : public Bus_NULL
+  {
+    bus_type_t busType(void) const override { return bus_type_t::bus_image_push; }
+    virtual void setImageBuffer(void* buffer, color_depth_t depth) {}
+    virtual void setBrightness(uint8_t brightness) {}
+    virtual void setInvert(uint8_t invert) {}
   };
 
 //----------------------------------------------------------------------------

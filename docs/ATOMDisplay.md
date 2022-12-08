@@ -1,8 +1,7 @@
 # ATOM Display library
 
 
-![M5Stack ATOM Display](https://static-cdn.m5stack.com/resource/docs/static/assets/img/product_pics/atom_base/atom_display/atom_display_01.webp "ATOM Display")
-
+![M5Stack ATOM Display](https://static-cdn.m5stack.com/resource/docs/products/atom/atom_display/atom_display_01.webp "ATOM Display")
 
 ### Notes.
 - Audio output function is not included.  

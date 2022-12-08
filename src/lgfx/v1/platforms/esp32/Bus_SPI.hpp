@@ -25,7 +25,11 @@ Contributors:
  #include <esp32/rom/lldesc.h>
 #endif
 
-#if __has_include(<driver/spi_common_internal.h>)
+#if __has_include(<esp_private/spi_common_internal.h>)
+ // ESP-IDF v5
+ #include <esp_private/spi_common_internal.h>
+#elif __has_include(<driver/spi_common_internal.h>)
+ // ESP-IDF v4
  #include <driver/spi_common_internal.h>
 #endif
 
@@ -99,6 +103,8 @@ namespace lgfx
     bool busy(void) const override;
     uint32_t getClock(void) const override { return _cfg.freq_write; }
     void setClock(uint32_t freq) override { if (_cfg.freq_write != freq) { _cfg.freq_write = freq; _last_freq_apb = 0; } }
+    uint32_t getReadClock(void) const override { return _cfg.freq_read; }
+    void setReadClock(uint32_t freq) override { if (_cfg.freq_read != freq) { _cfg.freq_read = freq; _last_freq_apb = 0; } }
 
     void flush(void) override {}
     bool writeCommand(uint32_t data, uint_fast8_t bit_length) override;

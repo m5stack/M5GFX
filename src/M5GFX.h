@@ -149,10 +149,12 @@ namespace m5gfx
       int32_t cursor_x, cursor_y;
     };
 
-    lgfx::Bus_SPI _bus_spi;
     lgfx::Panel_Device* _panel_last;
+#if defined ( ESP_PLATFORM )
+    lgfx::Bus_SPI _bus_spi;
     lgfx::ILight* _light_last;
     lgfx::ITouch* _touch_last;
+#endif
     std::vector<DisplayState> _displayStateStack;
 
     bool init_impl(bool use_reset, bool use_clear) override;
@@ -173,12 +175,14 @@ namespace m5gfx
     void popState(void);
 
     /// draw RGB565 format image.
+    [[deprecated("use pushImage")]] 
     void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data)
     {
       pushImage(x, y, w, h, (const rgb565_t*)data);
     }
 
     /// draw RGB565 format image, with transparent color.
+    [[deprecated("use pushImage")]] 
     void drawBitmap(int16_t x, int16_t y, int16_t w, int16_t h, const void *data, uint16_t transparent)
     {
       pushImage(x, y, w, h, (const rgb565_t*)data, transparent);
@@ -210,6 +214,14 @@ namespace m5gfx
       }
 #endif
       return false;
+    }
+
+    using lgfx::LGFX_Device::init;
+
+    bool init(lgfx::Panel_Device* panel)
+    {
+      setPanel(panel);
+      return LGFX_Device::init_impl(true, true);
     }
   };
 

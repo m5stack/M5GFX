@@ -327,21 +327,21 @@ namespace lgfx
 
   bool GFXfont::updateFontMetric(lgfx::FontMetrics *metrics, uint16_t uniCode) const
   {
-    auto glyph = getGlyph(uniCode);
-    bool res = glyph;
+    auto glyph_ = getGlyph(uniCode);
+    bool res = glyph_;
     if (!res)
     {
-      glyph = getGlyph(0x20);
-      if (!glyph)
+      glyph_ = getGlyph(0x20);
+      if (!glyph_)
       {
         metrics->x_offset = 0;
         metrics->width = metrics->x_advance = pgm_read_byte(&this->yAdvance) >> 1;
         return false;
       }
     }
-    metrics->x_offset  = (int8_t)pgm_read_byte(&glyph->xOffset);
-    metrics->width     = pgm_read_byte(&glyph->width);
-    metrics->x_advance = pgm_read_byte(&glyph->xAdvance);
+    metrics->x_offset  = (int8_t)pgm_read_byte(&glyph_->xOffset);
+    metrics->width     = pgm_read_byte(&glyph_->width);
+    metrics->x_advance = pgm_read_byte(&glyph_->xAdvance);
     return res;
   }
 
@@ -350,7 +350,7 @@ namespace lgfx
     auto f = pgm_read_word(&first);
     if (uniCode > pgm_read_word(&last)
     ||  uniCode < f) return nullptr;
-    uint_fast16_t custom_range_num = pgm_read_word(&range_num);
+    uint_fast16_t custom_range_num = pgm_read_word_unaligned(&range_num);
     if (custom_range_num == 0) {
       uniCode -= f;
       return &(((GFXglyph*)pgm_read_ptr( &glyph ))[uniCode]);
@@ -371,7 +371,7 @@ namespace lgfx
     int_fast8_t glyph_bb = 0;   // glyph delta Y (height) below baseline
     size_t numChars = pgm_read_word(&last) - pgm_read_word(&first);
 
-    size_t custom_range_num = pgm_read_word(&range_num);
+    size_t custom_range_num = pgm_read_word_unaligned(&range_num);
     if (custom_range_num != 0) {
       EncodeRange *range_pst = range;
       size_t i = 0;
@@ -402,21 +402,21 @@ namespace lgfx
   {
     int32_t sy = 65536 * style->size_y;
     y += (metrics->y_offset * sy) >> 16;
-    auto glyph = this->getGlyph(uniCode);
-    if (!glyph)
+    auto glyph_ = this->getGlyph(uniCode);
+    if (!glyph_)
     {
-      glyph = this->getGlyph(0x20);
-      if (glyph) return drawCharDummy(gfx, x, y, pgm_read_byte(&glyph->xAdvance), metrics->height, style, filled_x);
+      glyph_ = this->getGlyph(0x20);
+      if (glyph_) return drawCharDummy(gfx, x, y, pgm_read_byte(&glyph_->xAdvance), metrics->height, style, filled_x);
       return 0;
     }
 
-    int32_t w = pgm_read_byte(&glyph->width);
-    int32_t h = pgm_read_byte(&glyph->height);
+    int32_t w = pgm_read_byte(&glyph_->width);
+    int32_t h = pgm_read_byte(&glyph_->height);
 
     int32_t sx = 65536 * style->size_x;
 
-    int32_t xAdvance = sx * pgm_read_byte(&glyph->xAdvance) >> 16;
-    int32_t xoffset  = sx * ((int8_t)pgm_read_byte(&glyph->xOffset)) >> 16;
+    int32_t xAdvance = sx * pgm_read_byte(&glyph_->xAdvance) >> 16;
+    int32_t xoffset  = sx * ((int8_t)pgm_read_byte(&glyph_->xOffset)) >> 16;
 
     uint32_t colortbl[2] = {gfx->getColorConverter()->convert(style->back_rgb888), gfx->getColorConverter()->convert(style->fore_rgb888)};
     bool fillbg = (style->back_rgb888 != style->fore_rgb888);
@@ -430,7 +430,7 @@ namespace lgfx
     }
 
     x += xoffset;
-    int32_t yoffset = (- metrics->y_offset) + (int8_t)pgm_read_byte(&glyph->yOffset);
+    int32_t yoffset = (- metrics->y_offset) + (int8_t)pgm_read_byte(&glyph_->yOffset);
 
     gfx->startWrite();
 
@@ -447,9 +447,9 @@ namespace lgfx
 
     if (h)
     {
-      uint8_t *bitmap = &this->bitmap[pgm_read_dword(&glyph->bitmapOffset)];
+      uint8_t *bitmap_ = &this->bitmap[pgm_read_dword(&glyph_->bitmapOffset)];
       uint_fast8_t mask = 0x80;
-      int32_t btmp = pgm_read_byte(bitmap); /// btmpの最上位ビット (符号ビット) をフラグとして扱うため敢えて uintにしない ;
+      int32_t btmp = pgm_read_byte(bitmap_); /// btmpの最上位ビット (符号ビット) をフラグとして扱うため敢えて uintにしない ;
       if (btmp & mask) { btmp = ~btmp; }
       uint32_t bitlen = 0;
 
@@ -496,7 +496,7 @@ namespace lgfx
 
 label_nextbyte: /// 次のデータを取得する;
               mask = 0x80;
-              btmp = pgm_read_byte(++bitmap) ^ (btmp < 0 ? ~0 : 0);
+              btmp = pgm_read_byte(++bitmap_) ^ (btmp < 0 ? ~0 : 0);
             } while (btmp & mask);
           }
 
@@ -572,12 +572,12 @@ label_nextbyte: /// 次のデータを取得する;
 
       do
       {
-        font += getSwap16(pgm_read_word(&unicode_lut[0]));
-        e     = getSwap16(pgm_read_word(&unicode_lut[2]));
+        font += (pgm_read_byte(&unicode_lut[0]) << 8) + pgm_read_byte(&unicode_lut[1]);
+        e     = (pgm_read_byte(&unicode_lut[2]) << 8) + pgm_read_byte(&unicode_lut[3]);
         unicode_lut += 4;
       } while ( e < encoding );
 
-      for ( ; 0 != (e = getSwap16(pgm_read_word(&font[0]))); font += pgm_read_byte(&font[2]))
+      for ( ; 0 != (e = (pgm_read_byte(&font[0]) << 8) + pgm_read_byte(&font[1])) ; font += pgm_read_byte(&font[2]))
       {
         if ( e == encoding ) { return font + 3; }  /* skip encoding and glyph size */
       }
@@ -1005,7 +1005,7 @@ label_nextbyte: /// 次のデータを取得する;
       {
         auto buf = (bgr888_t*)alloca((bw * ((sy + 65535) >> 16)) * sizeof(bgr888_t));
 
-        pixelcopy_t p(buf, gfx->getColorConverter()->depth, rgb888_3Byte, gfx->hasPalette());
+        pixelcopy_t p_(buf, gfx->getColorConverter()->depth, rgb888_3Byte, gfx->hasPalette());
         int32_t y0, y1 = (yoffset * sy) >> 16;
         int32_t i = 0;
         do {
@@ -1052,7 +1052,7 @@ label_nextbyte: /// 次のデータを取得する;
                     } while (++x0 != x1);
                   }
                 } while (++j0 < j1);
-                gfx->pushImage(x + rx, by, rw, bh, &p);
+                gfx->pushImage(x + rx, by, rw, bh, &p_);
               }
             }
           }

@@ -51,24 +51,69 @@ public:
                , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
                )
   {
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-    static constexpr int i2c_port =  1;
-    static constexpr int i2c_sda  = 25;
-    static constexpr int i2c_scl  = 21;
-    static constexpr int spi_cs   = 33;
-    static constexpr int spi_mosi = 19;
-    static constexpr int spi_miso = 22;
+    lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
+    cfg_reso.logical_width  = logical_width;
+    cfg_reso.logical_height = logical_height;
+    cfg_reso.refresh_rate   = refresh_rate;
+    cfg_reso.output_width   = output_width;
+    cfg_reso.output_height  = output_height;
+    cfg_reso.scale_w        = scale_w;
+    cfg_reso.scale_h        = scale_h;
+    _panel_instance.config_resolution(cfg_reso);
 
-    int spi_sclk = (m5gfx::get_pkg_ver() == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)
-                 ? 23  // for ATOM Lite / Matrix
-                 : 5   // for ATOM PSRAM
-                 ;
+    setPanel(&_panel_instance);
+    _board = lgfx::board_t::board_M5AtomDisplay;
+  // }
+
+  // bool init_impl(bool use_reset, bool use_clear) override
+  // {
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+
+    // for AtomS3LCD
+    int i2c_port = 1;
+    int i2c_sda  = GPIO_NUM_38;
+    int i2c_scl  = GPIO_NUM_39;
+    int spi_cs   = GPIO_NUM_40;
+    int spi_mosi = GPIO_NUM_17;
+    int spi_miso = GPIO_NUM_14;
+    int spi_sclk = GPIO_NUM_42;
+    spi_host_device_t spi_host = SPI2_HOST;
+
+#elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+
+    int i2c_port = 1;
+    int i2c_sda  = GPIO_NUM_25;
+    int i2c_scl  = GPIO_NUM_21;
+    int spi_cs   = GPIO_NUM_33;
+    int spi_mosi = GPIO_NUM_19;
+    int spi_miso = GPIO_NUM_22;
+    int spi_sclk = GPIO_NUM_5;
+    spi_host_device_t spi_host = VSPI_HOST;
+
+    std::uint32_t pkg_ver = lgfx::get_pkg_ver();
+    // ESP_LOGD("LGFX","pkg:%d", pkg_ver);
+
+    switch (pkg_ver)
+    {
+    case EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4: // for ATOM Lite / Matrix
+      // ESP_LOGD("LGFX","AtomDisplay Lite");
+      spi_sclk = GPIO_NUM_23;
+      break;
+
+    default:
+//  case 6: // EFUSE_RD_CHIP_VER_PKG_ESP32PICOV3_02: // ATOM PSRAM
+      // ESP_LOGD("LGFX","AtomDisplay PSRAM");
+      spi_sclk = GPIO_NUM_5;
+      break;
+    }
+
+#endif
 
     {
       auto cfg = _bus_instance.config();
       cfg.freq_write = 80000000;
       cfg.freq_read  = 20000000;
-      cfg.spi_host = VSPI_HOST;
+      cfg.spi_host = spi_host;
       cfg.spi_mode = 3;
       cfg.dma_channel = 1;
       cfg.use_lock = true;
@@ -104,19 +149,8 @@ public:
       _panel_instance.config(cfg);
       _panel_instance.setRotation(1);
     }
-#endif
-    lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
-    cfg_reso.logical_width  = logical_width;
-    cfg_reso.logical_height = logical_height;
-    cfg_reso.refresh_rate   = refresh_rate;
-    cfg_reso.output_width   = output_width;
-    cfg_reso.output_height  = output_height;
-    cfg_reso.scale_w        = scale_w;
-    cfg_reso.scale_h        = scale_h;
-    _panel_instance.config_resolution(cfg_reso);
 
-    setPanel(&_panel_instance);
-    _board = lgfx::board_t::board_M5AtomDisplay;
+    // return LGFX_Device::init_impl(use_reset, use_clear);
   }
 
   bool setResolution( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH
