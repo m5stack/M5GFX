@@ -35,6 +35,13 @@
 #define M5MODULEDISPLAY_SCALE_H 0
 #endif
 
+#if __has_include(<esp_idf_version.h>)
+ #include <esp_idf_version.h>
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
+  #define M5MODULEDISPLAY_SPI_DMA_CH SPI_DMA_CH_AUTO
+ #endif
+#endif
+
 class M5ModuleDisplay : public lgfx::LGFX_Device
 {
   lgfx::Panel_M5HDMI _panel_instance;
@@ -67,6 +74,11 @@ public:
 
   bool init_impl(bool use_reset, bool use_clear) override
   {
+#ifndef M5MODULEDISPLAY_SPI_DMA_CH
+    int dma_ch = 0;
+#else
+    int dma_ch = M5MODULEDISPLAY_SPI_DMA_CH;
+#endif
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 
     // for CoreS3
@@ -77,6 +89,7 @@ public:
     int spi_mosi = GPIO_NUM_37;
     int spi_miso = GPIO_NUM_35;
     int spi_sclk = GPIO_NUM_36;
+    bool bus_shared = true;
     spi_host_device_t spi_host = SPI2_HOST;
 
     m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
@@ -120,7 +133,7 @@ public:
         spi_sclk = GPIO_NUM_18;
         if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
         { // M5Stack Core2 / Tough
-          ESP_LOGD("LGFX","DisplayModule with Core2/Tough");
+          ESP_LOGD("LGFX","ModuleDisplay with Core2/Tough");
           i2c_port =  1;
           i2c_sda  = GPIO_NUM_21;
           i2c_scl  = GPIO_NUM_22;
@@ -129,7 +142,7 @@ public:
         }
         else
         { // M5Stack BASIC / FIRE / GO
-          ESP_LOGD("LGFX","DisplayModule with Core Basic/Fire/Go");
+          ESP_LOGD("LGFX","ModuleDisplay with Core Basic/Fire/Go");
           i2c_port =  0;
           i2c_sda  = GPIO_NUM_21;
           i2c_scl  = GPIO_NUM_22;
@@ -147,7 +160,7 @@ public:
       cfg.freq_read  = 20000000;
       cfg.spi_host = spi_host;
       cfg.spi_mode = 3;
-      cfg.dma_channel = 1;
+      cfg.dma_channel = dma_ch;
       cfg.use_lock = true;
       cfg.pin_mosi = spi_mosi;
       cfg.pin_miso = spi_miso;

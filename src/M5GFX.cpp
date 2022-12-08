@@ -1055,6 +1055,7 @@ namespace m5gfx
             cfg.panel_width = 128;
             cfg.panel_height = 128;
             cfg.offset_y = 32;
+            cfg.readable = false;
             p->config(cfg);
           }
           _panel_last = p;

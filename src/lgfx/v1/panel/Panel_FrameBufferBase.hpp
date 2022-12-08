@@ -41,7 +41,6 @@ namespace lgfx
     bool displayBusy(void) override { return false; }
     color_depth_t setColorDepth(color_depth_t depth) override { _write_depth = depth; _read_depth = depth; return depth; }
 
-    void setBrightness(uint8_t brightness) override {}
     void setInvert(bool invert) override { _invert = invert; }
     void setSleep(bool flg) override {}
     void setPowerSave(bool flg) override {}
@@ -56,7 +55,7 @@ namespace lgfx
     void writeImageARGB(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param) override;
     void writePixels(pixelcopy_t* param, uint32_t len, bool use_dma) override;
 
-    uint32_t readCommand(uint_fast8_t, uint_fast8_t, uint_fast8_t) override { return 0; }
+    uint32_t readCommand(uint_fast16_t, uint_fast8_t, uint_fast8_t) override { return 0; }
     uint32_t readData(uint_fast8_t, uint_fast8_t) override { return 0; }
 
     void readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param) override;

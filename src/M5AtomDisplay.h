@@ -63,10 +63,10 @@ public:
 
     setPanel(&_panel_instance);
     _board = lgfx::board_t::board_M5AtomDisplay;
-  }
+  // }
 
-  bool init_impl(bool use_reset, bool use_clear) override
-  {
+  // bool init_impl(bool use_reset, bool use_clear) override
+  // {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 
     // for AtomS3LCD
@@ -91,18 +91,18 @@ public:
     spi_host_device_t spi_host = VSPI_HOST;
 
     std::uint32_t pkg_ver = lgfx::get_pkg_ver();
-    ESP_LOGD("LGFX","pkg:%d", pkg_ver);
+    // ESP_LOGD("LGFX","pkg:%d", pkg_ver);
 
     switch (pkg_ver)
     {
     case EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4: // for ATOM Lite / Matrix
-      ESP_LOGD("LGFX","AtomDisplay Lite");
+      // ESP_LOGD("LGFX","AtomDisplay Lite");
       spi_sclk = GPIO_NUM_23;
       break;
 
     default:
 //  case 6: // EFUSE_RD_CHIP_VER_PKG_ESP32PICOV3_02: // ATOM PSRAM
-      ESP_LOGD("LGFX","AtomDisplay PSRAM");
+      // ESP_LOGD("LGFX","AtomDisplay PSRAM");
       spi_sclk = GPIO_NUM_5;
       break;
     }
@@ -150,7 +150,7 @@ public:
       _panel_instance.setRotation(1);
     }
 
-    return LGFX_Device::init_impl(use_reset, use_clear);
+    // return LGFX_Device::init_impl(use_reset, use_clear);
   }
 
   bool setResolution( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH

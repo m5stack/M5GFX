@@ -39,6 +39,12 @@ Contributors:
 #define REG_SPI_BASE(i)     (DR_REG_SPI2_BASE)
 #endif
 
+#if defined ( ESP_IDF_VERSION_VAL )
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  #define LGFX_IDF_V5
+ #endif
+#endif
+
 namespace lgfx
 {
  inline namespace v1
@@ -49,7 +55,7 @@ namespace lgfx
   __attribute__ ((unused)) static inline unsigned long micros(void) { return (unsigned long) (esp_timer_get_time()); }
   __attribute__ ((unused)) static inline void delayMicroseconds(uint32_t us)
   {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#if defined ( LGFX_IDF_V5 )
     esp_rom_delay_us(us);
 #else
     ets_delay_us(us);
@@ -74,6 +80,13 @@ namespace lgfx
   static inline void* heap_alloc_dma(  size_t length) { return heap_caps_malloc((length + 3) & ~3, MALLOC_CAP_DMA);  }
   static inline void* heap_alloc_psram(size_t length) { return heap_caps_malloc((length + 3) & ~3, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);  }
   static inline void heap_free(void* buf) { heap_caps_free(buf); }
+
+  /// 引数のポインタが組込RAMか判定する  true=内部RAM / false=外部RAMやROM等;
+#if defined ( CONFIG_IDF_TARGET_ESP32S3 )
+  static inline bool isEmbeddedMemory(const void* ptr) { return (((uintptr_t)ptr & 0x3FF80000u) == 0x3FC80000u); }
+#else
+  static inline bool isEmbeddedMemory(const void* ptr) { return (((uintptr_t)ptr & 0x3FF80000u) == 0x3FF00000u); }
+#endif
 
   enum pin_mode_t
   { output
@@ -110,6 +123,9 @@ namespace lgfx
 
   // esp_efuse_get_pkg_ver
   uint32_t get_pkg_ver(void);
+
+  // Find GDMA assigned to a peripheral;
+  int32_t search_dma_out_ch(int peripheral_select);
 
 //----------------------------------------------------------------------------
 

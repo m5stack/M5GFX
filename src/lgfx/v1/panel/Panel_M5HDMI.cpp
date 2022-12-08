@@ -44,7 +44,7 @@ namespace lgfx
 //----------------------------------------------------------------------------
 
   enum GWFPGA_Inst_Def
-  { 
+  {
     ISC_NOOP          = 0x02,
     ISC_ERASE         = 0x05,
     ERASE_DONE        = 0x09,
@@ -124,7 +124,7 @@ namespace lgfx
     ESP_LOGI(TAG, "Starting Writing to SRAM...");
     JTAG_WriteInst(ISC_ENABLE);
     JTAG_WriteInst(FAST_PROGRAM);
-    
+
     JTAG_MoveTap(TAP_IDLE, TAP_DRSHIFT);
 
     int32_t rle_len = -1;
@@ -286,7 +286,7 @@ namespace lgfx
       if (lgfx::gpio_in(TDO_PIN)) { out += 1 << i; }
     };
     JTAG_MoveTap(TAP_DREXIT1,  TAP_IDLE);
-    return out;   
+    return out;
   }
 
 //----------------------------------------------------------------------------
@@ -360,7 +360,11 @@ namespace lgfx
   {
     auto id = this->readChipID();
     {
-      static constexpr const uint8_t data_1[] = { 0xff, 0x82, 0xD6, 0x8E, 0xD7, 0x04, 0xff, 0x84, 0x06, 0x08, 0x07, 0x10, 0x09, 0x00, 0x0F, 0xAB, 0x34, 0xD5, 0x35, 0x00, 0x36, 0x30, 0x37, 0x00, 0x3C, 0x21,
+// 96kHz audio setting.
+//    static constexpr const uint8_t data_1[] = { 0xff, 0x82, 0xD6, 0x8E, 0xD7, 0x04, 0xff, 0x84, 0x06, 0x08, 0x07, 0x10, 0x09, 0x00, 0x0F, 0xAB, 0x34, 0xD5, 0x35, 0x00, 0x36, 0x30, 0x37, 0x00, 0x3C, 0x21,
+
+// 48kHz audio setting.
+      static constexpr const uint8_t data_1[] = { 0xff, 0x82, 0xD6, 0x8E, 0xD7, 0x04, 0xff, 0x84, 0x06, 0x08, 0x07, 0x10, 0x09, 0x00, 0x0F, 0x2B, 0x34, 0xD5, 0x35, 0x00, 0x36, 0x18, 0x37, 0x00, 0x3C, 0x21,
                                                   0xff, 0x82, 0xde, 0x00, 0xde, 0xc0, 0xff, 0x81, 0x23, 0x40, 0x24, 0x64, 0x26, 0x55, 0x29, 0x04, 0x4d, 0x00, 0x27, 0x60, 0x28, 0x00, 0x25, 0x01, 0x2c, 0x94, 0x2d, 0x99 };
       this->writeRegisterSet(data_1, sizeof(data_1));
     }
@@ -451,7 +455,7 @@ namespace lgfx
     }
 
     if (!Panel_Device::init(false)) { return false; }
-  
+
     // Initialize and read ID
     ESP_LOGI(TAG, "Waiting the FPGA gets idle...");
     startWrite();
@@ -470,7 +474,7 @@ namespace lgfx
     cs_control(true);
     _bus->endRead();
     cs_control(false);
-  
+
     bool res = _init_resolution();
 
     ESP_LOGI(TAG, "Initialize HDMI transmitter...");
@@ -517,9 +521,9 @@ namespace lgfx
 
     bool res = (hori_total > hori_min);
     if (!res)
-    { // If the blanking period is too small, it will not work properly. 
+    { // If the blanking period is too small, it will not work properly.
       hori_total = hori_min;
-      ESP_LOGE(TAG, "resolution error. out of range  %dx%d %.2f Hz", mem_width, mem_height, _refresh_rate);
+      ESP_LOGE(TAG, "resolution error. out of range  %dx%d %.2f Hz", mem_width, mem_height, (double)_refresh_rate);
     }
 
     video_timing_t vt;

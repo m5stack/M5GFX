@@ -21,21 +21,44 @@ Contributors:
 #include "../misc/pixelcopy.hpp"
 #include "../misc/common_function.hpp"
 
+#if defined (ESP_PLATFORM)
+ #include <sdkconfig.h>
+ #if defined (CONFIG_IDF_TARGET_ESP32S3)
+  #if __has_include(<esp32s3/rom/cache.h>)
+   #include <esp32s3/rom/cache.h>
+   extern int Cache_WriteBack_Addr(uint32_t addr, uint32_t size);
+   #define LGFX_USE_CACHE_WRITEBACK_ADDR
+  #endif
+ #endif
+#endif
+
 namespace lgfx
 {
  inline namespace v1
  {
 //----------------------------------------------------------------------------
 
+#if defined ( LGFX_USE_CACHE_WRITEBACK_ADDR )
+  void cacheWriteBack(const void* ptr, uint32_t size)
+  {
+    if (!isEmbeddedMemory(ptr))
+    {
+      Cache_WriteBack_Addr((uint32_t)ptr, size);
+    }
+  }
+#else
+  static inline void cacheWriteBack(const void*, uint32_t) {}
+#endif
+
   bool Panel_FrameBufferBase::init(bool use_reset)
   {
+    setInvert(_invert);
+    setRotation(_rotation);
+
     if (!Panel_Device::init(use_reset))
     {
       return false;
     }
-
-    setInvert(_invert);
-    setRotation(_rotation);
     return true;
   }
 
@@ -83,7 +106,9 @@ namespace lgfx
     if (_write_bits >= 8)
     {
       size_t bytes = _write_bits >> 3;
-      memcpy(&_lines_buffer[y][x * bytes], &rawcolor, bytes);
+      auto ptr = &_lines_buffer[y][x * bytes];
+      memcpy(ptr, &rawcolor, bytes);
+      cacheWriteBack(ptr, bytes);
     }
   }
 
@@ -102,7 +127,9 @@ namespace lgfx
       size_t bytes = _write_bits >> 3;
       do
       {
-        memset_multi(&_lines_buffer[y][x * bytes], rawcolor, bytes, w);
+        auto ptr = &_lines_buffer[y][x * bytes];
+        memset_multi(ptr, rawcolor, bytes, w);
+        cacheWriteBack(ptr, bytes * w);
       } while (++y < h);
     }
   }
@@ -239,7 +266,10 @@ namespace lgfx
     uint_fast8_t r = _rotation;
     if (r == 0 && param->transp == pixelcopy_t::NON_TRANSP && param->no_convert)
     {
-      auto sw = param->src_bitwidth;
+      auto bits = _write_bits;
+      x = x * bits >> 3;
+      w = w * bits >> 3;
+      auto sw = param->src_bitwidth * bits >> 3;
       auto src = &((uint8_t*)param->src_data)[param->src_y * sw + param->src_x];
       h += y;
       do
