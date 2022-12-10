@@ -1028,7 +1028,7 @@ namespace m5gfx
       {
         bus_cfg.pin_mosi = GPIO_NUM_21;
         bus_cfg.pin_miso = GPIO_NUM_13;
-        bus_cfg.pin_sclk = GPIO_NUM_16;
+        bus_cfg.pin_sclk = GPIO_NUM_17;
         bus_cfg.pin_dc   = GPIO_NUM_33;
         bus_cfg.spi_mode = 0;
         bus_cfg.spi_3wire = true;
@@ -1059,7 +1059,7 @@ namespace m5gfx
             p->config(cfg);
           }
           _panel_last = p;
-          _set_pwm_backlight(GPIO_NUM_18, 7, 240); /// AtomS3LCDのバックライトはPWM周期が速いと点灯しない;
+          _set_pwm_backlight(GPIO_NUM_16, 7, 240); /// AtomS3LCDのバックライトはPWM周期が速いと点灯しない;
 
           goto init_clear;
         }
