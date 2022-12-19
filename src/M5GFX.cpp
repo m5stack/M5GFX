@@ -467,9 +467,9 @@ namespace m5gfx
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {
-    if (getPanel()->width())
+    if (getBoard() != board_t::board_unknown)
     {
-      return LGFX_Device::init_impl(use_reset, use_clear);
+      return true;
     }
 
     static constexpr char NVS_KEY[] = "AUTODETECT";
