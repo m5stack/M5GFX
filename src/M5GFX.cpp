@@ -467,9 +467,9 @@ namespace m5gfx
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {
-    if (getPanel()->width())
+    if (getBoard() != board_t::board_unknown)
     {
-      return LGFX_Device::init_impl(use_reset, use_clear);
+      return true;
     }
 
     static constexpr char NVS_KEY[] = "AUTODETECT";
@@ -1024,11 +1024,11 @@ namespace m5gfx
 //     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
 // ESP_LOGE("DEBUG","pkg_ver:%02x", pkg_ver);
 
-      if (board == 0 || board == board_t::board_M5AtomS3LCD)
+      if (board == 0 || board == board_t::board_M5AtomS3)
       {
         bus_cfg.pin_mosi = GPIO_NUM_21;
         bus_cfg.pin_miso = GPIO_NUM_13;
-        bus_cfg.pin_sclk = GPIO_NUM_16;
+        bus_cfg.pin_sclk = GPIO_NUM_17;
         bus_cfg.pin_dc   = GPIO_NUM_33;
         bus_cfg.spi_mode = 0;
         bus_cfg.spi_3wire = true;
@@ -1038,8 +1038,8 @@ namespace m5gfx
         id = _read_panel_id(&_bus_spi, GPIO_NUM_15);
         if ((id & 0xFFFFFF) == 0x079100)
         {  //  check panel (GC9107)
-          board = board_t::board_M5AtomS3LCD;
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3LCD");
+          board = board_t::board_M5AtomS3;
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3");
           _bus_spi.release();
           bus_cfg.spi_host = SPI3_HOST;
           bus_cfg.freq_write = 40000000;
@@ -1059,7 +1059,7 @@ namespace m5gfx
             p->config(cfg);
           }
           _panel_last = p;
-          _set_pwm_backlight(GPIO_NUM_18, 7, 240); /// AtomS3LCDのバックライトはPWM周期が速いと点灯しない;
+          _set_pwm_backlight(GPIO_NUM_16, 7, 240); /// AtomS3LCDのバックライトはPWM周期が速いと点灯しない;
 
           goto init_clear;
         }

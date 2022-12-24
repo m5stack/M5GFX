@@ -73,10 +73,10 @@ public:
     int i2c_port = 1;
     int i2c_sda  = GPIO_NUM_38;
     int i2c_scl  = GPIO_NUM_39;
-    int spi_cs   = GPIO_NUM_40;
-    int spi_mosi = GPIO_NUM_17;
-    int spi_miso = GPIO_NUM_14;
-    int spi_sclk = GPIO_NUM_42;
+    int spi_cs   = GPIO_NUM_8;
+    int spi_mosi = GPIO_NUM_6;
+    int spi_miso = GPIO_NUM_5;
+    int spi_sclk = GPIO_NUM_7;
     spi_host_device_t spi_host = SPI2_HOST;
 
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)

@@ -18,7 +18,7 @@ Support device
 - M5Paper
 - M5Tough
 - M5Station
-- M5ATOMS3LCD
+- M5ATOMS3
 - UnitOLED
 - UnitLCD
 - [UnitRCA](docs/UnitRCA.md)
