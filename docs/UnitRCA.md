@@ -1,7 +1,6 @@
 # Unit RCA and Module RCA library
 
-<img src="https://static-cdn.m5stack.com/resource/docs/products/unit/RCA/img-9420bb3d-22b8-4f80-b7fe-e708088f1e51.webp" width="49%">
-<img src="https://static-cdn.m5stack.com/resource/docs/products/module/RCA%20Module%2013.2/img-047dda32-31a1-4ce6-a6d4-910aa511caa5.webp" width="49%">
+<img src="https://static-cdn.m5stack.com/resource/docs/products/unit/RCA/img-9420bb3d-22b8-4f80-b7fe-e708088f1e51.webp" width="45%"><img src="https://static-cdn.m5stack.com/resource/docs/products/module/RCA%20Module%2013.2/img-047dda32-31a1-4ce6-a6d4-910aa511caa5.webp" width="45%">
 
 ### Notes.
 - If you wish audio output, please use other libraries such as M5Unified::Speaker.  
