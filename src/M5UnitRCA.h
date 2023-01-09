@@ -7,7 +7,6 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
-#include "lgfx/v1/platforms/esp32/Panel_CVBS.hpp"
 #include "M5GFX.h"
 
 #if defined ( ARDUINO )

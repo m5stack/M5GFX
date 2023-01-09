@@ -21,7 +21,7 @@ Support device
 - M5ATOMS3
 - UnitOLED
 - UnitLCD
-- [UnitRCA](docs/UnitRCA.md)
+- [UnitRCA / ModuleRCA](docs/UnitRCA.md)
 - [AtomDisplay](docs/ATOMDisplay.md)
 
 

@@ -38,7 +38,6 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5UnitOLED
     , board_M5UnitRCA
     , board_M5ModuleDisplay
-    , board_M5ModuleRCA
     };
   }
   using namespace boards;
