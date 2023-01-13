@@ -8,9 +8,6 @@
 // #include <SD.h>
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
-#if defined (ARDUINO)
-#include <FS.h>
-#endif
 
 #ifdef setFont
 #undef setFont
