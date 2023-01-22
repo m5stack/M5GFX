@@ -57,19 +57,21 @@ M5AtomDisplay display;
 
 
 // Depending on the supported resolution of the display, it may not be displayed correctly.
-// You may be able to display it by setting the resolution (width and height) to be output to the display with the  arguments 4 and 5.
-// You can also set the scaling factor for width and height with arguments 6 and 7.
+// Arguments 4 and 5 allow you to set the resolution (width and height) to be output to the display.
+// Arguments 6 and 7 allow you to set the scaling factor for width and height.
+// Argument 8 allows you to set the pixel clock frequency.
 // If the enlarged resolution is less than the output resolution, there will be a gap around the perimeter of the screen.
 // ディスプレイの対応解像度によっては正しく表示できない場合があります。
-// 引数4と5でディスプレイに出力する解像度(幅,高さ)を設定することで表示できる場合があります。
-// また、引数6と7で幅と高さの拡大倍率を設定できます。
+// 引数4と5でディスプレイに出力する解像度(幅,高さ)を設定できます。
+// 引数6と7で幅と高さの拡大倍率を設定できます。
+// 引数8でピクセルクロックの周波数を設定できます。
 // なお拡大後の解像度が出力解像度に満たない場合、画面外周に隙間が生じます。
 
-// M5AtomDisplay display ( 512, 384, 60, 1280, 800, 2, 2 );
+// M5AtomDisplay display ( 512, 384, 60, 1280, 800, 2, 2, 74250000 );
 
 // ※ The width scaling factor must be a number that is divisible by the width of the output resolution.
 // ※ 幅の拡大倍率は、出力解像度の幅を割り切れる数である必要があります。
-// ex: M5AtomDisplay display ( 400, 250, 60, 1280, 800, 3, 3 );
+// ex: M5AtomDisplay display ( 400, 250, 60, 1280, 800, 3, 3, 74250000 );
 //  In this example, 1280 is not divisible by 3, so the horizontal scaling factor will be changed to 2.
 //  この例は 1280 を 3で割り切れないため、横方向の拡大倍率は2に変更されます。
 

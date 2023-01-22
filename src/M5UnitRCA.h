@@ -8,6 +8,7 @@
 // #include <HTTPClient.h>
 
 #include "M5GFX.h"
+#include "lgfx/v1/platforms/esp32/Panel_CVBS.hpp"
 
 #if defined ( ARDUINO )
  #include <Arduino.h>

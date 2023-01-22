@@ -2,13 +2,13 @@
 
 Graphics library for M5Stack series  
 
-Support framework  
+Supported framework  
 ----------------
 - ESP-IDF
 - Arduino for ESP32
 
 
-Support device  
+Supported device  
 ----------------
 - M5Stack ( Basic / Gray / GO / Fire )
 - M5Stack Core2

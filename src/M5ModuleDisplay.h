@@ -34,6 +34,9 @@
 #ifndef M5MODULEDISPLAY_SCALE_H
 #define M5MODULEDISPLAY_SCALE_H 0
 #endif
+#ifndef M5MODULEDISPLAY_PIXELCLOCK
+#define M5MODULEDISPLAY_PIXELCLOCK 74250000
+#endif
 
 #if __has_include(<esp_idf_version.h>)
  #include <esp_idf_version.h>
@@ -56,6 +59,7 @@ public:
                  , uint16_t output_height  = M5MODULEDISPLAY_OUTPUT_HEIGHT
                  , uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W
                  , uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H
+                 , uint32_t pixel_clock    = M5MODULEDISPLAY_PIXELCLOCK
                  )
   {
     lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
@@ -66,6 +70,7 @@ public:
     cfg_reso.output_height  = output_height;
     cfg_reso.scale_w        = scale_w;
     cfg_reso.scale_h        = scale_h;
+    cfg_reso.pixel_clock    = pixel_clock;
     _panel_instance.config_resolution(cfg_reso);
 
     setPanel(&_panel_instance);
@@ -205,6 +210,7 @@ public:
                     , uint16_t output_height  = M5MODULEDISPLAY_OUTPUT_HEIGHT
                     , uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W
                     , uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H
+                    , uint32_t pixel_clock    = M5MODULEDISPLAY_PIXELCLOCK
                     )
   {
     bool res = _panel_instance.setResolution
@@ -215,6 +221,7 @@ public:
       , output_height
       , scale_w
       , scale_h
+      , pixel_clock
       );
     setRotation(getRotation());
     return res;

@@ -34,6 +34,9 @@
 #ifndef M5ATOMDISPLAY_SCALE_H
 #define M5ATOMDISPLAY_SCALE_H 0
 #endif
+#ifndef M5ATOMDISPLAY_PIXELCLOCK
+#define M5ATOMDISPLAY_PIXELCLOCK 74250000
+#endif
 
 class M5AtomDisplay : public lgfx::LGFX_Device
 {
@@ -49,6 +52,7 @@ public:
                , uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT
                , uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W
                , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
+               , uint32_t pixel_clock    = M5ATOMDISPLAY_PIXELCLOCK
                )
   {
     lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
@@ -59,6 +63,7 @@ public:
     cfg_reso.output_height  = output_height;
     cfg_reso.scale_w        = scale_w;
     cfg_reso.scale_h        = scale_h;
+    cfg_reso.pixel_clock    = pixel_clock;
     _panel_instance.config_resolution(cfg_reso);
 
     setPanel(&_panel_instance);
@@ -160,6 +165,7 @@ public:
                     , uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT
                     , uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W
                     , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
+                    , uint32_t pixel_clock    = M5ATOMDISPLAY_PIXELCLOCK
                     )
   {
     bool res = _panel_instance.setResolution
@@ -170,6 +176,7 @@ public:
       , output_height
       , scale_w
       , scale_h
+      , pixel_clock
       );
     setRotation(getRotation());
     return res;
