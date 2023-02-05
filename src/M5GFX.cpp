@@ -448,8 +448,8 @@ namespace m5gfx
 
   void M5GFX::_set_backlight(lgfx::ILight* bl)
   {
-    if (_light_last) { delete _light_last; }
-    _light_last = bl;
+//  if (_light_last) { delete _light_last; }
+    _light_last.reset(bl);
     _panel_last->setLight(bl);
   }
 
@@ -556,33 +556,21 @@ namespace m5gfx
 
   board_t M5GFX::autodetect(bool use_reset, board_t board)
   {
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-    auto bus_cfg = _bus_spi.config();
+    auto bus_spi = new Bus_SPI();
+    _bus_last.reset(bus_spi);
 
     panel(nullptr);
 
-    if (_panel_last)
-    {
-      delete _panel_last;
-      _panel_last = nullptr;
-    }
-    if (_light_last)
-    {
-      delete _light_last;
-      _light_last = nullptr;
-    }
-    if (_touch_last)
-    {
-      delete _touch_last;
-      _touch_last = nullptr;
-    }
-
+    auto bus_cfg = bus_spi->config();
     bus_cfg.freq_write = 8000000;
     bus_cfg.freq_read  = 8000000;
-    bus_cfg.spi_host = VSPI_HOST;
     bus_cfg.spi_mode = 0;
-    bus_cfg.dma_channel = 1;
     bus_cfg.use_lock = true;
+
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+
+    bus_cfg.spi_host = VSPI_HOST;
+    bus_cfg.dma_channel = 1;
 
     std::uint32_t id;
 
@@ -598,20 +586,20 @@ namespace m5gfx
         bus_cfg.pin_sclk = GPIO_NUM_13;
         bus_cfg.pin_dc   = GPIO_NUM_23;
         bus_cfg.spi_3wire = true;
-        _bus_spi.config(bus_cfg);
-        _bus_spi.init();
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
         _pin_reset(GPIO_NUM_18, use_reset); // LCD RST
-        id = _read_panel_id(&_bus_spi, GPIO_NUM_5);
+        id = _read_panel_id(bus_spi, GPIO_NUM_5);
         if ((id & 0xFF) == 0x85)
         {  //  check panel (ST7789)
           board = board_t::board_M5StickCPlus;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus");
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
-          _bus_spi.config(bus_cfg);
+          bus_spi->config(bus_cfg);
           auto p = new Panel_M5StickCPlus();
-          p->bus(&_bus_spi);
-          _panel_last = p;
+          p->bus(bus_spi);
+          _panel_last.reset(p);
           _set_backlight(new Light_M5StickC());
           goto init_clear;
         }
@@ -621,16 +609,16 @@ namespace m5gfx
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickC");
           bus_cfg.freq_write = 27000000;
           bus_cfg.freq_read  = 14000000;
-          _bus_spi.config(bus_cfg);
+          bus_spi->config(bus_cfg);
           auto p = new Panel_M5StickC();
-          p->bus(&_bus_spi);
-          _panel_last = p;
+          p->bus(bus_spi);
+          _panel_last.reset(p);
           _set_backlight(new Light_M5StickC());
           goto init_clear;
         }
         lgfx::pinMode(GPIO_NUM_18, lgfx::pin_mode_t::input); // LCD RST
         lgfx::pinMode(GPIO_NUM_5 , lgfx::pin_mode_t::input); // LCD CS
-        _bus_spi.release();
+        bus_spi->release();
       }
 
       if (board == 0 || board == board_t::board_M5StackCoreInk)
@@ -641,9 +629,9 @@ namespace m5gfx
         bus_cfg.pin_sclk = GPIO_NUM_18;
         bus_cfg.pin_dc   = GPIO_NUM_15;
         bus_cfg.spi_3wire = true;
-        _bus_spi.config(bus_cfg);
-        _bus_spi.init();
-        id = _read_panel_id(&_bus_spi, GPIO_NUM_9, 0x70, 0);
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        id = _read_panel_id(bus_spi, GPIO_NUM_9, 0x70, 0);
         if (id == 0x00F00000)
         {  //  check panel (e-paper GDEW0154M09)
           _pin_level(GPIO_NUM_12, true);  // POWER_HOLD_PIN 12
@@ -651,10 +639,10 @@ namespace m5gfx
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StackCoreInk");
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
-          _bus_spi.config(bus_cfg);
+          bus_spi->config(bus_cfg);
           auto p = new lgfx::Panel_GDEW0154M09();
-          p->bus(&_bus_spi);
-          _panel_last = p;
+          p->bus(bus_spi);
+          _panel_last.reset(p);
           auto cfg = p->config();
           cfg.panel_height = 200;
           cfg.panel_width  = 200;
@@ -666,7 +654,7 @@ namespace m5gfx
         }
         lgfx::pinMode(GPIO_NUM_0, lgfx::pin_mode_t::input); // RST
         lgfx::pinMode(GPIO_NUM_9, lgfx::pin_mode_t::input); // CS
-        _bus_spi.release();
+        bus_spi->release();
       }
 
 /// LCD / EPD 検出失敗の場合はATOM 判定;
@@ -699,11 +687,11 @@ namespace m5gfx
             bus_cfg.pin_sclk = GPIO_NUM_18;
             bus_cfg.pin_dc   = GPIO_NUM_19;
             bus_cfg.spi_3wire = true;
-            _bus_spi.config(bus_cfg);
-            _bus_spi.init();
+            bus_spi->config(bus_cfg);
+            bus_spi->init();
             _pin_reset(GPIO_NUM_15, use_reset); // LCD RST;
 
-            id = _read_panel_id(&_bus_spi, GPIO_NUM_5);
+            id = _read_panel_id(bus_spi, GPIO_NUM_5);
             if ((id & 0xFF) == 0x85)
             {   // ST7789
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5Station");
@@ -711,7 +699,7 @@ namespace m5gfx
 
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 15000000;
-              _bus_spi.config(bus_cfg);
+              bus_spi->config(bus_cfg);
 
               auto p = new Panel_M5StickCPlus();
               {
@@ -720,13 +708,13 @@ namespace m5gfx
                 p->config(cfg);
                 p->setRotation(1);
               }
-              p->bus(&_bus_spi);
-              _panel_last = p;
+              p->bus(bus_spi);
+              _panel_last.reset(p);
               /// M5StationのバックライトはM5Toughと同じ;
               _set_backlight(new Light_M5Tough());
               goto init_clear;
             }
-            _bus_spi.release();
+            bus_spi->release();
             lgfx::pinMode(GPIO_NUM_5 , lgfx::pin_mode_t::input); // LCD CS
             lgfx::pinMode(GPIO_NUM_15, lgfx::pin_mode_t::input); // LCD RST
           }
@@ -761,21 +749,21 @@ namespace m5gfx
               bus_cfg.pin_sclk = GPIO_NUM_18;
               bus_cfg.pin_dc   = GPIO_NUM_15;
               bus_cfg.spi_3wire = true;
-              _bus_spi.config(bus_cfg);
-              _bus_spi.init();
+              bus_spi->config(bus_cfg);
+              bus_spi->init();
 
               _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
-              id = _read_panel_id(&_bus_spi, GPIO_NUM_5);
+              id = _read_panel_id(bus_spi, GPIO_NUM_5);
               if ((id & 0xFF) == 0xE3)
               {   // ILI9342c
                 bus_cfg.freq_write = 40000000;
                 bus_cfg.freq_read  = 16000000;
-                _bus_spi.config(bus_cfg);
+                bus_spi->config(bus_cfg);
 
                 auto p = new Panel_M5StackCore2();
-                p->bus(&_bus_spi);
-                _panel_last = p;
+                p->bus(bus_spi);
+                _panel_last.reset(p);
 
                 // Tough のタッチコントローラ有無をチェックする;
                 // Core2/Tough 判別条件としてCore2のTP(0x38)の有無を用いた場合、以下の問題が生じる;
@@ -790,7 +778,7 @@ namespace m5gfx
                   _set_backlight(new Light_M5StackCore2());
 
                   auto t = new lgfx::Touch_FT5x06();
-                  _touch_last = t;
+                  _touch_last.reset(t);
                   auto cfg = t->config();
                   cfg.pin_int  = GPIO_NUM_39;
                   cfg.pin_sda  = GPIO_NUM_21;
@@ -816,7 +804,7 @@ namespace m5gfx
                   _set_backlight(new Light_M5Tough());
 
                   auto t = new Touch_M5Tough();
-                  _touch_last = t;
+                  _touch_last.reset(t);
                   auto cfg = t->config();
                   cfg.pin_int  = GPIO_NUM_39;
                   cfg.pin_sda  = GPIO_NUM_21;
@@ -837,7 +825,7 @@ namespace m5gfx
               }
               lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // TF card CS
               lgfx::pinMode(GPIO_NUM_5, lgfx::pin_mode_t::input); // LCD CS
-              _bus_spi.release();
+              bus_spi->release();
             }
           }
         }
@@ -851,13 +839,13 @@ namespace m5gfx
         bus_cfg.pin_dc   = GPIO_NUM_27;
 
         bus_cfg.spi_3wire = true;
-        _bus_spi.config(bus_cfg);
-        _bus_spi.init();
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST;
 
         _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
-        id = _read_panel_id(&_bus_spi, GPIO_NUM_14);
+        id = _read_panel_id(bus_spi, GPIO_NUM_14);
         if ((id & 0xFF) == 0xE3)
         {   // ILI9342c
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5Stack");
@@ -865,15 +853,15 @@ namespace m5gfx
 
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
-          _bus_spi.config(bus_cfg);
+          bus_spi->config(bus_cfg);
 
           auto p = new Panel_M5Stack();
-          p->bus(&_bus_spi);
-          _panel_last = p;
+          p->bus(bus_spi);
+          _panel_last.reset(p);
           _set_pwm_backlight(GPIO_NUM_32, 7, 44100);
           goto init_clear;
         }
-        _bus_spi.release();
+        bus_spi->release();
         lgfx::pinMode(GPIO_NUM_4 , lgfx::pin_mode_t::input); // TF card CS
         lgfx::pinMode(GPIO_NUM_14, lgfx::pin_mode_t::input); // LCD CS
         lgfx::pinMode(GPIO_NUM_33, lgfx::pin_mode_t::input); // LCD RST
@@ -893,11 +881,11 @@ namespace m5gfx
           bus_cfg.pin_sclk = GPIO_NUM_14;
           bus_cfg.pin_dc   = -1;
           bus_cfg.spi_3wire = false;
-          _bus_spi.config(bus_cfg);
+          bus_spi->config(bus_cfg);
           id = lgfx::millis();
 
           _pin_level(GPIO_NUM_15, true); // M5Paper CS;
-          _bus_spi.init();
+          bus_spi->init();
           _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
           do
           {
@@ -906,12 +894,12 @@ namespace m5gfx
           } while (!lgfx::gpio_in(GPIO_NUM_27));
           if (id)
           {
-            _bus_spi.beginTransaction();
+            bus_spi->beginTransaction();
             lgfx::gpio_lo(GPIO_NUM_15);
-            _bus_spi.writeData(__builtin_bswap16(0x6000), 16);
-            _bus_spi.writeData(__builtin_bswap16(0x0302), 16);  // read DevInfo
+            bus_spi->writeData(__builtin_bswap16(0x6000), 16);
+            bus_spi->writeData(__builtin_bswap16(0x0302), 16);  // read DevInfo
             id = lgfx::millis();
-            _bus_spi.wait();
+            bus_spi->wait();
             lgfx::gpio_hi(GPIO_NUM_15);
             do
             {
@@ -919,13 +907,13 @@ namespace m5gfx
               if (lgfx::millis() - id > 192) { break; }
             } while (!lgfx::gpio_in(GPIO_NUM_27));
             lgfx::gpio_lo(GPIO_NUM_15);
-            _bus_spi.writeData(__builtin_bswap16(0x1000), 16);
-            _bus_spi.writeData(__builtin_bswap16(0x0000), 16);
+            bus_spi->writeData(__builtin_bswap16(0x1000), 16);
+            bus_spi->writeData(__builtin_bswap16(0x0000), 16);
             std::uint8_t buf[40];
-            _bus_spi.beginRead();
-            _bus_spi.readBytes(buf, 40, false);
-            _bus_spi.endRead();
-            _bus_spi.endTransaction();
+            bus_spi->beginRead();
+            bus_spi->readBytes(buf, 40, false);
+            bus_spi->endRead();
+            bus_spi->endTransaction();
             lgfx::gpio_hi(GPIO_NUM_15);
             id = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
             ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel size :%08x", id);
@@ -935,11 +923,11 @@ namespace m5gfx
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5Paper");
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 20000000;
-              _bus_spi.config(bus_cfg);
+              bus_spi->config(bus_cfg);
               {
                 auto p = new lgfx::Panel_IT8951();
-                p->bus(&_bus_spi);
-                _panel_last = p;
+                p->bus(bus_spi);
+                _panel_last.reset(p);
                 auto cfg = p->config();
                 cfg.panel_height = 540;
                 cfg.panel_width  = 960;
@@ -951,7 +939,7 @@ namespace m5gfx
               }
               {
                 auto t = new lgfx::Touch_GT911();
-                _touch_last = t;
+                _touch_last.reset(t);
                 auto cfg = t->config();
                 cfg.pin_int  = GPIO_NUM_36;
                 cfg.pin_sda  = GPIO_NUM_21;
@@ -980,7 +968,7 @@ namespace m5gfx
               goto init_clear;
             }
           }
-          _bus_spi.release();
+          bus_spi->release();
           lgfx::pinMode(GPIO_NUM_15, lgfx::pin_mode_t::input); // EPD CS
           lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // M5Paper TF card CS
           lgfx::pinMode(GPIO_NUM_2, lgfx::pin_mode_t::input); // M5EPD_MAIN_PWR_PIN 2
@@ -992,32 +980,8 @@ namespace m5gfx
 
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
 
-    auto bus_cfg = _bus_spi.config();
-
-    panel(nullptr);
-
-    if (_panel_last)
-    {
-      delete _panel_last;
-      _panel_last = nullptr;
-    }
-    if (_light_last)
-    {
-      delete _light_last;
-      _light_last = nullptr;
-    }
-    if (_touch_last)
-    {
-      delete _touch_last;
-      _touch_last = nullptr;
-    }
-
-    bus_cfg.freq_write = 8000000;
-    bus_cfg.freq_read  = 8000000;
     bus_cfg.spi_host = SPI2_HOST;
-    bus_cfg.spi_mode = 0;
     bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
-    bus_cfg.use_lock = true;
 
     std::uint32_t id;
 
@@ -1032,22 +996,22 @@ namespace m5gfx
         bus_cfg.pin_dc   = GPIO_NUM_33;
         bus_cfg.spi_mode = 0;
         bus_cfg.spi_3wire = true;
-        _bus_spi.config(bus_cfg);
-        _bus_spi.init();
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
         _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
-        id = _read_panel_id(&_bus_spi, GPIO_NUM_15);
+        id = _read_panel_id(bus_spi, GPIO_NUM_15);
         if ((id & 0xFFFFFF) == 0x079100)
         {  //  check panel (GC9107)
           board = board_t::board_M5AtomS3;
           ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3");
-          _bus_spi.release();
+          bus_spi->release();
           bus_cfg.spi_host = SPI3_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
-          _bus_spi.config(bus_cfg);
-          _bus_spi.init();
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
           auto p = new Panel_GC9107();
-          p->bus(&_bus_spi);
+          p->bus(bus_spi);
           {
             auto cfg = p->config();
             cfg.pin_cs  = GPIO_NUM_15;
@@ -1058,13 +1022,13 @@ namespace m5gfx
             cfg.readable = false;
             p->config(cfg);
           }
-          _panel_last = p;
+          _panel_last.reset(p);
           _set_pwm_backlight(GPIO_NUM_16, 7, 240); /// AtomS3LCDのバックライトはPWM周期が速いと点灯しない;
 
           goto init_clear;
         }
         lgfx::pinMode(GPIO_NUM_48, lgfx::pin_mode_t::input); // LCD RST
-        _bus_spi.release();
+        bus_spi->release();
       }
 
       if (board == 0 || board == board_t::board_M5StackCoreS3)
@@ -1097,34 +1061,34 @@ namespace m5gfx
             bus_cfg.pin_dc   = GPIO_NUM_35;// MISOとLCD D/CをGPIO35でシェアしている;
             bus_cfg.spi_mode = 0;
             bus_cfg.spi_3wire = true;
-            _bus_spi.config(bus_cfg);
-            _bus_spi.init();
+            bus_spi->config(bus_cfg);
+            bus_spi->init();
 
             _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
-            id = _read_panel_id(&_bus_spi, GPIO_NUM_3);
+            id = _read_panel_id(bus_spi, GPIO_NUM_3);
             if ((id & 0xFF) == 0xE3)
             {  //  check panel (ILI9342)
               board = board_t::board_M5StackCoreS3;
               ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5StackCoreS3");
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 16000000;
-              _bus_spi.config(bus_cfg);
+              bus_spi->config(bus_cfg);
               auto p = new Panel_M5StackCoreS3();
-              p->bus(&_bus_spi);
-              _panel_last = p;
+              p->bus(bus_spi);
+              _panel_last.reset(p);
 
               _set_backlight(new Light_M5StackCoreS3());
 
               {
                 auto t = new Touch_M5StackCoreS3();
-                _touch_last = t;
+                _touch_last.reset(t);
                 _panel_last->touch(t);
               }
 
               goto init_clear;
             }
-            _bus_spi.release();
+            bus_spi->release();
             lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // TF card CS
             lgfx::pinMode(GPIO_NUM_3, lgfx::pin_mode_t::input); // LCD CS
           }
@@ -1139,7 +1103,7 @@ namespace m5gfx
     goto init_clear;
 init_clear:
 
-    panel(_panel_last);
+    panel(_panel_last.get());
 
     return board;
   }

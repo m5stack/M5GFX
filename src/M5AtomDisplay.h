@@ -34,11 +34,20 @@
 #ifndef M5ATOMDISPLAY_SCALE_H
 #define M5ATOMDISPLAY_SCALE_H 0
 #endif
+#ifndef M5ATOMDISPLAY_PIXELCLOCK
+#define M5ATOMDISPLAY_PIXELCLOCK 74250000
+#endif
 
-class M5AtomDisplay : public lgfx::LGFX_Device
+#if __has_include(<esp_idf_version.h>)
+ #include <esp_idf_version.h>
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
+  #define M5ATOMDISPLAY_SPI_DMA_CH SPI_DMA_CH_AUTO
+ #endif
+#endif
+
+class M5AtomDisplay : public M5GFX
 {
-  lgfx::Panel_M5HDMI _panel_instance;
-  lgfx::Bus_SPI      _bus_instance;
+  lgfx::Panel_M5HDMI::config_resolution_t _cfg_reso;
 
 public:
 
@@ -49,27 +58,33 @@ public:
                , uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT
                , uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W
                , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
+               , uint32_t pixel_clock    = M5ATOMDISPLAY_PIXELCLOCK
                )
   {
-    lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
-    cfg_reso.logical_width  = logical_width;
-    cfg_reso.logical_height = logical_height;
-    cfg_reso.refresh_rate   = refresh_rate;
-    cfg_reso.output_width   = output_width;
-    cfg_reso.output_height  = output_height;
-    cfg_reso.scale_w        = scale_w;
-    cfg_reso.scale_h        = scale_h;
-    _panel_instance.config_resolution(cfg_reso);
-
-    setPanel(&_panel_instance);
     _board = lgfx::board_t::board_M5AtomDisplay;
-  // }
+    _cfg_reso.logical_width  = logical_width;
+    _cfg_reso.logical_height = logical_height;
+    _cfg_reso.refresh_rate   = refresh_rate;
+    _cfg_reso.output_width   = output_width;
+    _cfg_reso.output_height  = output_height;
+    _cfg_reso.scale_w        = scale_w;
+    _cfg_reso.scale_h        = scale_h;
+    _cfg_reso.pixel_clock    = pixel_clock;
+  }
 
-  // bool init_impl(bool use_reset, bool use_clear) override
-  // {
+  bool init_impl(bool use_reset, bool use_clear)
+  {
+    if (_panel_last.get() != nullptr) {
+      return true;
+    }
+    auto p = new lgfx::Panel_M5HDMI();
+    if (!p) {
+      return false;
+    }
+
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 
-    // for AtomS3LCD
+    // for AtomS3/AtomS3Lite
     int i2c_port = 1;
     int i2c_sda  = GPIO_NUM_38;
     int i2c_scl  = GPIO_NUM_39;
@@ -91,7 +106,7 @@ public:
     spi_host_device_t spi_host = VSPI_HOST;
 
     std::uint32_t pkg_ver = lgfx::get_pkg_ver();
-    // ESP_LOGD("LGFX","pkg:%d", pkg_ver);
+    ESP_LOGD("LGFX","pkg:%d", pkg_ver);
 
     switch (pkg_ver)
     {
@@ -109,25 +124,30 @@ public:
 
 #endif
 
+    auto bus_spi = new lgfx::Bus_SPI();
     {
-      auto cfg = _bus_instance.config();
+      auto cfg = bus_spi->config();
       cfg.freq_write = 80000000;
       cfg.freq_read  = 20000000;
       cfg.spi_host = spi_host;
       cfg.spi_mode = 3;
+#ifndef M5ATOMDISPLAY_SPI_DMA_CH
       cfg.dma_channel = 1;
+#else
+      cfg.dma_channel = M5ATOMDISPLAY_SPI_DMA_CH;
+#endif
       cfg.use_lock = true;
       cfg.pin_mosi = spi_mosi;
       cfg.pin_miso = spi_miso;
       cfg.pin_sclk = spi_sclk;
       cfg.spi_3wire = false;
 
-      _bus_instance.config(cfg);
-      _panel_instance.setBus(&_bus_instance);
+      bus_spi->config(cfg);
+      p->setBus(bus_spi);
     }
 
     {
-      auto cfg = _panel_instance.config_transmitter();
+      auto cfg = p->config_transmitter();
       cfg.freq_read = 400000;
       cfg.freq_write = 400000;
       cfg.pin_scl = i2c_scl;
@@ -137,42 +157,30 @@ public:
       cfg.prefix_cmd = 0x00;
       cfg.prefix_data = 0x00;
       cfg.prefix_len = 0;
-      _panel_instance.config_transmitter(cfg);
+      p->config_transmitter(cfg);
     }
 
     {
-      auto cfg = _panel_instance.config();
+      auto cfg = p->config();
       cfg.offset_rotation = 3;
       cfg.pin_cs     = spi_cs;
       cfg.readable   = false;
       cfg.bus_shared = false;
-      _panel_instance.config(cfg);
-      _panel_instance.setRotation(1);
+      p->config(cfg);
+      p->setRotation(1);
     }
-
-    // return LGFX_Device::init_impl(use_reset, use_clear);
-  }
-
-  bool setResolution( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH
-                    , uint16_t logical_height = M5ATOMDISPLAY_LOGICAL_HEIGHT
-                    , float refresh_rate      = M5ATOMDISPLAY_REFRESH_RATE
-                    , uint16_t output_width   = M5ATOMDISPLAY_OUTPUT_WIDTH
-                    , uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT
-                    , uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W
-                    , uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H
-                    )
-  {
-    bool res = _panel_instance.setResolution
-      ( logical_width
-      , logical_height
-      , refresh_rate
-      , output_width
-      , output_height
-      , scale_w
-      , scale_h
-      );
-    setRotation(getRotation());
-    return res;
+    p->config_resolution(_cfg_reso);
+    setPanel(p);
+    if (lgfx::LGFX_Device::init_impl(use_reset, use_clear))
+    {
+      _panel_last.reset(p);
+      _bus_last.reset(bus_spi);
+      return true;
+    }
+    setPanel(nullptr);
+    delete p;
+    delete bus_spi;
+    return false;
   }
 };
 

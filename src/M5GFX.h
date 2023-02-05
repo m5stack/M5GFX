@@ -8,9 +8,6 @@
 // #include <SD.h>
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
-#if defined (ARDUINO)
-#include <FS.h>
-#endif
 
 #ifdef setFont
 #undef setFont
@@ -26,6 +23,7 @@
 #include "lgfx/v1/LGFX_Button.hpp"
 
 #include <vector>
+#include <memory>
 
 namespace m5gfx
 {
@@ -139,6 +137,7 @@ namespace m5gfx
 
   class M5GFX : public lgfx::LGFX_Device
   {
+  protected:
     static M5GFX* _instance;
 
     struct DisplayState
@@ -149,11 +148,11 @@ namespace m5gfx
       int32_t cursor_x, cursor_y;
     };
 
-    lgfx::Panel_Device* _panel_last;
+    std::shared_ptr<lgfx::Panel_Device> _panel_last;
 #if defined ( ESP_PLATFORM )
-    lgfx::Bus_SPI _bus_spi;
-    lgfx::ILight* _light_last;
-    lgfx::ITouch* _touch_last;
+    std::shared_ptr<lgfx::IBus> _bus_last;
+    std::shared_ptr<lgfx::ILight> _light_last;
+    std::shared_ptr<lgfx::ITouch> _touch_last;
 #endif
     std::vector<DisplayState> _displayStateStack;
 
@@ -195,12 +194,14 @@ namespace m5gfx
                       , uint16_t output_height  = 0
                       , uint_fast8_t scale_w    = 0
                       , uint_fast8_t scale_h    = 0
+                      , uint32_t pixel_clock    = 74250000
                       )
     {
-#ifdef __M5GFX_M5ATOMDISPLAY__
-      if (getBoard() == board_t::board_M5AtomDisplay)
+#if defined (__M5GFX_M5ATOMDISPLAY__) || defined (__M5GFX_M5MODULEDISPLAY__)
+      auto board = getBoard();
+      if (board == board_t::board_M5AtomDisplay || board == board_t::board_M5ModuleDisplay)
       {
-        bool res = ((Panel_M5HDMI*)panel())->setResolution
+        bool res = ((lgfx::Panel_M5HDMI*)panel())->setResolution
           ( logical_width
           , logical_height
           , refresh_rate
@@ -208,6 +209,7 @@ namespace m5gfx
           , output_height
           , scale_w
           , scale_h
+          , pixel_clock
           );
         setRotation(getRotation());
         return res;
