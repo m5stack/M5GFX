@@ -1,5 +1,5 @@
-#ifndef __M5GFX_M5UNITRCA__
-#define __M5GFX_M5UNITRCA__
+#ifndef __M5GFX_M5MODULERCA__
+#define __M5GFX_M5MODULERCA__
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
 //  please include <SD.h>,<SPIFFS.h>,<HTTPClient.h> before <M5GFX.h>
@@ -16,32 +16,31 @@
  #include <sdkconfig.h>
 #endif
 
-#ifndef M5UNITRCA_PIN_DAC
-#define M5UNITRCA_PIN_DAC GPIO_NUM_26
+#ifndef M5MODULERCA_PIN_DAC
+#define M5MODULERCA_PIN_DAC GPIO_NUM_26
 #endif
-#ifndef M5UNITRCA_LOGICAL_WIDTH
-#define M5UNITRCA_LOGICAL_WIDTH 216
+#ifndef M5MODULERCA_LOGICAL_WIDTH
+#define M5MODULERCA_LOGICAL_WIDTH 216
 #endif
-#ifndef M5UNITRCA_LOGICAL_HEIGHT
-#define M5UNITRCA_LOGICAL_HEIGHT 144
+#ifndef M5MODULERCA_LOGICAL_HEIGHT
+#define M5MODULERCA_LOGICAL_HEIGHT 144
 #endif
-#ifndef M5UNITRCA_SIGNAL_TYPE
-#define M5UNITRCA_SIGNAL_TYPE signal_type_t::PAL
+#ifndef M5MODULERCA_SIGNAL_TYPE
+#define M5MODULERCA_SIGNAL_TYPE signal_type_t::PAL
 #endif
-#ifndef M5UNITRCA_OUTPUT_WIDTH
-#define M5UNITRCA_OUTPUT_WIDTH 0
+#ifndef M5MODULERCA_OUTPUT_WIDTH
+#define M5MODULERCA_OUTPUT_WIDTH 0
 #endif
-#ifndef M5UNITRCA_OUTPUT_HEIGHT
-#define M5UNITRCA_OUTPUT_HEIGHT 0
+#ifndef M5MODULERCA_OUTPUT_HEIGHT
+#define M5MODULERCA_OUTPUT_HEIGHT 0
 #endif
-#ifndef M5UNITRCA_USE_PSRAM
-#define M5UNITRCA_USE_PSRAM use_psram_t::psram_half_use
+#ifndef M5MODULERCA_USE_PSRAM
+#define M5MODULERCA_USE_PSRAM use_psram_t::psram_half_use
 #endif
-#ifndef M5UNITRCA_OUTPUT_LEVEL
-#define M5UNITRCA_OUTPUT_LEVEL 0
+#ifndef M5MODULERCA_OUTPUT_LEVEL
+#define M5MODULERCA_OUTPUT_LEVEL 0
 #endif
-
-class M5UnitRCA : public M5GFX
+class M5ModuleRCA : public M5GFX
 {
   lgfx::Panel_CVBS::config_t _cfg;
   lgfx::Panel_CVBS::config_detail_t _cfg_detail;
@@ -55,43 +54,43 @@ public:
     psram_use = 2,
   };
 
-  M5UnitRCA( uint16_t logical_width    = M5UNITRCA_LOGICAL_WIDTH
-           , uint16_t logical_height   = M5UNITRCA_LOGICAL_HEIGHT
-           , uint16_t output_width     = M5UNITRCA_OUTPUT_WIDTH
-           , uint16_t output_height    = M5UNITRCA_OUTPUT_HEIGHT
-           , signal_type_t signal_type = M5UNITRCA_SIGNAL_TYPE
-           , use_psram_t use_psram     = M5UNITRCA_USE_PSRAM
-           , uint8_t  pin_dac          = M5UNITRCA_PIN_DAC
-           , uint8_t  output_level     = M5UNITRCA_OUTPUT_LEVEL
-           )
+  M5ModuleRCA( uint16_t logical_width    = M5MODULERCA_LOGICAL_WIDTH
+             , uint16_t logical_height   = M5MODULERCA_LOGICAL_HEIGHT
+             , uint16_t output_width     = M5MODULERCA_OUTPUT_WIDTH
+             , uint16_t output_height    = M5MODULERCA_OUTPUT_HEIGHT
+             , signal_type_t signal_type = M5MODULERCA_SIGNAL_TYPE
+             , use_psram_t use_psram     = M5MODULERCA_USE_PSRAM
+             , uint8_t  pin_dac          = M5MODULERCA_PIN_DAC
+             , uint8_t  output_level     = M5MODULERCA_OUTPUT_LEVEL
+             )
   {
-    _board = lgfx::board_t::board_M5UnitRCA;
+    _board = lgfx::board_t::board_M5ModuleRCA;
     setup(logical_width, logical_height, output_width, output_height, signal_type, use_psram, pin_dac, output_level);
   }
 
   using lgfx::LGFX_Device::init;
   bool init( uint16_t logical_width
            , uint16_t logical_height
-           , uint16_t output_width     = M5UNITRCA_OUTPUT_WIDTH
-           , uint16_t output_height    = M5UNITRCA_OUTPUT_HEIGHT
-           , signal_type_t signal_type = M5UNITRCA_SIGNAL_TYPE
-           , use_psram_t use_psram     = M5UNITRCA_USE_PSRAM
-           , uint8_t  pin_dac          = M5UNITRCA_PIN_DAC
-           , uint8_t  output_level     = M5UNITRCA_OUTPUT_LEVEL
+           , uint16_t output_width     = M5MODULERCA_OUTPUT_WIDTH
+           , uint16_t output_height    = M5MODULERCA_OUTPUT_HEIGHT
+           , signal_type_t signal_type = M5MODULERCA_SIGNAL_TYPE
+           , use_psram_t use_psram     = M5MODULERCA_USE_PSRAM
+           , uint8_t  pin_dac          = M5MODULERCA_PIN_DAC
+           , uint8_t  output_level     = M5MODULERCA_OUTPUT_LEVEL
            )
   {
     setup(logical_width, logical_height, output_width, output_height, signal_type, use_psram, pin_dac, output_level);
     return init();
   }
 
-  void setup(uint16_t logical_width    = M5UNITRCA_LOGICAL_WIDTH
-           , uint16_t logical_height   = M5UNITRCA_LOGICAL_HEIGHT
-           , uint16_t output_width     = M5UNITRCA_OUTPUT_WIDTH
-           , uint16_t output_height    = M5UNITRCA_OUTPUT_HEIGHT
-           , signal_type_t signal_type = M5UNITRCA_SIGNAL_TYPE
-           , use_psram_t use_psram     = M5UNITRCA_USE_PSRAM
-           , uint8_t  pin_dac          = M5UNITRCA_PIN_DAC
-           , uint8_t  output_level     = M5UNITRCA_OUTPUT_LEVEL
+  void setup(uint16_t logical_width    = M5MODULERCA_LOGICAL_WIDTH
+           , uint16_t logical_height   = M5MODULERCA_LOGICAL_HEIGHT
+           , uint16_t output_width     = M5MODULERCA_OUTPUT_WIDTH
+           , uint16_t output_height    = M5MODULERCA_OUTPUT_HEIGHT
+           , signal_type_t signal_type = M5MODULERCA_SIGNAL_TYPE
+           , use_psram_t use_psram     = M5MODULERCA_USE_PSRAM
+           , uint8_t  pin_dac          = M5MODULERCA_PIN_DAC
+           , uint8_t  output_level     = M5MODULERCA_OUTPUT_LEVEL
            )
   {
     if (output_width  < logical_width ) { output_width  = logical_width;  }
@@ -124,14 +123,14 @@ public:
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
     if (_cfg_detail.output_level == 0) {
-      if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
-      { // M5Stack Core2 / Tough
-        ESP_LOGD("LGFX","UnitRCA with Core2/Tough");
-        _cfg_detail.output_level = 200;
-      }
-      else
+      // if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
+      // { // M5Stack Core2 / Tough
+      //   ESP_LOGD("LGFX","ModuleRCA with Core2/Tough");
+      //   _cfg_detail.output_level = 200;
+      // }
+      // else
       { // M5Stack BASIC / FIRE / GO
-        ESP_LOGD("LGFX","UnitRCA with Core Basic/Fire/Go");
+        ESP_LOGD("LGFX","ModuleRCA with Core Basic/Fire/Go");
         _cfg_detail.output_level = 128;
       }
     }

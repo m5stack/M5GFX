@@ -49,10 +49,9 @@
 #define M5UNITOLED_FREQ 400000
 #endif
 
-class M5UnitOLED : public lgfx::LGFX_Device
+class M5UnitOLED : public M5GFX
 {
-  lgfx::Bus_I2C _bus_instance;
-  lgfx::Panel_SH110x _panel_instance;
+  lgfx::Bus_I2C::config_t _bus_cfg;
 
 public:
 
@@ -82,28 +81,44 @@ public:
     }
 
     {
-      auto cfg = _bus_instance.config();
-      cfg.freq_write = i2c_freq;
-      cfg.freq_read = i2c_freq;
-      cfg.pin_scl = pin_scl;
-      cfg.pin_sda = pin_sda;
-      cfg.i2c_port = i2c_port;
-      cfg.i2c_addr = i2c_addr;
-      cfg.prefix_cmd = 0x00;
-      cfg.prefix_data = 0x40;
-      cfg.prefix_len = 1;
-      _bus_instance.config(cfg);
-      _panel_instance.bus(&_bus_instance);
+      _bus_cfg.freq_write = i2c_freq;
+      _bus_cfg.freq_read = i2c_freq;
+      _bus_cfg.pin_scl = pin_scl;
+      _bus_cfg.pin_sda = pin_sda;
+      _bus_cfg.i2c_port = i2c_port;
+      _bus_cfg.i2c_addr = i2c_addr;
+      _bus_cfg.prefix_cmd = 0x00;
+      _bus_cfg.prefix_data = 0x40;
+      _bus_cfg.prefix_len = 1;
     }
+    _board = lgfx::board_t::board_M5UnitOLED;
+  }
+
+  bool init_impl(bool use_reset, bool use_clear)
+  {
+    if (_panel_last.get() != nullptr) {
+      return true;
+    }
+    auto p = new lgfx::Panel_SH110x();
+    auto b = new lgfx::Bus_I2C();
+    b->config(_bus_cfg);
     {
-      auto cfg = _panel_instance.config();
+      p->bus(b);
+      auto cfg = p->config();
       cfg.panel_width = 64;
       cfg.offset_x = 32;
-      _panel_instance.config(cfg);
+      p->config(cfg);
     }
-
-    setPanel(&_panel_instance);
-    _board = lgfx::board_t::board_M5UnitOLED;
+    setPanel(p);
+    if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
+      _panel_last.reset(p);
+      _bus_last.reset(b);
+      return true;
+    }
+    setPanel(nullptr);
+    delete p;
+    delete b;
+    return false;
   }
 };
 
