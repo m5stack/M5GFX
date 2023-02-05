@@ -40,6 +40,7 @@
 #ifndef M5MODULERCA_OUTPUT_LEVEL
 #define M5MODULERCA_OUTPUT_LEVEL 0
 #endif
+
 class M5ModuleRCA : public M5GFX
 {
   lgfx::Panel_CVBS::config_t _cfg;
@@ -123,12 +124,12 @@ public:
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
     if (_cfg_detail.output_level == 0) {
-      // if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
-      // { // M5Stack Core2 / Tough
-      //   ESP_LOGD("LGFX","ModuleRCA with Core2/Tough");
-      //   _cfg_detail.output_level = 200;
-      // }
-      // else
+      if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
+      { // M5Stack Core2 / Tough
+        ESP_LOGD("LGFX","ModuleRCA with Core2/Tough");
+        _cfg_detail.output_level = 200;
+      }
+      else
       { // M5Stack BASIC / FIRE / GO
         ESP_LOGD("LGFX","ModuleRCA with Core Basic/Fire/Go");
         _cfg_detail.output_level = 128;

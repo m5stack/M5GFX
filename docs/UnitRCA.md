@@ -1,21 +1,21 @@
 # Unit RCA and Module RCA library
 
-<img src="https://static-cdn.m5stack.com/resource/docs/products/unit/RCA/img-9420bb3d-22b8-4f80-b7fe-e708088f1e51.webp" width="45%"><img src="https://static-cdn.m5stack.com/resource/docs/products/module/RCA%20Module%2013.2/img-047dda32-31a1-4ce6-a6d4-910aa511caa5.webp" width="45%">
+<img src="https://static-cdn.m5stack.com/resource/docs/products/unit/RCA/img-9420bb3d-22b8-4f80-b7fe-e708088f1e51.webp" width="46%"><img src="https://static-cdn.m5stack.com/resource/docs/products/module/RCA%20Module%2013.2/img-047dda32-31a1-4ce6-a6d4-910aa511caa5.webp" width="46%">
 
 ### Notes.
 - If you wish audio output, please use other libraries such as M5Unified::Speaker.  
 - Video signals can be output using the ESP32's I2S-DAC output.  
 - The ESP32's I2S-DAC output uses I2S0. Only GPIO 25 or 26 can be used as the output destination.  
 - ESP32-S3 does not have a DAC output and cannot be used.  
-- Display color depth can be selected from 8bit(RGB332 or Grayscale) / 16bit(RGB565).  
+- Display color depth can be selected from Grayscale / 8bit(RGB332) / 16bit(RGB565).  
 - The output resolution can be set freely, but it uses memory in proportion to area and color depth.  
 
 ### 注意事項  
 - 音声出力に関してはM5Unified::Speaker等の他のライブラリをご利用ください。  
 - ESP32の内蔵I2S-DAC出力を使用してビデオ信号を出力できます。  
 - ESP32の内蔵I2S-DAC出力はI2S0を使用します。出力先には GPIO 25, 26 のみが使用できます。  
-- ESP32-S3ではDAC出力がないため使用できません。  
-- 表示色は 8bit(RGB332 or Grayscale) / 16bit(RGB565) から選択できます。  
+- ESP32-S3ではDAC出力がないため映像出力には使用できません。  
+- 表示色は Grayscale / 8bit(RGB332) / 16bit(RGB565) から選択できます。  
 - 出力解像度は自由に設定できますが、色数と面積に比例してメモリを使用します。  
 
 
@@ -85,6 +85,7 @@
 Sample Code:
 ```
 #include <M5UnitRCA.h>
+#include <M5ModuleRCA.h>
 
 // Resolution, signal type, and output pin number can be specified in the constructor or init function.
 // If the argument is omitted, the resolution is set to 216x144, PAL format, and GPIO 26 pins.
@@ -94,12 +95,15 @@ Sample Code:
 // 引数の省略時は 解像度 216x144 , PAL形式 , GPIO26ピン が設定されます。
 // 解像度が高すぎる場合はメモリ不足のため動作しない可能性があります。
 
+// M5ModuleRCA or M5UnitRCA 
 M5UnitRCA display ( 216                            // logical_width
                   , 144                            // logical_height
                   , 256                            // output_width
                   , 160                            // output_height
                   , M5UnitRCA::signal_type_t::PAL  // signal_type
+                  , M5UnitRCA::use_psram_t::psram_half_use // use_psram
                   , 26                             // GPIO pin
+                  , 128                            // output level
                   );
 
 // If output_width and output_height are set larger than logical_width and logical_height, there will be margins at the edge of the screen.
