@@ -370,6 +370,27 @@ namespace m5gfx
     }
   };
 
+  struct Light_M5AtomS3 : public lgfx::Light_PWM
+  {
+    Light_M5AtomS3(void)
+    {
+      auto cfg = config();
+      /// The backlight of AtomS3 does not light up if the PWM cycle is too fast.
+      cfg.freq = 240;
+      cfg.pin_bl = GPIO_NUM_16;
+      cfg.pwm_channel = 7;
+      config(cfg);
+    }
+
+    void setBrightness(uint8_t brightness) override
+    {
+      if (brightness) 
+      {
+        brightness = brightness - (brightness >> 3) + 31;
+      }
+      Light_PWM::setBrightness(brightness);
+    }
+  };
 
 
 #endif
@@ -1023,7 +1044,7 @@ namespace m5gfx
             p->config(cfg);
           }
           _panel_last.reset(p);
-          _set_pwm_backlight(GPIO_NUM_16, 7, 240); /// AtomS3LCDのバックライトはPWM周期が速いと点灯しない;
+          _set_backlight(new Light_M5AtomS3());
 
           goto init_clear;
         }
