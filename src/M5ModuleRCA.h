@@ -126,12 +126,16 @@ public:
     if (_cfg_detail.output_level == 0) {
       if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
       { // M5Stack Core2 / Tough
+#if defined ( ESP_LOGD )
         ESP_LOGD("LGFX","ModuleRCA with Core2/Tough");
+#endif
         _cfg_detail.output_level = 200;
       }
       else
       { // M5Stack BASIC / FIRE / GO
+#if defined ( ESP_LOGD )
         ESP_LOGD("LGFX","ModuleRCA with Core Basic/Fire/Go");
+#endif
         _cfg_detail.output_level = 128;
       }
     }
