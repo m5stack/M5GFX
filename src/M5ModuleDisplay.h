@@ -107,11 +107,15 @@ public:
 
     if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
     { // M5Stack Core2 / Tough
+#if defined ( ESP_LOGD )
       ESP_LOGD("LGFX","ModuleDisplay with Core2/Tough");
+#endif
     }
     else
     { // M5Stack BASIC / FIRE / GO
+#if defined ( ESP_LOGD )
       ESP_LOGD("LGFX","ModuleDisplay with Core Basic/Fire/Go");
+#endif
       i2c_port =  0;
       spi_cs   = GPIO_NUM_13;
       spi_miso = GPIO_NUM_19;
