@@ -433,53 +433,23 @@ namespace lgfx
   {
   public:
     _pin_backup_t(gpio_num_t pin_num)
-      : _io_mux_gpio_reg   { *reinterpret_cast<uint32_t*>(IO_MUX_GPIO0_REG           + (pin_num * 4)) }
-      , _gpio_pin_reg      { *reinterpret_cast<uint32_t*>(GPIO_PIN0_REG              + (pin_num * 4)) }
+      : _io_mux_gpio_reg   { *reinterpret_cast<uint32_t*>(GPIO_PIN_MUX_REG[pin_num]) }
       , _gpio_func_out_reg { *reinterpret_cast<uint32_t*>(GPIO_FUNC0_OUT_SEL_CFG_REG + (pin_num * 4)) }
       , _pin_num           { pin_num }
-    {
-#if defined ( GPIO_ENABLE1_REG )
-      _gpio_enable = *reinterpret_cast<uint32_t*>(((_pin_num & 32) ? GPIO_ENABLE1_REG : GPIO_ENABLE_REG)) & (1 << (_pin_num & 31));
-#else
-      _gpio_enable = *reinterpret_cast<uint32_t*>(GPIO_ENABLE_REG) & (1 << (_pin_num & 31));
-#endif
-    }
+    {}
 
     void restore(void) const
     {
       if ((uint32_t)_pin_num < GPIO_NUM_MAX) {
-        *reinterpret_cast<uint32_t*>(IO_MUX_GPIO0_REG           + (_pin_num * 4)) = _io_mux_gpio_reg;
-        *reinterpret_cast<uint32_t*>(GPIO_PIN0_REG              + (_pin_num * 4)) = _gpio_pin_reg;
+        *reinterpret_cast<uint32_t*>(GPIO_PIN_MUX_REG[_pin_num]) = _io_mux_gpio_reg;
         *reinterpret_cast<uint32_t*>(GPIO_FUNC0_OUT_SEL_CFG_REG + (_pin_num * 4)) = _gpio_func_out_reg;
-#if defined ( GPIO_ENABLE1_REG )
-        auto gpio_enable_reg = reinterpret_cast<uint32_t*>(((_pin_num & 32) ? GPIO_ENABLE1_REG : GPIO_ENABLE_REG));
-#else
-        auto gpio_enable_reg = reinterpret_cast<uint32_t*>(GPIO_ENABLE_REG);
-#endif
-
-        uint32_t pin_mask = 1 << (_pin_num & 31);
-        auto gpio_en = *gpio_enable_reg;
-        if (_gpio_enable != (bool)(gpio_en & pin_mask))
-        {
-          if (_gpio_enable)
-          {
-            gpio_en |= pin_mask;
-          }
-          else
-          {
-            gpio_en &= ~pin_mask;
-          }
-          *gpio_enable_reg = gpio_en;
-        }
       }
     }
 
   private:
     uint32_t _io_mux_gpio_reg;
-    uint32_t _gpio_pin_reg;
     uint32_t _gpio_func_out_reg;
     gpio_num_t _pin_num;
-    bool _gpio_enable;
   };
 
   bool Panel_M5HDMI::init(bool use_reset)
@@ -506,7 +476,6 @@ namespace lgfx
       LOAD_FPGA fpga(bus_cfg.pin_sclk, bus_cfg.pin_mosi, bus_cfg.pin_miso, _cfg.pin_cs);
       for (auto &bup : backup_sclk) { bup.restore(); }
     }
-
     if (!Panel_Device::init(false)) { return false; }
 
     // Initialize and read ID
