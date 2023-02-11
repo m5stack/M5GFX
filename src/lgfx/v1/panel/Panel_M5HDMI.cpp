@@ -26,6 +26,7 @@ Contributors:
 #include "../misc/colortype.hpp"
 
 #include <esp_log.h>
+#include <soc/gpio_periph.h>
 #include <soc/gpio_reg.h>
 #include <soc/io_mux_reg.h>
 #if __has_include(<hal/gpio_types.h>)
@@ -912,6 +913,15 @@ namespace lgfx
 
   void Panel_M5HDMI::setSleep(bool flg)
   {
+    HDMI_Trans driver(_HDMI_Trans_config);
+    if (flg)
+    {
+      driver.reset();
+    }
+    else
+    {
+      driver.init();
+    }
   }
 
   void Panel_M5HDMI::setPowerSave(bool flg)
