@@ -818,12 +818,17 @@ namespace lgfx
 
   void Panel_M5HDMI::beginTransaction(void)
   {
+    if (_in_transaction) { return; }
+    _in_transaction = true;
     _bus->beginTransaction();
     cs_control(false);
   }
 
   void Panel_M5HDMI::endTransaction(void)
   {
+    if (!_in_transaction) return;
+    _in_transaction = false;
+
     _last_cmd = 0;
     _bus->wait();
     cs_control(true);
