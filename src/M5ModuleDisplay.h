@@ -51,6 +51,33 @@ class M5ModuleDisplay : public M5GFX
 
 public:
 
+  struct config_t
+  {
+    uint16_t logical_width  = M5MODULEDISPLAY_LOGICAL_WIDTH;
+    uint16_t logical_height = M5MODULEDISPLAY_LOGICAL_HEIGHT;
+    float refresh_rate      = M5MODULEDISPLAY_REFRESH_RATE;
+    uint16_t output_width   = M5MODULEDISPLAY_OUTPUT_WIDTH;
+    uint16_t output_height  = M5MODULEDISPLAY_OUTPUT_HEIGHT;
+    uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W;
+    uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H;
+    uint32_t pixel_clock    = M5MODULEDISPLAY_PIXELCLOCK;
+  };
+
+  config_t config(void) const { return config_t(); }
+
+  M5ModuleDisplay( const config_t& cfg )
+  {
+    _board = lgfx::board_t::board_M5ModuleDisplay;
+    _cfg_reso.logical_width  = cfg.logical_width;
+    _cfg_reso.logical_height = cfg.logical_height;
+    _cfg_reso.refresh_rate   = cfg.refresh_rate;
+    _cfg_reso.output_width   = cfg.output_width;
+    _cfg_reso.output_height  = cfg.output_height;
+    _cfg_reso.scale_w        = cfg.scale_w;
+    _cfg_reso.scale_h        = cfg.scale_h;
+    _cfg_reso.pixel_clock    = cfg.pixel_clock;
+  }
+
   M5ModuleDisplay( uint16_t logical_width  = M5MODULEDISPLAY_LOGICAL_WIDTH
                  , uint16_t logical_height = M5MODULEDISPLAY_LOGICAL_HEIGHT
                  , float refresh_rate      = M5MODULEDISPLAY_REFRESH_RATE

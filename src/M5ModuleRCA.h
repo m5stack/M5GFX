@@ -55,6 +55,26 @@ public:
     psram_use = 2,
   };
 
+  struct config_t
+  {
+    uint16_t logical_width    = M5MODULERCA_LOGICAL_WIDTH;
+    uint16_t logical_height   = M5MODULERCA_LOGICAL_HEIGHT;
+    uint16_t output_width     = M5MODULERCA_OUTPUT_WIDTH;
+    uint16_t output_height    = M5MODULERCA_OUTPUT_HEIGHT;
+    signal_type_t signal_type = M5MODULERCA_SIGNAL_TYPE;
+    use_psram_t use_psram     = M5MODULERCA_USE_PSRAM;
+    uint8_t  pin_dac          = M5MODULERCA_PIN_DAC;
+    uint8_t  output_level     = M5MODULERCA_OUTPUT_LEVEL;
+  };
+
+  config_t config(void) const { return config_t(); }
+
+  M5ModuleRCA( const config_t& cfg )
+  {
+    _board = lgfx::board_t::board_M5ModuleRCA;
+    setup(cfg.logical_width, cfg.logical_height, cfg.output_width, cfg.output_height, cfg.signal_type, cfg.use_psram, cfg.pin_dac, cfg.output_level);
+  }
+
   M5ModuleRCA( uint16_t logical_width    = M5MODULERCA_LOGICAL_WIDTH
              , uint16_t logical_height   = M5MODULERCA_LOGICAL_HEIGHT
              , uint16_t output_width     = M5MODULERCA_OUTPUT_WIDTH
@@ -141,8 +161,12 @@ public:
     }
 #endif
 
+    _cfg.offset_rotation = 3;
+    _cfg.bus_shared = false;
+
     p->config_detail(_cfg_detail);
     p->config(_cfg);
+    p->setRotation(1);
     setPanel(p);
 
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear))

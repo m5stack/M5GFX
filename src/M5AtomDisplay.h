@@ -51,6 +51,33 @@ class M5AtomDisplay : public M5GFX
 
 public:
 
+  struct config_t
+  {
+    uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH;
+    uint16_t logical_height = M5ATOMDISPLAY_LOGICAL_HEIGHT;
+    float refresh_rate      = M5ATOMDISPLAY_REFRESH_RATE;
+    uint16_t output_width   = M5ATOMDISPLAY_OUTPUT_WIDTH;
+    uint16_t output_height  = M5ATOMDISPLAY_OUTPUT_HEIGHT;
+    uint_fast8_t scale_w    = M5ATOMDISPLAY_SCALE_W;
+    uint_fast8_t scale_h    = M5ATOMDISPLAY_SCALE_H;
+    uint32_t pixel_clock    = M5ATOMDISPLAY_PIXELCLOCK;
+  };
+
+  config_t config(void) const { return config_t(); }
+
+  M5AtomDisplay( const config_t& cfg )
+  {
+    _board = lgfx::board_t::board_M5AtomDisplay;
+    _cfg_reso.logical_width  = cfg.logical_width;
+    _cfg_reso.logical_height = cfg.logical_height;
+    _cfg_reso.refresh_rate   = cfg.refresh_rate;
+    _cfg_reso.output_width   = cfg.output_width;
+    _cfg_reso.output_height  = cfg.output_height;
+    _cfg_reso.scale_w        = cfg.scale_w;
+    _cfg_reso.scale_h        = cfg.scale_h;
+    _cfg_reso.pixel_clock    = cfg.pixel_clock;
+  }
+
   M5AtomDisplay( uint16_t logical_width  = M5ATOMDISPLAY_LOGICAL_WIDTH
                , uint16_t logical_height = M5ATOMDISPLAY_LOGICAL_HEIGHT
                , float refresh_rate      = M5ATOMDISPLAY_REFRESH_RATE
