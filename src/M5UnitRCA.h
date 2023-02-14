@@ -71,7 +71,7 @@ public:
 
   M5UnitRCA( const config_t& cfg )
   {
-    _board = lgfx::board_t::board_M5ModuleRCA;
+    _board = lgfx::board_t::board_M5UnitRCA;
     setup(cfg.logical_width, cfg.logical_height, cfg.output_width, cfg.output_height, cfg.signal_type, cfg.use_psram, cfg.pin_dac, cfg.output_level);
   }
 
