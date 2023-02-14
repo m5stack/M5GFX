@@ -10,6 +10,7 @@
 #include <esp_log.h>
 #include <driver/i2c.h>
 #include <soc/efuse_reg.h>
+#include <soc/gpio_reg.h>
 
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
@@ -306,7 +307,7 @@ namespace m5gfx
       *(volatile uint32_t*)GPIO_FUNC35_OUT_SEL_CFG_REG = flg ? 0x43 : 0x100;
       if (flg == false)
       { // CS low の場合はD/Cとして扱うためGPIO出力を有効にする;
-        *(volatile uint32_t*)GPIO_ENABLE1_W1TS_REG = (0x1 << (GPIO_NUM_35 - 32));
+        *(volatile uint32_t*)GPIO_ENABLE1_W1TS_REG = (0x1 << (GPIO_NUM_35 & 31));
       }
     }
   };
@@ -965,7 +966,6 @@ namespace m5gfx
                 cfg.pin_int  = GPIO_NUM_36;
                 cfg.pin_sda  = GPIO_NUM_21;
                 cfg.pin_scl  = GPIO_NUM_22;
-                cfg.i2c_addr = 0x14;
 #ifdef _M5EPD_H_
                 cfg.i2c_port = I2C_NUM_0;
 #else
@@ -979,11 +979,6 @@ namespace m5gfx
                 cfg.offset_rotation = 1;
                 cfg.bus_shared = false;
                 t->config(cfg);
-                if (!t->init())
-                {
-                  cfg.i2c_addr = 0x5D; // addr change (0x14 or 0x5D)
-                  t->config(cfg);
-                }
                 _panel_last->touch(t);
               }
               goto init_clear;
