@@ -55,6 +55,24 @@ class M5UnitOLED : public M5GFX
 
 public:
 
+  struct config_t
+  {
+    uint8_t pin_sda = 255;
+    uint8_t pin_scl = 255;
+    uint8_t i2c_addr = M5UNITOLED_ADDR;
+    int8_t i2c_port = -1;
+    uint32_t i2c_freq = M5UNITOLED_FREQ;
+  };
+
+  config_t config(void) const { return config_t(); }
+
+  M5UnitOLED(const config_t &cfg)
+  {
+    uint8_t pin_sda = cfg.pin_sda < GPIO_NUM_MAX ? cfg.pin_sda : M5UNITOLED_SDA;
+    uint8_t pin_scl = cfg.pin_scl < GPIO_NUM_MAX ? cfg.pin_scl : M5UNITOLED_SCL;
+    setup(pin_sda, pin_scl, cfg.i2c_freq, cfg.i2c_port, cfg.i2c_addr);
+  }
+
   M5UnitOLED(uint8_t pin_sda = M5UNITOLED_SDA, uint8_t pin_scl = M5UNITOLED_SCL, uint32_t i2c_freq = M5UNITOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITOLED_ADDR)
   {
     setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
@@ -69,6 +87,7 @@ public:
 
   void setup(uint8_t pin_sda = M5UNITOLED_SDA, uint8_t pin_scl = M5UNITOLED_SCL, uint32_t i2c_freq = M5UNITOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITOLED_ADDR)
   {
+    _board = lgfx::board_t::board_M5UnitOLED;
     if (i2c_port < 0)
     {
       i2c_port = 0;
@@ -91,7 +110,6 @@ public:
       _bus_cfg.prefix_data = 0x40;
       _bus_cfg.prefix_len = 1;
     }
-    _board = lgfx::board_t::board_M5UnitOLED;
   }
 
   bool init_impl(bool use_reset, bool use_clear)
@@ -107,6 +125,7 @@ public:
       auto cfg = p->config();
       cfg.panel_width = 64;
       cfg.offset_x = 32;
+      cfg.bus_shared = false;
       p->config(cfg);
     }
     setPanel(p);

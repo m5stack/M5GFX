@@ -26,6 +26,12 @@ Contributors:
 #include "../misc/colortype.hpp"
 
 #include <esp_log.h>
+#include <soc/gpio_periph.h>
+#include <soc/gpio_reg.h>
+#include <soc/io_mux_reg.h>
+#if __has_include(<hal/gpio_types.h>)
+ #include <hal/gpio_types.h>
+#endif
 
 #if __has_include(<alloca.h>)
 #include <alloca.h>
@@ -362,10 +368,15 @@ namespace lgfx
     {
 // 96kHz audio setting.
 //    static constexpr const uint8_t data_1[] = { 0xff, 0x82, 0xD6, 0x8E, 0xD7, 0x04, 0xff, 0x84, 0x06, 0x08, 0x07, 0x10, 0x09, 0x00, 0x0F, 0xAB, 0x34, 0xD5, 0x35, 0x00, 0x36, 0x30, 0x37, 0x00, 0x3C, 0x21,
+//                                                0xff, 0x82, 0xde, 0x00, 0xde, 0xc0, 0xff, 0x81, 0x23, 0x40, 0x24, 0x64, 0x26, 0x55, 0x29, 0x04, 0x4d, 0x00, 0x27, 0x60, 0x28, 0x00, 0x25, 0x01, 0x2c, 0x94, 0x2d, 0x99 };
 
 // 48kHz audio setting.
       static constexpr const uint8_t data_1[] = { 0xff, 0x82, 0xD6, 0x8E, 0xD7, 0x04, 0xff, 0x84, 0x06, 0x08, 0x07, 0x10, 0x09, 0x00, 0x0F, 0x2B, 0x34, 0xD5, 0x35, 0x00, 0x36, 0x18, 0x37, 0x00, 0x3C, 0x21,
                                                   0xff, 0x82, 0xde, 0x00, 0xde, 0xc0, 0xff, 0x81, 0x23, 0x40, 0x24, 0x64, 0x26, 0x55, 0x29, 0x04, 0x4d, 0x00, 0x27, 0x60, 0x28, 0x00, 0x25, 0x01, 0x2c, 0x94, 0x2d, 0x99 };
+
+// disable audio setting.
+//    static constexpr const uint8_t data_1[] = { 0xff, 0x82, 0xde, 0x00, 0xde, 0xc0, 0xff, 0x81, 0x23, 0x40, 0x24, 0x64, 0x26, 0x55, 0x29, 0x04, 0x4d, 0x00, 0x27, 0x60, 0x28, 0x00, 0x25, 0x01, 0x2c, 0x94, 0x2d, 0x99 };
+
       this->writeRegisterSet(data_1, sizeof(data_1));
     }
     this->writeRegister(0x2b, this->readRegister(0x2b) & 0xfd);
@@ -429,6 +440,29 @@ namespace lgfx
 
 //----------------------------------------------------------------------------
 
+  class _pin_backup_t
+  {
+  public:
+    _pin_backup_t(gpio_num_t pin_num)
+      : _io_mux_gpio_reg   { *reinterpret_cast<uint32_t*>(GPIO_PIN_MUX_REG[pin_num]) }
+      , _gpio_func_out_reg { *reinterpret_cast<uint32_t*>(GPIO_FUNC0_OUT_SEL_CFG_REG + (pin_num * 4)) }
+      , _pin_num           { pin_num }
+    {}
+
+    void restore(void) const
+    {
+      if ((uint32_t)_pin_num < GPIO_NUM_MAX) {
+        *reinterpret_cast<uint32_t*>(GPIO_PIN_MUX_REG[_pin_num]) = _io_mux_gpio_reg;
+        *reinterpret_cast<uint32_t*>(GPIO_FUNC0_OUT_SEL_CFG_REG + (_pin_num * 4)) = _gpio_func_out_reg;
+      }
+    }
+
+  private:
+    uint32_t _io_mux_gpio_reg;
+    uint32_t _gpio_func_out_reg;
+    gpio_num_t _pin_num;
+  };
+
   bool Panel_M5HDMI::init(bool use_reset)
   {
     ESP_LOGI(TAG, "i2c port:%d sda:%d scl:%d", _HDMI_Trans_config.i2c_port, _HDMI_Trans_config.pin_sda, _HDMI_Trans_config.pin_scl);
@@ -447,12 +481,12 @@ namespace lgfx
     ESP_LOGI(TAG, "Resetting HDMI transmitter...");
     driver.reset();
 
-
     {
-      auto bus_cfg = reinterpret_cast<lgfx::Bus_SPI*>(bus())->config();
+      auto bus_cfg = reinterpret_cast<lgfx::Bus_SPI*>(_bus)->config();
+      _pin_backup_t backup_pins[] = { (gpio_num_t)bus_cfg.pin_sclk, (gpio_num_t)bus_cfg.pin_mosi, (gpio_num_t)bus_cfg.pin_miso };
       LOAD_FPGA fpga(bus_cfg.pin_sclk, bus_cfg.pin_mosi, bus_cfg.pin_miso, _cfg.pin_cs);
+      for (auto &bup : backup_pins) { bup.restore(); }
     }
-
     if (!Panel_Device::init(false)) { return false; }
 
     // Initialize and read ID
@@ -784,12 +818,17 @@ namespace lgfx
 
   void Panel_M5HDMI::beginTransaction(void)
   {
+    if (_in_transaction) { return; }
+    _in_transaction = true;
     _bus->beginTransaction();
     cs_control(false);
   }
 
   void Panel_M5HDMI::endTransaction(void)
   {
+    if (!_in_transaction) return;
+    _in_transaction = false;
+
     _last_cmd = 0;
     _bus->wait();
     cs_control(true);
@@ -884,6 +923,15 @@ namespace lgfx
 
   void Panel_M5HDMI::setSleep(bool flg)
   {
+    HDMI_Trans driver(_HDMI_Trans_config);
+    if (flg)
+    {
+      driver.reset();
+    }
+    else
+    {
+      driver.init();
+    }
   }
 
   void Panel_M5HDMI::setPowerSave(bool flg)

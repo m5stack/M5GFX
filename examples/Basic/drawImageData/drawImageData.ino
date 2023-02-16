@@ -1,5 +1,8 @@
 
 #include <Arduino.h>
+
+// If you want to use a set of functions to handle SD/SPIFFS/HTTP,
+//  please include <SD.h>,<SPIFFS.h>,<HTTPClient.h> before <M5GFX.h>
 // #include <SD.h>
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
