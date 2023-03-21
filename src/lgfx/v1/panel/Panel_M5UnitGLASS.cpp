@@ -34,6 +34,23 @@ namespace lgfx
       return false;
     }
 
+    bool connected = false;
+    uint8_t res = 0xFFu;
+    int retry = 4;
+    waitBusy();
+    do {
+      _bus->beginTransaction();
+      if (_bus->writeCommand(REG_INDEX_FIRMWARE_VERSION, 8))
+      {
+        _bus->endTransaction();
+        _bus->beginRead();
+        connected = _bus->readBytes(&res, 1);
+      }
+      _bus->endTransaction();
+    } while (!connected && --retry >= 0);
+
+    if (!connected) { return false; }
+
     _range_mod.top    = INT16_MAX;
     _range_mod.left   = INT16_MAX;
     _range_mod.right  = 0;
