@@ -109,7 +109,7 @@ namespace lgfx
     waitBusy();
     do
     {
-      uint_fast8_t x = xs;
+      x = xs;
       uint_fast8_t x_start = x;
       int index = 0;
       auto buf = &_buf[y * _cfg.panel_width];

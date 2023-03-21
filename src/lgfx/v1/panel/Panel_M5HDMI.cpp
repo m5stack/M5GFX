@@ -542,6 +542,7 @@ namespace lgfx
       return false;
     }
 
+    ESP_LOGI(TAG, "done.");
     return res;
   }
 

@@ -12,6 +12,9 @@
 #include <soc/efuse_reg.h>
 #include <soc/gpio_reg.h>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
@@ -464,7 +467,7 @@ namespace m5gfx
     bus->endTransaction();
     _pin_level(pin_cs, true);
 
-    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02x = %08x", cmd, res);
+    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02lx = %08lx", cmd, res);
     return res;
   }
 
