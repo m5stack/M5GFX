@@ -12,6 +12,9 @@
 #include <soc/efuse_reg.h>
 #include <soc/gpio_reg.h>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
@@ -464,7 +467,7 @@ namespace m5gfx
     bus->endTransaction();
     _pin_level(pin_cs, true);
 
-    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02x = %08x", cmd, res);
+    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02lx = %08lx", cmd, res);
     return res;
   }
 
@@ -501,7 +504,7 @@ namespace m5gfx
     {
       nvs_get_u32(nvs_handle, NVS_KEY, static_cast<uint32_t*>(&nvs_board));
       nvs_close(nvs_handle);
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%d", nvs_board);
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%" PRIu32, nvs_board);
     }
 
     if (0 == nvs_board)
@@ -938,7 +941,7 @@ namespace m5gfx
             bus_spi->endTransaction();
             lgfx::gpio_hi(GPIO_NUM_15);
             id = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel size :%08x", id);
+            // ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel size :%08" PRIx32 , id);
             if (id == 0x03C0021C)
             {  //  check panel ( panel size 960(0x03C0) x 540(0x021C) )
               board = board_t::board_M5Paper;

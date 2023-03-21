@@ -17,7 +17,11 @@
 #endif
 
 #ifndef M5UNITRCA_PIN_DAC
-#define M5UNITRCA_PIN_DAC GPIO_NUM_26
+ #if defined ( CONFIG_IDF_TARGET_ESP32 ) || !defined ( CONFIG_IDF_TARGET )
+  #define M5UNITRCA_PIN_DAC GPIO_NUM_26
+ #else
+  #define M5UNITRCA_PIN_DAC GPIO_NUM_NC
+ #endif
 #endif
 #ifndef M5UNITRCA_LOGICAL_WIDTH
 #define M5UNITRCA_LOGICAL_WIDTH 216

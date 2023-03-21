@@ -110,6 +110,7 @@ public:
     }
 
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
+ #define M5GFX_SPI_HOST SPI2_HOST
 
     // for AtomS3/AtomS3Lite
     int i2c_port = 1;
@@ -119,9 +120,9 @@ public:
     int spi_mosi = GPIO_NUM_6;
     int spi_miso = GPIO_NUM_5;
     int spi_sclk = GPIO_NUM_7;
-    spi_host_device_t spi_host = SPI2_HOST;
 
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+ #define M5GFX_SPI_HOST VSPI_HOST
 
     int i2c_port = 1;
     int i2c_sda  = GPIO_NUM_25;
@@ -130,7 +131,6 @@ public:
     int spi_mosi = GPIO_NUM_19;
     int spi_miso = GPIO_NUM_22;
     int spi_sclk = GPIO_NUM_5;
-    spi_host_device_t spi_host = VSPI_HOST;
 
     std::uint32_t pkg_ver = lgfx::get_pkg_ver();
     ESP_LOGD("LGFX","pkg:%d", pkg_ver);
@@ -151,13 +151,16 @@ public:
 
 #endif
 
+#if defined M5GFX_SPI_HOST
+
     auto bus_spi = new lgfx::Bus_SPI();
     {
       auto cfg = bus_spi->config();
       cfg.freq_write = 80000000;
-      cfg.freq_read  = 20000000;
-      cfg.spi_host = spi_host;
+      cfg.freq_read  = 16000000;
       cfg.spi_mode = 3;
+      cfg.spi_host = M5GFX_SPI_HOST;
+#undef M5GFX_SPI_HOST
 #ifndef M5ATOMDISPLAY_SPI_DMA_CH
       cfg.dma_channel = 1;
 #else
@@ -207,6 +210,8 @@ public:
     setPanel(nullptr);
     delete p;
     delete bus_spi;
+
+#endif
     return false;
   }
 };

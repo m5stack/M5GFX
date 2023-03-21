@@ -110,6 +110,7 @@ public:
     }
 
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
+ #define M5GFX_SPI_HOST SPI2_HOST
 
     // for CoreS3
     int i2c_port = 1;
@@ -119,9 +120,9 @@ public:
     int spi_mosi = GPIO_NUM_37;
     int spi_miso = GPIO_NUM_35;
     int spi_sclk = GPIO_NUM_36;
-    spi_host_device_t spi_host = SPI2_HOST;
 
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+ #define M5GFX_SPI_HOST VSPI_HOST
 
     int i2c_port = 1;
     int i2c_sda  = GPIO_NUM_21;
@@ -130,7 +131,6 @@ public:
     int spi_miso = GPIO_NUM_38;
     int spi_mosi = GPIO_NUM_23;
     int spi_sclk = GPIO_NUM_18;
-    spi_host_device_t spi_host = VSPI_HOST;
 
     if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
     { // M5Stack Core2 / Tough
@@ -149,6 +149,8 @@ public:
     }
 #endif
 
+#if defined M5GFX_SPI_HOST
+
 // AtomDisplay/ModuleDisplay自己機種判定のための暫定措置
     // m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
     // m5gfx::gpio_lo(GPIO_NUM_0);
@@ -157,9 +159,10 @@ public:
     {
       auto cfg = bus_spi->config();
       cfg.freq_write = 80000000;
-      cfg.freq_read  = 20000000;
-      cfg.spi_host = spi_host;
+      cfg.freq_read  = 16000000;
       cfg.spi_mode = 3;
+      cfg.spi_host = M5GFX_SPI_HOST;
+#undef M5GFX_SPI_HOST
 #ifndef M5MODULEDISPLAY_SPI_DMA_CH
       cfg.dma_channel = 1;
 #else
@@ -209,6 +212,9 @@ public:
     setPanel(nullptr);
     delete p;
     delete bus_spi;
+
+#endif
+
     return false;
   }
 };
