@@ -467,7 +467,7 @@ namespace m5gfx
     bus->endTransaction();
     _pin_level(pin_cs, true);
 
-    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02lx = %08lx", cmd, res);
+    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02" PRIx32 " = %08" PRIx32, cmd, res);
     return res;
   }
 
@@ -509,27 +509,27 @@ namespace m5gfx
 
     if (0 == nvs_board)
     {
-#if defined ( ARDUINO_M5Stack_Core_ESP32 ) || defined ( ARDUINO_M5STACK_FIRE )
+#if defined ( ARDUINO_M5STACK_CORE_ESP32 ) || defined ( ARDUINO_M5STACK_FIRE ) || defined ( ARDUINO_M5Stack_Core_ESP32 )
 
       nvs_board = board_t::board_M5Stack;
 
-#elif defined ( ARDUINO_M5STACK_Core2 )
+#elif defined ( ARDUINO_M5STACK_CORE2 ) || defined ( ARDUINO_M5STACK_Core2 )
 
       nvs_board = board_t::board_M5StackCore2;
 
-#elif defined ( ARDUINO_M5Stick_C )
+#elif defined ( ARDUINO_M5STICK_C ) || defined ( ARDUINO_M5Stick_C )
 
       nvs_board = board_t::board_M5StickC;
 
-#elif defined ( ARDUINO_M5Stick_C_Plus )
+#elif defined ( ARDUINO_M5STICK_C_PLUS ) || defined ( ARDUINO_M5Stick_C_Plus )
 
       nvs_board = board_t::board_M5StickCPlus;
 
-#elif defined ( ARDUINO_M5Stack_CoreInk )
+#elif defined ( ARDUINO_M5STACK_COREINK ) || defined ( ARDUINO_M5Stack_CoreInk )
 
       nvs_board = board_t::board_M5StackCoreInk;
 
-#elif defined ( ARDUINO_M5STACK_Paper )
+#elif defined ( ARDUINO_M5STACK_PAPER ) || defined ( ARDUINO_M5STACK_Paper )
 
       nvs_board = board_t::board_M5Paper;
 
@@ -537,11 +537,11 @@ namespace m5gfx
 
       nvs_board = board_t::board_M5Tough;
 
-#elif defined ( ARDUINO_M5Stack_ATOM )
+#elif defined ( ARDUINO_M5STACK_ATOM ) || defined ( ARDUINO_M5Stack_ATOM )
 
       nvs_board = board_t::board_M5Atom;
 
-//#elif defined ( ARDUINO_M5Stack_Timer_CAM )
+//#elif defined ( ARDUINO_M5STACK_TIMER_CAM ) || defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
     }
 
@@ -552,11 +552,11 @@ namespace m5gfx
     {
       if (retry == 1) use_reset = true;
       board = autodetect(use_reset, board);
-      //ESP_LOGD(LIBRARY_NAME,"autodetect board:%d", board);
+      //ESP_LOGD(LIBRARY_NAME,"autodetect board:%" PRIu32, board);
     } while (board_t::board_unknown == board && --retry >= 0);
     _board = board;
 
-#if defined ( ARDUINO_M5Stack_ATOM )
+#if defined ( ARDUINO_M5STACK_ATOM ) || defined ( ARDUINO_M5Stack_ATOM )
 
     if (board == board_t::board_unknown || board == board_t::board_M5Atom)
     {
@@ -571,7 +571,7 @@ namespace m5gfx
 
     if (nvs_board != board) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
-        ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", board);
+        ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%" PRIu32, board);
         nvs_set_u32(nvs_handle, NVS_KEY, board);
         nvs_close(nvs_handle);
       }
@@ -600,7 +600,7 @@ namespace m5gfx
     std::uint32_t id;
 
     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
-//  ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", pkg_ver);
+//  ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02" PRIx32, pkg_ver);
 
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)  /// check PICO-D4 (M5StickC,CPlus,T,T2 / CoreInk / ATOM )
     {
@@ -1005,7 +1005,7 @@ namespace m5gfx
     std::uint32_t id;
 
 //     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
-// ESP_LOGE("DEBUG","pkg_ver:%02x", pkg_ver);
+// ESP_LOGE("DEBUG","pkg_ver:%02" PRIx32, pkg_ver);
 
       if (board == 0 || board == board_t::board_M5AtomS3)
       {
@@ -1054,8 +1054,8 @@ namespace m5gfx
       {
         lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
 
-// ESP_LOGI("DEBUG","AW 0x10 :%02x ", lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, 400000).value());
-// ESP_LOGI("DEBUG","AXP0x03 :%02x ", lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, 400000).value());
+// ESP_LOGI("DEBUG","AW 0x10 :%02" PRIx32, lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, 400000).value());
+// ESP_LOGI("DEBUG","AXP0x03 :%02" PRIx32, lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, 400000).value());
 
         auto chk_axp = lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, i2c_freq);
         if (chk_axp.has_value() && chk_axp.value() == 0x4A)
