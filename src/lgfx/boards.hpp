@@ -31,6 +31,7 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5StampC3U
     , board_M5StampS3
     , board_M5AtomS3Lite
+    , board_M5AtomS3U
 
 /// external displays
     , board_M5AtomDisplay
