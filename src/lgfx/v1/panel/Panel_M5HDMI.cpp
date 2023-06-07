@@ -493,7 +493,7 @@ namespace lgfx
     ESP_LOGI(TAG, "Waiting the FPGA gets idle...");
     startWrite();
     _bus->beginRead();
-    uint32_t retry = 256;
+    uint32_t retry = 512;
     do {
       lgfx::delay(10);
     } while ((0xFFFFFFFFu != _bus->readData(32)) && --retry);
@@ -509,7 +509,8 @@ namespace lgfx
     uint_fast8_t div_write = apbfreq / (_bus->getClock() + 1) + 1;
     uint_fast8_t div_read  = apbfreq / (_bus->getReadClock() + 1) + 1;
 
-    for (;;)
+    retry = 8;
+    do
     {
    // ESP_LOGI(TAG, "FREQ:%lu , %lu  DIV_W:%lu , %lu", _bus->getClock(), _bus->getReadClock(), div_write, div_read);
       startWrite();
@@ -536,6 +537,11 @@ namespace lgfx
       { // 受信データの先頭が HD でない場合は受信速度を下げる。
         _bus->setReadClock(apbfreq / ++div_read);
       }
+    } while (--retry);
+
+    if (retry == 0) {
+      ESP_LOGW(TAG, "read FPGA ID failed.");
+      return false;
     }
 
     startWrite();
