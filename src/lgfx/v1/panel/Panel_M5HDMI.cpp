@@ -513,7 +513,7 @@ namespace lgfx
       startWrite();
       _bus->beginRead();
       _bus->readData(32);
-      uint32_t retry = 256;
+      uint32_t retry = 512;
       do {
         lgfx::delay(10);
       } while ((0xFFFFFFFFu != _bus->readData(32)) && --retry);
