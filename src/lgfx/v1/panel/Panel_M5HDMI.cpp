@@ -493,7 +493,7 @@ namespace lgfx
     ESP_LOGI(TAG, "Waiting the FPGA gets idle...");
     startWrite();
     _bus->beginRead();
-    uint32_t retry = 512;
+    uint32_t retry = 2048;
     do {
       lgfx::delay(10);
     } while ((0xFFFFFFFFu != _bus->readData(32)) && --retry);
