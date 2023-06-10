@@ -63,9 +63,6 @@ namespace lgfx
     return _inited;
   }
 
-  void IRAM_ATTR Touch_CST816S::_irq_isr(void) {
-    _flg_released = false;
-  }
 //----------------------------------------------------------------------------
   bool Touch_CST816S::init(void)
   {
@@ -91,16 +88,6 @@ namespace lgfx
     // CST816S の正確な仕様を確認することができていないが恐らく省電力モード中は通信応答しないものと思われる。
     // 通信の成否による初期化の成否の判定ができないため、ひとまず true を返す。
     return true;
-  }
-
-  void Touch_CST816S::wakeup(void)
-  {
-  }
-
-  void Touch_CST816S::sleep(void)
-  {
-    if (!_check_init()) return;
-    // _write_reg(CST816S_SLEEP_REG, CST816S_SLEEP_IN);
   }
 
   size_t Touch_CST816S::_read_data(uint8_t* readdata)
