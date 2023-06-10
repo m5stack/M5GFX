@@ -571,7 +571,7 @@ namespace m5gfx
 
     if (nvs_board != board) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
-        ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%" PRIu32, board);
+        ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", (int)board);
         nvs_set_u32(nvs_handle, NVS_KEY, board);
         nvs_close(nvs_handle);
       }
@@ -941,7 +941,7 @@ namespace m5gfx
             bus_spi->endTransaction();
             lgfx::gpio_hi(GPIO_NUM_15);
             id = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
-            // ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel size :%08" PRIx32 , id);
+            // ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel size :%08x", (int)id);
             if (id == 0x03C0021C)
             {  //  check panel ( panel size 960(0x03C0) x 540(0x021C) )
               board = board_t::board_M5Paper;
