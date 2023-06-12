@@ -109,6 +109,14 @@ namespace lgfx
     *_tdi_reg[0] = TDI_MASK;
     *_tck_reg[0] = TCK_MASK;
 
+    int retry = 128;
+    do
+    { // FPGAのロットによって待ち時間に差がある。
+      // 先に進んで良いかステータスレジスタの状態をチェックする。
+      if ((JTAG_ReadStatus() & 0x200) == 0) { break; }
+      delay(1);
+    } while (--retry);
+
     JTAG_MoveTap(TAP_UNKNOWN, TAP_IDLE);
 
     ESP_LOGI(TAG, "Erase FPGA SRAM...");
@@ -484,7 +492,6 @@ namespace lgfx
   bool Panel_M5HDMI::init(bool use_reset)
   {
     ESP_LOGI(TAG, "i2c port:%d sda:%d scl:%d", _HDMI_Trans_config.i2c_port, _HDMI_Trans_config.pin_sda, _HDMI_Trans_config.pin_scl);
-
     lgfx::i2c::init(_HDMI_Trans_config.i2c_port, _HDMI_Trans_config.pin_sda, _HDMI_Trans_config.pin_scl);
 
     HDMI_Trans driver(_HDMI_Trans_config);
