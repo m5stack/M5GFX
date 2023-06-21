@@ -1049,10 +1049,7 @@ namespace lgfx
       buf[3] = _raw_color;
       bytes += 4;
     }
-    if (rect || _total_send || _last_cmd)
-    {
-      _check_busy(bytes);
-    }
+    _check_busy(bytes);
     _bus->writeBytes(((uint8_t*)buf)+3, bytes, false, false);
   }
 
