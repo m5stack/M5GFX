@@ -2250,28 +2250,26 @@ namespace lgfx
       int_fast16_t thickness = w / qrcode.size;
       int_fast16_t lineLength = qrcode.size * thickness;
       int_fast16_t offset = (w - lineLength) >> 1;
-      int_fast16_t xOffset = x + offset;
-      int_fast16_t yOffset = y + offset;
       startWrite();
       writeFillRect(x, y, w, offset, TFT_WHITE);
-      int_fast16_t dy = yOffset;
+      int_fast16_t dy = y + offset;
       if (thickness)
       {
         int_fast16_t iy = 0;
         do {
           writeFillRect(x, dy, offset, thickness, TFT_WHITE);
           int_fast16_t ix = 0;
-          int_fast16_t dx = xOffset;
+          int_fast16_t dx = x + offset;
           do {
             setColor(lgfx_qrcode_getModule(&qrcode, ix, iy) ? TFT_BLACK : TFT_WHITE);
             writeFillRect(dx, dy, thickness, thickness);
             dx += thickness;
           } while (++ix < qrcode.size);
-          writeFillRect(dx, dy, x+w - dx, thickness, TFT_WHITE);
+          writeFillRect(dx, dy, x + w - dx, thickness, TFT_WHITE);
           dy += thickness;
         } while (++iy < qrcode.size);
       }
-      writeFillRect(x, dy, w, y+w - dy, TFT_WHITE);
+      writeFillRect(x, dy, w, y + w - dy, TFT_WHITE);
       endWrite();
       break;
     }
