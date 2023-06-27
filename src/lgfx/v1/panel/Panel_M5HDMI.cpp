@@ -448,29 +448,6 @@ namespace lgfx
 
 //----------------------------------------------------------------------------
 
-  class _pin_backup_t
-  {
-  public:
-    _pin_backup_t(gpio_num_t pin_num)
-      : _io_mux_gpio_reg   { *reinterpret_cast<uint32_t*>(GPIO_PIN_MUX_REG[pin_num]) }
-      , _gpio_func_out_reg { *reinterpret_cast<uint32_t*>(GPIO_FUNC0_OUT_SEL_CFG_REG + (pin_num * 4)) }
-      , _pin_num           { pin_num }
-    {}
-
-    void restore(void) const
-    {
-      if ((uint32_t)_pin_num < GPIO_NUM_MAX) {
-        *reinterpret_cast<uint32_t*>(GPIO_PIN_MUX_REG[_pin_num]) = _io_mux_gpio_reg;
-        *reinterpret_cast<uint32_t*>(GPIO_FUNC0_OUT_SEL_CFG_REG + (_pin_num * 4)) = _gpio_func_out_reg;
-      }
-    }
-
-  private:
-    uint32_t _io_mux_gpio_reg;
-    uint32_t _gpio_func_out_reg;
-    gpio_num_t _pin_num;
-  };
-
   uint32_t Panel_M5HDMI::_read_fpga_id(void)
   {
     startWrite();
@@ -511,7 +488,7 @@ namespace lgfx
     if ((_read_fpga_id() & 0xFFFF) != ('H' | 'D' << 8))
     {
       auto bus_cfg = reinterpret_cast<lgfx::Bus_SPI*>(_bus)->config();
-      _pin_backup_t backup_pins[] = { (gpio_num_t)bus_cfg.pin_sclk, (gpio_num_t)bus_cfg.pin_mosi, (gpio_num_t)bus_cfg.pin_miso };
+      gpio::pin_backup_t backup_pins[] = { bus_cfg.pin_sclk, bus_cfg.pin_mosi, bus_cfg.pin_miso };
       LOAD_FPGA fpga(bus_cfg.pin_sclk, bus_cfg.pin_mosi, bus_cfg.pin_miso, _cfg.pin_cs);
       for (auto &bup : backup_pins) { bup.restore(); }
 

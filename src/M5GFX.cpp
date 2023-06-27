@@ -12,9 +12,6 @@
 #include <soc/efuse_reg.h>
 #include <soc/gpio_reg.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
@@ -306,12 +303,16 @@ namespace m5gfx
     {
       lgfx::Panel_ILI9342::cs_control(flg);
       // CS操作時にGPIO35の役割を切り替える (MISO or D/C);
-      // 0x43==FSPI MISO / 0x100==GPIO OUT
-      *(volatile uint32_t*)GPIO_FUNC35_OUT_SEL_CFG_REG = flg ? 0x43 : 0x100;
-      if (flg == false)
-      { // CS low の場合はD/Cとして扱うためGPIO出力を有効にする;
-        *(volatile uint32_t*)GPIO_ENABLE1_W1TS_REG = (0x1 << (GPIO_NUM_35 & 31));
-      }
+
+      // FSPIQ_IN_IDX==FSPI MISO / SIG_GPIO_OUT_IDX==GPIO OUT
+      // *(volatile uint32_t*)GPIO_FUNC35_OUT_SEL_CFG_REG = flg ? FSPIQ_OUT_IDX : SIG_GPIO_OUT_IDX;
+
+      // CS HIGHの場合はGPIO出力を無効化し、MISO入力として機能させる。
+      // CS LOW の場合はGPIO出力を有効化し、D/Cとして機能させる。
+      *(volatile uint32_t*)( flg
+                             ? GPIO_ENABLE1_W1TC_REG
+                             : GPIO_ENABLE1_W1TS_REG
+                           ) = 1u << (GPIO_NUM_35 & 31);
     }
   };
 
@@ -467,7 +468,7 @@ namespace m5gfx
     bus->endTransaction();
     _pin_level(pin_cs, true);
 
-    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02" PRIx32 " = %08" PRIx32, cmd, res);
+    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02x = %08x", (int)cmd, (int)res);
     return res;
   }
 
@@ -504,7 +505,7 @@ namespace m5gfx
     {
       nvs_get_u32(nvs_handle, NVS_KEY, static_cast<uint32_t*>(&nvs_board));
       nvs_close(nvs_handle);
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%" PRIu32, nvs_board);
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%d", (int)nvs_board);
     }
 
     if (0 == nvs_board)
@@ -552,7 +553,7 @@ namespace m5gfx
     {
       if (retry == 1) use_reset = true;
       board = autodetect(use_reset, board);
-      //ESP_LOGD(LIBRARY_NAME,"autodetect board:%" PRIu32, board);
+      //ESP_LOGD(LIBRARY_NAME,"autodetect board:%d", (int)board);
     } while (board_t::board_unknown == board && --retry >= 0);
     _board = board;
 
@@ -600,7 +601,7 @@ namespace m5gfx
     std::uint32_t id;
 
     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
-//  ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02" PRIx32, pkg_ver);
+//  ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
 
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)  /// check PICO-D4 (M5StickC,CPlus,T,T2 / CoreInk / ATOM )
     {
@@ -1005,7 +1006,7 @@ namespace m5gfx
     std::uint32_t id;
 
 //     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
-// ESP_LOGE("DEBUG","pkg_ver:%02" PRIx32, pkg_ver);
+// ESP_LOGE("DEBUG","pkg_ver:%02x", (int)pkg_ver);
 
       if (board == 0 || board == board_t::board_M5AtomS3)
       {
@@ -1054,8 +1055,8 @@ namespace m5gfx
       {
         lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
 
-// ESP_LOGI("DEBUG","AW 0x10 :%02" PRIx32, lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, 400000).value());
-// ESP_LOGI("DEBUG","AXP0x03 :%02" PRIx32, lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, 400000).value());
+// ESP_LOGI("DEBUG","AW 0x10 :%02x", (int)lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, 400000).value());
+// ESP_LOGI("DEBUG","AXP0x03 :%02x", (int)lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, 400000).value());
 
         auto chk_axp = lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, i2c_freq);
         if (chk_axp.has_value() && chk_axp.value() == 0x4A)
