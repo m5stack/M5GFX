@@ -288,7 +288,7 @@ namespace lgfx
       else
       { rtc_gpio_pullup_dis((gpio_num_t)pin); }
     }
-    // else
+    else
 #endif
     {
       io_mux_val &= ~(FUN_PU_M | FUN_PD_M | SLP_PU_M | SLP_PD_M);
@@ -449,7 +449,7 @@ namespace lgfx
       if (spi_sclk >= 0) {
         gpio_lo(spi_sclk); // ここでLOWにしておくことで、pinMode変更によるHIGHパルスが出力されるのを防止する (CSなしパネル対策);
       }
-#if defined (ARDUINO) // Arduino ESP32
+#if defined (ARDUINO) && __has_include (<SPI.h>) // Arduino ESP32
       if (spi_host == default_spi_host)
       {
         SPI.end();
@@ -515,7 +515,7 @@ namespace lgfx
     void release(int spi_host)
     {
 //ESP_LOGI("LGFX","spi::release");
-#if defined (ARDUINO) // Arduino ESP32
+#if defined (ARDUINO) && __has_include (<SPI.h>) // Arduino ESP32
       if (_spi_handle[spi_host] != nullptr)
       {
         if (spi_host == default_spi_host)
@@ -752,7 +752,7 @@ namespace lgfx
       {
         pin_sda = sda;
         pin_scl = scl;
-#if defined ( ARDUINO )
+#if defined ( ARDUINO ) && __has_include (<Wire.h>)
  #if defined ( ESP_IDF_VERSION_VAL )
   #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
    #if defined ARDUINO_ESP32_GIT_VER
@@ -958,7 +958,7 @@ namespace lgfx
       if (i2c_context[i2c_port].initialized)
       {
         i2c_context[i2c_port].initialized = false;
-#if defined ( ARDUINO ) && defined ( ESP_IDF_VERSION_VAL )
+#if defined ( ARDUINO ) && __has_include (<Wire.h>) && defined ( ESP_IDF_VERSION_VAL )
  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
   #if defined ARDUINO_ESP32_GIT_VER
     #if ARDUINO_ESP32_GIT_VER != 0x44c11981
@@ -1001,7 +1001,7 @@ namespace lgfx
       release(i2c_port).has_value();
       i2c_context[i2c_port].pin_scl = (gpio_num_t)pin_scl;
       i2c_context[i2c_port].pin_sda = (gpio_num_t)pin_sda;
-#if defined ( ARDUINO )
+#if defined ( ARDUINO ) && __has_include (<Wire.h>)
  #if defined ( ESP_IDF_VERSION_VAL )
   #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(3, 3, 0)
    #define USE_TWOWIRE_SETPINS
@@ -1029,7 +1029,7 @@ namespace lgfx
         release(i2c_port);
       }
 
-#if defined ( ARDUINO )
+#if defined ( ARDUINO ) && __has_include (<Wire.h>)
       auto twowire = ((i2c_port == 1) ? &Wire1 : &Wire);
  #if defined ( USE_TWOWIRE_SETPINS )
       twowire->begin();
