@@ -2942,9 +2942,24 @@ namespace lgfx
     }
   }
 
+
+  static pngle_t* pngle = nullptr;
+  void LGFXBase::releasePngMemory(void)
+  {
+    if (pngle) {
+      lgfx_pngle_destroy(pngle);
+      pngle = nullptr;
+    }
+  }
+
   bool LGFXBase::draw_png(DataWrapper* data, int32_t x, int32_t y, int32_t maxWidth, int32_t maxHeight, int32_t offX, int32_t offY, float zoom_x, float zoom_y, datum_t datum)
   {
-    pngle_t *pngle = lgfx_pngle_new();
+    /// PNG描画を繰り返し使用した場合、pngleのメモリ確保に失敗するケースがある。
+    /// そのため、pngle使用後に解放せず、再利用できる構成に変更した。
+    /// メモリを明示的に解放したい場合は releasePngMemory を使用する。
+    if (pngle == nullptr) {
+      pngle = lgfx_pngle_new();
+    }
     if (pngle == nullptr) { return false; }
 
     prepareTmpTransaction(data);
@@ -2954,7 +2969,6 @@ namespace lgfx
 
     if (lgfx_pngle_prepare(pngle, image_decoder_t::read_data, &png) < 0)
     {
-      lgfx_pngle_destroy(pngle);
       return false;
     }
 
@@ -2970,7 +2984,6 @@ namespace lgfx
                   , datum
                   , lgfx_pngle_get_width(pngle), lgfx_pngle_get_height(pngle)))
     {
-      lgfx_pngle_destroy(pngle);
       return true;
     }
 
@@ -2999,7 +3012,6 @@ namespace lgfx
       heap_free(png.lineBuffer);
     }
     png.end();
-    lgfx_pngle_destroy(pngle);
 
     return res < 0 ? false : true;
   }
