@@ -149,17 +149,17 @@ namespace m5gfx
     };
 
     std::shared_ptr<lgfx::Panel_Device> _panel_last;
+    std::shared_ptr<lgfx::ITouch> _touch_last;
 #if defined ( ESP_PLATFORM )
     std::shared_ptr<lgfx::IBus> _bus_last;
     std::shared_ptr<lgfx::ILight> _light_last;
-    std::shared_ptr<lgfx::ITouch> _touch_last;
 #endif
     std::vector<DisplayState> _displayStateStack;
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
     void _set_backlight(lgfx::ILight* bl);
-    void _set_pwm_backlight(std::int16_t pin, std::uint8_t ch, std::uint32_t freq = 12000, bool invert = false);
+    void _set_pwm_backlight(int16_t pin, uint8_t ch, uint32_t freq = 12000, bool invert = false);
 
   public:
     M5GFX(void);

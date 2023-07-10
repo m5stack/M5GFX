@@ -11,7 +11,7 @@
     "url": "https://github.com/m5stack/M5GFX.git"
   },
   "version": "0.1.7",
-  "frameworks": ["arduino", "espidf"],
-  "platforms": "espressif32",
+  "frameworks": ["arduino", "espidf", "*"],
+  "platforms": ["espressif32", "native"],
   "headers": "M5GFX.h"
 }

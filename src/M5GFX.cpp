@@ -21,6 +21,10 @@
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
 #include "lgfx/v1/touch/Touch_GT911.hpp"
 
+#else
+
+#include "lgfx/v1/platforms/sdl/Panel_sdl.hpp"
+
 #endif
 
 namespace m5gfx
@@ -510,7 +514,11 @@ namespace m5gfx
 
     if (0 == nvs_board)
     {
-#if defined ( ARDUINO_M5STACK_CORE_ESP32 ) || defined ( ARDUINO_M5STACK_FIRE ) || defined ( ARDUINO_M5Stack_Core_ESP32 )
+#if defined ( M5GFX_BOARD )
+
+      nvs_board = M5GFX_BOARD;
+
+#elif defined ( ARDUINO_M5STACK_CORE_ESP32 ) || defined ( ARDUINO_M5STACK_FIRE ) || defined ( ARDUINO_M5Stack_Core_ESP32 )
 
       nvs_board = board_t::board_M5Stack;
 
@@ -566,10 +574,6 @@ namespace m5gfx
 
 #endif
 
-    /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。;
-    /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効;
-    bool res = LGFX_Device::init_impl(false, use_clear);
-
     if (nvs_board != board) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
         ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", (int)board);
@@ -577,7 +581,10 @@ namespace m5gfx
         nvs_close(nvs_handle);
       }
     }
-    return res;
+
+    /// autodetectの際にreset済みなのでここではuse_resetをfalseで呼び出す。;
+    /// M5Paperはreset後の復帰に800msec程度掛かるのでreset省略は起動時間短縮に有効;
+    return LGFX_Device::init_impl(false, use_clear);
   }
 
   board_t M5GFX::autodetect(bool use_reset, board_t board)
@@ -686,10 +693,47 @@ namespace m5gfx
 /// LCD / EPD 検出失敗の場合はATOM 判定;
 
     }
-    else if (pkg_ver == 6)  // PICOV3_02 (ATOM PSRAM)
+    else if (pkg_ver == 6)  // PICOV3_02 (StickCPlus2 / ATOM PSRAM)
     {
-      board = board_t::board_M5AtomPsram;
-      goto init_clear;
+      if (board == 0 || board == board_t::board_M5StickCPlus2)
+      {
+        bus_cfg.pin_mosi = GPIO_NUM_15;
+        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_13;
+        bus_cfg.pin_dc   = GPIO_NUM_14;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        _pin_reset(GPIO_NUM_12, use_reset); // LCD RST
+        id = _read_panel_id(bus_spi, GPIO_NUM_5);
+        if ((id & 0xFF) == 0x85)
+        {  //  check panel (ST7789)
+          board = board_t::board_M5StickCPlus2;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus2");
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 15000000;
+          bus_spi->config(bus_cfg);
+          auto p = new Panel_M5StickCPlus();
+          {
+            auto cfg = p->config();
+            cfg.pin_rst = GPIO_NUM_12;
+            p->config(cfg);
+          }
+          p->bus(bus_spi);
+          _panel_last.reset(p);
+          _set_pwm_backlight(GPIO_NUM_27, 7, 240);
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_12, lgfx::pin_mode_t::input); // LCD RST
+        lgfx::pinMode(GPIO_NUM_5 , lgfx::pin_mode_t::input); // LCD CS
+        bus_spi->release();
+      }
+
+      if (board == 0)
+      {
+        board = board_t::board_M5AtomPsram;
+        goto init_clear;
+      }
     }
     else
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32D0WDQ6)
@@ -1127,6 +1171,117 @@ init_clear:
 
     return board;
   }
+
+#else
+
+  bool M5GFX::init_impl(bool use_reset, bool use_clear)
+  {
+    board_t b = board_t::board_unknown;
+#if defined (M5GFX_BOARD)
+    b = M5GFX_BOARD;
+#endif
+    _board = autodetect(use_reset, b);
+    return LGFX_Device::init_impl(use_reset, use_clear);
+  }
+
+  board_t M5GFX::autodetect(bool use_reset, board_t board)
+  {
+    auto p = new Panel_sdl();
+    _panel_last.reset(p);
+    auto pnl_cfg = p->config();
+
+    int_fast16_t w = 320;
+    int_fast16_t h = 240;
+    int_fast16_t r = 0;
+    int scale = 1;
+#if defined (M5GFX_SCALE)
+  #if M5GFX_SCALE > 1
+    scale = M5GFX_SCALE;
+#endif
+#endif
+
+    if (board == 0) {
+      board = board_M5Stack;
+    }
+
+    switch (board) {
+    case board_M5AtomS3:
+      w = 128;
+      h = 128;
+      break;
+
+    case board_M5Paper:
+      w = 960;
+      h = 540;
+      pnl_cfg.offset_rotation = 3;
+      r = 1;
+      break;
+
+    case board_M5StackCoreInk:
+      w = 200;
+      h = 200;
+      break;
+
+    case board_M5StickC:
+      w = 80;
+      h = 160;
+      break;
+
+    case board_M5Station:
+    case board_M5StickCPlus:
+    case board_M5StickCPlus2:
+      w = 135;
+      h = 240;
+      break;
+
+    default:
+      pnl_cfg.offset_rotation = 3;
+      r = 1;
+      break;
+    }
+
+#if defined (M5GFX_ROTATION)
+    {
+      if (M5GFX_ROTATION & 1)
+      {
+        auto t = w;
+        w = h;
+        h = t;
+      }
+      pnl_cfg.offset_rotation = ((pnl_cfg.offset_rotation + M5GFX_ROTATION) & 3)
+                              + ((pnl_cfg.offset_rotation ^ M5GFX_ROTATION) & 4);
+    }
+#endif
+
+    pnl_cfg.memory_width = w;
+    pnl_cfg.panel_width = w;
+    pnl_cfg.memory_height = h;
+    pnl_cfg.panel_height = h;
+    pnl_cfg.bus_shared = false;
+    p->config(pnl_cfg);
+    p->setScaling(scale, scale);
+    p->setRotation(r);
+
+    auto t = new lgfx::Touch_sdl();
+    _touch_last.reset(t);
+    {
+      auto cfg = t->config();
+      cfg.x_min = 0;
+      cfg.x_max = w - 1;
+      cfg.y_min = 0;
+      cfg.y_max = h - 1;
+      cfg.bus_shared = false;
+      t->config(cfg);
+      p->touch(t);
+      //    float affine[6] = { 1, 0, 0, 0, 1, 0 };
+      //    p->setCalibrateAffine(affine);
+    }
+
+    panel(_panel_last.get());
+
+    return board;
+  }
+
 
 #endif  /// end of if defined (ESP_PLATFORM)
 
