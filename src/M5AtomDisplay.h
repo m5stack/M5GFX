@@ -1,3 +1,5 @@
+#if __has_include(<sdkconfig.h>)
+
 #ifndef __M5GFX_M5ATOMDISPLAY__
 #define __M5GFX_M5ATOMDISPLAY__
 
@@ -7,11 +9,11 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
-#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
-#include "M5GFX.h"
-
 #include <sdkconfig.h>
 #include <soc/efuse_reg.h>
+
+#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
+#include "M5GFX.h"
 
 #ifndef M5ATOMDISPLAY_LOGICAL_WIDTH
 #define M5ATOMDISPLAY_LOGICAL_WIDTH 1280
@@ -216,4 +218,5 @@ public:
   }
 };
 
+#endif
 #endif

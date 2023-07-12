@@ -1,3 +1,5 @@
+#if __has_include( <sdkconfig.h> )
+
 #ifndef __M5GFX_M5MODULERCA__
 #define __M5GFX_M5MODULERCA__
 
@@ -10,10 +12,10 @@
 #include "lgfx/v1/platforms/esp32/Panel_CVBS.hpp"
 #include "M5GFX.h"
 
+#include <sdkconfig.h>
+
 #if defined ( ARDUINO )
  #include <Arduino.h>
-#elif __has_include( <sdkconfig.h> )
- #include <sdkconfig.h>
 #endif
 
 #ifndef M5MODULERCA_PIN_DAC
@@ -246,4 +248,5 @@ public:
   }
 };
 
+#endif
 #endif

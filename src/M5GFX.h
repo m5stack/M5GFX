@@ -159,7 +159,7 @@ namespace m5gfx
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
     void _set_backlight(lgfx::ILight* bl);
-    void _set_pwm_backlight(int16_t pin, uint8_t ch, uint32_t freq = 12000, bool invert = false);
+    void _set_pwm_backlight(int16_t pin, uint8_t ch, uint32_t freq = 12000, bool invert = false, uint8_t offset = 0);
 
   public:
     M5GFX(void);

@@ -1,3 +1,5 @@
+#if __has_include(<sdkconfig.h>)
+
 #ifndef __M5GFX_M5MODULEDISPLAY__
 #define __M5GFX_M5MODULEDISPLAY__
 
@@ -7,11 +9,11 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
-#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
-#include "M5GFX.h"
-
 #include <sdkconfig.h>
 #include <soc/efuse_reg.h>
+
+#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
+#include "M5GFX.h"
 
 #ifndef M5MODULEDISPLAY_LOGICAL_WIDTH
 #define M5MODULEDISPLAY_LOGICAL_WIDTH 1280
@@ -151,10 +153,6 @@ public:
 
 #if defined M5GFX_SPI_HOST
 
-// AtomDisplay/ModuleDisplay自己機種判定のための暫定措置
-    // m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
-    // m5gfx::gpio_lo(GPIO_NUM_0);
-
     auto bus_spi = new lgfx::Bus_SPI();
     {
       auto cfg = bus_spi->config();
@@ -180,8 +178,8 @@ public:
 
     {
       auto cfg = p->config_transmitter();
-      cfg.freq_read = 400000;
-      cfg.freq_write = 400000;
+      cfg.freq_read = 100000;
+      cfg.freq_write = 100000;
       cfg.pin_scl = i2c_scl;
       cfg.pin_sda = i2c_sda;
       cfg.i2c_port = i2c_port;
@@ -219,4 +217,5 @@ public:
   }
 };
 
+#endif
 #endif

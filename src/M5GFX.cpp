@@ -379,29 +379,6 @@ namespace m5gfx
     }
   };
 
-  struct Light_M5AtomS3 : public lgfx::Light_PWM
-  {
-    Light_M5AtomS3(void)
-    {
-      auto cfg = config();
-      /// The backlight of AtomS3 does not light up if the PWM cycle is too fast.
-      cfg.freq = 240;
-      cfg.pin_bl = GPIO_NUM_16;
-      cfg.pwm_channel = 7;
-      config(cfg);
-    }
-
-    void setBrightness(uint8_t brightness) override
-    {
-      if (brightness) 
-      {
-        brightness = brightness - (brightness >> 3) + 31;
-      }
-      Light_PWM::setBrightness(brightness);
-    }
-  };
-
-
 #endif
 
   static void _pin_level(std::int_fast16_t pin, bool level)
@@ -483,13 +460,14 @@ namespace m5gfx
     _panel_last->setLight(bl);
   }
 
-  void M5GFX::_set_pwm_backlight(std::int16_t pin, std::uint8_t ch, std::uint32_t freq, bool invert)
+  void M5GFX::_set_pwm_backlight(std::int16_t pin, std::uint8_t ch, std::uint32_t freq, bool invert, uint8_t offset)
   {
     auto bl = new lgfx::Light_PWM();
     auto cfg = bl->config();
     cfg.pin_bl = pin;
     cfg.freq   = freq;
     cfg.pwm_channel = ch;
+    cfg.offset = offset;
     cfg.invert = invert;
     bl->config(cfg);
     _set_backlight(bl);
@@ -708,6 +686,7 @@ namespace m5gfx
         id = _read_panel_id(bus_spi, GPIO_NUM_5);
         if ((id & 0xFF) == 0x85)
         {  //  check panel (ST7789)
+          _pin_level(GPIO_NUM_4, true);  // POWER_HOLD_PIN 4
           board = board_t::board_M5StickCPlus2;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus2");
           bus_cfg.freq_write = 40000000;
@@ -721,7 +700,7 @@ namespace m5gfx
           }
           p->bus(bus_spi);
           _panel_last.reset(p);
-          _set_pwm_backlight(GPIO_NUM_27, 7, 240);
+          _set_pwm_backlight(GPIO_NUM_27, 7, 256, false, 40);
           goto init_clear;
         }
         lgfx::pinMode(GPIO_NUM_12, lgfx::pin_mode_t::input); // LCD RST
@@ -1087,7 +1066,7 @@ namespace m5gfx
             p->config(cfg);
           }
           _panel_last.reset(p);
-          _set_backlight(new Light_M5AtomS3());
+          _set_pwm_backlight(GPIO_NUM_16, 7, 256, false, 48);
 
           goto init_clear;
         }

@@ -34,15 +34,17 @@ Contributors:
 #include <driver/spi_master.h>
 #include <driver/rtc_io.h>
 #include <soc/rtc.h>
-#include <soc/soc_caps.h>
 #include <soc/soc.h>
 #include <soc/i2c_reg.h>
 #include <soc/i2c_struct.h>
 #include <soc/apb_ctrl_reg.h>
 #include <soc/efuse_reg.h>
-#include <hal/gpio_hal.h>
 
 #include <esp_log.h>
+
+#if __has_include (<soc/soc_caps.h>)
+#include <soc/soc_caps.h>
+#endif
 
 #if __has_include (<esp_private/periph_ctrl.h>)
  #include <esp_private/periph_ctrl.h>
@@ -59,6 +61,9 @@ Contributors:
 #endif
 
 #if defined (ESP_IDF_VERSION_VAL)
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  #include <hal/gpio_hal.h>
+ #endif
  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(3, 4, 0)
 
   #if defined (ESP_ARDUINO_VERSION_VAL)
@@ -244,7 +249,7 @@ namespace lgfx
     auto s = (const uint32_t*)src;
     do
     {
-      printf("0x%08x = 0x%08x\n", (size_t)s, s[0]);
+      printf("0x%08x = 0x%08x\n", (int)s, (int)s[0]);
       ++s;
       len -= 4;
     } while (len > 0);
@@ -806,7 +811,11 @@ namespace lgfx
         cmd_val |= (1 << 10); // ACK_VALUE (set NACK)
       }
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2)
+      (&dev->comd[0])[index].val = cmd_val;
+ #else
       (&dev->comd0)[index].val = cmd_val;
+ #endif
 #else
       dev->command[index].val = cmd_val;
 #endif
