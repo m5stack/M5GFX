@@ -1,5 +1,3 @@
-#if __has_include( <sdkconfig.h> )
-
 #ifndef __M5GFX_M5MODULERCA__
 #define __M5GFX_M5MODULERCA__
 
@@ -12,12 +10,8 @@
 #include "lgfx/v1/platforms/esp32/Panel_CVBS.hpp"
 #include "M5GFX.h"
 
+#if __has_include( <sdkconfig.h> )
 #include <sdkconfig.h>
-
-#if defined ( ARDUINO )
- #include <Arduino.h>
-#endif
-
 #ifndef M5MODULERCA_PIN_DAC
  #if defined ( CONFIG_IDF_TARGET_ESP32 ) || !defined ( CONFIG_IDF_TARGET )
   #define M5MODULERCA_PIN_DAC GPIO_NUM_26
@@ -25,6 +19,13 @@
   #define M5MODULERCA_PIN_DAC GPIO_NUM_NC
  #endif
 #endif
+#else
+#include "lgfx/v1/platforms/sdl/Panel_sdl.hpp"
+#ifndef M5MODULERCA_PIN_DAC
+ #define M5MODULERCA_PIN_DAC -1
+#endif
+#endif
+
 #ifndef M5MODULERCA_LOGICAL_WIDTH
 #define M5MODULERCA_LOGICAL_WIDTH 216
 #endif
@@ -136,6 +137,48 @@ public:
     _cfg_detail.output_level = output_level;
   }
 
+#if defined (SDL_h_)
+  bool init_impl(bool use_reset, bool use_clear)
+  {
+    if (_panel_last.get() != nullptr) {
+      return true;
+    }
+    auto p = new lgfx::Panel_sdl();
+    if (!p) {
+      return false;
+    }
+    {
+      auto pnl_cfg = p->config();
+      pnl_cfg.memory_width = _cfg.memory_width;
+      pnl_cfg.panel_width = _cfg.panel_width;
+      pnl_cfg.memory_height = _cfg.memory_height;
+      pnl_cfg.panel_height = _cfg.panel_height;
+      pnl_cfg.bus_shared = false;
+      pnl_cfg.offset_rotation = 3;
+      p->config(pnl_cfg);
+      p->setScaling(1, 1);
+      p->setRotation(1);
+      setPanel(p);
+      _panel_last.reset(p);
+    }
+
+    if (lgfx::LGFX_Device::init_impl(use_reset, use_clear))
+    {
+      return true;
+    }
+    setPanel(nullptr);
+    _panel_last.reset();
+    return false;
+  }
+  void setOutputLevel(uint8_t output_level) { }
+  inline void setOutputBoost(bool boost = true) { }
+  void setOutputPin(uint8_t pin_dac) { }
+  void setSignalType(signal_type_t signal_type) { }
+  void setPsram(use_psram_t use_psram) { }
+  inline void setPsram(uint8_t use_psram) { }
+
+#else
+
   bool init_impl(bool use_reset, bool use_clear)
   {
     if (_panel_last.get() != nullptr) {
@@ -246,7 +289,7 @@ public:
   inline void setPsram(uint8_t use_psram) {
     setPsram((use_psram_t)use_psram);
   }
+#endif
 };
 
-#endif
 #endif

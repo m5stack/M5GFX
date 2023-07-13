@@ -201,6 +201,8 @@ namespace m5gfx
       auto board = getBoard();
       if (board == board_t::board_M5AtomDisplay || board == board_t::board_M5ModuleDisplay)
       {
+#if defined (SDL_h_)
+#else
         bool res = ((lgfx::Panel_M5HDMI*)panel())->setResolution
           ( logical_width
           , logical_height
@@ -213,6 +215,7 @@ namespace m5gfx
           );
         setRotation(getRotation());
         return res;
+#endif
       }
 #endif
       return false;
