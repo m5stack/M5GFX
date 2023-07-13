@@ -34,6 +34,17 @@ xcode-select --install
 
 ## Step 3.  Enable `SDL2` on PlatformIO.
 
+#### for Windows
+
+Go to the [SDL repository on github and obtain the release package (SDL2-devel-x.x.x-mingw.zip).](https://github.com/libsdl-org/SDL/releases) 
+
+Unzip the zip file and copy the following four files to `C:\msys64\mingw64`
+
+ - share
+ - bin
+ - include
+ - lib
+
 #### for Linux
 
 open the system terminal and run the following commands:
@@ -48,17 +59,6 @@ Install `sdl2` using [Homebrew](https://brew.sh/).
 ```
  brew install sdl2
 ```
-
-#### for Windows
-
-Go to the [SDL repository on github and obtain the release package (SDL2-devel-x.x.x-mingw.zip).](https://github.com/libsdl-org/SDL/releases) 
-
-Unzip the zip file and copy the following four files to `C:\msys64\mingw64`
-
- - share
- - bin
- - include
- - lib
 
 
 
