@@ -87,5 +87,9 @@ Contributors:
 
 #include "arduino_default/Bus_SPI.hpp"
 
+#elif __has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>)
+
+#include "sdl/Bus_I2C.hpp"
+
 #endif
 
