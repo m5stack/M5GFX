@@ -82,7 +82,7 @@ namespace lgfx
     for (auto& m : _list_monitor)
     {
       uint32_t lm = m->panel->_last_msec;
-      if (lm == 0 || (msec - lm) >= 128)
+      if (lm == 0 || (msec - lm) >= 16)
       {
         m->panel->_last_msec = msec;
         m->panel->sdl_update();

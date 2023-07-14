@@ -1187,6 +1187,7 @@ init_clear:
     switch (board) {
     case board_M5Stack:        title = "M5Stack";        break;
     case board_M5StackCore2:   title = "M5StackCore2";   break;
+    case board_M5StackCoreS3:  title = "M5StackCoreS3";  break;
     case board_M5StickC:       title = "M5StickC";       break;
     case board_M5StickCPlus:   title = "M5StickCPlus";   break;
     case board_M5StickCPlus2:  title = "M5StickCPlus2";  break;
@@ -1194,7 +1195,6 @@ init_clear:
     case board_M5Paper:        title = "M5Paper";        break;
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5Station:      title = "M5Station";      break;
-    case board_M5StackCoreS3:  title = "M5StackCoreS3";  break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
     default:                   title = "M5GFX";          break;
     }
@@ -1232,9 +1232,14 @@ init_clear:
       h = 240;
       break;
 
-    default:
+    case board_M5Stack:
+    case board_M5StackCore2:
+    case board_M5StackCoreS3:
       pnl_cfg.offset_rotation = 3;
       r = 1;
+      break;
+
+    default:
       break;
     }
 
