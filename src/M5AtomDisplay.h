@@ -113,7 +113,7 @@ public:
       pnl_cfg.panel_height = _config.logical_height;
       pnl_cfg.bus_shared = false;
       p->config(pnl_cfg);
-      p->setScaling(1, 1);
+      p->setWindowTitle("AtomDisplay");
     }
 
 #else

@@ -22,7 +22,7 @@ Porting for SDL:
 
 #include "common.hpp"
 #if defined (SDL_h_)
-#include "../../panel/Panel_Device.hpp"
+#include "../../panel/Panel_FrameBufferBase.hpp"
 #include "../../misc/range.hpp"
 #include "../../Touch.hpp"
 
@@ -36,8 +36,6 @@ namespace lgfx
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
-    volatile bool sdl_refr_qry;
-    bgr888_t* tft_fb = nullptr;
     Panel_sdl* panel = nullptr;
     int scaling_x = 1;
     int scaling_y = 1;
@@ -57,60 +55,42 @@ namespace lgfx
 
 //----------------------------------------------------------------------------
 
-  struct Panel_sdl : public Panel_Device
+  struct Panel_sdl : public Panel_FrameBufferBase
   {
-  protected:
-    static uint32_t _last_msec;
-
   public:
-    static void sdl_event_handler(void);
-    static void sdl_update_handler(bool force = false);
     Panel_sdl(void);
     virtual ~Panel_sdl(void);
 
     bool init(bool use_reset) override;
-    void beginTransaction(void) override {}
-    void endTransaction(void) override {}
 
     color_depth_t setColorDepth(color_depth_t depth) override;
-    void setRotation(uint_fast8_t r) override;
-    void setInvert(bool invert) override {}
-    void setSleep(bool flg) override {}
-    void setPowerSave(bool) override {}
 
-    void waitDisplay(void) override {}
-    bool displayBusy(void) override { return false; }
-
-    void writePixels(pixelcopy_t* param, uint32_t len, bool use_dma) override;
-    void writeBlock(uint32_t rawcolor, uint32_t length) override;
     void display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h) override;
-    void setWindow(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye) override;
-    void drawPixelPreclipped(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor) override;
-    void writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor) override;
-    void writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool use_dma) override;
-    void writeImageARGB(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param) override;
 
-    uint32_t readCommand(uint_fast16_t cmd, uint_fast8_t index, uint_fast8_t len) override { return 0; }
-    uint32_t readData(uint_fast8_t index, uint_fast8_t len) override { return 0; }
-    void readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param) override;
-    void copyRect(uint_fast16_t dst_x, uint_fast16_t dst_y, uint_fast16_t w, uint_fast16_t h, uint_fast16_t src_x, uint_fast16_t src_y) override;
+    // void setInvert(bool invert) override {}
 
     uint_fast8_t getTouchRaw(touch_point_t* tp, uint_fast8_t count) override;
 
+    void setWindowTitle(const char* title);
     void setScaling(uint_fast8_t scaling_x, uint_fast8_t scaling_y);
 
-  private:
-    void sdl_create(monitor_t * m);
-    void sdl_update(void);
+    static void sdl_event_handler(void);
+    void sdl_invalidate(void) { _last_msec = 0; }
 
   protected:
+    uint32_t _last_msec;
+    const char* _window_title = "LGFX Simulator";
+
+    void sdl_create(monitor_t * m);
+    void sdl_update(void);
+    static void sdl_update_handler(void);
+
     touch_point_t _touch_point;
     monitor_t monitor;
-    int32_t _xpos = 0;
-    int32_t _ypos = 0;
-    // bool sdl_quit_qry = false;
 
     void _rotate_pixelcopy(uint_fast16_t& x, uint_fast16_t& y, uint_fast16_t& w, uint_fast16_t& h, pixelcopy_t* param, uint32_t& nextx, uint32_t& nexty);
+    bool initFrameBuffer(size_t width, size_t height);
+    void deinitFrameBuffer(void);
   };
 
 //----------------------------------------------------------------------------

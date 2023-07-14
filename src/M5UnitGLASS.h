@@ -101,6 +101,8 @@ public:
  #endif
 #endif
       p->setScaling(scale, scale);
+      p->setWindowTitle("UnitGLASS");
+      p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {

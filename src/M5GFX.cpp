@@ -1183,6 +1183,23 @@ init_clear:
       board = board_M5Stack;
     }
 
+    const char* title;
+    switch (board) {
+    case board_M5Stack:        title = "M5Stack";        break;
+    case board_M5StackCore2:   title = "M5StackCore2";   break;
+    case board_M5StickC:       title = "M5StickC";       break;
+    case board_M5StickCPlus:   title = "M5StickCPlus";   break;
+    case board_M5StickCPlus2:  title = "M5StickCPlus2";  break;
+    case board_M5StackCoreInk: title = "M5StackCoreInk"; break;
+    case board_M5Paper:        title = "M5Paper";        break;
+    case board_M5Tough:        title = "M5Tough";        break;
+    case board_M5Station:      title = "M5Station";      break;
+    case board_M5StackCoreS3:  title = "M5StackCoreS3";  break;
+    case board_M5AtomS3:       title = "M5AtomS3";       break;
+    default:                   title = "M5GFX";          break;
+    }
+    p->setWindowTitle(title);
+
     switch (board) {
     case board_M5AtomS3:
       w = 128;
@@ -1193,12 +1210,14 @@ init_clear:
       w = 960;
       h = 540;
       pnl_cfg.offset_rotation = 3;
+      p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
       r = 1;
       break;
 
     case board_M5StackCoreInk:
       w = 200;
       h = 200;
+      p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
       break;
 
     case board_M5StickC:

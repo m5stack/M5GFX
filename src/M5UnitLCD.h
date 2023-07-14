@@ -101,6 +101,7 @@ public:
  #endif
 #endif
       p->setScaling(scale, scale);
+      p->setWindowTitle("UnitLCD");
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {

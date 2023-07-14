@@ -32,8 +32,6 @@ namespace lgfx
 {
  inline namespace v1
  {
-
-  uint32_t Panel_sdl::_last_msec;
   static std::list<monitor_t*> _list_monitor;
 
   static monitor_t* const getMonitorByWindowID(uint32_t windowID)
@@ -48,12 +46,11 @@ namespace lgfx
 
   int quit_filter(void * userdata, SDL_Event * event)
   {
-//  Panel_sdl *sdl = (Panel_sdl *)userdata;
-
     if(event->type == SDL_WINDOWEVENT) {
-      if(event->window.event == SDL_WINDOWEVENT_CLOSE) {
-        auto monitor = getMonitorByWindowID(event->window.windowID);
-        if (monitor) {
+      auto monitor = getMonitorByWindowID(event->window.windowID);
+      if (monitor) {
+        monitor->panel->sdl_invalidate();
+        if(event->window.event == SDL_WINDOWEVENT_CLOSE) {
           SDL_DestroyTexture(monitor->texture);
           SDL_DestroyRenderer(monitor->renderer);
           SDL_DestroyWindow(monitor->window);
@@ -79,25 +76,17 @@ namespace lgfx
     return 1;
   }
 
-  void Panel_sdl::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
-  {
-    sdl_update_handler(true);
-  }
-
-  void Panel_sdl::sdl_update_handler(bool force)
+  void Panel_sdl::sdl_update_handler(void)
   {
     uint32_t msec = millis();
-    if ((msec - _last_msec) < 16 && !force) {
-      return;
-    }
-    if (!force) {
-      SDL_Delay(1);
-      ++msec;
-    }
-    _last_msec = msec;
     for (auto& m : _list_monitor)
     {
-      m->panel->sdl_update();
+      uint32_t lm = m->panel->_last_msec;
+      if (lm == 0 || (msec - lm) >= 128)
+      {
+        m->panel->_last_msec = msec;
+        m->panel->sdl_update();
+      }
     }
   }
 
@@ -149,7 +138,11 @@ namespace lgfx
         auto mon = getMonitorByWindowID(event.button.windowID);
         if (mon != nullptr)
         {
-          SDL_GetMouseState(&mon->touch_x, &mon->touch_y);
+          int x, y, w, h;
+          SDL_GetWindowSize(mon->window, &w, &h);
+          SDL_GetMouseState(&x, &y);
+          mon->touch_x = x * mon->panel->_cfg.panel_width / w;
+          mon->touch_y = y * mon->panel->_cfg.panel_height / h;
           if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
           {
             mon->touched = true;
@@ -186,10 +179,11 @@ namespace lgfx
     _list_monitor.remove(&monitor);
   }
 
-  Panel_sdl::Panel_sdl(void) : Panel_Device()
+  Panel_sdl::Panel_sdl(void) : Panel_FrameBufferBase()
   {
     _auto_display = true;
     monitor.panel = this;
+
     static bool inited = false;
     if (inited) { return; }
     for (size_t pin = 0; pin < EMULATED_GPIO_MAX; ++pin) { gpio_hi(pin); }
@@ -204,458 +198,58 @@ namespace lgfx
 
   bool Panel_sdl::init(bool use_reset)
   {
-    uint32_t len = _cfg.panel_width * _cfg.panel_height * sizeof(bgr888_t) + 16;
-    monitor.tft_fb = (bgr888_t*)malloc(len);
-    memset(monitor.tft_fb, 0x44, len);
+    initFrameBuffer(_cfg.panel_width * 4, _cfg.panel_height);
 
     _list_monitor.push_back(&monitor);
 
-    return Panel_Device::init(use_reset);
+    return Panel_FrameBufferBase::init(use_reset);
   }
 
   color_depth_t Panel_sdl::setColorDepth(color_depth_t depth)
   {
-    _write_depth = color_depth_t::rgb888_3Byte;
-    _read_depth = color_depth_t::rgb888_3Byte;
-    return _write_depth;
+    // if (depth != color_depth_t::grayscale_8bit) {
+    //   depth = ((depth & color_depth_t::bit_mask) > 16) ? rgb888_3Byte : rgb565_2Byte;
+    // }
+    _write_depth = depth;
+    _read_depth = depth;
+
+    return depth;
   }
 
-  void Panel_sdl::setRotation(uint_fast8_t r)
+  void Panel_sdl::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
-    r &= 7;
-    _rotation = r;
-    _internal_rotation = ((r + _cfg.offset_rotation) & 3) | ((r & 4) ^ (_cfg.offset_rotation & 4));
-
-    _width  = _cfg.panel_width;
-    _height = _cfg.panel_height;
-    if (_internal_rotation & 1) std::swap(_width, _height);
-  }
-
-  void Panel_sdl::setWindow(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye)
-  {
-    xs = std::max<uint_fast16_t>(0u, std::min<uint_fast16_t>(_width  - 1, xs));
-    xe = std::max<uint_fast16_t>(0u, std::min<uint_fast16_t>(_width  - 1, xe));
-    ys = std::max<uint_fast16_t>(0u, std::min<uint_fast16_t>(_height - 1, ys));
-    ye = std::max<uint_fast16_t>(0u, std::min<uint_fast16_t>(_height - 1, ye));
-    _xpos = xs;
-    _xs = xs;
-    _xe = xe;
-    _ypos = ys;
-    _ys = ys;
-    _ye = ye;
-  }
-
-  void Panel_sdl::drawPixelPreclipped(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor)
-  {
-    uint_fast8_t r = _internal_rotation;
-    if (r)
-    {
-      if ((1u << r) & 0b10010110) { y = _height - (y + 1); }
-      if (r & 2)                  { x = _width  - (x + 1); }
-      if (r & 1) { std::swap(x, y); }
-    }
-
-    size_t bw = _cfg.panel_width;
-    size_t index = x + y * bw;
-    {
-      auto img = &((bgr888_t*)monitor.tft_fb)[index];
-      *img = rawcolor;
-    }
-    sdl_update_handler();
-  }
-
-  void Panel_sdl::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)
-  {
-    uint_fast8_t r = _internal_rotation;
-    if (r)
-    {
-      if ((1u << r) & 0b10010110) { y = _height - (y + h); }
-      if (r & 2)                  { x = _width  - (x + w); }
-      if (r & 1) { std::swap(x, y);  std::swap(w, h); }
-    }
-
-    if (w > 1)
-    {
-      uint_fast8_t bytes = _write_bits >> 3;
-      uint_fast16_t bw = _cfg.panel_width;
-      auto* dst = &monitor.tft_fb[(x + y * bw)];
-      auto* src = dst;
-      uint_fast16_t add_dst = bw;
-      uint_fast32_t w32 = w;
-      uint_fast32_t len = w * bytes;
-      if (w32 != bw)
-      {
-        dst += add_dst;
-      }
-      else
-      {
-        w32 *= h;
-        h = 1;
-      }
-      memset_multi((uint8_t*)src, rawcolor, bytes, w32);
-      while (--h)
-      {
-        memcpy(dst, src, len);
-        dst += add_dst;
-      }
-    }
-    else
-    {
-      size_t bw = _cfg.panel_width;
-      size_t index = x + y * bw;
-      {
-        auto img = &((bgr888_t*)monitor.tft_fb)[index];
-        do { *img = rawcolor; img += bw; } while (--h);
-      }
-    }
-    sdl_update_handler();
-  }
-
-  void Panel_sdl::writeBlock(uint32_t rawcolor, uint32_t length)
-  {
-    do
-    {
-      uint32_t h = 1;
-      auto w = std::min<uint32_t>(length, _xe + 1 - _xpos);
-      if (length >= (w << 1) && _xpos == _xs)
-      {
-        h = std::min<uint32_t>(length / w, _ye + 1 - _ypos);
-      }
-      writeFillRectPreclipped(_xpos, _ypos, w, h, rawcolor);
-      if ((_xpos += w) <= _xe) return;
-      _xpos = _xs;
-      if (_ye < (_ypos += h)) { _ypos = _ys; }
-      length -= w * h;
-    } while (length);
-  }
-
-  void Panel_sdl::_rotate_pixelcopy(uint_fast16_t& x, uint_fast16_t& y, uint_fast16_t& w, uint_fast16_t& h, pixelcopy_t* param, uint32_t& nextx, uint32_t& nexty)
-  {
-    uint32_t addx = param->src_x32_add;
-    uint32_t addy = param->src_y32_add;
-    uint_fast8_t r = _internal_rotation;
-    uint_fast8_t bitr = 1u << r;
-    if (bitr & 0b10010110) // case 1:2:4:7:
-    {
-      param->src_y32 += nexty * (h - 1);
-      nexty = -(int32_t)nexty;
-      y = _height - (y + h);
-    }
-    if (r & 2)
-    {
-      param->src_x32 += addx * (w - 1);
-      param->src_y32 += addy * (w - 1);
-      addx = -(int32_t)addx;
-      addy = -(int32_t)addy;
-      x = _width  - (x + w);
-    }
-    if (r & 1)
-    {
-      std::swap(x, y);
-      std::swap(w, h);
-      std::swap(nextx, addx);
-      std::swap(nexty, addy);
-    }
-    param->src_x32_add = addx;
-    param->src_y32_add = addy;
-  }
-
-  void Panel_sdl::writePixels(pixelcopy_t* param, uint32_t length, bool use_dma)
-  {
-    uint_fast16_t xs = _xs;
-    uint_fast16_t xe = _xe;
-    uint_fast16_t ys = _ys;
-    uint_fast16_t ye = _ye;
-    uint_fast16_t x = _xpos;
-    uint_fast16_t y = _ypos;
-    const size_t bits = _write_bits;
-    auto k = _cfg.panel_width * bits >> 3;
-
-    uint_fast8_t r = _internal_rotation;
-    if (!r)
-    {
-      uint_fast16_t linelength;
-      do {
-        linelength = std::min<uint_fast16_t>(xe - x + 1, length);
-        param->fp_copy(&monitor.tft_fb[y * k], x, x + linelength, param);
-        if ((x += linelength) > xe)
-        {
-          x = xs;
-          y = (y != ye) ? (y + 1) : ys;
-        }
-      } while (length -= linelength);
-      _xpos = x;
-      _ypos = y;
-    }
-    else
-    {
-      int_fast16_t ax = 1;
-      int_fast16_t ay = 1;
-      if ((1u << r) & 0b10010110) { y = _height - (y + 1); ys = _height - (ys + 1); ye = _height - (ye + 1); ay = -1; }
-      if (r & 2)                  { x = _width  - (x + 1); xs = _width  - (xs + 1); xe = _width  - (xe + 1); ax = -1; }
-      if (param->no_convert)
-      {
-        size_t bytes = _write_bits >> 3;
-        size_t xw = 1;
-        size_t yw = _cfg.panel_width;
-        if (r & 1) std::swap(xw, yw);
-        size_t idx = y * yw + x * xw;
-        auto data = (uint8_t*)param->src_data;
-        do
-        {
-          auto dst = &monitor.tft_fb[idx * bytes];
-          size_t b = 0;
-          do
-          {
-            dst[b] = *data++;
-          } while (++b < bytes);
-          if (x != xe)
-          {
-            idx += xw * ax;
-            x += ax;
-          }
-          else
-          {
-            x = xs;
-            y = (y != ye) ? (y + ay) : ys;
-            idx = y * yw + x * xw;
-          }
-        } while (--length);
-      }
-      else
-      {
-        if (r & 1)
-        {
-          do
-          {
-            param->fp_copy(&monitor.tft_fb[x * k], y, y + 1, param);
-            if (x != xe)
-            {
-              x += ax;
-            }
-            else
-            {
-              x = xs;
-              y = (y != ye) ? (y + ay) : ys;
-            }
-          } while (--length);
-        }
-        else
-        {
-          do
-          {
-            param->fp_copy(&monitor.tft_fb[y * k], x, x + 1, param);
-            if (x != xe)
-            {
-              x += ax;
-            }
-            else
-            {
-              x = xs;
-              y = (y != ye) ? (y + ay) : ys;
-            }
-          } while (--length);
-        }
-      }
-      if ((1u << r) & 0b10010110) { y = _height - (y + 1); }
-      if (r & 2)                  { x = _width  - (x + 1); }
-      _xpos = x;
-      _ypos = y;
-    }
-    sdl_update_handler();
-  }
-
-  void Panel_sdl::writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool)
-  {
-    uint_fast8_t r = _internal_rotation;
-    if (r == 0 && param->transp == pixelcopy_t::NON_TRANSP && param->no_convert)
-    {
-      auto sx = param->src_x;
-      auto bits = param->src_bits;
-
-      auto bw = _cfg.panel_width * bits >> 3;
-      auto dst = (uint8_t*)& monitor.tft_fb[_cfg.panel_width * y];
-      auto sw = param->src_bitwidth * bits >> 3;
-      auto src = &((uint8_t*)param->src_data)[param->src_y * sw];
-      if (sw == bw && this->_cfg.panel_width == w && sx == 0 && x == 0)
-      {
-        memcpy(dst, src, bw * h);
-        return;
-      }
-      y = 0;
-      dst +=  x * bits >> 3;
-      src += sx * bits >> 3;
-      w    =  w * bits >> 3;
-      do
-      {
-        memcpy(&dst[y * bw], &src[y * sw], w);
-      } while (++y != h);
-    }
-    else
-    {
-      uint32_t nextx = 0;
-      uint32_t nexty = 1 << pixelcopy_t::FP_SCALE;
-      if (r)
-      {
-        _rotate_pixelcopy(x, y, w, h, param, nextx, nexty);
-      }
-      uint32_t sx32 = param->src_x32;
-      uint32_t sy32 = param->src_y32;
-
-      uint_fast32_t y4b = y * _cfg.panel_width;
-      do
-      {
-        int32_t pos = y4b + x;
-        int32_t end = pos + w;
-        while (end != (pos = param->fp_copy(monitor.tft_fb, pos, end, param))
-          &&  end != (pos = param->fp_skip(      pos, end, param)));
-        param->src_x32 = (sx32 += nextx);
-        param->src_y32 = (sy32 += nexty);
-        y4b += _cfg.panel_width;
-      } while (--h);
-    }
-    sdl_update_handler();
-  }
-
-  void Panel_sdl::writeImageARGB(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param)
-  {
-    uint32_t nextx = 0;
-    uint32_t nexty = 1 << pixelcopy_t::FP_SCALE;
-    if (_internal_rotation)
-    {
-      _rotate_pixelcopy(x, y, w, h, param, nextx, nexty);
-    }
-    uint32_t sx32 = param->src_x32;
-    uint32_t sy32 = param->src_y32;
-
-    uint32_t pos = x + y * _cfg.panel_width;
-    uint32_t end = pos + w;
-    param->fp_copy(monitor.tft_fb, pos, end, param);
-    while (--h)
-    {
-      pos += _cfg.panel_width;
-      end = pos + w;
-      param->src_x32 = (sx32 += nextx);
-      param->src_y32 = (sy32 += nexty);
-      param->fp_copy(monitor.tft_fb, pos, end, param);
-    }
-    sdl_update_handler();
-  }
-
-  void Panel_sdl::readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param)
-  {
-    uint_fast8_t r = _internal_rotation;
-    if (0 == r && param->no_convert)
-    {
-      h += y;
-      auto bytes = _write_bits >> 3;
-      auto bw = _cfg.panel_width;
-      auto d = (uint8_t*)dst;
-      w *= bytes;
-      do {
-        memcpy(d, &monitor.tft_fb[(x + y * bw)], w);
-        d += w;
-      } while (++y != h);
-    }
-    else
-    {
-      param->src_bitwidth = _cfg.panel_width;
-      param->src_data = monitor.tft_fb;
-      uint32_t nextx = 0;
-      uint32_t nexty = 1 << pixelcopy_t::FP_SCALE;
-      if (r)
-      {
-        uint32_t addx = param->src_x32_add;
-        uint32_t addy = param->src_y32_add;
-        uint_fast8_t rb = 1 << r;
-        if (rb & 0b10010110) // case 1:2:4:7:
-        {
-          nexty = -(int32_t)nexty;
-          y = _height - (y + 1);
-        }
-        if (r & 2)
-        {
-          addx = -(int32_t)addx;
-          x = _width - (x + 1);
-        }
-        if ((r+1) & 2)
-        {
-          addy  = -(int32_t)addy;
-        }
-        if (r & 1)
-        {
-          std::swap(x, y);
-          std::swap(addx, addy);
-          std::swap(nextx, nexty);
-        }
-        param->src_x32_add = addx;
-        param->src_y32_add = addy;
-      }
-      size_t dstindex = 0;
-      uint32_t x32 = x << pixelcopy_t::FP_SCALE;
-      uint32_t y32 = y << pixelcopy_t::FP_SCALE;
-      param->src_x32 = x32;
-      param->src_y32 = y32;
-      do
-      {
-        param->src_x32 = x32;
-        x32 += nextx;
-        param->src_y32 = y32;
-        y32 += nexty;
-        dstindex = param->fp_copy(dst, dstindex, dstindex + w, param);
-      } while (--h);
-    }
-  }
-
-  void Panel_sdl::copyRect(uint_fast16_t dst_x, uint_fast16_t dst_y, uint_fast16_t w, uint_fast16_t h, uint_fast16_t src_x, uint_fast16_t src_y)
-  {
-    uint_fast8_t r = _internal_rotation;
-    if (r)
-    {
-      if ((1u << r) & 0b10010110) { src_y = _height - (src_y + h); dst_y = _height - (dst_y + h); }
-      if (r & 2)                  { src_x = _width  - (src_x + w); dst_x = _width  - (dst_x + w); }
-      if (r & 1) { std::swap(src_x, src_y);  std::swap(dst_x, dst_y);  std::swap(w, h); }
-    }
-
-    size_t bytes = _write_bits >> 3;
-    size_t len = w * bytes;
-    int32_t add = _cfg.panel_width * bytes;
-    if (src_y < dst_y) add = -add;
-    int32_t pos = (src_y < dst_y) ? h - 1 : 0;
-    uint8_t* src = (uint8_t*)&monitor.tft_fb[(src_x + (src_y + pos) * _cfg.panel_width)];
-    uint8_t* dst = (uint8_t*)&monitor.tft_fb[(dst_x + (dst_y + pos) * _cfg.panel_width)];
-    do
-    {
-      memmove(dst, src, len);
-      src += add;
-      dst += add;
-    } while (--h);
-    sdl_update_handler();
+    _last_msec = 0;
   }
 
   uint_fast8_t Panel_sdl::getTouchRaw(touch_point_t* tp, uint_fast8_t count)
   {
-    tp->x = monitor.touch_x / monitor.scaling_x;
-    tp->y = monitor.touch_y / monitor.scaling_y;
+    tp->x = monitor.touch_x;
+    tp->y = monitor.touch_y;
     tp->size = monitor.touched ? 1 : 0;
     tp->id = 0;
     return monitor.touched;
   }
 
+  void Panel_sdl::setWindowTitle(const char* title)
+  {
+    _window_title = title;
+    SDL_SetWindowTitle(monitor.window, _window_title);
+  }
+  
   void Panel_sdl::sdl_create(monitor_t * m)
   {
-    int flag = 0;
+    int flag = SDL_WINDOW_RESIZABLE;
 #if SDL_FULLSCREEN
     flag |= SDL_WINDOW_FULLSCREEN;
 #endif
-    m->panel = this;
-    m->window = SDL_CreateWindow("LGFX Simulator",
+    m->window = SDL_CreateWindow(_window_title,
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               _cfg.panel_width * m->scaling_x, _cfg.panel_height * m->scaling_y, flag);       /*last param. SDL_WINDOW_BORDERLESS to hide borders*/
 
     m->renderer = SDL_CreateRenderer(m->window, -1, SDL_RENDERER_ACCELERATED);
-    m->texture = SDL_CreateTexture(m->renderer,
-                                SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, _cfg.panel_width, _cfg.panel_height);
+
+    m->texture = SDL_CreateTexture(m->renderer, SDL_PIXELFORMAT_RGB24,
+                     SDL_TEXTUREACCESS_STATIC, _cfg.panel_width, _cfg.panel_height);
     SDL_SetTextureBlendMode(m->texture, SDL_BLENDMODE_NONE);
   }
 
@@ -666,11 +260,61 @@ namespace lgfx
       sdl_create(&monitor);
     }
 
-    SDL_UpdateTexture(monitor.texture, NULL, monitor.tft_fb, _cfg.panel_width * sizeof(bgr888_t));
+    auto array = (rgb888_t*)alloca((_cfg.panel_width + 1) * 4);
+    pixelcopy_t pc(nullptr, color_depth_t::rgb888_3Byte, _write_depth, false);
 
-    /*Update the renderer with the texture containing the rendered image*/
-    SDL_RenderCopy(monitor.renderer, monitor.texture, NULL, NULL);
-    SDL_RenderPresent(monitor.renderer);
+    SDL_Rect r = {0, 0, _cfg.panel_width, 1};
+    for (int y = 0; y < _cfg.panel_height; ++y)
+    {
+      r.y = y;
+      pc.src_data = _lines_buffer[y];
+      pc.src_x32 = 0;
+      pc.fp_copy(array, 0, _cfg.panel_width, &pc);
+      SDL_UpdateTexture(monitor.texture, &r, array, _cfg.panel_width * _write_bits >> 3);
+    }
+    { /*Update the renderer with the texture containing the rendered image*/
+      if (0 == SDL_RenderCopy(monitor.renderer, monitor.texture, NULL, NULL))
+      {
+        SDL_RenderPresent(monitor.renderer);
+      }
+    }
+  }
+
+  bool Panel_sdl::initFrameBuffer(size_t width, size_t height)
+  {
+// printf("initFrameBuffer w:%d h:%d \n", width, height);
+    uint8_t** lineArray = (uint8_t**)heap_alloc_dma(height * sizeof(uint8_t*));
+    if ( nullptr == lineArray ) { return false; }
+
+    /// 4byte alignment;
+    width = (width + 7) & ~7u;
+
+    _lines_buffer = lineArray;
+    memset(lineArray, 0, height * sizeof(uint8_t*));
+
+    uint8_t* framebuffer = (uint8_t*)heap_alloc_dma(width * height + 16);
+
+    size_t alloc_idx = 0;
+    auto fb = framebuffer;
+    {
+      for (int y = 0; y < height; ++y)
+      {
+        lineArray[y] = fb;
+        fb += width;
+      }
+    }
+    return true;
+  }
+
+  void Panel_sdl::deinitFrameBuffer(void)
+  {
+    auto lines = _lines_buffer;
+    _lines_buffer = nullptr;
+    if (lines != nullptr)
+    {
+      heap_free(lines[0]);
+      heap_free(lines);
+    }
   }
 
 //----------------------------------------------------------------------------

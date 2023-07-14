@@ -156,6 +156,7 @@ public:
       pnl_cfg.bus_shared = false;
       pnl_cfg.offset_rotation = 3;
       p->config(pnl_cfg);
+      p->setWindowTitle("UnitRCA");
       p->setScaling(864/_cfg.panel_width, 576/_cfg.panel_height);
       p->setRotation(1);
       setPanel(p);
