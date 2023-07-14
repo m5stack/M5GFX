@@ -154,15 +154,68 @@ namespace lgfx
     LGFX_INLINE   void writeFillRectPreclipped( int32_t x, int32_t y, int32_t w, int32_t h)                 { _panel->writeFillRectPreclipped(x, y, w, h, getRawColor()); }
     LGFX_INLINE_T void writeColor      ( const T& color, uint32_t length) { if (0 == length) return; setColor(color);               _panel->writeBlock(getRawColor(), length); }
     LGFX_INLINE_T void pushBlock       ( const T& color, uint32_t length) { if (0 == length) return; setColor(color); startWrite(); _panel->writeBlock(getRawColor(), length); endWrite(); }
+
+    /// @brief Draw a pixel.
+    /// @param x X-coordinate
+    /// @param y Y-coordinate
+    /// @note Draws in the color specified by setColor().
     LGFX_INLINE   void drawPixel       ( int32_t x, int32_t y) { if (x >= _clip_l && x <= _clip_r && y >= _clip_t && y <= _clip_b) { _panel->drawPixelPreclipped(x, y, getRawColor()); } }
+    /// @brief Draw a pixel.
+    /// @param x X-coordinate
+    /// @param y Y-coordinate
+    /// @param color Color to draw with
     LGFX_INLINE_T void drawPixel       ( int32_t x, int32_t y                                 , const T& color) { setColor(color); drawPixel    (x, y         ); }
+    /// @brief Draw a vertical line.
+    /// @param x Top-most X-coordinate
+    /// @param y Top-most Y-coordinate
+    /// @param h Height in pixels
+    /// @param color Color to draw with
     LGFX_INLINE_T void drawFastVLine   ( int32_t x, int32_t y           , int32_t h           , const T& color) { setColor(color); drawFastVLine(x, y   , h   ); }
+    /// @brief Draw a vertical line.
+    /// @param x Top-most X-coordinate
+    /// @param y Top-most Y-coordinate
+    /// @param h Height in pixels
+    /// @note Draws in the color specified by setColor().
                   void drawFastVLine   ( int32_t x, int32_t y           , int32_t h);
+    /// @brief Draw a horizontal line.
+    /// @param x Left-most X-coordinate
+    /// @param y Left-most Y-coordinate
+    /// @param w Width in pixels
+    /// @param color Color to draw with
     LGFX_INLINE_T void drawFastHLine   ( int32_t x, int32_t y, int32_t w                      , const T& color) { setColor(color); drawFastHLine(x, y, w      ); }
+    /// @brief Draw a horizontal line.
+    /// @param x Left-most X-coordinate
+    /// @param y Left-most Y-coordinate
+    /// @param w Width in pixels
+    /// @note Draws in the color specified by setColor().
                   void drawFastHLine   ( int32_t x, int32_t y, int32_t w);
+    /// @brief  Fill a rectangle.
+    /// @param x Top-left-corner X-coordinate
+    /// @param y Top-left-corner Y-coordinate
+    /// @param w Width in pixels
+    /// @param h Height in pixels
+    /// @param color Color to fill with
     LGFX_INLINE_T void fillRect        ( int32_t x, int32_t y, int32_t w, int32_t h           , const T& color) { setColor(color); fillRect     (x, y, w, h   ); }
+    /// @brief  Fill a rectangle.
+    /// @param x Top-left-corner X-coordinate
+    /// @param y Top-left-corner Y-coordinate
+    /// @param w Width in pixels
+    /// @param h Height in pixels
+    /// @note Draws in the color specified by setColor().
                   void fillRect        ( int32_t x, int32_t y, int32_t w, int32_t h);
+    /// @brief Draw a rectangle outline.
+    /// @param x Top-left-corner X-coordinate
+    /// @param y Top-left-corner Y-coordinate
+    /// @param w Width in pixels
+    /// @param h Height in pixels
+    /// @param color Color to fill with
     LGFX_INLINE_T void drawRect        ( int32_t x, int32_t y, int32_t w, int32_t h           , const T& color) { setColor(color); drawRect     (x, y, w, h   ); }
+    /// @brief Draw a rectangle outline.
+    /// @param x Top-left-corner X-coordinate
+    /// @param y Top-left-corner Y-coordinate
+    /// @param w Width in pixels
+    /// @param h Height in pixels
+    /// @note Draws in the color specified by setColor().
                   void drawRect        ( int32_t x, int32_t y, int32_t w, int32_t h);
     LGFX_INLINE_T void drawRoundRect   ( int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, const T& color) { setColor(color); drawRoundRect(x, y, w, h, r); }
                   void drawRoundRect   ( int32_t x, int32_t y, int32_t w, int32_t h, int32_t r);
