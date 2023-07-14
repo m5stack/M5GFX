@@ -7,6 +7,7 @@ void loop(void);
 
 static int loopThread(void* args)
 {
+  setup();
   for (;;)
   {
     loop();
@@ -23,12 +24,11 @@ __attribute__((weak))
 int main(int, char**)
 #endif
 {
-  setup();
   SDL_CreateThread(loopThread, "lt", nullptr);
   for (;;)
   {
-    SDL_Delay(1);
     lgfx::Panel_sdl::sdl_event_handler();
+    SDL_Delay(1);
   }
   return 0;
 }

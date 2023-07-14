@@ -92,6 +92,17 @@ namespace lgfx
 
   void Panel_sdl::sdl_event_handler(void)
   {
+    static bool inited = false;
+    if (!inited) {
+      inited = true;
+
+      for (size_t pin = 0; pin < EMULATED_GPIO_MAX; ++pin) { gpio_hi(pin); }
+      /*Initialize the SDL*/
+      SDL_Init(SDL_INIT_VIDEO);
+      SDL_SetEventFilter(quit_filter, nullptr);
+      SDL_StartTextInput();
+    }
+
     sdl_update_handler();
 
     SDL_Event event;
@@ -183,17 +194,6 @@ namespace lgfx
   {
     _auto_display = true;
     monitor.panel = this;
-
-    static bool inited = false;
-    if (inited) { return; }
-    for (size_t pin = 0; pin < EMULATED_GPIO_MAX; ++pin) { gpio_hi(pin); }
-
-    /*Initialize the SDL*/
-    SDL_Init(SDL_INIT_VIDEO);
-
-    SDL_SetEventFilter(quit_filter, this);
-
-    SDL_StartTextInput();
   }
 
   bool Panel_sdl::init(bool use_reset)
@@ -233,7 +233,9 @@ namespace lgfx
   void Panel_sdl::setWindowTitle(const char* title)
   {
     _window_title = title;
-    SDL_SetWindowTitle(monitor.window, _window_title);
+    if (monitor.window) {
+      SDL_SetWindowTitle(monitor.window, _window_title);
+    }
   }
   
   void Panel_sdl::sdl_create(monitor_t * m)

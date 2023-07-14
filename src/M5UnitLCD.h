@@ -7,12 +7,14 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
+#if defined (ESP_PLATFORM)
+ #include <sdkconfig.h>
+#else
+ #include "lgfx/v1/platforms/sdl/Panel_sdl.hpp"
+#endif
+
 #include "lgfx/v1/panel/Panel_M5UnitLCD.hpp"
 #include "M5GFX.h"
-
-#if __has_include( <sdkconfig.h> )
- #include <sdkconfig.h>
-#endif
 
 #ifndef M5UNITLCD_SDA
  #if defined ( ARDUINO )

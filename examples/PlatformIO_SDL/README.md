@@ -59,6 +59,11 @@ Install `sdl2` using [Homebrew](https://brew.sh/).
 ```
  brew install sdl2
 ```
+If you are using an Intel core mac, you can also use the debugger by installing gdb.
+```
+ brew install gdb
+```
+(Not sure how to use the debugger for Arm core Macs currently.)
 
 
 
