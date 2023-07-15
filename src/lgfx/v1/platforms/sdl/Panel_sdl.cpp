@@ -151,11 +151,11 @@ namespace lgfx
   int Panel_sdl::loop(void)
   {
     if (!_inited) return 1;
-    _event_proc();
     int wait = SDL_SemWaitTimeout(_update_in_semaphore, 8);
     if (_update_proc()) { return 1; }
+    _event_proc();
 
-    if (wait != SDL_MUTEX_TIMEDOUT && SDL_SemValue(_update_out_semaphore) < 0) {
+    if (wait != SDL_MUTEX_TIMEDOUT && SDL_SemValue(_update_out_semaphore) == 0) {
       SDL_SemPost(_update_out_semaphore);
     }
     return 0;
@@ -214,8 +214,9 @@ namespace lgfx
   void Panel_sdl::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
     _last_msec = 0;
+    SDL_SemTryWait(_update_out_semaphore);
     SDL_SemPost(_update_in_semaphore);
-    SDL_SemWaitTimeout(_update_out_semaphore, 1);
+    SDL_SemWaitTimeout(_update_out_semaphore, 8);
   }
 
   uint_fast8_t Panel_sdl::getTouchRaw(touch_point_t* tp, uint_fast8_t count)
@@ -259,18 +260,17 @@ namespace lgfx
       sdl_create(&monitor);
     }
 
-    auto array = (rgb888_t*)alloca((_cfg.panel_width + 1) * 4);
+    auto array = (rgb888_t*)alloca((_cfg.panel_width * _cfg.panel_height + 1) * sizeof(rgb888_t));
     pixelcopy_t pc(nullptr, color_depth_t::rgb888_3Byte, _write_depth, false);
 
-    SDL_Rect r = {0, 0, _cfg.panel_width, 1};
     for (int y = 0; y < _cfg.panel_height; ++y)
     {
-      r.y = y;
       pc.src_x32 = 0;
       pc.src_data = _lines_buffer[y];
-      pc.fp_copy(array, 0, _cfg.panel_width, &pc);
-      SDL_UpdateTexture(monitor.texture, &r, array, _cfg.panel_width * _write_bits >> 3);
+      pc.fp_copy(&array[y * _cfg.panel_width], 0, _cfg.panel_width, &pc);
     }
+    SDL_UpdateTexture(monitor.texture, nullptr, array, _cfg.panel_width * sizeof(rgb888_t));
+
     { /*Update the renderer with the texture containing the rendered image*/
       if (0 == SDL_RenderCopy(monitor.renderer, monitor.texture, NULL, NULL))
       {

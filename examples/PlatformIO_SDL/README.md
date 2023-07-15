@@ -67,13 +67,13 @@ Install `sdl2` using [Homebrew](https://brew.sh/).
 
 ## Step 4. Execute !
 
-Open the `PlatformIO_SDL` folder containing this document in PlatformIO.
-
-![execute](img_00.png)
+Open the `PlatformIO_SDL` folder containing this document in PlatformIO.  
 
 Click on the ![PlatformIO](img_pio.png) icon on the left side of the screen.  
 Click `PROJECT TASKS` -> `native` -> `General` -> `Upload`  
+![execute](img_00.png)
 
+※ The window may start up with the window hidden behind. Check the task tray.
 
 ---
 
