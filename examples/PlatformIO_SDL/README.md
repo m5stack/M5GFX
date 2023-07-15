@@ -1,5 +1,5 @@
 
-# Steps to use M5GFX in a Visual Studio Code + PlatformIO + SDL2 environment.
+# Steps to run M5GFX on a PC. ( VisualStudioCode + PlatformIO + SDL2 environment. )
 
 ## Step 1. install Visual Studio Code and make PlatformIO ready for use.  
 
