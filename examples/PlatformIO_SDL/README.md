@@ -5,8 +5,9 @@
 
 https://docs.m5stack.com/ja/quick_start/m5unified/intro_vscode
 
+---
 
-## Step 2.  PlatformIO to allow `platform = native` to be built.
+## Step 2. PlatformIO to allow `platform = native` to be built.
 https://docs.platformio.org/en/latest/platforms/native.html#installation
 
 #### for Windows
@@ -32,7 +33,9 @@ open the system terminal and install Xcode Command Line Tools
 xcode-select --install
 ```
 
-## Step 3.  Enable `SDL2` on PlatformIO.
+---
+
+## Step 3. Enable `SDL2` on PlatformIO.
 
 #### for Windows
 
@@ -59,11 +62,44 @@ Install `sdl2` using [Homebrew](https://brew.sh/).
 ```
  brew install sdl2
 ```
-If you are using an Intel core mac, you can also use the debugger by installing gdb.
-```
- brew install gdb
-```
-(Not sure how to use the debugger for Arm core Macs currently.)
+
+---
+
+## Step 4. Execute !
+
+Open the `PlatformIO_SDL` folder containing this document in PlatformIO.
+
+![execute](img_00.png)
+
+Click on the ![PlatformIO](img_pio.png) icon on the left side of the screen.  
+Click `PROJECT TASKS` -> `native` -> `General` -> `Upload`  
+
+
+---
+
+## Step 5. Use debugger.
+
+
+#### for macOS
+
+If you want to use the debugger on a mac, lldb is available.
+
+![setup lldb](img_01.png)
+
+ `EXPLORER` -> `.vscode` -> `launch.json` -> `Add Configuration...` -> `C/C++: (lldb) Launch`
+
+![setup lldb](img_02.png)
+
+Rewrite the `"program"` : `"${workspaceRoot}/.pio/build/native/program"`
+
+(The `native` part should match the environment name in `PlatformIO`)
+
+![setup lldb](img_03.png)
+
+Pressing the `F5` key allows debugging execution.
+
+---
+
 
 
 

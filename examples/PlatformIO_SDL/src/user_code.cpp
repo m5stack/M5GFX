@@ -6,7 +6,6 @@ static M5GFX gfx;
 void setup(void)
 {
   gfx.init();
-  gfx.startWrite();
 }
 
 void loop(void)
