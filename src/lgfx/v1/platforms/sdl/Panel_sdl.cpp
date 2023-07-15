@@ -28,6 +28,9 @@ Porting for SDL:
 
 #include <list>
 
+static SDL_semaphore *_update_in_semaphore = nullptr;
+static SDL_semaphore *_update_out_semaphore = nullptr;
+
 namespace lgfx
 {
  inline namespace v1
@@ -44,104 +47,26 @@ namespace lgfx
   }
 //----------------------------------------------------------------------------
 
-  int quit_filter(void * userdata, SDL_Event * event)
+  void Panel_sdl::_event_proc(void)
   {
-    if(event->type == SDL_WINDOWEVENT) {
-      auto monitor = getMonitorByWindowID(event->window.windowID);
-      if (monitor) {
-        monitor->panel->sdl_invalidate();
-        if(event->window.event == SDL_WINDOWEVENT_CLOSE) {
-          SDL_DestroyTexture(monitor->texture);
-          SDL_DestroyRenderer(monitor->renderer);
-          SDL_DestroyWindow(monitor->window);
-          _list_monitor.remove(monitor);
-          if (_list_monitor.empty()) {
-            SDL_Quit();
-            exit(0);
-          }
-        }
-      }
-    }
-    else if(event->type == SDL_QUIT) {
-      for (auto& m : _list_monitor)
-      {
-        SDL_DestroyTexture(m->texture);
-        SDL_DestroyRenderer(m->renderer);
-        SDL_DestroyWindow(m->window);
-      }
-      SDL_Quit();
-      exit(0);
-    }
-
-    return 1;
-  }
-
-  void Panel_sdl::sdl_update_handler(void)
-  {
-    uint32_t msec = millis();
-    for (auto& m : _list_monitor)
-    {
-      uint32_t lm = m->panel->_last_msec;
-      if (lm == 0 || (msec - lm) >= 16)
-      {
-        m->panel->_last_msec = msec;
-        m->panel->sdl_update();
-      }
-    }
-  }
-
-  void Panel_sdl::sdl_event_handler(void)
-  {
-    static bool inited = false;
-    if (!inited) {
-      inited = true;
-
-      for (size_t pin = 0; pin < EMULATED_GPIO_MAX; ++pin) { gpio_hi(pin); }
-      /*Initialize the SDL*/
-      SDL_Init(SDL_INIT_VIDEO);
-      SDL_SetEventFilter(quit_filter, nullptr);
-      SDL_StartTextInput();
-    }
-
-    sdl_update_handler();
-
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-      if (event.type == SDL_KEYDOWN)
+      if ((event.type == SDL_KEYDOWN) || (event.type == SDL_KEYUP))
       {
+        int gpio = -1;
         switch (event.key.keysym.sym)
         { /// M5StackのBtnA～BtnCのエミュレート;
-        case SDLK_LEFT:
-          gpio_lo(39);
-          break;
-        case SDLK_DOWN:
-          gpio_lo(38);
-          break;
-        case SDLK_RIGHT:
-          gpio_lo(37);
-          break;
-        case SDLK_UP:
-          gpio_lo(36);
-          break;
+        case SDLK_LEFT:  gpio = 39; break;
+        case SDLK_DOWN:  gpio = 38; break;
+        case SDLK_RIGHT: gpio = 37; break;
+        case SDLK_UP:    gpio = 36; break;
+        default: continue;
         }
-      }
-      else if (event.type == SDL_KEYUP)
-        { /// M5StackのBtnA～BtnCのエミュレート;
-        switch (event.key.keysym.sym)
-        {
-        case SDLK_LEFT:
-          gpio_hi(39);
-          break;
-        case SDLK_DOWN:
-          gpio_hi(38);
-          break;
-        case SDLK_RIGHT:
-          gpio_hi(37);
-          break;
-        case SDLK_UP:
-          gpio_hi(36);
-          break;
+        if (event.type == SDL_KEYDOWN) {
+          gpio_lo(gpio);
+        } else {
+          gpio_hi(gpio);
         }
       }
       else if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP || event.type == SDL_MOUSEMOTION)
@@ -152,8 +77,8 @@ namespace lgfx
           int x, y, w, h;
           SDL_GetWindowSize(mon->window, &w, &h);
           SDL_GetMouseState(&x, &y);
-          mon->touch_x = x * mon->panel->_cfg.panel_width / w;
-          mon->touch_y = y * mon->panel->_cfg.panel_height / h;
+          mon->touch_x = x * mon->panel->config().panel_width / w;
+          mon->touch_y = y * mon->panel->config().panel_height / h;
           if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
           {
             mon->touched = true;
@@ -164,19 +89,72 @@ namespace lgfx
           }
         }
       }
-      else if (event.type == SDL_WINDOWEVENT) {
-
-        switch((&event)->window.event) {
-  #if SDL_VERSION_ATLEAST(2, 0, 5)
-          case SDL_WINDOWEVENT_TAKE_FOCUS:
-  #endif
-          case SDL_WINDOWEVENT_EXPOSED:
-          break;
-          default:
-          break;
+      else
+      if (event.type == SDL_WINDOWEVENT
+      || event.type == SDL_QUIT) {
+        auto monitor = getMonitorByWindowID(event.window.windowID);
+        if (monitor) {
+          if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
+            monitor->closing = true;
+          }
+          else
+          {
+            monitor->panel->sdl_invalidate();
+          }
         }
       }
     }
+  }
+
+  bool Panel_sdl::_update_proc(void)
+  {
+    uint32_t msec = millis();
+    for (auto it = _list_monitor.begin(); it != _list_monitor.end(); )
+    {
+      if ((*it)->closing) {
+        SDL_DestroyTexture((*it)->texture);
+        SDL_DestroyRenderer((*it)->renderer);
+        SDL_DestroyWindow((*it)->window);
+        _list_monitor.erase(it++);
+        if (_list_monitor.empty()) {
+          return true;
+        }
+        continue;
+      }
+      uint32_t lm = (*it)->panel->_last_msec;
+      if (lm == 0 || (msec - lm) >= 16)
+      {
+        (*it)->panel->_last_msec = msec;
+        (*it)->panel->sdl_update();
+      }
+      ++it;
+    }
+    return false;
+  }
+
+  int Panel_sdl::main_loop(void)
+  {
+    static bool inited = false;
+    if (inited) return 0;
+    inited = true;
+
+    _update_in_semaphore = SDL_CreateSemaphore(0);
+    _update_out_semaphore = SDL_CreateSemaphore(0);
+    for (size_t pin = 0; pin < EMULATED_GPIO_MAX; ++pin) { gpio_hi(pin); }
+    /*Initialize the SDL*/
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_StartTextInput();
+    for (;;) {
+      _event_proc();
+      SDL_SemWaitTimeout(_update_in_semaphore, 8);
+      if (_update_proc()) { break; }
+
+      if (SDL_SemValue(_update_out_semaphore) < 0) {
+        SDL_SemPost(_update_out_semaphore);
+      }
+    }
+    // exit(0);
+    return 0;
   }
 
   void Panel_sdl::setScaling(uint_fast8_t scaling_x, uint_fast8_t scaling_y)
@@ -199,10 +177,11 @@ namespace lgfx
   bool Panel_sdl::init(bool use_reset)
   {
     initFrameBuffer(_cfg.panel_width * 4, _cfg.panel_height);
+    bool res = Panel_FrameBufferBase::init(use_reset);
 
     _list_monitor.push_back(&monitor);
 
-    return Panel_FrameBufferBase::init(use_reset);
+    return res;
   }
 
   color_depth_t Panel_sdl::setColorDepth(color_depth_t depth)
@@ -219,6 +198,8 @@ namespace lgfx
   void Panel_sdl::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
     _last_msec = 0;
+    SDL_SemPost(_update_in_semaphore);
+    SDL_SemWaitTimeout(_update_out_semaphore, 1);
   }
 
   uint_fast8_t Panel_sdl::getTouchRaw(touch_point_t* tp, uint_fast8_t count)

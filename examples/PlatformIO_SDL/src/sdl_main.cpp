@@ -24,13 +24,8 @@ __attribute__((weak))
 int main(int, char**)
 #endif
 {
-  SDL_CreateThread(loopThread, "lt", nullptr);
-  for (;;)
-  {
-    lgfx::Panel_sdl::sdl_event_handler();
-    SDL_Delay(1);
-  }
-  return 0;
+  SDL_CreateThread(loopThread, "loopThread", nullptr);
+  return lgfx::Panel_sdl::main_loop();
 }
 #endif
 #endif

@@ -39,8 +39,9 @@ namespace lgfx
     Panel_sdl* panel = nullptr;
     int scaling_x = 1;
     int scaling_y = 1;
-    bool touched = false;
     int touch_x, touch_y;
+    bool touched = false;
+    bool closing = false;
   };
 //----------------------------------------------------------------------------
 
@@ -74,8 +75,7 @@ namespace lgfx
     void setWindowTitle(const char* title);
     void setScaling(uint_fast8_t scaling_x, uint_fast8_t scaling_y);
 
-    static void sdl_event_handler(void);
-    void sdl_invalidate(void) { _last_msec = 0; }
+    static int main_loop(void);
 
   protected:
     uint32_t _last_msec;
@@ -83,12 +83,13 @@ namespace lgfx
 
     void sdl_create(monitor_t * m);
     void sdl_update(void);
-    static void sdl_update_handler(void);
 
     touch_point_t _touch_point;
     monitor_t monitor;
 
-    void _rotate_pixelcopy(uint_fast16_t& x, uint_fast16_t& y, uint_fast16_t& w, uint_fast16_t& h, pixelcopy_t* param, uint32_t& nextx, uint32_t& nexty);
+    static void _event_proc(void);
+    static bool _update_proc(void);
+    void sdl_invalidate(void) { _last_msec = 0; }
     bool initFrameBuffer(size_t width, size_t height);
     void deinitFrameBuffer(void);
   };
