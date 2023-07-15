@@ -75,7 +75,9 @@ namespace lgfx
     void setWindowTitle(const char* title);
     void setScaling(uint_fast8_t scaling_x, uint_fast8_t scaling_y);
 
-    static int main_loop(void);
+    static int setup(void);
+    static int loop(void);
+    static int close(void);
 
   protected:
     uint32_t _last_msec;

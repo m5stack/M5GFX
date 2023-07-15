@@ -90,6 +90,7 @@ Contributors:
 #elif __has_include(<SDL2/SDL.h>) || __has_include(<SDL.h>)
 
 #include "sdl/Bus_I2C.hpp"
+#include "sdl/Panel_sdl.hpp"
 
 #endif
 

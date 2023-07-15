@@ -28,13 +28,14 @@ Porting for SDL:
 
 #include <list>
 
-static SDL_semaphore *_update_in_semaphore = nullptr;
-static SDL_semaphore *_update_out_semaphore = nullptr;
-
 namespace lgfx
 {
  inline namespace v1
  {
+  static SDL_semaphore *_update_in_semaphore = nullptr;
+  static SDL_semaphore *_update_out_semaphore = nullptr;
+  static bool _inited = false;
+
   static std::list<monitor_t*> _list_monitor;
 
   static monitor_t* const getMonitorByWindowID(uint32_t windowID)
@@ -132,11 +133,10 @@ namespace lgfx
     return false;
   }
 
-  int Panel_sdl::main_loop(void)
+  int Panel_sdl::setup(void)
   {
-    static bool inited = false;
-    if (inited) return 0;
-    inited = true;
+    if (_inited) return 1;
+    _inited = true;
 
     _update_in_semaphore = SDL_CreateSemaphore(0);
     _update_out_semaphore = SDL_CreateSemaphore(0);
@@ -144,16 +144,32 @@ namespace lgfx
     /*Initialize the SDL*/
     SDL_Init(SDL_INIT_VIDEO);
     SDL_StartTextInput();
-    for (;;) {
-      _event_proc();
-      SDL_SemWaitTimeout(_update_in_semaphore, 8);
-      if (_update_proc()) { break; }
+    // SDL_SetThreadPriority(SDL_ThreadPriority::SDL_THREAD_PRIORITY_HIGH);
+    return 0;
+  }
 
-      if (SDL_SemValue(_update_out_semaphore) < 0) {
-        SDL_SemPost(_update_out_semaphore);
-      }
+  int Panel_sdl::loop(void)
+  {
+    if (!_inited) return 1;
+    _event_proc();
+    int wait = SDL_SemWaitTimeout(_update_in_semaphore, 8);
+    if (_update_proc()) { return 1; }
+
+    if (wait != SDL_MUTEX_TIMEDOUT && SDL_SemValue(_update_out_semaphore) < 0) {
+      SDL_SemPost(_update_out_semaphore);
     }
-    // exit(0);
+    return 0;
+  }
+
+  int Panel_sdl::close(void)
+  {
+    if (!_inited) return 1;
+    _inited = false;
+
+    SDL_StopTextInput();
+    SDL_DestroySemaphore(_update_in_semaphore);
+    SDL_DestroySemaphore(_update_out_semaphore);
+    SDL_Quit();
     return 0;
   }
 
@@ -250,8 +266,8 @@ namespace lgfx
     for (int y = 0; y < _cfg.panel_height; ++y)
     {
       r.y = y;
-      pc.src_data = _lines_buffer[y];
       pc.src_x32 = 0;
+      pc.src_data = _lines_buffer[y];
       pc.fp_copy(array, 0, _cfg.panel_width, &pc);
       SDL_UpdateTexture(monitor.texture, &r, array, _cfg.panel_width * _write_bits >> 3);
     }
@@ -265,11 +281,10 @@ namespace lgfx
 
   bool Panel_sdl::initFrameBuffer(size_t width, size_t height)
   {
-// printf("initFrameBuffer w:%d h:%d \n", width, height);
     uint8_t** lineArray = (uint8_t**)heap_alloc_dma(height * sizeof(uint8_t*));
     if ( nullptr == lineArray ) { return false; }
 
-    /// 4byte alignment;
+    /// 8byte alignment;
     width = (width + 7) & ~7u;
 
     _lines_buffer = lineArray;
