@@ -17,9 +17,7 @@
 #include "M5GFX.h"
 
 #ifndef M5UNITLCD_SDA
- #if defined ( ARDUINO )
-  #define M5UNITLCD_SDA SDA
- #elif defined (CONFIG_IDF_TARGET_ESP32S3)
+ #if defined (CONFIG_IDF_TARGET_ESP32S3)
   #define M5UNITLCD_SDA 2
  #elif defined (CONFIG_IDF_TARGET_ESP32C3)
   #define M5UNITLCD_SDA 1
@@ -29,9 +27,7 @@
 #endif
 
 #ifndef M5UNITLCD_SCL
- #if defined ( ARDUINO )
-  #define M5UNITLCD_SCL SCL
- #elif defined (CONFIG_IDF_TARGET_ESP32S3)
+ #if defined (CONFIG_IDF_TARGET_ESP32S3)
   #define M5UNITLCD_SCL 1
  #elif defined (CONFIG_IDF_TARGET_ESP32C3)
   #define M5UNITLCD_SCL 0

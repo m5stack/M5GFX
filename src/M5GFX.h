@@ -129,6 +129,13 @@ namespace m5gfx
 
   namespace tft_command
   {
+#ifdef TFT_DISPOFF
+    #undef TFT_DISPOFF
+    #undef TFT_DISPON
+    #undef TFT_SLPIN
+    #undef TFT_SLPOUT
+#endif
+
     static constexpr int TFT_DISPOFF = 0x28;
     static constexpr int TFT_DISPON  = 0x29;
     static constexpr int TFT_SLPIN   = 0x10;
