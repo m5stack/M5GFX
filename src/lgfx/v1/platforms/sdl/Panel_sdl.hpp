@@ -69,6 +69,12 @@ namespace lgfx
     void display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h) override;
 
     // void setInvert(bool invert) override {}
+    void drawPixelPreclipped(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor) override;
+    void writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor) override;
+    void writeBlock(uint32_t rawcolor, uint32_t length) override;
+    void writeImage(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param, bool use_dma) override;
+    void writeImageARGB(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, pixelcopy_t* param) override;
+    void writePixels(pixelcopy_t* param, uint32_t len, bool use_dma) override;
 
     uint_fast8_t getTouchRaw(touch_point_t* tp, uint_fast8_t count) override;
 
@@ -82,18 +88,28 @@ namespace lgfx
   protected:
     uint32_t _last_msec;
     const char* _window_title = "LGFX Simulator";
+    SDL_mutex *_sdl_mutex = nullptr;
 
     void sdl_create(monitor_t * m);
-    void sdl_update(void);
+    void sdl_update(uint32_t msec);
 
     touch_point_t _touch_point;
     monitor_t monitor;
+
+    rgb888_t* _texturebuf = nullptr;
 
     static void _event_proc(void);
     static bool _update_proc(void);
     void sdl_invalidate(void) { _last_msec = 0; }
     bool initFrameBuffer(size_t width, size_t height);
     void deinitFrameBuffer(void);
+
+    struct lock_t {
+      lock_t(Panel_sdl* parent);
+      ~lock_t();
+    protected:
+      Panel_sdl* _parent;
+    };
   };
 
 //----------------------------------------------------------------------------

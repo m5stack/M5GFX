@@ -8,7 +8,6 @@ void loop(void);
 __attribute__((weak))
 int main_func(bool* running)
 {
-  // SDL_SetThreadPriority(SDL_ThreadPriority::SDL_THREAD_PRIORITY_HIGH);
   setup();
   do
   {
@@ -27,14 +26,14 @@ __attribute__((weak))
 int main(int, char**)
 #endif
 {
+  /// SDLの準備
+  if (0 != lgfx::Panel_sdl::setup()) { return 1; }
+
   /// loopThreadの動作用フラグ
   bool running = true;
 
   /// loopThreadを起動
   auto thread = SDL_CreateThread((SDL_ThreadFunction)main_func, "main_func", &running);
-
-  /// SDLの準備
-  if (0 != lgfx::Panel_sdl::setup()) { return 1; }
 
   /// 全部のウィンドウが閉じられるまでSDLのイベント・描画処理を継続
   while (0 == lgfx::Panel_sdl::loop()) {};
