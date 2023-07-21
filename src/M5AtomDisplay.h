@@ -142,8 +142,9 @@ public:
     int spi_sclk = GPIO_NUM_5;
 
     std::uint32_t pkg_ver = lgfx::get_pkg_ver();
+#if defined ( ESP_LOGD )
     ESP_LOGD("LGFX","pkg:%d", pkg_ver);
-
+#endif
     switch (pkg_ver)
     {
     case EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4: // for ATOM Lite / Matrix

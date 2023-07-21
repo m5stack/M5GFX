@@ -96,9 +96,9 @@ public:
       cfg.bus_shared = false;
       cfg.offset_rotation = 0;
       p->config(cfg);
-      uint_fast8_t scale = 2;
+      uint_fast8_t scale = 1;
 #if defined (M5GFX_SCALE)
- #if M5GFX_SCALE > 2
+ #if M5GFX_SCALE > 1
       scale = M5GFX_SCALE;
  #endif
 #endif
