@@ -39,6 +39,7 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5ATOMDisplay = board_M5AtomDisplay
     , board_M5UnitLCD
     , board_M5UnitOLED
+    , board_M5UnitMiniOLED
     , board_M5UnitGLASS
     , board_M5UnitRCA
     , board_M5ModuleDisplay
