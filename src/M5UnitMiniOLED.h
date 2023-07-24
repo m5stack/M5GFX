@@ -179,7 +179,9 @@ public:
       cfg.offset_x = 28;
       cfg.panel_height = 40;
       cfg.bus_shared = false;
+      cfg.offset_rotation = 1;
       p->config(cfg);
+      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
