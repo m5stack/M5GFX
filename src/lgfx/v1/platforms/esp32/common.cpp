@@ -479,7 +479,9 @@ namespace lgfx
         buscfg.max_transfer_sz = 1;
         buscfg.flags = SPICOMMON_BUSFLAG_MASTER;
         buscfg.intr_flags = 0;
-
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0))
+        buscfg.isr_cpu_id = INTR_CPU_ID_AUTO;
+#endif
         if (ESP_OK != spi_bus_initialize(static_cast<spi_host_device_t>(spi_host), &buscfg, dma_channel))
         {
           ESP_LOGW("LGFX", "Failed to spi_bus_initialize. ");
@@ -802,7 +804,7 @@ namespace lgfx
         cmd_val |= (1 << 10); // ACK_VALUE (set NACK)
       }
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
- #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2)
+ #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2) && ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 1, 0))
       (&dev->comd[0])[index].val = cmd_val;
  #else
       (&dev->comd0)[index].val = cmd_val;
