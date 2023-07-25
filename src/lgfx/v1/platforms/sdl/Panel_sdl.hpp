@@ -86,7 +86,6 @@ namespace lgfx
     static int close(void);
 
   protected:
-    uint32_t _last_msec;
     const char* _window_title = "LGFX Simulator";
     SDL_mutex *_sdl_mutex = nullptr;
 

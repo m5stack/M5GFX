@@ -295,14 +295,12 @@ namespace lgfx
 
   void Panel_sdl::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
-    sdl_invalidate();
     if (_in_step_exec)
     {
       if (_display_counter != _modified_counter) {
-        while (0 == SDL_SemTryWait(_update_out_semaphore)) {};
         do {
           SDL_SemPost(_update_in_semaphore);
-          SDL_SemWaitTimeout(_update_out_semaphore, 8);
+          SDL_SemWaitTimeout(_update_out_semaphore, 1);
         } while (_display_counter != _modified_counter);
         SDL_Delay(1);
       }
@@ -377,9 +375,8 @@ namespace lgfx
       }
     }
 
-    if (_invalidated || _display_counter != _texupdate_counter)
+    if (_invalidated || (_display_counter != _texupdate_counter))
     {
-      _invalidated = false;
       SDL_RendererInfo info;
       if (0 == SDL_GetRendererInfo(monitor.renderer, &info)) {
         // ステップ実行中はVSYNCを待機しない
@@ -389,9 +386,13 @@ namespace lgfx
         }
       }
       SDL_RenderCopy(monitor.renderer, monitor.texture, nullptr, nullptr);
-      _last_msec = millis();
       SDL_RenderPresent(monitor.renderer);
       _display_counter = _texupdate_counter;
+      if (_invalidated) {
+        _invalidated = false;
+        SDL_RenderCopy(monitor.renderer, monitor.texture, nullptr, nullptr);
+        SDL_RenderPresent(monitor.renderer);
+      }
     }
   }
 
