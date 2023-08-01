@@ -94,7 +94,7 @@ public:
       cfg.memory_height = 64;
       cfg.panel_height  = 64;
       cfg.bus_shared = false;
-      cfg.offset_rotation = 0;
+      cfg.offset_rotation = 3;
       p->config(cfg);
       uint_fast8_t scale = 2;
 #if defined (M5GFX_SCALE)

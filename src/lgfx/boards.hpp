@@ -19,6 +19,7 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5Station
     , board_M5StackCoreS3
     , board_M5AtomS3
+    , board_M5Dial
 
 /// non display boards 
     , board_M5Atom
@@ -41,6 +42,7 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5UnitOLED
     , board_M5UnitMiniOLED
     , board_M5UnitGLASS
+    , board_M5UnitGLASS2
     , board_M5UnitRCA
     , board_M5ModuleDisplay
     , board_M5ModuleRCA

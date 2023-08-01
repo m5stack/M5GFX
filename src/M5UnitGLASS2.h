@@ -1,5 +1,5 @@
-#ifndef __M5GFX_M5UNITMINIOLED__
-#define __M5GFX_M5UNITMINIOLED__
+#ifndef __M5GFX_M5UNITGLASS2__
+#define __M5GFX_M5UNITGLASS2__
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
 //  please include <SD.h>,<SPIFFS.h>,<HTTPClient.h> before <M5GFX.h>
@@ -16,39 +16,39 @@
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
 #include "M5GFX.h"
 
-#ifndef M5UNITMINIOLED_SDA
+#ifndef M5UNITGLASS2_SDA
  #if defined ( ARDUINO )
-  #define M5UNITMINIOLED_SDA SDA
+  #define M5UNITGLASS2_SDA SDA
  #elif defined (CONFIG_IDF_TARGET_ESP32S3)
-  #define M5UNITMINIOLED_SDA 2
+  #define M5UNITGLASS2_SDA 2
  #elif defined (CONFIG_IDF_TARGET_ESP32C3)
-  #define M5UNITMINIOLED_SDA 1
+  #define M5UNITGLASS2_SDA 1
  #else
-  #define M5UNITMINIOLED_SDA 21
+  #define M5UNITGLASS2_SDA 21
  #endif
 #endif
 
-#ifndef M5UNITMINIOLED_SCL
+#ifndef M5UNITGLASS2_SCL
  #if defined ( ARDUINO )
-  #define M5UNITMINIOLED_SCL SCL
+  #define M5UNITGLASS2_SCL SCL
  #elif defined (CONFIG_IDF_TARGET_ESP32S3)
-  #define M5UNITMINIOLED_SCL 1
+  #define M5UNITGLASS2_SCL 1
  #elif defined (CONFIG_IDF_TARGET_ESP32C3)
-  #define M5UNITMINIOLED_SCL 0
+  #define M5UNITGLASS2_SCL 0
  #else
-  #define M5UNITMINIOLED_SCL 22
+  #define M5UNITGLASS2_SCL 22
  #endif
 #endif
 
-#ifndef M5UNITMINIOLED_ADDR
-#define M5UNITMINIOLED_ADDR 0x3C
+#ifndef M5UNITGLASS2_ADDR
+#define M5UNITGLASS2_ADDR 0x3C
 #endif
 
-#ifndef M5UNITMINIOLED_FREQ
-#define M5UNITMINIOLED_FREQ 400000
+#ifndef M5UNITGLASS2_FREQ
+#define M5UNITGLASS2_FREQ 400000
 #endif
 
-class M5UnitMiniOLED : public M5GFX
+class M5UnitGLASS2 : public M5GFX
 {
   lgfx::Bus_I2C::config_t _bus_cfg;
 
@@ -58,27 +58,27 @@ public:
   {
     uint8_t pin_sda = 255;
     uint8_t pin_scl = 255;
-    uint8_t i2c_addr = M5UNITMINIOLED_ADDR;
+    uint8_t i2c_addr = M5UNITGLASS2_ADDR;
     int8_t i2c_port = -1;
-    uint32_t i2c_freq = M5UNITMINIOLED_FREQ;
+    uint32_t i2c_freq = M5UNITGLASS2_FREQ;
   };
 
   config_t config(void) const { return config_t(); }
 
 #if defined (SDL_h_)
 
-  M5UnitMiniOLED(const config_t &cfg)
+  M5UnitGLASS2(const config_t &cfg)
   { }
-  M5UnitMiniOLED(uint8_t pin_sda = M5UNITMINIOLED_SDA, uint8_t pin_scl = M5UNITMINIOLED_SCL, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
+  M5UnitGLASS2(uint8_t pin_sda = M5UNITGLASS2_SDA, uint8_t pin_scl = M5UNITGLASS2_SCL, uint32_t i2c_freq = M5UNITGLASS2_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS2_ADDR)
   { }
 
   using lgfx::LGFX_Device::init;
-  bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
+  bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITGLASS2_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS2_ADDR)
   {
     return init();
   }
 
-  void setup(uint8_t pin_sda = M5UNITMINIOLED_SDA, uint8_t pin_scl = M5UNITMINIOLED_SCL, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
+  void setup(uint8_t pin_sda = M5UNITGLASS2_SDA, uint8_t pin_scl = M5UNITGLASS2_SCL, uint32_t i2c_freq = M5UNITGLASS2_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS2_ADDR)
   { }
 
   bool init_impl(bool use_reset, bool use_clear)
@@ -89,10 +89,10 @@ public:
     auto p = new lgfx::Panel_sdl;
     {
       auto cfg = p->config();
-      cfg.memory_width = 72;
-      cfg.panel_width  = 72;
-      cfg.memory_height = 40;
-      cfg.panel_height  = 40;
+      cfg.memory_width = 128;
+      cfg.panel_width  = 128;
+      cfg.memory_height = 64;
+      cfg.panel_height  = 64;
       cfg.bus_shared = false;
       cfg.offset_rotation = 3;
       p->config(cfg);
@@ -103,9 +103,9 @@ public:
  #endif
 #endif
       p->setScaling(scale, scale);
-      p->setWindowTitle("UnitMiniOLED");
+      p->setWindowTitle("UnitGLASS2");
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-      p->setRotation(1lgfx::color_depth_t::grayscale_8bit);
+      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
@@ -119,28 +119,28 @@ public:
 
 #else
 
-  M5UnitMiniOLED(const config_t &cfg)
+  M5UnitGLASS2(const config_t &cfg)
   {
-    uint8_t pin_sda = cfg.pin_sda < GPIO_NUM_MAX ? cfg.pin_sda : M5UNITMINIOLED_SDA;
-    uint8_t pin_scl = cfg.pin_scl < GPIO_NUM_MAX ? cfg.pin_scl : M5UNITMINIOLED_SCL;
+    uint8_t pin_sda = cfg.pin_sda < GPIO_NUM_MAX ? cfg.pin_sda : M5UNITGLASS2_SDA;
+    uint8_t pin_scl = cfg.pin_scl < GPIO_NUM_MAX ? cfg.pin_scl : M5UNITGLASS2_SCL;
     setup(pin_sda, pin_scl, cfg.i2c_freq, cfg.i2c_port, cfg.i2c_addr);
   }
 
-  M5UnitMiniOLED(uint8_t pin_sda = M5UNITMINIOLED_SDA, uint8_t pin_scl = M5UNITMINIOLED_SCL, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
+  M5UnitGLASS2(uint8_t pin_sda = M5UNITGLASS2_SDA, uint8_t pin_scl = M5UNITGLASS2_SCL, uint32_t i2c_freq = M5UNITGLASS2_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS2_ADDR)
   {
     setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
   }
 
   using lgfx::LGFX_Device::init;
-  bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
+  bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITGLASS2_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS2_ADDR)
   {
     setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
     return init();
   }
 
-  void setup(uint8_t pin_sda = M5UNITMINIOLED_SDA, uint8_t pin_scl = M5UNITMINIOLED_SCL, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
+  void setup(uint8_t pin_sda = M5UNITGLASS2_SDA, uint8_t pin_scl = M5UNITGLASS2_SCL, uint32_t i2c_freq = M5UNITGLASS2_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS2_ADDR)
   {
-    _board = lgfx::board_t::board_M5UnitMiniOLED;
+    _board = lgfx::board_t::board_M5UnitGLASS2;
     if (i2c_port < 0)
     {
       i2c_port = 0;
@@ -170,15 +170,12 @@ public:
     if (_panel_last.get() != nullptr) {
       return true;
     }
-    auto p = new lgfx::Panel_SSD1306(); // SSD1315
+    auto p = new lgfx::Panel_SSD1306(); // SSD1309
     auto b = new lgfx::Bus_I2C();
     b->config(_bus_cfg);
     {
       p->bus(b);
       auto cfg = p->config();
-      cfg.panel_width = 72;
-      cfg.offset_x = 28;
-      cfg.panel_height = 40;
       cfg.bus_shared = false;
       cfg.offset_rotation = 1;
       p->config(cfg);
