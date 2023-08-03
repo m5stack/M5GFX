@@ -25,6 +25,7 @@ Supported device
 - UnitLCD
 - [UnitRCA / ModuleRCA](docs/UnitRCA.md)
 - [UnitGLASS](docs/UnitGLASS.md)
+- UnitGLASS2
 - [AtomDisplay](docs/ATOMDisplay.md) / ModuleDisplay
 
 
