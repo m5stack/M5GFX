@@ -7,15 +7,14 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
+#if defined (ESP_PLATFORM)
+ #include <sdkconfig.h>
+#else
+ #include "lgfx/v1/platforms/sdl/Panel_sdl.hpp"
+#endif
+
 #include "lgfx/v1/panel/Panel_M5UnitGLASS.hpp"
 #include "M5GFX.h"
-
-#if defined ( ARDUINO )
- #include <Arduino.h>
-#endif
-#if __has_include( <sdkconfig.h> )
- #include <sdkconfig.h>
-#endif
 
 #ifndef M5UNITGLASS_SDA
  #if defined ( ARDUINO )
@@ -65,6 +64,59 @@ public:
   };
 
   config_t config(void) const { return config_t(); }
+
+#if defined (SDL_h_)
+
+  M5UnitGLASS(const config_t &cfg)
+  { }
+  M5UnitGLASS(uint8_t pin_sda = M5UNITGLASS_SDA, uint8_t pin_scl = M5UNITGLASS_SCL, uint32_t i2c_freq = M5UNITGLASS_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS_ADDR)
+  { }
+
+  using lgfx::LGFX_Device::init;
+  bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITGLASS_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS_ADDR)
+  {
+    return init();
+  }
+
+  void setup(uint8_t pin_sda = M5UNITGLASS_SDA, uint8_t pin_scl = M5UNITGLASS_SCL, uint32_t i2c_freq = M5UNITGLASS_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITGLASS_ADDR)
+  { }
+
+  bool init_impl(bool use_reset, bool use_clear)
+  {
+    if (_panel_last.get() != nullptr) {
+      return true;
+    }
+    auto p = new lgfx::Panel_sdl;
+    {
+      auto cfg = p->config();
+      cfg.memory_width = 128;
+      cfg.panel_width  = 128;
+      cfg.memory_height = 64;
+      cfg.panel_height  = 64;
+      cfg.bus_shared = false;
+      cfg.offset_rotation = 3;
+      p->config(cfg);
+      uint_fast8_t scale = 2;
+#if defined (M5GFX_SCALE)
+ #if M5GFX_SCALE > 2
+      scale = M5GFX_SCALE;
+ #endif
+#endif
+      p->setScaling(scale, scale);
+      p->setWindowTitle("UnitGLASS");
+      p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
+    }
+    setPanel(p);
+    if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
+      _panel_last.reset(p);
+      return true;
+    }
+    setPanel(nullptr);
+    delete p;
+    return false;
+  }
+
+#else
 
   M5UnitGLASS(const config_t &cfg)
   {
@@ -157,6 +209,7 @@ public:
     auto p = (lgfx::Panel_M5UnitGlass*)_panel_last.get();
     p->setBuzzerEnable(enable);
   }
+#endif
 };
 
 #endif

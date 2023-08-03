@@ -7,11 +7,22 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
-#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
-#include "M5GFX.h"
-
+#if __has_include(<sdkconfig.h>)
 #include <sdkconfig.h>
 #include <soc/efuse_reg.h>
+
+#if __has_include(<esp_idf_version.h>)
+ #include <esp_idf_version.h>
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
+  #define M5MODULEDISPLAY_SPI_DMA_CH SPI_DMA_CH_AUTO
+ #endif
+#endif
+
+#else
+#include "lgfx/v1/platforms/sdl/Panel_sdl.hpp"
+#endif
+#include "lgfx/v1/panel/Panel_M5HDMI.hpp"
+#include "M5GFX.h"
 
 #ifndef M5MODULEDISPLAY_LOGICAL_WIDTH
 #define M5MODULEDISPLAY_LOGICAL_WIDTH 1280
@@ -38,17 +49,8 @@
 #define M5MODULEDISPLAY_PIXELCLOCK 74250000
 #endif
 
-#if __has_include(<esp_idf_version.h>)
- #include <esp_idf_version.h>
- #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
-  #define M5MODULEDISPLAY_SPI_DMA_CH SPI_DMA_CH_AUTO
- #endif
-#endif
-
 class M5ModuleDisplay : public M5GFX
 {
-  lgfx::Panel_M5HDMI::config_resolution_t _cfg_reso;
-
 public:
 
   struct config_t
@@ -68,14 +70,7 @@ public:
   M5ModuleDisplay( const config_t& cfg )
   {
     _board = lgfx::board_t::board_M5ModuleDisplay;
-    _cfg_reso.logical_width  = cfg.logical_width;
-    _cfg_reso.logical_height = cfg.logical_height;
-    _cfg_reso.refresh_rate   = cfg.refresh_rate;
-    _cfg_reso.output_width   = cfg.output_width;
-    _cfg_reso.output_height  = cfg.output_height;
-    _cfg_reso.scale_w        = cfg.scale_w;
-    _cfg_reso.scale_h        = cfg.scale_h;
-    _cfg_reso.pixel_clock    = cfg.pixel_clock;
+    _config = cfg;
   }
 
   M5ModuleDisplay( uint16_t logical_width  = M5MODULEDISPLAY_LOGICAL_WIDTH
@@ -89,14 +84,14 @@ public:
                  )
   {
     _board = lgfx::board_t::board_M5ModuleDisplay;
-    _cfg_reso.logical_width  = logical_width;
-    _cfg_reso.logical_height = logical_height;
-    _cfg_reso.refresh_rate   = refresh_rate;
-    _cfg_reso.output_width   = output_width;
-    _cfg_reso.output_height  = output_height;
-    _cfg_reso.scale_w        = scale_w;
-    _cfg_reso.scale_h        = scale_h;
-    _cfg_reso.pixel_clock    = pixel_clock;
+    _config.logical_width  = logical_width;
+    _config.logical_height = logical_height;
+    _config.refresh_rate   = refresh_rate;
+    _config.output_width   = output_width;
+    _config.output_height  = output_height;
+    _config.scale_w        = scale_w;
+    _config.scale_h        = scale_h;
+    _config.pixel_clock    = pixel_clock;
   }
 
   bool init_impl(bool use_reset, bool use_clear)
@@ -104,10 +99,24 @@ public:
     if (_panel_last.get() != nullptr) {
       return true;
     }
-    auto p = new lgfx::Panel_M5HDMI();
+
+#if defined (SDL_h_)
+    auto p = new lgfx::Panel_sdl();
     if (!p) {
       return false;
     }
+    {
+      auto pnl_cfg = p->config();
+      pnl_cfg.memory_width = _config.logical_width;
+      pnl_cfg.panel_width = _config.logical_width;
+      pnl_cfg.memory_height = _config.logical_height;
+      pnl_cfg.panel_height = _config.logical_height;
+      pnl_cfg.bus_shared = false;
+      p->config(pnl_cfg);
+      p->setWindowTitle("ModuleDisplay");
+    }
+
+#else
 
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
  #define M5GFX_SPI_HOST SPI2_HOST
@@ -151,9 +160,10 @@ public:
 
 #if defined M5GFX_SPI_HOST
 
-// AtomDisplay/ModuleDisplay自己機種判定のための暫定措置
-    // m5gfx::pinMode(GPIO_NUM_0, m5gfx::pin_mode_t::output);
-    // m5gfx::gpio_lo(GPIO_NUM_0);
+    auto p = new lgfx::Panel_M5HDMI();
+    if (!p) {
+      return false;
+    }
 
     auto bus_spi = new lgfx::Bus_SPI();
     {
@@ -176,12 +186,13 @@ public:
 
       bus_spi->config(cfg);
       p->setBus(bus_spi);
+      _bus_last.reset(bus_spi);
     }
 
     {
       auto cfg = p->config_transmitter();
-      cfg.freq_read = 400000;
-      cfg.freq_write = 400000;
+      cfg.freq_read = 100000;
+      cfg.freq_write = 100000;
       cfg.pin_scl = i2c_scl;
       cfg.pin_sda = i2c_sda;
       cfg.i2c_port = i2c_port;
@@ -200,23 +211,33 @@ public:
       cfg.bus_shared = true;
       p->config(cfg);
       p->setRotation(1);
+
+      lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
+      cfg_reso.logical_width  = _config.logical_width;
+      cfg_reso.logical_height = _config.logical_height;
+      cfg_reso.refresh_rate   = _config.refresh_rate;
+      cfg_reso.output_width   = _config.output_width;
+      cfg_reso.output_height  = _config.output_height;
+      cfg_reso.scale_w        = _config.scale_w;
+      cfg_reso.scale_h        = _config.scale_h;
+      cfg_reso.pixel_clock    = _config.pixel_clock;
+      p->config_resolution(cfg_reso);
     }
-    p->config_resolution(_cfg_reso);
+#endif
+#endif
     setPanel(p);
+    _panel_last.reset(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear))
     {
-      _panel_last.reset(p);
-      _bus_last.reset(bus_spi);
       return true;
     }
     setPanel(nullptr);
-    delete p;
-    delete bus_spi;
-
-#endif
+    _panel_last.reset();
 
     return false;
   }
+protected:
+  config_t _config;
 };
 
 #endif

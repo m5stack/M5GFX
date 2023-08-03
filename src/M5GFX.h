@@ -129,6 +129,13 @@ namespace m5gfx
 
   namespace tft_command
   {
+#ifdef TFT_DISPOFF
+    #undef TFT_DISPOFF
+    #undef TFT_DISPON
+    #undef TFT_SLPIN
+    #undef TFT_SLPOUT
+#endif
+
     static constexpr int TFT_DISPOFF = 0x28;
     static constexpr int TFT_DISPON  = 0x29;
     static constexpr int TFT_SLPIN   = 0x10;
@@ -149,17 +156,17 @@ namespace m5gfx
     };
 
     std::shared_ptr<lgfx::Panel_Device> _panel_last;
+    std::shared_ptr<lgfx::ITouch> _touch_last;
 #if defined ( ESP_PLATFORM )
     std::shared_ptr<lgfx::IBus> _bus_last;
     std::shared_ptr<lgfx::ILight> _light_last;
-    std::shared_ptr<lgfx::ITouch> _touch_last;
 #endif
     std::vector<DisplayState> _displayStateStack;
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
     void _set_backlight(lgfx::ILight* bl);
-    void _set_pwm_backlight(std::int16_t pin, std::uint8_t ch, std::uint32_t freq = 12000, bool invert = false);
+    void _set_pwm_backlight(int16_t pin, uint8_t ch, uint32_t freq = 12000, bool invert = false, uint8_t offset = 0);
 
   public:
     M5GFX(void);
@@ -201,6 +208,8 @@ namespace m5gfx
       auto board = getBoard();
       if (board == board_t::board_M5AtomDisplay || board == board_t::board_M5ModuleDisplay)
       {
+#if defined (SDL_h_)
+#else
         bool res = ((lgfx::Panel_M5HDMI*)panel())->setResolution
           ( logical_width
           , logical_height
@@ -213,6 +222,7 @@ namespace m5gfx
           );
         setRotation(getRotation());
         return res;
+#endif
       }
 #endif
       return false;

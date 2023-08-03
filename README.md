@@ -15,11 +15,13 @@ Supported device
 - M5Stack CoreInk
 - M5Stick C
 - M5Stick C Plus
+- M5Stick C Plus2
 - M5Paper
 - M5Tough
 - M5Station
 - M5ATOMS3
 - UnitOLED
+- UnitMiniOLED
 - UnitLCD
 - [UnitRCA / ModuleRCA](docs/UnitRCA.md)
 - [UnitGLASS](docs/UnitGLASS.md)

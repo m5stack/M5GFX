@@ -7,15 +7,14 @@
 // #include <SPIFFS.h>
 // #include <HTTPClient.h>
 
+#if defined (ESP_PLATFORM)
+ #include <sdkconfig.h>
+#else
+ #include "lgfx/v1/platforms/sdl/Panel_sdl.hpp"
+#endif
+
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
 #include "M5GFX.h"
-
-#if defined ( ARDUINO )
- #include <Arduino.h>
-#endif
-#if __has_include( <sdkconfig.h> )
- #include <sdkconfig.h>
-#endif
 
 #ifndef M5UNITOLED_SDA
  #if defined ( ARDUINO )
@@ -65,6 +64,59 @@ public:
   };
 
   config_t config(void) const { return config_t(); }
+
+#if defined (SDL_h_)
+
+  M5UnitOLED(const config_t &cfg)
+  { }
+  M5UnitOLED(uint8_t pin_sda = M5UNITOLED_SDA, uint8_t pin_scl = M5UNITOLED_SCL, uint32_t i2c_freq = M5UNITOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITOLED_ADDR)
+  { }
+
+  using lgfx::LGFX_Device::init;
+  bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITOLED_ADDR)
+  {
+    return init();
+  }
+
+  void setup(uint8_t pin_sda = M5UNITOLED_SDA, uint8_t pin_scl = M5UNITOLED_SCL, uint32_t i2c_freq = M5UNITOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITOLED_ADDR)
+  { }
+
+  bool init_impl(bool use_reset, bool use_clear)
+  {
+    if (_panel_last.get() != nullptr) {
+      return true;
+    }
+    auto p = new lgfx::Panel_sdl;
+    {
+      auto cfg = p->config();
+      cfg.memory_width = 64;
+      cfg.panel_width  = 64;
+      cfg.memory_height = 128;
+      cfg.panel_height  = 128;
+      cfg.bus_shared = false;
+      cfg.offset_rotation = 0;
+      p->config(cfg);
+      uint_fast8_t scale = 2;
+#if defined (M5GFX_SCALE)
+ #if M5GFX_SCALE > 2
+      scale = M5GFX_SCALE;
+ #endif
+#endif
+      p->setScaling(scale, scale);
+      p->setWindowTitle("UnitOLED");
+      p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
+    }
+    setPanel(p);
+    if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
+      _panel_last.reset(p);
+      return true;
+    }
+    setPanel(nullptr);
+    delete p;
+    return false;
+  }
+
+#else
 
   M5UnitOLED(const config_t &cfg)
   {
@@ -139,6 +191,7 @@ public:
     delete b;
     return false;
   }
+#endif
 };
 
 #endif
