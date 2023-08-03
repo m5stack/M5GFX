@@ -34,7 +34,8 @@ namespace lgfx
  {
   static SDL_semaphore *_update_in_semaphore = nullptr;
   static SDL_semaphore *_update_out_semaphore = nullptr;
-  volatile static uint_fast16_t _in_step_exec = 0;
+  volatile static uint32_t _in_step_exec = 0;
+  volatile static uint32_t _msec_step_exec = 512;
   static bool _inited = false;
   static bool _all_close = false;
 
@@ -118,7 +119,7 @@ namespace lgfx
       uint32_t ms = SDL_GetTicks();
       /// 時間間隔が広すぎる場合はステップ実行中 (ブレークポイントで止まった)と判断する。
       /// また、解除されたと判断した後も1023msecほど状態を維持する。
-      if (ms - prev_ms > 64) { _in_step_exec = 1023; }
+      if (ms - prev_ms > 64) { _in_step_exec = _msec_step_exec; }
       else if (_in_step_exec) { --_in_step_exec; }
       prev_ms = ms;
     } while (*running);
@@ -166,7 +167,7 @@ namespace lgfx
   int Panel_sdl::loop(void)
   {
     if (!_inited) return 1;
-    int result = 0;
+
     _event_proc();
     SDL_SemWaitTimeout(_update_in_semaphore, 1);
     _update_proc();
@@ -189,6 +190,30 @@ namespace lgfx
     SDL_DestroySemaphore(_update_out_semaphore);
     SDL_Quit();
     return 0;
+  }
+
+  int Panel_sdl::main(int(*fn)(bool*), uint32_t msec_step_exec)
+  {
+    _msec_step_exec = msec_step_exec;
+
+    /// SDLの準備
+    if (0 != Panel_sdl::setup()) { return 1; }
+
+    /// ユーザコード関数の動作・停止フラグ
+    bool running = true;
+
+    /// ユーザコード関数を起動する
+    auto thread = SDL_CreateThread((SDL_ThreadFunction)fn, "fn", &running);
+
+    /// 全部のウィンドウが閉じられるまでSDLのイベント・描画処理を継続
+    while (0 == Panel_sdl::loop()) {};
+
+    /// ユーザコード関数を終了する
+    running = false;
+    SDL_WaitThread(thread, nullptr);
+
+    /// SDLを終了する
+    return Panel_sdl::close();
   }
 
   void Panel_sdl::setScaling(uint_fast8_t scaling_x, uint_fast8_t scaling_y)
@@ -411,7 +436,6 @@ namespace lgfx
 
     uint8_t* framebuffer = (uint8_t*)heap_alloc_dma(width * height + 16);
 
-    size_t alloc_idx = 0;
     auto fb = framebuffer;
     {
       for (int y = 0; y < height; ++y)

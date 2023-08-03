@@ -1,29 +1,25 @@
-
 #include <M5GFX.h>
+#if defined ( SDL_h_ )
 
-static M5GFX gfx;
+void setup(void);
+void loop(void);
 
-void setup(void)
+__attribute__((weak))
+int user_func(bool* running)
 {
-  gfx.init();
+  setup();
+  do
+  {
+    loop();
+  } while (*running);
+  return 0;
 }
 
-void loop(void)
+int main(int, char**)
 {
-  gfx.fillCircle(rand()%gfx.width(), rand()%gfx.height(), 16, rand());
+  // The second argument is effective for step execution with breakpoints.
+  // You can specify the time in milliseconds to perform slow execution that ensures screen updates.
+  return lgfx::Panel_sdl::main(user_func, 128);
 }
 
-
-
-#if defined ( ESP_PLATFORM ) && !defined ( ARDUINO )
-extern "C" {
-int app_main(int, char**)
-{
-    setup();
-    for (;;) {
-      loop();
-    }
-    return 0;
-}
-}
 #endif
