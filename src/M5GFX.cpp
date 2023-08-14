@@ -1278,6 +1278,50 @@ namespace m5gfx
         bus_spi->release();
       }
 
+      if (board == 0 || board == board_t::board_M5DinMeter)
+      {
+        bus_cfg.pin_mosi = GPIO_NUM_5;
+        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_6;
+        bus_cfg.pin_dc   = GPIO_NUM_4;
+        bus_cfg.spi_mode = 0;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
+        id = _read_panel_id(bus_spi, GPIO_NUM_7);
+        if ((id & 0xFF) == 0x85)
+        {  //  check panel (ST7789)
+          board = board_t::board_M5DinMeter;
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5DinMeter");
+          bus_spi->release();
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          auto p = new Panel_ST7789();
+          p->bus(bus_spi);
+          {
+            auto cfg = p->config();
+            cfg.pin_cs  = GPIO_NUM_7;
+            cfg.pin_rst = GPIO_NUM_8;
+            cfg.panel_width = 135;
+            cfg.panel_height = 240;
+            cfg.offset_x     = 52;
+            cfg.offset_y     = 40;
+            cfg.readable = true;
+            cfg.invert = true;
+            p->config(cfg);
+          }
+          _panel_last.reset(p);
+          _set_pwm_backlight(GPIO_NUM_9, 7, 256, false, 16);
+
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_8, lgfx::pin_mode_t::input); // LCD RST
+        bus_spi->release();
+      }
+
 #endif
 
     board = board_t::board_unknown;
