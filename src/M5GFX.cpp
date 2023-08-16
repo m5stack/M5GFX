@@ -60,11 +60,16 @@ namespace m5gfx
 
     bool init(bool use_reset) override
     {
-      lgfx::gpio_hi(_cfg.pin_rst);
-      lgfx::pinMode(_cfg.pin_rst, lgfx::pin_mode_t::input_pulldown);
-      _cfg.invert = lgfx::gpio_in(_cfg.pin_rst);       // get panel type (IPS or TN)
-      lgfx::pinMode(_cfg.pin_rst, lgfx::pin_mode_t::output);
-
+      _cfg.invert = lgfx::gpio::command(
+        (const uint8_t[]) {
+        lgfx::gpio::command_mode_output        , GPIO_NUM_33,
+        lgfx::gpio::command_write_low          , GPIO_NUM_33,
+        lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_33,
+        lgfx::gpio::command_write_high         , GPIO_NUM_33,
+        lgfx::gpio::command_read               , GPIO_NUM_33,
+        lgfx::gpio::command_mode_output        , GPIO_NUM_33,
+        lgfx::gpio::command_end
+        });
       return lgfx::Panel_ILI9342::init(use_reset);
     }
   };
@@ -80,12 +85,12 @@ namespace m5gfx
       _rotation = 1; // default rotation
     }
 
-    void reset(void) override
+    void rst_control(bool level) override
     {
+      uint8_t bits = level ? 2 : 0;
+      uint8_t mask = level ? ~0 : ~2;
       // AXP192 reg 0x96 = GPIO3&4 control
-      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, 0, ~0x02, axp_i2c_freq); // GPIO4 LOW (LCD RST)
-      lgfx::delay(4);
-      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, 2, ~0x00, axp_i2c_freq); // GPIO4 HIGH (LCD RST)
+      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, bits, mask, axp_i2c_freq);
     }
   };
 
@@ -322,11 +327,12 @@ namespace m5gfx
       _rotation = 1; // default rotation
     }
 
-    void reset(void) override
+    void rst_control(bool level) override
     {
-      lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, 0, ~(1<<5), i2c_freq);  // LCD_RST
-      lgfx::delay(4);
-      lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, (1<<5), ~0, i2c_freq);  // LCD_RST
+      uint8_t bits = level ? (1<<5) : 0;
+      uint8_t mask = level ? ~0 : ~(1<<5);
+      // LCD_RST
+      lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, bits, mask, i2c_freq);
     }
 
     void cs_control(bool flg) override
@@ -831,10 +837,10 @@ namespace m5gfx
               // BLDO1 == LCD BL
               // BLDO2 == Boost EN
               // DLDO1 == Vibration Motor
-              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0x08, ~0x84u, axp_i2c_freq); // ALDO4 ON / ALDO3 OFF, DLDO1 OFF
-              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x80, 0x05, ~0, axp_i2c_freq); // DCDC1 + DCDC3 ON
-              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x82, 0x12, 0, axp_i2c_freq);  // DCDC1 3.3V
-              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x84, 0x6A, 0, axp_i2c_freq);  // DCDC3 3.3V
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0x08, 0x7B, axp_i2c_freq); // ALDO4 ON / ALDO3 OFF, DLDO1 OFF
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x80, 0x05, 0xFF, axp_i2c_freq); // DCDC1 + DCDC3 ON
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x82, 0x12, 0x00, axp_i2c_freq);  // DCDC1 3.3V
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x84, 0x6A, 0x00, axp_i2c_freq);  // DCDC3 3.3V
               if (use_reset) {
                 lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0, ~0x02, axp_i2c_freq); // ALDO2 OFF
                 lgfx::delay(1);
