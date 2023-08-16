@@ -830,7 +830,8 @@ namespace m5gfx
               // ALDO4 == TF, TP, LCD PWR
               // BLDO1 == LCD BL
               // BLDO2 == Boost EN
-              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0x08, ~0, axp_i2c_freq); // ALDO4 ON
+              // DLDO1 == Vibration Motor
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0x08, ~0x84u, axp_i2c_freq); // ALDO4 ON / ALDO3 OFF, DLDO1 OFF
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x80, 0x05, ~0, axp_i2c_freq); // DCDC1 + DCDC3 ON
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x82, 0x12, 0, axp_i2c_freq);  // DCDC1 3.3V
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x84, 0x6A, 0, axp_i2c_freq);  // DCDC3 3.3V
