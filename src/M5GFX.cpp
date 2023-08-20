@@ -60,11 +60,16 @@ namespace m5gfx
 
     bool init(bool use_reset) override
     {
-      lgfx::gpio_hi(_cfg.pin_rst);
-      lgfx::pinMode(_cfg.pin_rst, lgfx::pin_mode_t::input_pulldown);
-      _cfg.invert = lgfx::gpio_in(_cfg.pin_rst);       // get panel type (IPS or TN)
-      lgfx::pinMode(_cfg.pin_rst, lgfx::pin_mode_t::output);
-
+      _cfg.invert = lgfx::gpio::command(
+        (const uint8_t[]) {
+        lgfx::gpio::command_mode_output        , GPIO_NUM_33,
+        lgfx::gpio::command_write_low          , GPIO_NUM_33,
+        lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_33,
+        lgfx::gpio::command_write_high         , GPIO_NUM_33,
+        lgfx::gpio::command_read               , GPIO_NUM_33,
+        lgfx::gpio::command_mode_output        , GPIO_NUM_33,
+        lgfx::gpio::command_end
+        });
       return lgfx::Panel_ILI9342::init(use_reset);
     }
   };
@@ -80,12 +85,12 @@ namespace m5gfx
       _rotation = 1; // default rotation
     }
 
-    void reset(void) override
+    void rst_control(bool level) override
     {
+      uint8_t bits = level ? 2 : 0;
+      uint8_t mask = level ? ~0 : ~2;
       // AXP192 reg 0x96 = GPIO3&4 control
-      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, 0, ~0x02, axp_i2c_freq); // GPIO4 LOW (LCD RST)
-      lgfx::delay(4);
-      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, 2, ~0x00, axp_i2c_freq); // GPIO4 HIGH (LCD RST)
+      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, bits, mask, axp_i2c_freq);
     }
   };
 
@@ -110,6 +115,31 @@ namespace m5gfx
       }
     // AXP192 reg 0x27 = DC3
       lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x27, brightness, 0x80, axp_i2c_freq);
+    }
+  };
+
+  struct Light_M5StackCore2_AXP2101 : public lgfx::ILight
+  {
+    bool init(std::uint8_t brightness) override
+    {
+      setBrightness(brightness);
+      return true;
+    }
+
+    void setBrightness(std::uint8_t brightness) override
+    {
+      // BLDO1
+      if (brightness)
+      {
+        brightness = ((brightness + 641) >> 5);
+        lgfx::i2c::bitOn(axp_i2c_port, axp_i2c_addr, 0x90, 0x10, axp_i2c_freq); // BLDO1 enable
+      }
+      else
+      {
+        lgfx::i2c::bitOff(axp_i2c_port, axp_i2c_addr, 0x90, 0x10, axp_i2c_freq); // BLDO1 disable
+      }
+    // AXP192 reg 0x96 = BLO1 voltage setting (0.5v ~ 3.5v  100mv/step)
+      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, brightness, 0, axp_i2c_freq);
     }
   };
 
@@ -297,11 +327,12 @@ namespace m5gfx
       _rotation = 1; // default rotation
     }
 
-    void reset(void) override
+    void rst_control(bool level) override
     {
-      lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, 0, ~(1<<5), i2c_freq);  // LCD_RST
-      lgfx::delay(4);
-      lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, (1<<5), ~0, i2c_freq);  // LCD_RST
+      uint8_t bits = level ? (1<<5) : 0;
+      uint8_t mask = level ? ~0 : ~(1<<5);
+      // LCD_RST
+      lgfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x03, bits, mask, i2c_freq);
     }
 
     void cs_control(bool flg) override
@@ -367,7 +398,7 @@ namespace m5gfx
     {
       if (brightness)
       {
-        brightness = (brightness / 25) + 18;
+        brightness = ((brightness + 641) >> 5);
     // AXP2101 reg 0x90 = LDOS ON/OFF control
         lgfx::i2c::bitOn(i2c_port, axp_i2c_addr, 0x90, 0x80, i2c_freq); // DLDO1 enable
       }
@@ -718,7 +749,6 @@ namespace m5gfx
     else
     if (pkg_ver == EFUSE_RD_CHIP_VER_PKG_ESP32D0WDQ6)
     {
-
       /// AXP192の有無を最初に判定し、分岐する。;
       if (board == 0
       || board == board_t::board_M5Station
@@ -727,10 +757,21 @@ namespace m5gfx
       {
         // I2C addr 0x34 = AXP192
         lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
-        if (lgfx::i2c::readRegister8(axp_i2c_port, axp_i2c_addr, 0x03, 400000) == 0x03) // AXP192 found
+
+        auto chk_axp = lgfx::i2c::readRegister8(axp_i2c_port, axp_i2c_addr, 0x03, 400000);
+        if (chk_axp.has_value())
         {
-          ESP_LOGD(LIBRARY_NAME, "AXP192 found");
-          if (board == 0 || board == board_t::board_M5Station)
+          uint_fast16_t axp_exists = 0;
+          if (chk_axp.value() == 0x03) { // AXP192 found
+            axp_exists = 192;
+            ESP_LOGD(LIBRARY_NAME, "AXP192 found");
+          }
+          else if (chk_axp.value() == 0x4A) { // AXP2101 found
+            axp_exists = 2101;
+            ESP_LOGD(LIBRARY_NAME, "AXP2101 found");
+          }
+  
+          if (axp_exists == 192 && (board == 0 || board == board_t::board_M5Station))
           {
             bus_cfg.pin_mosi = GPIO_NUM_23;
             bus_cfg.pin_miso = -1;
@@ -769,19 +810,18 @@ namespace m5gfx
             lgfx::pinMode(GPIO_NUM_15, lgfx::pin_mode_t::input); // LCD RST
           }
 
-          if (board == 0 || board == board_t::board_M5StackCore2 || board == board_t::board_M5Tough)
+          if (axp_exists && (board == 0 || board == board_t::board_M5StackCore2 || board == board_t::board_M5Tough))
           {
-            if (lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x95, 0x84, 0x72, axp_i2c_freq)) // GPIO4 enable
-            {
+            if (axp_exists == 192) { // AXP192
               // AXP192_LDO2 = LCD PWR
               // AXP192_IO4  = LCD RST
               // AXP192_DC3  = LCD BL (Core2)
               // AXP192_LDO3 = LCD BL (Tough)
               // AXP192_IO1  = TP RST (Tough)
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x95, 0x84, 0x72, axp_i2c_freq); // GPIO4 enable
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x28, 0xF0, ~0, axp_i2c_freq);   // set LDO2 3300mv // LCD PWR
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x12, 0x04, ~0, axp_i2c_freq);   // LDO2 enable
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x92, 0x00, 0xF8, axp_i2c_freq); // GPIO1 OpenDrain (M5Tough TOUCH)
-              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x95, 0x84, 0x72, axp_i2c_freq); // GPIO4 enable
               if (use_reset)
               {
                 lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, 0, ~0x02, axp_i2c_freq); // GPIO4 LOW (LCD RST)
@@ -790,9 +830,25 @@ namespace m5gfx
               }
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, 0x02, ~0, axp_i2c_freq);   // GPIO4 HIGH (LCD RST)
               lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x94, 0x02, ~0, axp_i2c_freq);   // GPIO1 HIGH (M5Tough TOUCH RST)
-
+            } else if (axp_exists == 2101) { // AXP2101
+              // ALDO2 == LCD+TOUCH RST
+              // ALDO3 == SPK EN
+              // ALDO4 == TF, TP, LCD PWR
+              // BLDO1 == LCD BL
+              // BLDO2 == Boost EN
+              // DLDO1 == Vibration Motor
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0x08, 0x7B, axp_i2c_freq); // ALDO4 ON / ALDO3 OFF, DLDO1 OFF
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x80, 0x05, 0xFF, axp_i2c_freq); // DCDC1 + DCDC3 ON
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x82, 0x12, 0x00, axp_i2c_freq);  // DCDC1 3.3V
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x84, 0x6A, 0x00, axp_i2c_freq);  // DCDC3 3.3V
+              if (use_reset) {
+                lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0, ~0x02, axp_i2c_freq); // ALDO2 OFF
+                lgfx::delay(1);
+              }
+              lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x90, 0x02, ~0, axp_i2c_freq); // ALDO2 ON
+            }
+            {
               _pin_level(GPIO_NUM_5, true);
-              // ets_delay_us(128); // AXP 起動後、LCDがアクセス可能になるまで少し待機;
 
               bus_cfg.pin_mosi = GPIO_NUM_23;
               bus_cfg.pin_miso = GPIO_NUM_38;
@@ -825,7 +881,13 @@ namespace m5gfx
                   ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StackCore2");
                   board = board_t::board_M5StackCore2;
 
-                  _set_backlight(new Light_M5StackCore2());
+                  ILight* light = nullptr;
+                  if (axp_exists == 2101) {
+                    light = new Light_M5StackCore2_AXP2101();
+                  } else {
+                    light = new Light_M5StackCore2();
+                  }
+                  _set_backlight(light);
 
                   auto t = new lgfx::Touch_FT5x06();
                   _touch_last.reset(t);
@@ -1216,6 +1278,50 @@ namespace m5gfx
               _panel_last->touch(t);
             }
           }
+
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_8, lgfx::pin_mode_t::input); // LCD RST
+        bus_spi->release();
+      }
+
+      if (board == 0 || board == board_t::board_M5DinMeter)
+      {
+        bus_cfg.pin_mosi = GPIO_NUM_5;
+        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_6;
+        bus_cfg.pin_dc   = GPIO_NUM_4;
+        bus_cfg.spi_mode = 0;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
+        id = _read_panel_id(bus_spi, GPIO_NUM_7);
+        if ((id & 0xFF) == 0x85)
+        {  //  check panel (ST7789)
+          board = board_t::board_M5DinMeter;
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5DinMeter");
+          bus_spi->release();
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          auto p = new Panel_ST7789();
+          p->bus(bus_spi);
+          {
+            auto cfg = p->config();
+            cfg.pin_cs  = GPIO_NUM_7;
+            cfg.pin_rst = GPIO_NUM_8;
+            cfg.panel_width = 135;
+            cfg.panel_height = 240;
+            cfg.offset_x     = 52;
+            cfg.offset_y     = 40;
+            cfg.readable = true;
+            cfg.invert = true;
+            p->config(cfg);
+          }
+          _panel_last.reset(p);
+          _set_pwm_backlight(GPIO_NUM_9, 7, 256, false, 16);
 
           goto init_clear;
         }

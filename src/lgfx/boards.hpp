@@ -1,13 +1,12 @@
 #ifndef __LGFX_BOARDS_HPP__
 #define __LGFX_BOARDS_HPP__
 
-namespace lgfx // これはm5gfxに変更してはならない;
+namespace lgfx // This should not be changed to "m5gfx"
 {
   namespace boards
-  {
+  { // Be careful not to change existing board numbers when adding values.
     enum board_t
-    { board_unknown
-    , board_Non_Panel
+    { board_unknown = 0
     , board_M5Stack
     , board_M5StackCore2
     , board_M5StickC
@@ -20,9 +19,10 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5StackCoreS3
     , board_M5AtomS3
     , board_M5Dial
+    , board_M5DinMeter
 
 /// non display boards 
-    , board_M5Atom
+    , board_M5Atom = 128
     , board_M5ATOM = board_M5Atom
     , board_M5AtomPsram
     , board_M5AtomU
@@ -34,9 +34,10 @@ namespace lgfx // これはm5gfxに変更してはならない;
     , board_M5StampS3
     , board_M5AtomS3Lite
     , board_M5AtomS3U
+    , board_M5Capsule
 
 /// external displays
-    , board_M5AtomDisplay
+    , board_M5AtomDisplay = 192
     , board_M5ATOMDisplay = board_M5AtomDisplay
     , board_M5UnitLCD
     , board_M5UnitOLED

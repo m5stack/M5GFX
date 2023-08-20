@@ -105,6 +105,7 @@ public:
       p->setScaling(scale, scale);
       p->setWindowTitle("UnitGLASS");
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
+      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
@@ -175,6 +176,7 @@ public:
       auto cfg = p->config();
       cfg.offset_rotation = 3;
       p->config(cfg);
+      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {

@@ -105,7 +105,7 @@ public:
       p->setScaling(scale, scale);
       p->setWindowTitle("UnitMiniOLED");
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-      p->setRotation(1lgfx::color_depth_t::grayscale_8bit);
+      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
