@@ -1316,6 +1316,7 @@ namespace m5gfx
             cfg.panel_height = 240;
             cfg.offset_x     = 52;
             cfg.offset_y     = 40;
+            cfg.offset_rotation = 2;
             cfg.readable = true;
             cfg.invert = true;
             p->config(cfg);

@@ -68,9 +68,13 @@ public:
 #if defined (SDL_h_)
 
   M5UnitMiniOLED(const config_t &cfg)
-  { }
+  {
+    setup(cfg.pin_sda, cfg.pin_scl, cfg.i2c_freq, cfg.i2c_port, cfg.i2c_addr);
+  }
   M5UnitMiniOLED(uint8_t pin_sda = M5UNITMINIOLED_SDA, uint8_t pin_scl = M5UNITMINIOLED_SCL, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
-  { }
+  {
+    setup(pin_sda, pin_scl, i2c_freq, i2c_port, i2c_addr);
+  }
 
   using lgfx::LGFX_Device::init;
   bool init(uint8_t pin_sda, uint8_t pin_scl, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
@@ -79,7 +83,9 @@ public:
   }
 
   void setup(uint8_t pin_sda = M5UNITMINIOLED_SDA, uint8_t pin_scl = M5UNITMINIOLED_SCL, uint32_t i2c_freq = M5UNITMINIOLED_FREQ, int8_t i2c_port = -1, uint8_t i2c_addr = M5UNITMINIOLED_ADDR)
-  { }
+  {
+    _board = lgfx::board_t::board_M5UnitMiniOLED;
+  }
 
   bool init_impl(bool use_reset, bool use_clear)
   {
