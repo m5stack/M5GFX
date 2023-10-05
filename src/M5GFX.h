@@ -1,7 +1,8 @@
 // Copyright (c) M5Stack. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma once
+#ifndef __M5GFX_H__
+#define __M5GFX_H__
 
 // If you want to use a set of functions to handle SD/SPIFFS/HTTP,
 //  please include <SD.h>,<SPIFFS.h>,<HTTPClient.h> before <M5GFX.h>
@@ -255,3 +256,9 @@ using namespace m5gfx::tft_command;
 using M5GFX = m5gfx::M5GFX;
 using M5Canvas = m5gfx::M5Canvas;
 using RGBColor = m5gfx::bgr888_t;
+
+#endif
+
+#ifdef USE_M5_FONT_CREATOR
+using EncodeRange = lgfx::EncodeRange;
+#endif
