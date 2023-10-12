@@ -29,6 +29,9 @@ Contributors:
 #include <string.h>
 #include <math.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 #include <driver/i2c.h>
 #include <driver/spi_common.h>
 #include <driver/spi_master.h>
@@ -712,6 +715,19 @@ namespace lgfx
       };
       cpp::result<state_t, error_t> state;
 
+      SemaphoreHandle_t mtx = nullptr;
+
+      void lock(uint32_t msec = portMAX_DELAY) {
+        if (mtx == nullptr) {
+          mtx = xSemaphoreCreateMutex();
+        }
+        xSemaphoreTake(mtx, msec);
+      }
+
+      void unlock(void) {
+        xSemaphoreGive(mtx);
+      }
+
       gpio_num_t pin_scl = (gpio_num_t)-1;
       gpio_num_t pin_sda = (gpio_num_t)-1;
       uint8_t wait_ack_stage = 0;   // 0:Not waiting. / 1:Waiting after addressing. / 2:Waiting during data transmission.
@@ -806,7 +822,8 @@ namespace lgfx
         cmd_val |= (1 << 10); // ACK_VALUE (set NACK)
       }
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
- #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2) && ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 1, 0))
+ #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 3) && ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 1, 0)) \
+  || (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 1) && ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0))
       (&dev->comd[0])[index].val = cmd_val;
  #else
       (&dev->comd0)[index].val = cmd_val;
@@ -953,6 +970,7 @@ namespace lgfx
         {
           i2c_context[i2c_port].state = i2c_context_t::state_t::state_disconnect;
         }
+        i2c_context[i2c_port].unlock();
       }
       return res;
     }
@@ -1210,6 +1228,7 @@ namespace lgfx
 //ESP_LOGI("LGFX", "i2c::beginTransaction : port:%d / addr:%02x / freq:%d / rw:%d", i2c_port, i2c_addr, freq, read);
 
       auto dev = getDev(i2c_port);
+      i2c_context[i2c_port].lock();
 
 #if defined ( CONFIG_IDF_TARGET_ESP32C3 ) ||  defined ( CONFIG_IDF_TARGET_ESP32S3 )
       if (dev->sr.bus_busy)

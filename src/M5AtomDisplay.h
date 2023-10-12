@@ -100,6 +100,8 @@ public:
       return true;
     }
 
+#if !defined (CONFIG_IDF_TARGET_ESP32C3)
+
 #if defined (SDL_h_)
     auto p = new lgfx::Panel_sdl();
     if (!p) {
@@ -230,6 +232,8 @@ public:
 #endif
     setPanel(p);
     _panel_last.reset(p);
+#endif
+
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear))
     {
       return true;

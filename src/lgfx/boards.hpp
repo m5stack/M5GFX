@@ -35,6 +35,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5AtomS3Lite
     , board_M5AtomS3U
     , board_M5Capsule
+    , board_M5Cardputer
 
 /// external displays
     , board_M5AtomDisplay = 192

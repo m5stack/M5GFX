@@ -469,6 +469,7 @@ namespace lgfx
   bool Panel_M5HDMI::init(bool use_reset)
   {
     ESP_LOGI(TAG, "i2c port:%d sda:%d scl:%d", _HDMI_Trans_config.i2c_port, _HDMI_Trans_config.pin_sda, _HDMI_Trans_config.pin_scl);
+
     lgfx::i2c::init(_HDMI_Trans_config.i2c_port, _HDMI_Trans_config.pin_sda, _HDMI_Trans_config.pin_scl);
 
     HDMI_Trans driver(_HDMI_Trans_config);
@@ -875,6 +876,7 @@ namespace lgfx
   {
     if ((_last_cmd & ~7) == CMD_WRITE_RAW)
     {
+      _bus->wait();
       cs_control(true);
       _total_send = 0;
       _last_cmd = 0;
@@ -900,7 +902,6 @@ namespace lgfx
   {
     if ((_last_cmd & ~7) == CMD_WRITE_RAW)
     {
-      _last_cmd = 0;
       _total_send = 0;
 
       _bus->beginRead();

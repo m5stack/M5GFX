@@ -1316,6 +1316,7 @@ namespace m5gfx
             cfg.panel_height = 240;
             cfg.offset_x     = 52;
             cfg.offset_y     = 40;
+            cfg.offset_rotation = 2;
             cfg.readable = true;
             cfg.invert = true;
             p->config(cfg);
@@ -1326,6 +1327,52 @@ namespace m5gfx
           goto init_clear;
         }
         lgfx::pinMode(GPIO_NUM_8, lgfx::pin_mode_t::input); // LCD RST
+        bus_spi->release();
+      }
+
+      if (board == 0 || board == board_t::board_M5Cardputer)
+      {
+        bus_cfg.pin_mosi = GPIO_NUM_35;
+        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_36;
+        bus_cfg.pin_dc   = GPIO_NUM_34;
+        bus_cfg.spi_mode = 0;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
+        id = _read_panel_id(bus_spi, GPIO_NUM_37);
+        if ((id & 0xFF) == 0x81)
+        {  //  check panel (ST7789V2)
+          board = board_t::board_M5Cardputer;
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
+          bus_spi->release();
+          bus_cfg.spi_host = SPI3_HOST;
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          auto p = new Panel_ST7789();
+          p->bus(bus_spi);
+          {
+            auto cfg = p->config();
+            cfg.pin_cs  = GPIO_NUM_37;
+            cfg.pin_rst = GPIO_NUM_33;
+            cfg.panel_width = 135;
+            cfg.panel_height = 240;
+            cfg.offset_x     = 52;
+            cfg.offset_y     = 40;
+            cfg.offset_rotation = 0;
+            cfg.readable = true;
+            cfg.invert = true;
+            p->config(cfg);
+          }
+          _panel_last.reset(p);
+          _set_pwm_backlight(GPIO_NUM_38, 7, 256, false, 16);
+
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_33, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
       }
 
