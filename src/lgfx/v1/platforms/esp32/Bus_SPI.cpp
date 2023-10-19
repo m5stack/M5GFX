@@ -46,27 +46,27 @@ Contributors:
 #if defined (ARDUINO) // Arduino ESP32
  #include <soc/periph_defs.h>
  #include <esp32-hal-cpu.h>
-#else
- #include <driver/spi_master.h>
+#endif
+#include <driver/spi_master.h>
 
- #if defined ( CONFIG_IDF_TARGET_ESP32S3 )
-  #if __has_include (<esp32s3/rom/gpio.h>)
-    #include <esp32s3/rom/gpio.h>
-  #else
-    #include <rom/gpio.h>
-  #endif
- #elif defined ( CONFIG_IDF_TARGET_ESP32S2 )
-  #if __has_include (<esp32s2/rom/gpio.h>)
-    #include <esp32s2/rom/gpio.h>
-  #else
-    #include <rom/gpio.h>
-  #endif
+#if defined ( CONFIG_IDF_TARGET_ESP32S3 )
+ #if __has_include (<esp32s3/rom/gpio.h>)
+ 
+   #include <esp32s3/rom/gpio.h>
  #else
-  #if __has_include (<esp32/rom/gpio.h>)
-    #include <esp32/rom/gpio.h>
-  #else
-    #include <rom/gpio.h>
-  #endif
+   #include <rom/gpio.h>
+ #endif
+#elif defined ( CONFIG_IDF_TARGET_ESP32S2 )
+ #if __has_include (<esp32s2/rom/gpio.h>)
+   #include <esp32s2/rom/gpio.h>
+ #else
+   #include <rom/gpio.h>
+ #endif
+#else
+ #if __has_include (<esp32/rom/gpio.h>)
+   #include <esp32/rom/gpio.h>
+ #else
+   #include <rom/gpio.h>
  #endif
 #endif
 
