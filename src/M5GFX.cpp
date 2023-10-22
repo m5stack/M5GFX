@@ -1432,6 +1432,7 @@ init_clear:
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5Station:      title = "M5Station";      break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
+    case board_M5Dial:         title = "M5Dial";         break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -1473,6 +1474,11 @@ init_clear:
     case board_M5StackCoreS3:
       pnl_cfg.offset_rotation = 3;
       r = 1;
+      break;
+
+    case board_M5Dial:
+      w = 240;
+      h = 240;
       break;
 
     default:
