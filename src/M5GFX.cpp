@@ -1433,6 +1433,8 @@ init_clear:
     case board_M5Station:      title = "M5Station";      break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
     case board_M5Dial:         title = "M5Dial";         break;
+    case board_M5Cardputer:    title = "M5Cardputer";    break;
+    case board_M5DinMeter:     title = "M5DinMeter";     break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -1463,8 +1465,16 @@ init_clear:
       break;
 
     case board_M5Station:
+    case board_M5Cardputer:
+      w = 240;
+      h = 135;
+      pnl_cfg.offset_rotation = 3;
+      r = 1;
+      break;
+
     case board_M5StickCPlus:
     case board_M5StickCPlus2:
+    case board_M5DinMeter:
       w = 135;
       h = 240;
       break;
