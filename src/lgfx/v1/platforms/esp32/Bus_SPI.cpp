@@ -49,26 +49,15 @@ Contributors:
 #endif
 #include <driver/spi_master.h>
 
-#if defined ( CONFIG_IDF_TARGET_ESP32S3 )
- #if __has_include (<esp32s3/rom/gpio.h>)
- 
-   #include <esp32s3/rom/gpio.h>
- #else
-   #include <rom/gpio.h>
- #endif
-#elif defined ( CONFIG_IDF_TARGET_ESP32S2 )
- #if __has_include (<esp32s2/rom/gpio.h>)
-   #include <esp32s2/rom/gpio.h>
- #else
-   #include <rom/gpio.h>
- #endif
+#if defined ESP_IDF_VERSION_MAJOR && ESP_IDF_VERSION_MAJOR >= 5
+    #include <rom/gpio.h> // dispatched by core
+#elif defined ( CONFIG_IDF_TARGET_ESP32S3 ) && __has_include (<esp32s3/rom/gpio.h>)
+   #include <esp32s3/rom/gpio.h>  // dispatched by config
+#elif defined ( CONFIG_IDF_TARGET_ESP32S2 ) && __has_include (<esp32s2/rom/gpio.h>)
+   #include <esp32s2/rom/gpio.h>  // dispatched by config
 #else
- #if __has_include (<esp32/rom/gpio.h>)
-   #include <esp32/rom/gpio.h>
- #else
-   #include <rom/gpio.h>
- #endif
-#endif
+   #include <rom/gpio.h> // dispatched by core
+#endif   
 
 #ifndef SPI_PIN_REG
  #define SPI_PIN_REG SPI_MISC_REG
