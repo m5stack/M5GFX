@@ -41,7 +41,13 @@ namespace lgfx
 
 #if defined ( ARDUINO )
 
-#if ESP_ARDUINO_VERSION < ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+#if defined ESP_ARDUINO_VERSION
+  #if ESP_ARDUINO_VERSION < ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+    #define LEDC_USE_IDF_V5 // esp32-arduino core 3.x.x uses the new ledC syntax
+  #endif   
+#endif
+
+#if defined LEDC_USE_IDF_V5
     ledcSetup(_cfg.pwm_channel, _cfg.freq, PWM_BITS);
     ledcAttachPin(_cfg.pin_bl, _cfg.pwm_channel);
     setBrightness(brightness);
