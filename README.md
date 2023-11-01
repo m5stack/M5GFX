@@ -22,7 +22,6 @@ Supported device
 - M5ATOMS3
 - M5Dial
 - M5DinMeter
-- M5Capsule
 - M5Cardputer
 - UnitOLED
 - UnitMiniOLED

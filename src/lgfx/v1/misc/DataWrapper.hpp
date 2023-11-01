@@ -22,6 +22,7 @@ Contributors:
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 #include <string.h>
 #include "../../utility/pgmspace.h"
 
@@ -43,8 +44,6 @@ namespace lgfx
   {
     constexpr DataWrapper(void) = default;
     virtual ~DataWrapper(void) = default;
-
-    bool need_transaction = false;
 
     uint8_t read8(void)
     {
@@ -83,12 +82,80 @@ namespace lgfx
     LGFXBase* parent = nullptr;
     void (*fp_pre_read )(LGFXBase*) = nullptr;
     void (*fp_post_read)(LGFXBase*) = nullptr;
+    bool need_transaction = false;
   };
+
+//----------------------------------------------------------------------------
+
+  template <typename T>
+  struct DataWrapperT : public DataWrapper {
+    DataWrapperT(void) : DataWrapper() {}
+    DataWrapperT(void*) : DataWrapper() {}
+  };
+
+  struct DataWrapperFactory {
+    virtual DataWrapper* create(void) = 0;
+    virtual ~DataWrapperFactory() {};
+  };
+
+//----------------------------------------------------------------------------
+
+#if defined (__FILE_defined) || defined (_FILE_DEFINED) || defined (_FSTDIO)
+  template <>
+  struct DataWrapperT<FILE> : public DataWrapper
+  {
+    DataWrapperT<FILE>(FILE* fp = nullptr) : DataWrapper() , _fp { fp }
+    {
+      need_transaction = true;
+    }
+#if defined (__STDC_WANT_SECURE_LIB__)
+    bool open(const char* path) override {
+      while (0 != fopen_s(&_fp, path, "rb") && path[0] == '/')
+      { ++path; }
+      return _fp;
+    }
+#else
+    bool open(const char* path) override {
+      while (nullptr == (_fp = fopen(path, "rb")) && path[0] == '/')
+      { ++path; }
+      return _fp;
+    }
+#endif
+    int read(uint8_t *buf, uint32_t len) override { return fread((char*)buf, 1, len, _fp); }
+    void skip(int32_t offset) override { seek(offset, SEEK_CUR); }
+    bool seek(uint32_t offset) override { return seek(offset, SEEK_SET); }
+    bool seek(uint32_t offset, int origin) { return fseek(_fp, offset, origin); }
+    void close(void) override { if (_fp) { fclose(_fp); _fp = nullptr; } }
+    int32_t tell(void) override { return ftell(_fp); }
+  protected:
+    FILE* _fp;
+  };
+
+  template <>
+  struct DataWrapperT<void> : public DataWrapperT<FILE>
+  {
+    DataWrapperT<void>(void) : DataWrapperT<FILE>() {}
+  };
+#else
+  template <>
+  struct DataWrapperT<void> : public DataWrapper
+  {
+    DataWrapperT<void>(void) : DataWrapper() { }
+    int read(uint8_t *buf, uint32_t len) override { return false; }
+    void skip(int32_t offset) override { }
+    bool seek(uint32_t offset) override { return false; }
+    bool seek(uint32_t offset, int origin) { return false; }
+    void close(void) override { }
+    int32_t tell(void) override { return 0; }
+  };
+#endif
 
 //----------------------------------------------------------------------------
 
   struct PointerWrapper : public DataWrapper
   {
+    PointerWrapper() : DataWrapper{} , _ptr { nullptr }, _index { 0 }, _length { 0 } {};
+    PointerWrapper(const uint8_t* src, uint32_t length = ~0) : DataWrapper{}, _ptr { src }, _index { 0 }, _length { length } {}
     void set(const uint8_t* src, uint32_t length = ~0) { _ptr = src; _length = length; _index = 0; }
     int read(uint8_t *buf, uint32_t len) override {
       if (len > _length - _index) { len = _length - _index; }
@@ -102,9 +169,9 @@ namespace lgfx
     int32_t tell(void) override { return _index; }
 
   protected:
-    const uint8_t* _ptr = nullptr;
-    uint32_t _index = 0;
-    uint32_t _length = 0;
+    const uint8_t* _ptr;
+    uint32_t _index;
+    uint32_t _length;
   };
 
 //----------------------------------------------------------------------------
@@ -116,23 +183,52 @@ namespace lgfx
    #define LGFX_SDFAT_TYPE SdBase<FsVolume>
   #endif
 
-  struct SdFatWrapper : public DataWrapper
+  template <>
+  struct DataWrapperT<FsFile> : public DataWrapper
   {
-    SdFatWrapper() : DataWrapper()
+    DataWrapperT(FsFile* fp = nullptr) : DataWrapper{}, _fp { fp } { need_transaction = true; }
+    int read(uint8_t *buf, uint32_t len) override { uint32_t a = _fp->available(); return _fp->read(buf, a < len ? a : len); }
+    void skip(int32_t offset) override { _fp->seekCur(offset); }
+    bool seek(uint32_t offset) override { return _fp->seekSet(offset); }
+    void close(void) override { if (_fp) { _fp->close(); _fp = nullptr; } }
+    int32_t tell(void) override { return _fp->position(); }
+  protected:
+    FsFile *_fp;
+  };
+
+  template <>
+  struct DataWrapperT<LGFX_SDFAT_TYPE> : public DataWrapperT<FsFile>
+  {
+    DataWrapperT(LGFX_SDFAT_TYPE *fs, FsFile* fp = nullptr) : DataWrapperT<FsFile>{ fp }, _fs { fs } {}
+    bool open(const char* path) override
     {
-      need_transaction = true;
+      _file = _fs->open(path, O_RDONLY);
+      _fp = &_file;
+      return _file;
+    }
+  protected:
+    LGFX_SDFAT_TYPE *_fs;
+    FsFile _file;
+  };
+
+  template <>
+  struct DataWrapperT<SdFs> : public DataWrapperT<LGFX_SDFAT_TYPE> {
+    DataWrapperT(SdFs* fs, FsFile* fp = nullptr) : DataWrapperT<LGFX_SDFAT_TYPE>(fs, fp) {}
+  };
+
+  struct SdFatWrapper : public DataWrapperT<LGFX_SDFAT_TYPE>
+  {
+    SdFatWrapper(LGFX_SDFAT_TYPE &fs, FsFile* fp = nullptr) : DataWrapperT<LGFX_SDFAT_TYPE> ( &fs, fp ) {}
+    SdFatWrapper(LGFX_SDFAT_TYPE *fs, FsFile* fp = nullptr) : DataWrapperT<LGFX_SDFAT_TYPE> ( fs, fp ) {}
+/*
+    SdFatWrapper() : DataWrapperT<SdFs>()
+    {
       _fs = nullptr;
       _fp = nullptr;
     }
 
-    LGFX_SDFAT_TYPE *_fs;
-    FsFile *_fp;
-    FsFile _file;
-
-    SdFatWrapper(LGFX_SDFAT_TYPE &fs, FsFile* fp = nullptr) : DataWrapper(), _fs(&fs), _fp(fp) { need_transaction = true; }
     void setFS(LGFX_SDFAT_TYPE &fs) {
       _fs = &fs;
-      need_transaction = true;
     }
 
     bool open(LGFX_SDFAT_TYPE &fs, const char* path)
@@ -142,25 +238,16 @@ namespace lgfx
       _fp = &_file;
       return _file;
     }
-    bool open(const char* path) override
-    {
-      _file = _fs->open(path, O_RDONLY);
-      _fp = &_file;
-      return _file;
-    }
-    int read(uint8_t *buf, uint32_t len) override { return _fp->read(buf, std::min<uint32_t>(_fp->available(), len)); }
-    void skip(int32_t offset) override { _fp->seekCur(offset); }
-    bool seek(uint32_t offset) override { return _fp->seekSet(offset); }
-    void close(void) override { if (_fp) _fp->close(); }
-    int32_t tell(void) override { return _fp->position(); }
+//*/
   };
 
  #undef LGFX_SDFAT_TYPE
+
 #endif
 
 //----------------------------------------------------------------------------
 
-#if ( defined (ARDUINO) && defined (Stream_h) ) || defined ARDUINO_ARCH_RP2040 // RP2040 has no defines for builtin Stream API
+#if ( defined (ARDUINO) && defined (Stream_h) ) || defined (ARDUINO_ARCH_RP2040) // RP2040 has no defines for builtin Stream API
 
   struct StreamWrapper : public DataWrapper
   {
@@ -210,14 +297,33 @@ namespace lgfx
     Stream* _stream;
     uint32_t _index;
     uint32_t _length = 0;
-
   };
 
 #endif
 
 //----------------------------------------------------------------------------
 
+  template <typename T>
+  struct DataWrapperTFactoryT : public DataWrapperFactory {
+    DataWrapperTFactoryT(T* fs) : _fs { fs } {}
+    DataWrapperTFactoryT(T& fs) : _fs { &fs } {}
+    DataWrapper* create(void) override { return new DataWrapperT<T>(_fs); }
+  protected:
+    T* _fs;
+  };
+
+  template <>
+  struct DataWrapperTFactoryT<void> : public DataWrapperFactory {
+    DataWrapperTFactoryT(void) {}
+    DataWrapperTFactoryT(void*) {}
+    DataWrapper* create(void) override { return new DataWrapperT<void>(); }
+  };
+
+//----------------------------------------------------------------------------
+
 #undef LGFX_INLINE
+
+//----------------------------------------------------------------------------
 
  }
 }
