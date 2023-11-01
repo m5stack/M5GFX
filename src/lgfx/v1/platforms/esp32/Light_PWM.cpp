@@ -22,6 +22,7 @@ Contributors:
 
 #if defined ( ARDUINO )
  #include <esp32-hal-ledc.h>
+ #include <esp_arduino_version.h>
 #else
  #include <driver/ledc.h>
 #endif
@@ -40,10 +41,20 @@ namespace lgfx
 
 #if defined ( ARDUINO )
 
+#if defined ESP_ARDUINO_VERSION
+  #if ESP_ARDUINO_VERSION < ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+    #define LEDC_USE_IDF_V5 // esp32-arduino core 3.x.x uses the new ledC syntax
+  #endif   
+#endif
+
+#if defined LEDC_USE_IDF_V5
     ledcSetup(_cfg.pwm_channel, _cfg.freq, PWM_BITS);
     ledcAttachPin(_cfg.pin_bl, _cfg.pwm_channel);
     setBrightness(brightness);
-
+#else
+    ledcAttach(_cfg.pin_bl, _cfg.freq, PWM_BITS); 
+    setBrightness(brightness);
+#endif
 #else
 
     static ledc_channel_config_t ledc_channel;
