@@ -104,7 +104,7 @@ namespace lgfx
   template <>
   struct DataWrapperT<FILE> : public DataWrapper
   {
-    DataWrapperT<FILE>(FILE* fp = nullptr) : DataWrapper() , _fp { fp }
+    DataWrapperT(FILE* fp = nullptr) : DataWrapper() , _fp { fp }
     {
       need_transaction = true;
     }
@@ -134,7 +134,7 @@ namespace lgfx
   template <>
   struct DataWrapperT<void> : public DataWrapperT<FILE>
   {
-    DataWrapperT<void>(void) : DataWrapperT<FILE>() {}
+    DataWrapperT(void) : DataWrapperT<FILE>() {}
   };
 #else
   template <>
