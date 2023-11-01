@@ -675,7 +675,7 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_9, 0x70, 0);
-        if (id == 0x00F00000)
+        if ((id & 0xFFFFF0FFu) == 0x00F00000u)
         {  //  check panel (e-paper GDEW0154M09)
           _pin_level(GPIO_NUM_12, true);  // POWER_HOLD_PIN 12
           board = board_t::board_M5StackCoreInk;
