@@ -55,6 +55,8 @@ Contributors:
    #include <esp32s3/rom/gpio.h>  // dispatched by config
 #elif defined ( CONFIG_IDF_TARGET_ESP32S2 ) && __has_include (<esp32s2/rom/gpio.h>)
    #include <esp32s2/rom/gpio.h>  // dispatched by config
+#elif defined ( CONFIG_IDF_TARGET_ESP32 ) && __has_include (<esp32/rom/gpio.h>)
+   #include <esp32/rom/gpio.h>
 #else
    #include <rom/gpio.h> // dispatched by core
 #endif   
