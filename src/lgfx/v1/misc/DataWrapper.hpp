@@ -140,7 +140,7 @@ namespace lgfx
   template <>
   struct DataWrapperT<void> : public DataWrapper
   {
-    DataWrapperT<void>(void) : DataWrapper() { }
+    DataWrapperT(void) : DataWrapper() { }
     int read(uint8_t *buf, uint32_t len) override { return false; }
     void skip(int32_t offset) override { }
     bool seek(uint32_t offset) override { return false; }
