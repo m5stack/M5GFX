@@ -104,7 +104,7 @@ namespace lgfx
   template <>
   struct DataWrapperT<FILE> : public DataWrapper
   {
-    DataWrapperT<FILE>(FILE* fp = nullptr) : DataWrapper() , _fp { fp }
+    DataWrapperT(FILE* fp = nullptr) : DataWrapper() , _fp { fp }
     {
       need_transaction = true;
     }
@@ -134,13 +134,13 @@ namespace lgfx
   template <>
   struct DataWrapperT<void> : public DataWrapperT<FILE>
   {
-    DataWrapperT<void>(void) : DataWrapperT<FILE>() {}
+    DataWrapperT(void) : DataWrapperT<FILE>() {}
   };
 #else
   template <>
   struct DataWrapperT<void> : public DataWrapper
   {
-    DataWrapperT<void>(void) : DataWrapper() { }
+    DataWrapperT(void) : DataWrapper() { }
     int read(uint8_t *buf, uint32_t len) override { return false; }
     void skip(int32_t offset) override { }
     bool seek(uint32_t offset) override { return false; }
