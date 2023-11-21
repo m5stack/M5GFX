@@ -177,71 +177,77 @@ namespace lgfx
 //----------------------------------------------------------------------------
 
 #if defined (SdFat_h)
-  #if SD_FAT_VERSION >= 20102
-   #define LGFX_SDFAT_TYPE SdBase<FsVolume,FsFormatter>
-  #else
-   #define LGFX_SDFAT_TYPE SdBase<FsVolume>
-  #endif
+  // #if SD_FAT_VERSION >= 20102
+  //  #define LGFX_SDFAT_TYPE SdBase<FsVolume,FsFormatter>
+  // #else
+  //  #define LGFX_SDFAT_TYPE SdBase<FsVolume>
+  // #endif
 
-  template <>
-  struct DataWrapperT<FsFile> : public DataWrapper
+  template <typename TFile>
+  struct DataWrapperT_SdFatFile : public DataWrapper
   {
-    DataWrapperT(FsFile* fp = nullptr) : DataWrapper{}, _fp { fp } { need_transaction = true; }
+    DataWrapperT_SdFatFile(TFile* fp = nullptr) : DataWrapper{}, _fp { fp } { need_transaction = true; }
     int read(uint8_t *buf, uint32_t len) override { uint32_t a = _fp->available(); return _fp->read(buf, a < len ? a : len); }
     void skip(int32_t offset) override { _fp->seekCur(offset); }
     bool seek(uint32_t offset) override { return _fp->seekSet(offset); }
     void close(void) override { if (_fp) { _fp->close(); _fp = nullptr; } }
     int32_t tell(void) override { return _fp->position(); }
   protected:
-    FsFile *_fp;
+    TFile *_fp;
   };
 
   template <>
-  struct DataWrapperT<LGFX_SDFAT_TYPE> : public DataWrapperT<FsFile>
+  struct DataWrapperT<FsFile> : public DataWrapperT_SdFatFile<FsFile> {
+    DataWrapperT(FsFile* fp = nullptr) : DataWrapperT_SdFatFile<FsFile>(fp) {}
+  };
+
+  template <>
+  struct DataWrapperT<ExFile> : public DataWrapperT_SdFatFile<ExFile> {
+    DataWrapperT(ExFile* fp = nullptr) : DataWrapperT_SdFatFile<ExFile>(fp) {}
+  };
+
+  template <>
+  struct DataWrapperT<File32> : public DataWrapperT_SdFatFile<File32> {
+    DataWrapperT(File32* fp = nullptr) : DataWrapperT_SdFatFile<File32>(fp) {}
+  };
+
+  template <typename TFS, typename TFile>
+  struct DataWrapperT_SdFatFS : public DataWrapperT_SdFatFile<TFile>
   {
-    DataWrapperT(LGFX_SDFAT_TYPE *fs, FsFile* fp = nullptr) : DataWrapperT<FsFile>{ fp }, _fs { fs } {}
+    DataWrapperT_SdFatFS(TFS *fs, TFile* fp = nullptr) : DataWrapperT_SdFatFile<TFile>{ fp }, _fs { fs } {}
     bool open(const char* path) override
     {
       _file = _fs->open(path, O_RDONLY);
-      _fp = &_file;
+      DataWrapperT_SdFatFile<TFile>::_fp = &_file;
       return _file;
     }
   protected:
-    LGFX_SDFAT_TYPE *_fs;
-    FsFile _file;
+    TFS *_fs;
+    TFile _file;
   };
 
   template <>
-  struct DataWrapperT<SdFs> : public DataWrapperT<LGFX_SDFAT_TYPE> {
-    DataWrapperT(SdFs* fs, FsFile* fp = nullptr) : DataWrapperT<LGFX_SDFAT_TYPE>(fs, fp) {}
+  struct DataWrapperT<SdFs> : public DataWrapperT_SdFatFS<SdFs, FsFile> {
+    DataWrapperT(SdFs* fs, FsFile* fp = nullptr) : DataWrapperT_SdFatFS<SdFs, FsFile>(fs, fp) {}
   };
 
-  struct SdFatWrapper : public DataWrapperT<LGFX_SDFAT_TYPE>
+  template <>
+  struct DataWrapperT<SdExFat> : public DataWrapperT_SdFatFS<SdExFat, ExFile> {
+    DataWrapperT(SdExFat* fs, ExFile* fp = nullptr) : DataWrapperT_SdFatFS<SdExFat, ExFile>(fs, fp) {}
+  };
+
+  template <>
+  struct DataWrapperT<SdFat32> : public DataWrapperT_SdFatFS<SdFat32, File32> {
+    DataWrapperT(SdFat32* fs, File32* fp = nullptr) : DataWrapperT_SdFatFS<SdFat32, File32>(fs, fp) {}
+  };
+
+  struct SdFatWrapper : public DataWrapperT<SdFs>
   {
-    SdFatWrapper(LGFX_SDFAT_TYPE &fs, FsFile* fp = nullptr) : DataWrapperT<LGFX_SDFAT_TYPE> ( &fs, fp ) {}
-    SdFatWrapper(LGFX_SDFAT_TYPE *fs, FsFile* fp = nullptr) : DataWrapperT<LGFX_SDFAT_TYPE> ( fs, fp ) {}
-/*
-    SdFatWrapper() : DataWrapperT<SdFs>()
-    {
-      _fs = nullptr;
-      _fp = nullptr;
-    }
-
-    void setFS(LGFX_SDFAT_TYPE &fs) {
-      _fs = &fs;
-    }
-
-    bool open(LGFX_SDFAT_TYPE &fs, const char* path)
-    {
-      setFS(fs);
-      _file = fs.open(path, O_RDONLY);
-      _fp = &_file;
-      return _file;
-    }
-//*/
+    SdFatWrapper(SdFs &fs, FsFile* fp = nullptr) : DataWrapperT<SdFs> ( &fs, fp ) {}
+    SdFatWrapper(SdFs *fs, FsFile* fp = nullptr) : DataWrapperT<SdFs> ( fs, fp ) {}
   };
 
- #undef LGFX_SDFAT_TYPE
+//  #undef LGFX_SDFAT_TYPE
 
 #endif
 
