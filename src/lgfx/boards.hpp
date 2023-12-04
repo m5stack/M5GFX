@@ -20,6 +20,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5AtomS3
     , board_M5Dial
     , board_M5DinMeter
+    , board_M5Cardputer
+    , board_M5AirQ
 
 /// non display boards 
     , board_M5Atom = 128
@@ -35,7 +37,6 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5AtomS3Lite
     , board_M5AtomS3U
     , board_M5Capsule
-    , board_M5Cardputer
 
 /// external displays
     , board_M5AtomDisplay = 192

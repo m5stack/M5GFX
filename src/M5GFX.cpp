@@ -1378,6 +1378,44 @@ namespace m5gfx
         bus_spi->release();
       }
 
+      if (board == 0 || board == board_t::board_M5AirQ)
+      {
+        _pin_reset( GPIO_NUM_2, true); // EPDがDeepSleepしている場合は自動認識に失敗する。そのためRST制御を必ず行う。;
+        bus_cfg.pin_mosi = GPIO_NUM_6;
+        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_5;
+        bus_cfg.pin_dc   = GPIO_NUM_3;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x70, 0);
+        if ((id & 0xFFFF00FFu) == 0x00F00000u)
+        {  //  check panel (e-paper GDEW0154M09)
+        // ID of first lot  : 0x00F00000u
+        // ID of 2023/11/17 : 0x00F01600u
+          _pin_level(GPIO_NUM_46, true);  // POWER_HOLD_PIN 46
+          board = board_t::board_M5AirQ;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5AirQ");
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          auto p = new lgfx::Panel_GDEW0154M09();
+          p->bus(bus_spi);
+          _panel_last.reset(p);
+          auto cfg = p->config();
+          cfg.panel_height = 200;
+          cfg.panel_width  = 200;
+          cfg.pin_cs   = GPIO_NUM_4;
+          cfg.pin_rst  = GPIO_NUM_2;
+          cfg.pin_busy = GPIO_NUM_1;
+          p->config(cfg);
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_2, lgfx::pin_mode_t::input); // RST
+        lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // CS
+        bus_spi->release();
+      }
+
 #endif
 
     board = board_t::board_unknown;
@@ -1437,6 +1475,7 @@ init_clear:
     case board_M5Dial:         title = "M5Dial";         break;
     case board_M5Cardputer:    title = "M5Cardputer";    break;
     case board_M5DinMeter:     title = "M5DinMeter";     break;
+    case board_M5AirQ:         title = "M5AirQ";         break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -1456,6 +1495,7 @@ init_clear:
       break;
 
     case board_M5StackCoreInk:
+    case board_M5AirQ:
       w = 200;
       h = 200;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
