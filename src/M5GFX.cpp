@@ -413,6 +413,7 @@ namespace m5gfx
 
 #endif
 
+  __attribute__ ((unused))
   static void _pin_level(std::int_fast16_t pin, bool level)
   {
     lgfx::pinMode(pin, lgfx::pin_mode_t::output);
@@ -420,6 +421,7 @@ namespace m5gfx
     else       lgfx::gpio_lo(pin);
   }
 
+  __attribute__ ((unused))
   static void _pin_reset(std::int_fast16_t pin, bool use_reset)
   {
     lgfx::gpio_hi(pin);
@@ -449,6 +451,7 @@ namespace m5gfx
   }
 
   /// TF card をSPIモードに移行する ;
+  __attribute__ ((unused))
   static void _set_sd_spimode(int spi_host, int_fast16_t pin_cs)
   {
     m5gfx::spi::beginTransaction(spi_host, 400000, 0);
@@ -468,6 +471,7 @@ namespace m5gfx
     m5gfx::spi::endTransaction(spi_host);
   }
 
+  __attribute__ ((unused))
   static std::uint32_t _read_panel_id(lgfx::Bus_SPI* bus, std::int32_t pin_cs, std::uint32_t cmd = 0x04, std::uint8_t dummy_read_bit = 1) // 0x04 = RDDID command
   {
     bus->beginTransaction();
@@ -605,6 +609,7 @@ namespace m5gfx
     panel(nullptr);
 
     auto bus_cfg = bus_spi->config();
+    (void)bus_cfg; // prevent compiler warning.
     bus_cfg.freq_write = 8000000;
     bus_cfg.freq_read  = 8000000;
     bus_cfg.spi_mode = 0;
