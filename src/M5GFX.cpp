@@ -17,6 +17,7 @@
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
 #include "lgfx/v1/panel/Panel_GC9A01.hpp"
 #include "lgfx/v1/panel/Panel_GDEW0154M09.hpp"
+#include "lgfx/v1/panel/Panel_GDEW0154D67.hpp"
 #include "lgfx/v1/panel/Panel_IT8951.hpp"
 #include "lgfx/v1/touch/Touch_CST816S.hpp"
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
@@ -1393,8 +1394,19 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x70, 0);
-        if ((id & 0xFFFF00FFu) == 0x00F00000u)
+        lgfx::Panel_HasBuffer* p = nullptr;
+        id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x2f ,0);
+        if (id == 0x00010001)
+        {  //  check panel (e-paper GDEW0154D67)
+          p = new lgfx::Panel_GDEW0154D67();
+        } else
+        {
+          id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x70, 0);
+          if ((id & 0xFFFF00FFu) == 0x00F00000u) {
+            p = new lgfx::Panel_GDEW0154M09();
+          }
+        }
+        if (p != nullptr)
         {  //  check panel (e-paper GDEW0154M09)
         // ID of first lot  : 0x00F00000u
         // ID of 2023/11/17 : 0x00F01600u
@@ -1404,7 +1416,6 @@ namespace m5gfx
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
           bus_spi->config(bus_cfg);
-          auto p = new lgfx::Panel_GDEW0154M09();
           p->bus(bus_spi);
           _panel_last.reset(p);
           auto cfg = p->config();
