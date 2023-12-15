@@ -427,6 +427,7 @@ namespace m5gfx
   {
     lgfx::gpio_hi(pin);
     lgfx::pinMode(pin, lgfx::pin_mode_t::output);
+    lgfx::delay(1);
     if (!use_reset) return;
     lgfx::gpio_lo(pin);
     auto time = lgfx::millis();
