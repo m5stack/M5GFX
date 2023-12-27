@@ -17,6 +17,7 @@
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
 #include "lgfx/v1/panel/Panel_GC9A01.hpp"
 #include "lgfx/v1/panel/Panel_GDEW0154M09.hpp"
+#include "lgfx/v1/panel/Panel_GDEW0154D67.hpp"
 #include "lgfx/v1/panel/Panel_IT8951.hpp"
 #include "lgfx/v1/touch/Touch_CST816S.hpp"
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
@@ -413,6 +414,7 @@ namespace m5gfx
 
 #endif
 
+  __attribute__ ((unused))
   static void _pin_level(std::int_fast16_t pin, bool level)
   {
     lgfx::pinMode(pin, lgfx::pin_mode_t::output);
@@ -420,23 +422,17 @@ namespace m5gfx
     else       lgfx::gpio_lo(pin);
   }
 
+  __attribute__ ((unused))
   static void _pin_reset(std::int_fast16_t pin, bool use_reset)
   {
     lgfx::gpio_hi(pin);
     lgfx::pinMode(pin, lgfx::pin_mode_t::output);
+    lgfx::delay(1);
     if (!use_reset) return;
     lgfx::gpio_lo(pin);
-    auto time = lgfx::millis();
-    do
-    {
-      lgfx::delay(1);
-    } while (lgfx::millis() - time < 2);
+    lgfx::delay(2);
     lgfx::gpio_hi(pin);
-    time = lgfx::millis();
-    do
-    {
-      lgfx::delay(1);
-    } while (lgfx::millis() - time < 10);
+    lgfx::delay(10);
   }
 
   /// TF card dummy clock送信 ;
@@ -449,6 +445,7 @@ namespace m5gfx
   }
 
   /// TF card をSPIモードに移行する ;
+  __attribute__ ((unused))
   static void _set_sd_spimode(int spi_host, int_fast16_t pin_cs)
   {
     m5gfx::spi::beginTransaction(spi_host, 400000, 0);
@@ -468,6 +465,7 @@ namespace m5gfx
     m5gfx::spi::endTransaction(spi_host);
   }
 
+  __attribute__ ((unused))
   static std::uint32_t _read_panel_id(lgfx::Bus_SPI* bus, std::int32_t pin_cs, std::uint32_t cmd = 0x04, std::uint8_t dummy_read_bit = 1) // 0x04 = RDDID command
   {
     bus->beginTransaction();
@@ -605,6 +603,7 @@ namespace m5gfx
     panel(nullptr);
 
     auto bus_cfg = bus_spi->config();
+    (void)bus_cfg; // prevent compiler warning.
     bus_cfg.freq_write = 8000000;
     bus_cfg.freq_read  = 8000000;
     bus_cfg.spi_mode = 0;
@@ -624,6 +623,7 @@ namespace m5gfx
     {
       if (board == 0 || board == board_t::board_M5StickC || board == board_t::board_M5StickCPlus)
       {
+        _pin_reset(GPIO_NUM_18, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_15;
         bus_cfg.pin_miso = GPIO_NUM_14;
         bus_cfg.pin_sclk = GPIO_NUM_13;
@@ -631,7 +631,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_18, use_reset); // LCD RST
         id = _read_panel_id(bus_spi, GPIO_NUM_5);
         if ((id & 0xFF) == 0x85)
         {  //  check panel (ST7789)
@@ -674,16 +673,28 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_9, 0x70, 0);
-        if ((id & 0xFFFFF0FFu) == 0x00F00000u)
-        {  //  check panel (e-paper GDEW0154M09)
+        lgfx::Panel_HasBuffer* p = nullptr;
+        id = _read_panel_id(bus_spi, GPIO_NUM_9, 0x2f ,0);
+        if (id == 0x00010001)
+        { //  check panel (e-paper GDEW0154D67)
+          p = new lgfx::Panel_GDEW0154D67();
+        } else {
+          id = _read_panel_id(bus_spi, GPIO_NUM_9, 0x70, 0);
+          if ((id & 0xFFFF00FFu) == 0x00F00000u)
+          { //  check panel (e-paper GDEW0154M09)
+            // ID of first lot  : 0x00F00000u
+            // ID of 2023/11/17 : 0x00F01600u
+            p = new lgfx::Panel_GDEW0154M09();
+          }
+        }
+        if (p != nullptr)
+        {
           _pin_level(GPIO_NUM_12, true);  // POWER_HOLD_PIN 12
           board = board_t::board_M5StackCoreInk;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StackCoreInk");
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
           bus_spi->config(bus_cfg);
-          auto p = new lgfx::Panel_GDEW0154M09();
           p->bus(bus_spi);
           _panel_last.reset(p);
           auto cfg = p->config();
@@ -707,6 +718,7 @@ namespace m5gfx
     {
       if (board == 0 || board == board_t::board_M5StickCPlus2)
       {
+        _pin_reset(GPIO_NUM_12, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_15;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_13;
@@ -714,7 +726,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_12, use_reset); // LCD RST
         id = _read_panel_id(bus_spi, GPIO_NUM_5);
         if ((id & 0xFF) == 0x85)
         {  //  check panel (ST7789)
@@ -773,6 +784,7 @@ namespace m5gfx
   
           if (axp_exists == 192 && (board == 0 || board == board_t::board_M5Station))
           {
+            _pin_reset(GPIO_NUM_15, use_reset); // LCD RST;
             bus_cfg.pin_mosi = GPIO_NUM_23;
             bus_cfg.pin_miso = -1;
             bus_cfg.pin_sclk = GPIO_NUM_18;
@@ -780,7 +792,6 @@ namespace m5gfx
             bus_cfg.spi_3wire = true;
             bus_spi->config(bus_cfg);
             bus_spi->init();
-            _pin_reset(GPIO_NUM_15, use_reset); // LCD RST;
 
             id = _read_panel_id(bus_spi, GPIO_NUM_5);
             if ((id & 0xFF) == 0x85)
@@ -945,6 +956,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5Stack)
       {
+        _pin_reset(GPIO_NUM_33, use_reset); // LCD RST;
         bus_cfg.pin_mosi = GPIO_NUM_23;
         bus_cfg.pin_miso = GPIO_NUM_19;
         bus_cfg.pin_sclk = GPIO_NUM_18;
@@ -953,7 +965,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_33, use_reset); // LCD RST;
 
         _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
@@ -1175,6 +1186,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5AtomS3)
       {
+        _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_21;
         bus_cfg.pin_miso = GPIO_NUM_13;
         bus_cfg.pin_sclk = GPIO_NUM_17;
@@ -1183,7 +1195,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
         id = _read_panel_id(bus_spi, GPIO_NUM_15);
         if ((id & 0xFFFFFF) == 0x079100)
         {  //  check panel (GC9107)
@@ -1218,6 +1229,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5Dial)
       {
+        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_5;
         bus_cfg.pin_miso = GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_6;
@@ -1226,7 +1238,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         id = _read_panel_id(bus_spi, GPIO_NUM_7);
         if ((id & 0xFFFFFF) == 0x019a00)
         {  //  check panel (GC9A01)
@@ -1287,6 +1298,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5DinMeter)
       {
+        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_5;
         bus_cfg.pin_miso = GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_6;
@@ -1295,7 +1307,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         id = _read_panel_id(bus_spi, GPIO_NUM_7);
         if ((id & 0xFF) == 0x85)
         {  //  check panel (ST7789)
@@ -1332,6 +1343,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5Cardputer)
       {
+        _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_35;
         bus_cfg.pin_miso = GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_36;
@@ -1340,7 +1352,6 @@ namespace m5gfx
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
         id = _read_panel_id(bus_spi, GPIO_NUM_37);
         if ((id & 0xFF) == 0x81)
         {  //  check panel (ST7789V2)
@@ -1373,6 +1384,54 @@ namespace m5gfx
           goto init_clear;
         }
         lgfx::pinMode(GPIO_NUM_33, lgfx::pin_mode_t::input); // LCD RST
+        bus_spi->release();
+      }
+
+      if (board == 0 || board == board_t::board_M5AirQ)
+      {
+        _pin_reset( GPIO_NUM_2, true); // EPDがDeepSleepしている場合は自動認識に失敗する。そのためRST制御を必ず行う。;
+        bus_cfg.pin_mosi = GPIO_NUM_6;
+        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_5;
+        bus_cfg.pin_dc   = GPIO_NUM_3;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        lgfx::Panel_HasBuffer* p = nullptr;
+        id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x2f ,0);
+        if (id == 0x00010001)
+        { //  check panel (e-paper GDEW0154D67)
+          p = new lgfx::Panel_GDEW0154D67();
+        } else {
+          id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x70, 0);
+          if ((id & 0xFFFF00FFu) == 0x00F00000u)
+          { //  check panel (e-paper GDEW0154M09)
+            // ID of first lot  : 0x00F00000u
+            // ID of 2023/11/17 : 0x00F01600u
+            p = new lgfx::Panel_GDEW0154M09();
+          }
+        }
+        if (p != nullptr)
+        {
+          _pin_level(GPIO_NUM_46, true);  // POWER_HOLD_PIN 46
+          board = board_t::board_M5AirQ;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5AirQ");
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          p->bus(bus_spi);
+          _panel_last.reset(p);
+          auto cfg = p->config();
+          cfg.panel_height = 200;
+          cfg.panel_width  = 200;
+          cfg.pin_cs   = GPIO_NUM_4;
+          cfg.pin_rst  = GPIO_NUM_2;
+          cfg.pin_busy = GPIO_NUM_1;
+          p->config(cfg);
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_2, lgfx::pin_mode_t::input); // RST
+        lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // CS
         bus_spi->release();
       }
 
@@ -1435,6 +1494,7 @@ init_clear:
     case board_M5Dial:         title = "M5Dial";         break;
     case board_M5Cardputer:    title = "M5Cardputer";    break;
     case board_M5DinMeter:     title = "M5DinMeter";     break;
+    case board_M5AirQ:         title = "M5AirQ";         break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -1454,6 +1514,7 @@ init_clear:
       break;
 
     case board_M5StackCoreInk:
+    case board_M5AirQ:
       w = 200;
       h = 200;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);

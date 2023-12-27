@@ -204,7 +204,7 @@ namespace lgfx
     template <typename T>
     bool createFromBmpFile(T &fs, const char *path)
     {
-      DataWrapperT<T> data { fs };
+      DataWrapperT<T> data { &fs };
       return create_from_bmp_file(&data, path);
     }
 
