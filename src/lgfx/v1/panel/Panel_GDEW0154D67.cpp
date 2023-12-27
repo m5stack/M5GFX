@@ -60,8 +60,6 @@ namespace lgfx
       return false;
     }
 
-    //memset(_buf, 255, len);
-
     _wait_busy();
 
     startWrite(true);
@@ -71,28 +69,6 @@ namespace lgfx
       command_list(cmds);
     }
 
-// _bus->writeCommand(0x12, 8); // SW Reset
-// delay(10); // wait 10 ms
-// _bus->writeCommand(0x01, 8); // set gate driver output
-// _bus->writeData(_cfg.panel_height&255, 8); // 0xC7=199 , 199+1=200gate
-// _bus->writeData(_cfg.panel_height>>8, 8);
-// _bus->writeData(0x00, 8); // scan line:
-
-// _bus->writeCommand(0x11, 8); // Define data entry sequence
-// _bus->writeData(0x03, 8); // X inc  ,  Y inc
-
-// _bus->writeCommand(0x3C, 8); //BorderWavefrom
-// _bus->writeData(0x05, 8);
-
-// _bus->writeCommand(0x18, 8); //Read built-in temperature sensor
-// _bus->writeData(0x80, 8);
-
-// _bus->writeCommand(0x0C, 8);  // booster enable with phase 1
-// _bus->writeData(0x8B, 8);
-// _bus->writeData(0x9C, 8);
-// _bus->writeData(0x96, 8);
-// _bus->writeData(0x0F, 8);
-
     setInvert(_invert);
 
     setRotation(_rotation);
@@ -101,17 +77,26 @@ namespace lgfx
     _range_old.left = 0;
     _range_old.right = _width - 1;
     _range_old.bottom = _height - 1;
-    // _exec_transfer(0x13, _range_old);
-    // _range_mod = _range_old;    
-_last_refresh_param = 0xFC;
-_bus->writeCommand(0x22, 8); // Display update seq opt
-_bus->writeData(_last_refresh_param, 8);
-    _exec_transfer(0x24, _range_old);
-    _close_transfer();
-_bus->writeCommand(0x20, 8);
-    _range_mod = _range_old;
+    _range_mod.top    = INT16_MAX;
+    _range_mod.left   = INT16_MAX;
+    _range_mod.right  = 0;
+    _range_mod.bottom = 0;
 
+    _last_epd_mode = epd_quality;
+    _need_flip_draw = true;
+    memset(_buf, 0xFF, _get_buffer_length());
+    _exec_transfer(0x24, _range_old);
+
+    _bus->writeCommand(0x22, 8);
+    _bus->writeData(0xFC, 8);
+    _bus->writeCommand(0x20, 8);
+    _send_msec = millis();
+    _wait_busy();
+    _exec_transfer(0x24, _range_old);
+    _bus->writeData(0x1C, 8);
+    _bus->writeCommand(0x20, 8);
     endWrite();
+    // memset(_buf, 0xFF, _get_buffer_length());
 
     return true;
   }
@@ -137,22 +122,60 @@ _bus->writeCommand(0x20, 8);
     }
     if (_range_mod.empty()) { return; }
 
-    uint8_t refresh_param = (getEpdMode() == epd_mode_t::epd_quality)
-                          ? 0x04
-                          : 0x0C;
+    auto epd_mode = getEpdMode();
 
-    if (_last_refresh_param != refresh_param) {
-      _last_refresh_param = refresh_param;
-      refresh_param |= 0x10;
+    bool need_full_transfer = (epd_mode != epd_mode_t::epd_quality);
+    uint8_t refresh_param = (need_full_transfer)
+                          ? 0x1C   // DISPLAY Mode2 (no flick)
+                          : 0x14;  // DISPLAY Mode1 (flicking)
+
+    bool need_flip_draw = _need_flip_draw || (epd_mode_t::epd_quality < epd_mode && epd_mode < epd_mode_t::epd_fastest);
+    _need_flip_draw = false;
+
+    if (_last_epd_mode != epd_mode) {
+      if (_last_epd_mode == epd_mode_t::epd_quality) {
+        need_flip_draw = true;
+      }
+      _last_epd_mode = epd_mode;
+
+    // }
+    // if (_last_refresh_param != refresh_param)
+    // {
+      // _last_refresh_param = refresh_param;
+      // refresh_param |= 0x10;
       _wait_busy();
       _bus->writeCommand(0x22, 8); // Display update seq opt
       _bus->writeData(refresh_param, 8);
+      need_full_transfer = true;
     }
 
-    _close_transfer();
+    range_rect_t tr = _range_mod;
+    // if (_range_old.intersectsWith(_range_mod))
+    if (need_full_transfer)
+    {
+      // tr.left = 0;
+      // tr.right = _width - 1;
+      // tr.top = 0;
+      // tr.bottom = _height - 1;
+      // tr = _range_old;
+      if (tr.top > _range_old.top) { tr.top = _range_old.top; }
+      if (tr.left > _range_old.left) { tr.left = _range_old.left; }
+      if (tr.right < _range_old.right) { tr.right = _range_old.right; }
+      if (tr.bottom < _range_old.bottom) { tr.bottom = _range_old.bottom; }
+    }
     _range_old = _range_mod;
+    // else
+    // {
+    //   tr = _range_mod;
+    //   // _exec_transfer(0x24, _range_mod);
+    // }
+    if (need_flip_draw) {
+      _exec_transfer(0x24, tr, true);
+      _bus->writeCommand(0x20, 8);
+      _send_msec = millis();
+    }
+    _exec_transfer(0x24, tr);
 
-    _exec_transfer(0x24, _range_mod);
     _bus->writeCommand(0x20, 8); // Active Display update
     _send_msec = millis();
     _range_mod.top    = INT16_MAX;
@@ -163,11 +186,18 @@ _bus->writeCommand(0x20, 8);
 
   void Panel_GDEW0154D67::setInvert(bool invert)
   {
-    startWrite();
+    if (_invert == invert) { return; }
     _invert = invert;
+    startWrite();
     _wait_busy();
     _bus->writeCommand(0x21, 8);
-    _bus->writeData((invert ^ _cfg.invert) ? 0x00 : 0x88, 8);
+    _bus->writeData((invert ^ _cfg.invert) ? 0x88 : 0x00, 8);
+    // _bus->writeCommand(0x20, 8);
+    _need_flip_draw = true;
+    _range_mod.top = 0;
+    _range_mod.left = 0;
+    _range_mod.right = _width - 1;
+    _range_mod.bottom = _height - 1;
     endWrite();
   }
 
@@ -176,6 +206,7 @@ _bus->writeCommand(0x20, 8);
     if (flg)
     {
       startWrite();
+      _wait_busy();
       _bus->writeCommand(0x10, 8);
       _bus->writeData(0x03, 8);
       _wait_busy();
@@ -189,23 +220,13 @@ _bus->writeCommand(0x20, 8);
 
   void Panel_GDEW0154D67::setPowerSave(bool flg)
   {
-/*
     startWrite();
-    _bus->writeCommand(0x50, 8);
-    if (flg)
-    {
-      _bus->writeData((_invert ^ _cfg.invert) ? 0xE7 : 0xF7, 8); // without OLD data
-      _wait_busy();
-      _bus->writeCommand(0x02, 8); // Power OFF(POF)
-    }
-    else
-    {
-      _bus->writeData((_invert ^ _cfg.invert) ? 0xC7 : 0xD7, 8); // without OLD data
-      _wait_busy();
-      _bus->writeCommand(0x04, 8); // Power ON(PON)
-    }
+    _wait_busy();
+    _bus->writeCommand(0x22, 8);
+    _bus->writeData(flg ? 0x03 : 0xE0, 8);
+    _wait_busy();
+    _bus->writeCommand(0x20, 8);
     endWrite();
-*/
   }
 
   void Panel_GDEW0154D67::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)
@@ -327,6 +348,7 @@ _bus->writeCommand(0x20, 8);
 
   bool Panel_GDEW0154D67::_wait_busy(uint32_t timeout)
   {
+    _bus->wait();
     if (_cfg.pin_busy >= 0 && gpio_in(_cfg.pin_busy))
     {
       uint32_t start_time = millis();
@@ -380,16 +402,17 @@ _bus->writeCommand(0x20, 8);
     _bus->writeCommand(0x4F, 8);
     _bus->writeData(data_tmp, 16);
 
-    // _wait_busy();
+    _wait_busy();
 
     _bus->writeCommand(cmd, 8);
-    int32_t w = ((xe - xs) >> 3) + 1;
     int32_t y = range.top;
+    int32_t h = range.bottom - y + 1;
     int32_t add = ((_cfg.panel_width + 7) & ~7) >> 3;
-    auto b = &_buf[xs >> 3];
+    auto b = &_buf[(xs >> 3) + (y * add)];
+    int32_t w = ((xe - xs) >> 3) + 1;
+
     if (invert)
     {
-      b += y * add;
       do
       {
         int32_t i = 0;
@@ -398,19 +421,28 @@ _bus->writeCommand(0x20, 8);
           _bus->writeData(~b[i], 8);
         } while (++i != w);
         b += add;
-      } while (++y <= range.bottom);
+      } while (--h);
     }
     else
+//*/
     {
-      do
+      if (add == w) {
+        _bus->writeBytes(b, w * h, true, true);
+      }
+      else
       {
-        _bus->writeBytes(&b[add * y], w, true, true);
-      } while (++y <= range.bottom);
+        do
+        {
+          _bus->writeBytes(b, w, true, true);
+          b += add;
+        } while (--h);
+      }
     }
   }
 
   void Panel_GDEW0154D67::_close_transfer(void)
   {
+/*
     if (_range_old.empty()) { return; }
     // while (millis() - _send_msec < _refresh_msec) delay(1);
     _exec_transfer(0x24, _range_old);
@@ -418,7 +450,7 @@ _bus->writeCommand(0x20, 8);
     _range_old.left   = INT16_MAX;
     _range_old.right  = 0;
     _range_old.bottom = 0;
-    _bus->wait();
+// _bus->wait();
 //*/
   }
 
@@ -429,10 +461,10 @@ _bus->writeCommand(0x20, 8);
     int32_t x1 = xs & ~7;
     int32_t x2 = (xe & ~7) + 7;
 
-    if (_range_old.horizon.intersectsWith(x1, x2) && _range_old.vertical.intersectsWith(ys, ye))
-    {
-      _close_transfer();
-    }
+    // if (_range_old.horizon.intersectsWith(x1, x2) && _range_old.vertical.intersectsWith(ys, ye))
+    // {
+    //   _close_transfer();
+    // }
     _range_mod.top    = std::min<int32_t>(ys, _range_mod.top);
     _range_mod.left   = std::min<int32_t>(x1, _range_mod.left);
     _range_mod.right  = std::max<int32_t>(x2, _range_mod.right);

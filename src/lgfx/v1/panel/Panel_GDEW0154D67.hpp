@@ -57,7 +57,8 @@ namespace lgfx
 
     range_rect_t _range_old;
     unsigned long _send_msec = 0;
-    uint8_t _last_refresh_param;
+    epd_mode_t _last_epd_mode;
+    bool _need_flip_draw;
 
     size_t _get_buffer_length(void) const override;
 
@@ -77,7 +78,12 @@ namespace lgfx
           0x3C, 1, 0x05,        // BorderWavefrom
           0x18, 1, 0x80,        // Read built-in temperature sensor
           0x0C, 4, 0x8B, 0x9C, 0x96, 0x0F,  // booster enable with phase 1
-          0xFF,0xFF, // end
+          0x21, 1, 0x00,
+          0x22, 1, 0xF8,        // Display update seq opt
+          // 0x47, 1 + CMD_INIT_DELAY, 0xF7, 100,
+          // 0x20, 0 + CMD_INIT_DELAY, 100,
+          // 0x47, 1 + CMD_INIT_DELAY, 0xF7, 100,
+          0xFF, 0xFF, // end
       };
       switch (listno) {
       case 0: return list0;
