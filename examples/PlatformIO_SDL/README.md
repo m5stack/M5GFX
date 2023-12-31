@@ -41,7 +41,7 @@ xcode-select --install
 
 Go to the [SDL repository on github and obtain the release package (SDL2-devel-x.x.x-mingw.zip).](https://github.com/libsdl-org/SDL/releases) 
 
-Unzip the zip file and copy the following four files to `C:\msys64\mingw64`
+Unzip the zip file and copy the following four files to `C:\msys64\ucrt64`
 
  - share
  - bin
