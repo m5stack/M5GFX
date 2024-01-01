@@ -11,7 +11,13 @@ https://docs.m5stack.com/ja/quick_start/m5unified/intro_vscode
 https://docs.platformio.org/en/latest/platforms/native.html#installation
 
 #### for Windows
-follow the [MSYS2](https://www.msys2.org/) installation guide and add the following paths to the `PATH` system environment variable:
+follow the [MSYS2](https://www.msys2.org/) installation guide .
+Run the following command on msys2 to install gcc and gdb .
+``` msys2
+ pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-gdb
+```
+
+Add the following paths to the `PATH` system environment variable:
 ```
 C:\msys64\mingw64\bin
 C:\msys64\ucrt64\bin
