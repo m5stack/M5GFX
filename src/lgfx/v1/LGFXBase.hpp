@@ -745,8 +745,8 @@ namespace lgfx
     /// load vlw font from filesystem.
     bool loadFont(const char *path)
     {
-      this->unloadFont();
-      this->_font_file.reset(_create_data_wrapper());
+      unloadFont();
+      _font_file.reset(_create_data_wrapper());
       return load_font_with_path(path);
     }
 
@@ -757,6 +757,12 @@ namespace lgfx
       unloadFont();
       _font_file.reset(new DataWrapperT<T>(&fs));
       return load_font_with_path(path);
+    }
+
+    bool loadFont(DataWrapper* data)
+    {
+      unloadFont();
+      return load_font(data);
     }
 
     /// unload VLW font
