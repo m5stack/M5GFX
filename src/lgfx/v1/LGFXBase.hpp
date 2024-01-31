@@ -294,7 +294,7 @@ namespace lgfx
     [[deprecated("use isBusShared()")]]
     LGFX_INLINE   bool isSPIShared(void) const { return _panel->isBusShared(); }
                   void display(int32_t x, int32_t y, int32_t w, int32_t h);
-    LGFX_INLINE   void display(void) { _panel->display(0, 0, 0, 0); }
+    LGFX_INLINE   void display(void) { display(0, 0, 0, 0); }
     LGFX_INLINE   void waitDisplay(void) { _panel->waitDisplay(); }
     LGFX_INLINE   bool displayBusy(void) { return _panel->displayBusy(); }
     LGFX_INLINE   void setAutoDisplay(bool flg) { _panel->setAutoDisplay(flg); }
@@ -761,7 +761,6 @@ namespace lgfx
 
     bool loadFont(DataWrapper* data)
     {
-      unloadFont();
       return load_font(data);
     }
 
