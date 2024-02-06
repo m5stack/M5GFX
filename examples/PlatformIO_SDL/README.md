@@ -77,6 +77,8 @@ Open the `PlatformIO_SDL` folder containing this document in PlatformIO.
 
 Click on the ![PlatformIO](img_pio.png) icon on the left side of the screen.  
 Click `PROJECT TASKS` -> `native` -> `General` -> `Upload`  
+※ If you are using arm processor, use `native_arm` instead of `native`  (e.g. M1mac)  
+
 ![execute](img_00.png)
 
 ※ The window may start up with the window hidden behind. Check the task tray.
