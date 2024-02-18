@@ -1569,6 +1569,11 @@ init_clear:
     }
 #endif
 
+#if defined (M5GFX_WINDOW_WIDTH) && defined (M5GFX_WINDOW_HEIGHT)
+    w = M5GFX_WINDOW_WIDTH;
+    h = M5GFX_WINDOW_HEIGHT;
+#endif
+
     pnl_cfg.memory_width = w;
     pnl_cfg.panel_width = w;
     pnl_cfg.memory_height = h;
