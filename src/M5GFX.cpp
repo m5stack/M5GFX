@@ -1341,8 +1341,8 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_7);
-        if ((id & 0xFF) == 0x85)
-        {  //  check panel (ST7789)
+        if ((id & 0xFF) == 0x81)
+        {  //  check panel (ST7789V2)
           board = board_t::board_M5DinMeter;
           ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5DinMeter");
           bus_spi->release();
