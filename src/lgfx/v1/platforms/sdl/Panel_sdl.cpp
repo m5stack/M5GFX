@@ -83,8 +83,10 @@ namespace lgfx
           int x, y, w, h;
           SDL_GetWindowSize(mon->window, &w, &h);
           SDL_GetMouseState(&x, &y);
-          mon->touch_x = x * mon->panel->config().panel_width / w;
-          mon->touch_y = y * mon->panel->config().panel_height / h;
+          // mon->touch_x = x * mon->panel->config().panel_width / w;
+          // mon->touch_y = y * mon->panel->config().panel_height / h;
+mon->touch_x = x * mon->frame_width / w - mon->frame_inner_x;
+mon->touch_y = y * mon->frame_height / h - mon->frame_inner_y;
           if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
           {
             mon->touched = true;
@@ -224,6 +226,20 @@ namespace lgfx
     monitor.scaling_y = scaling_y;
   }
 
+  void Panel_sdl::setFrameImage(const void* frame_image, int frame_width, int frame_height, int inner_x, int inner_y)
+  {
+    monitor.frame_image = frame_image;
+    monitor.frame_width = frame_width;
+    monitor.frame_height = frame_height;
+    monitor.frame_inner_x = inner_x;
+    monitor.frame_inner_y = inner_y;
+  }
+
+  void Panel_sdl::setFrameRotation(uint_fast16_t frame_rotation)
+  {
+    monitor.frame_rotation = frame_rotation;
+  }
+
   Panel_sdl::~Panel_sdl(void)
   {
     _list_monitor.remove(&monitor);
@@ -357,14 +373,35 @@ namespace lgfx
 #if SDL_FULLSCREEN
     flag |= SDL_WINDOW_FULLSCREEN;
 #endif
+
+    if (m->frame_width < _cfg.panel_width) { m->frame_width = _cfg.panel_width; }
+    if (m->frame_height < _cfg.panel_height) { m->frame_height = _cfg.panel_height; }
+
+    int window_width = m->frame_width * m->scaling_x;
+    int window_height = m->frame_height * m->scaling_y;
+    int scaling_x = m->scaling_x;
+    int scaling_y = m->scaling_y;
+    if (m->frame_rotation & 1) {
+      std::swap(window_width, window_height);
+      std::swap(scaling_x, scaling_y);
+    }
+
     m->window = SDL_CreateWindow(_window_title,
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              _cfg.panel_width * m->scaling_x, _cfg.panel_height * m->scaling_y, flag);       /*last param. SDL_WINDOW_BORDERLESS to hide borders*/
+                              // _cfg.panel_width * m->scaling_x, _cfg.panel_height * m->scaling_y, flag);       /*last param. SDL_WINDOW_BORDERLESS to hide borders*/
+                              window_width * scaling_x, window_height * scaling_y, flag);       /*last param. SDL_WINDOW_BORDERLESS to hide borders*/
 
     m->renderer = SDL_CreateRenderer(m->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     m->texture = SDL_CreateTexture(m->renderer, SDL_PIXELFORMAT_RGB24,
                      SDL_TEXTUREACCESS_STATIC, _cfg.panel_width, _cfg.panel_height);
     SDL_SetTextureBlendMode(m->texture, SDL_BLENDMODE_NONE);
+
+    if (m->frame_image) {
+      m->texture_frameimage = SDL_CreateTexture(m->renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_STATIC, m->frame_width, m->frame_height);
+          SDL_SetTextureBlendMode(m->texture_frameimage, SDL_BLENDMODE_ADD);
+      SDL_UpdateTexture(monitor.texture_frameimage, nullptr, m->frame_image, m->frame_width * sizeof(uint32_t));
+    }
+    SDL_SetTextureBlendMode(m->texture_frameimage, SDL_BLENDMODE_BLEND);
   }
 
   void Panel_sdl::sdl_update(void)
@@ -412,13 +449,59 @@ namespace lgfx
           SDL_RenderSetVSync(monitor.renderer, !step_exec);
         }
       }
-      SDL_RenderCopy(monitor.renderer, monitor.texture, nullptr, nullptr);
+
+SDL_Rect srcrect;
+srcrect.x = 0;
+srcrect.y = 0;
+srcrect.w = _cfg.panel_width;
+srcrect.h = _cfg.panel_height;
+// dstrect.x = _frame_inner_x;
+// dstrect.y = _frame_inner_y;
+// dstrect.w = _cfg.panel_width;
+// dstrect.h = _cfg.panel_height;
+int w, h;
+SDL_GetWindowSizeInPixels(monitor.window, &w, &h);
+SDL_FRect dstrect;
+dstrect.x = (float)(monitor.frame_inner_x * w) / monitor.frame_width;
+dstrect.y = (float)(monitor.frame_inner_y * h) / monitor.frame_height;
+dstrect.w = (float)(_cfg.panel_width * w) / monitor.frame_width;
+dstrect.h = (float)(_cfg.panel_height * h) / monitor.frame_height;
+
+//*
+SDL_FPoint pivot;
+int frame_rotation = monitor.frame_rotation;
+int angle = (frame_rotation & 3) * 90;
+if (frame_rotation & 1) {
+  pivot.x = (float)w / 2 - dstrect.x;
+  pivot.y = (float)h / 2 - dstrect.y;
+} else {
+  pivot.x = (float)w / 2 - dstrect.x;
+  pivot.y = (float)h / 2 - dstrect.y;
+}
+SDL_RenderCopyExF(monitor.renderer, monitor.texture, &srcrect, &dstrect, angle, &pivot, SDL_RendererFlip::SDL_FLIP_NONE);
+pivot.x = (float)w / 2;
+pivot.y = (float)h / 2;
+SDL_RenderCopyExF(monitor.renderer, monitor.texture_frameimage, nullptr, nullptr, angle, &pivot, SDL_RendererFlip::SDL_FLIP_NONE);
+/*/
+      SDL_RenderCopy(monitor.renderer, monitor.texture, &srcrect, &dstrect);
+      SDL_RenderCopy(monitor.renderer, monitor.texture_frameimage, nullptr, nullptr);
+//*/
       SDL_RenderPresent(monitor.renderer);
       _display_counter = _texupdate_counter;
       if (_invalidated) {
         _invalidated = false;
-        SDL_RenderCopy(monitor.renderer, monitor.texture, nullptr, nullptr);
+//
+pivot.x = (float)w / 2 - dstrect.x;
+pivot.y = (float)h / 2 - dstrect.y;
+SDL_RenderCopyExF(monitor.renderer, monitor.texture, &srcrect, &dstrect, angle, &pivot, SDL_RendererFlip::SDL_FLIP_NONE);
+pivot.x = (float)w / 2;
+pivot.y = (float)h / 2;
+SDL_RenderCopyExF(monitor.renderer, monitor.texture_frameimage, nullptr, nullptr, angle, &pivot, SDL_RendererFlip::SDL_FLIP_NONE);
+/*/
+        SDL_RenderCopy(monitor.renderer, monitor.texture, &srcrect, &dstrect);
+        SDL_RenderCopy(monitor.renderer, monitor.texture_frameimage, nullptr, nullptr);
         SDL_RenderPresent(monitor.renderer);
+//*/
       }
     }
   }
