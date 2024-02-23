@@ -5,6 +5,7 @@
 
 #if defined ( ESP_PLATFORM )
 
+#include <cstdint>
 #include <sdkconfig.h>
 #include <nvs.h>
 #include <esp_log.h>
