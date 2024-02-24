@@ -45,7 +45,8 @@ namespace lgfx
     uint_fast16_t frame_height = 0;
     uint_fast16_t frame_inner_x = 0;
     uint_fast16_t frame_inner_y = 0;
-    uint_fast16_t frame_rotation = 0;
+    int_fast16_t frame_rotation = 0;
+    float frame_angle = 0;
 
     int_fast16_t scaling_x = 1;
     int_fast16_t scaling_y = 1;
@@ -118,6 +119,7 @@ namespace lgfx
     static void _event_proc(void);
     static void _update_proc(void);
     void sdl_invalidate(void) { _invalidated = true; }
+    void render_texture(SDL_Texture* texture, int tx, int ty, int tw, int th, float angle);
     bool initFrameBuffer(size_t width, size_t height);
     void deinitFrameBuffer(void);
 
