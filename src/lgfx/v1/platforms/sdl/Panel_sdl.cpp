@@ -85,6 +85,28 @@ namespace lgfx
             }
           }
           break;
+        case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6:
+          if (event.type == SDL_KEYDOWN)
+          {
+            auto mon = getMonitorByWindowID(event.button.windowID);
+            if (mon != nullptr)
+            {
+              int nw = mon->frame_width;
+              int nh = mon->frame_height;
+              if (mon->frame_rotation & 1) {
+                std::swap(nw, nh);
+              }
+              int size = 1 + (event.key.keysym.sym - SDLK_1);
+              nw *= size;
+              nh *= size;
+              int x, y, w, h;
+              SDL_GetWindowSizeInPixels(mon->window, &w, &h);
+              SDL_GetWindowPosition(mon->window, &x, &y);
+              SDL_SetWindowSize(mon->window, nw, nh);
+              SDL_SetWindowPosition(mon->window, x + (w-nw)/2, y + (h-nh)/2);
+              mon->panel->sdl_invalidate();
+            }
+          }
         default: continue;
         }
         if (event.type == SDL_KEYDOWN) {
@@ -98,12 +120,10 @@ namespace lgfx
         auto mon = getMonitorByWindowID(event.button.windowID);
         if (mon != nullptr)
         {
-          int x, y, w, h;
-          SDL_GetWindowSize(mon->window, &w, &h);
-          SDL_GetMouseState(&x, &y);
-
-          // if (mon->frame_angle)
           {
+            int x, y, w, h;
+            SDL_GetWindowSize(mon->window, &w, &h);
+            SDL_GetMouseState(&x, &y);
             float sf = sinf(mon->frame_angle * M_PI / 180);
             float cf = cosf(mon->frame_angle * M_PI / 180);
             x -= w / 2.0f;
@@ -118,19 +138,6 @@ namespace lgfx
             mon->touch_x = x - mon->frame_inner_x;
             mon->touch_y = y - mon->frame_inner_y;
           }
-/*
-          int r = mon->frame_rotation & 3;
-          if (r) {
-            if (r & 1) { 
-              // std::swap(x, y); 
-              std::swap(w, h);
-            }
-            // if ((1u << r) & 0b0110) { y = h - (y + 1); }
-            // if (r & 2)              { x = w - (x + 1); }
-          }
-          mon->touch_x = x * mon->frame_width / w - mon->frame_inner_x;
-          mon->touch_y = y * mon->frame_height / h - mon->frame_inner_y;
-//*/
           if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
           {
             mon->touched = true;
@@ -179,6 +186,7 @@ namespace lgfx
     for (auto it = _list_monitor.begin(); it != _list_monitor.end(); )
     {
       if ((*it)->closing) {
+        if ((*it)->texture_frameimage) { SDL_DestroyTexture((*it)->texture_frameimage); }
         SDL_DestroyTexture((*it)->texture);
         SDL_DestroyRenderer((*it)->renderer);
         SDL_DestroyWindow((*it)->window);
