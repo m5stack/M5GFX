@@ -488,10 +488,6 @@ namespace lgfx
     { // 表示する向きを変える
       monitor.frame_angle = angle;
       sdl_invalidate();
-      int mw, mh;
-      SDL_GetWindowSizeInPixels(monitor.window, &mw, &mh);
-      SDL_Rect r{0, 0, mw, mh};
-      SDL_RenderFillRect(monitor.renderer, &r);
     } else if (monitor.frame_rotation & ~3u) {
       monitor.frame_rotation &= 3;
       monitor.frame_angle = (monitor.frame_rotation) * 90;
@@ -499,6 +495,7 @@ namespace lgfx
 
     if (_invalidated || (_display_counter != _texupdate_counter))
     {
+      _invalidated = false;
       SDL_RendererInfo info;
       if (0 == SDL_GetRendererInfo(monitor.renderer, &info)) {
         // ステップ実行中はVSYNCを待機しない
@@ -507,12 +504,16 @@ namespace lgfx
           SDL_RenderSetVSync(monitor.renderer, !step_exec);
         }
       }
+      SDL_SetRenderDrawColor(monitor.renderer, 0, 0, 0, 0xFF);
+      SDL_RenderClear(monitor.renderer);
       render_texture(monitor.texture, monitor.frame_inner_x, monitor.frame_inner_y, _cfg.panel_width, _cfg.panel_height, angle);
       render_texture(monitor.texture_frameimage, 0, 0, monitor.frame_width, monitor.frame_height, angle);
       SDL_RenderPresent(monitor.renderer);
       _display_counter = _texupdate_counter;
       if (_invalidated) {
         _invalidated = false;
+        SDL_SetRenderDrawColor(monitor.renderer, 0, 0, 0, 0xFF);
+        SDL_RenderClear(monitor.renderer);
         render_texture(monitor.texture, monitor.frame_inner_x, monitor.frame_inner_y, _cfg.panel_width, _cfg.panel_height, angle);
         render_texture(monitor.texture_frameimage, 0, 0, monitor.frame_width, monitor.frame_height, angle);
         SDL_RenderPresent(monitor.renderer);
