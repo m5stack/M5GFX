@@ -28,8 +28,11 @@ Porting for SDL:
 #include "../../misc/common_function.hpp"
 #include "../../Bus.hpp"
 
-#include <math.h>
 #include <list>
+#include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace lgfx
 {
