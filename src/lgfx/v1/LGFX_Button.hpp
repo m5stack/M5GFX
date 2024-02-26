@@ -90,7 +90,7 @@ namespace lgfx
     textdatum_t _textdatum = middle_center; // Text size multiplier and text datum for button
     char _label[12]; // Button text is 11 chars maximum unless long_name used
     float _textsize_x, _textsize_y;
-    bool _pressed, _last_press; // Button states
+    bool _pressed = false, _last_press = false; // Button states
   };
 
 //----------------------------------------------------------------------------
