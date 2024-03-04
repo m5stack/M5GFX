@@ -11,6 +11,7 @@ namespace m5gfx
   #include "frame_image_M5StackCoreInk.h"
   #include "frame_image_M5StickCPlus.h"
   #include "frame_image_M5StickCPlus2.h"
+  #include "frame_image_M5Dial.h"
 
   struct picture_frame_t
   {
@@ -26,6 +27,7 @@ namespace m5gfx
   static constexpr const picture_frame_t picture_frame_M5StackCoreInk = { 280, 395, 40, 80, frame_image_M5StackCoreInk };
   static constexpr const picture_frame_t picture_frame_M5StickCPlus = { 235, 468, 50, 40, frame_image_M5StickCPlus };
   static constexpr const picture_frame_t picture_frame_M5StickCPlus2 = { 235, 468, 50, 40, frame_image_M5StickCPlus2 };
+  static constexpr const picture_frame_t picture_frame_M5Dial = { 350, 350, 55, 55, frame_image_M5Dial };
 
   const picture_frame_t* getPictureFrame(board_t b)
   {
@@ -36,6 +38,7 @@ namespace m5gfx
     case board_M5StackCoreInk:  return &picture_frame_M5StackCoreInk;
     case board_M5StickCPlus:    return &picture_frame_M5StickCPlus;
     case board_M5StickCPlus2:   return &picture_frame_M5StickCPlus2;
+    case board_M5Dial:          return &picture_frame_M5Dial;
     default: return nullptr;
     }
   }
