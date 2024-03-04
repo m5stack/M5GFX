@@ -82,19 +82,33 @@ namespace lgfx
     _range_mod.right  = 0;
     _range_mod.bottom = 0;
 
-    _last_epd_mode = epd_quality;
+    _last_epd_mode = (epd_mode_t)~0u;
     _need_flip_draw = true;
     memset(_buf, 0xFF, _get_buffer_length());
     _exec_transfer(0x24, _range_old);
 
+    _wait_busy();
     _bus->writeCommand(0x22, 8);
     _bus->writeData(0xFC, 8);
+    // command 0x22 = Display Update Sequence
+    // 0b10000000 = Enable Clock signal
+    // 0b01000000 = Enable Analog
+    // 0b00100000 = Load temperature value
+    // 0b00010000 = Load LUT with DISPLAY Mode 1
+    // 0b00011000 = Load LUT with DISPLAY Mode 2
+    // 0b00000100 = Display with DISPLAY Mode 1
+    // 0b00001100 = Display with DISPLAY Mode 2
+    // 0b00000010 = Disable Analog
+    // 0b00000001 = Disable clock signal
     _bus->writeCommand(0x20, 8);
+    // command 0x20 = Activate Display Update Sequence
+
     _send_msec = millis();
     _wait_busy();
     _exec_transfer(0x24, _range_old);
     _bus->writeData(0x1C, 8);
     _bus->writeCommand(0x20, 8);
+    _wait_busy();
     endWrite();
     // memset(_buf, 0xFF, _get_buffer_length());
 
@@ -153,15 +167,17 @@ namespace lgfx
     // if (_range_old.intersectsWith(_range_mod))
     if (need_full_transfer)
     {
-      // tr.left = 0;
-      // tr.right = _width - 1;
-      // tr.top = 0;
-      // tr.bottom = _height - 1;
+      tr.left = 0;
+      tr.right = _width - 1;
+      tr.top = 0;
+      tr.bottom = _height - 1;
       // tr = _range_old;
+/*/
       if (tr.top > _range_old.top) { tr.top = _range_old.top; }
       if (tr.left > _range_old.left) { tr.left = _range_old.left; }
       if (tr.right < _range_old.right) { tr.right = _range_old.right; }
       if (tr.bottom < _range_old.bottom) { tr.bottom = _range_old.bottom; }
+//*/
     }
     _range_old = _range_mod;
     // else

@@ -11,7 +11,13 @@ https://docs.m5stack.com/ja/quick_start/m5unified/intro_vscode
 https://docs.platformio.org/en/latest/platforms/native.html#installation
 
 #### for Windows
-follow the [MSYS2](https://www.msys2.org/) installation guide and add the following paths to the `PATH` system environment variable:
+follow the [MSYS2](https://www.msys2.org/) installation guide .
+Run the following command on msys2 to install gcc and gdb .
+``` msys2
+ pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-gdb
+```
+
+Add the following paths to the `PATH` system environment variable:
 ```
 C:\msys64\mingw64\bin
 C:\msys64\ucrt64\bin
@@ -41,7 +47,7 @@ xcode-select --install
 
 Go to the [SDL repository on github and obtain the release package (SDL2-devel-x.x.x-mingw.zip).](https://github.com/libsdl-org/SDL/releases) 
 
-Unzip the zip file and copy the following four files to `C:\msys64\mingw64`
+Unzip the zip file and copy the following four files to `C:\msys64\ucrt64`
 
  - share
  - bin
@@ -71,6 +77,8 @@ Open the `PlatformIO_SDL` folder containing this document in PlatformIO.
 
 Click on the ![PlatformIO](img_pio.png) icon on the left side of the screen.  
 Click `PROJECT TASKS` -> `native` -> `General` -> `Upload`  
+※ If you are using arm processor, use `native_arm` instead of `native`  (e.g. M1mac)  
+
 ![execute](img_00.png)
 
 ※ The window may start up with the window hidden behind. Check the task tray.
