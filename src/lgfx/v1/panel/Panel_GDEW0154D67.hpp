@@ -58,7 +58,10 @@ namespace lgfx
     range_rect_t _range_old;
     unsigned long _send_msec = 0;
     epd_mode_t _last_epd_mode;
+    uint8_t _initialize_seq;
     bool _need_flip_draw;
+    bool _epd_frame_switching = false;
+    bool _epd_frame_back = false;
 
     size_t _get_buffer_length(void) const override;
 
@@ -67,7 +70,7 @@ namespace lgfx
     bool _read_pixel(uint_fast16_t x, uint_fast16_t y);
     void _update_transferred_rect(uint_fast16_t &xs, uint_fast16_t &ys, uint_fast16_t &xe, uint_fast16_t &ye);
     void _exec_transfer(uint32_t cmd, const range_rect_t& range, bool invert = false);
-    void _close_transfer(void);
+    void _after_wake(void);
 
     const uint8_t* getInitCommands(uint8_t listno) const override
     {
