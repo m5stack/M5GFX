@@ -83,6 +83,11 @@ namespace lgfx
       command_list(cmds);
     }
 
+    _last_epd_mode = (epd_mode_t)~0u;
+    _initialize_seq = true;
+    _need_flip_draw = false;
+    _epd_frame_back = false;
+
     setInvert(_invert);
 
     setRotation(_rotation);
@@ -95,11 +100,6 @@ namespace lgfx
     _range_mod.left   = INT16_MAX;
     _range_mod.right  = 0;
     _range_mod.bottom = 0;
-
-    _last_epd_mode = (epd_mode_t)~0u;
-    _need_flip_draw = true;
-    _initialize_seq = 2;
-    _epd_frame_back = false;
 
     endWrite();
   }
@@ -154,7 +154,6 @@ epd_mode != epd_quality の場合、EPDは内部の2つのフレームバッフ�
 epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY_UPDATE_CONTROL_2を使ってEPDのモード変更処理が必要
 
 */
-    uint8_t refresh_param = 0;
     if (_initialize_seq || flg_mode_changed)
     {
     // CMD_DISPLAY_UPDATE_CONTROL_2 parameter
@@ -168,20 +167,20 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
     // 0b00000010 = Disable Analog
     // 0b00000001 = Disable clock signal
     // epd_quality高品質モードではフリッキング更新を行う
-      refresh_param = (epd_mode == epd_mode_t::epd_quality)
-                          ? 0x14   // DISPLAY Mode1 (flicking)
-                          : 0x1C;  // DISPLAY Mode2 (no flick)
-      if (_initialize_seq) {
-        if (--_initialize_seq) {
-          // リセット直後は起動シーケンス設定を行う
-          refresh_param |= 0xF0;
-        }
-      }
-
       _range_mod.left = 0;
       _range_mod.right = _width - 1;
       _range_mod.top = 0;
       _range_mod.bottom = _height - 1;
+
+      if (_initialize_seq) {
+        _initialize_seq = false;
+        // リセット直後は起動シーケンス設定およびフレームバッファの転送を行う。ここではリフレッシュは行わない。
+        _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8);
+        _bus->writeData(0xF8, 8);
+        _exec_transfer(CMD_WRITE_RAM_BW, _range_mod, true);
+        _bus->writeCommand(CMD_MASTER_ACTIVATION, 8);
+        _send_msec = millis();
+      }
 
       // epd_qualityの場合は反転描画は不要になる。
       // 他のモードに変更した直後は反転描画を行う。
@@ -189,7 +188,7 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
       _epd_frame_switching = need_flip_draw;
       if (!need_flip_draw)
       {
-        if (!_initialize_seq && _epd_frame_back)
+        if (_epd_frame_back)
         {  // フレームバッファ2番に送信される場合はモード変更前に一度描画更新を行う
           _epd_frame_back = false;
           _exec_transfer(CMD_WRITE_RAM_BW, _range_mod);
@@ -199,6 +198,9 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
       }
       _wait_busy();
       _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
+      uint8_t refresh_param = (epd_mode == epd_mode_t::epd_quality)
+                          ? 0x14   // DISPLAY Mode1 (flicking)
+                          : 0x1C;  // DISPLAY Mode2 (no flick)
       _bus->writeData(refresh_param, 8);
       _last_epd_mode = epd_mode;
     }
@@ -212,8 +214,8 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
     _exec_transfer(CMD_WRITE_RAM_BW, tr, need_flip_draw);
     _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
     _send_msec = millis();
-
-    if (need_flip_draw) {
+    if (need_flip_draw)
+    { // 反転リフレッシュを自前でやる場合
       _exec_transfer(CMD_WRITE_RAM_BW, tr);
       _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
       _send_msec = millis();
@@ -230,11 +232,11 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
 
   void Panel_GDEW0154D67::setInvert(bool invert)
   {
-    if (_invert == invert) { return; }
+    if (_invert == invert && !_initialize_seq) { return; }
     _invert = invert;
     startWrite();
     _wait_busy();
-    _bus->writeCommand(0x21, 8);
+    _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_1, 8);
     _bus->writeData((invert ^ _cfg.invert) ? 0x88 : 0x00, 8);
     _need_flip_draw = true;
     _range_mod.top = 0;
@@ -259,8 +261,9 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
     else
     {
       rst_control(false);
-      delay(8);
+      delay(10);
       rst_control(true);
+      delay(10);
       _after_wake();
     }
   }

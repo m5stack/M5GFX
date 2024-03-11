@@ -58,7 +58,7 @@ namespace lgfx
     range_rect_t _range_old;
     unsigned long _send_msec = 0;
     epd_mode_t _last_epd_mode;
-    uint8_t _initialize_seq;
+    bool _initialize_seq;
     bool _need_flip_draw;
     bool _epd_frame_switching = false;
     bool _epd_frame_back = false;
