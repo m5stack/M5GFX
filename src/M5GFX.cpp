@@ -644,7 +644,7 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_5);
-        if ((id & 0xFF) == 0x85)
+        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
         {  //  check panel (ST7789)
           board = board_t::board_M5StickCPlus;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus");
@@ -739,7 +739,7 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_5);
-        if ((id & 0xFF) == 0x85)
+        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
         {  //  check panel (ST7789)
           _pin_level(GPIO_NUM_4, true);  // POWER_HOLD_PIN 4
           board = board_t::board_M5StickCPlus2;
@@ -806,8 +806,8 @@ namespace m5gfx
             bus_spi->init();
 
             id = _read_panel_id(bus_spi, GPIO_NUM_5);
-            if ((id & 0xFF) == 0x85)
-            {   // ST7789
+          if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+          {  //  check panel (ST7789)
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5Station");
               board = board_t::board_M5Station;
 
@@ -1342,8 +1342,8 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_7);
-        if ((id & 0xFF) == 0x81)
-        {  //  check panel (ST7789V2)
+        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+        {  //  check panel (ST7789)
           board = board_t::board_M5DinMeter;
           ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5DinMeter");
           bus_spi->release();
@@ -1387,8 +1387,8 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_37);
-        if ((id & 0xFF) == 0x81)
-        {  //  check panel (ST7789V2)
+        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+        {  //  check panel (ST7789)
           board = board_t::board_M5Cardputer;
           ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
           bus_spi->release();
