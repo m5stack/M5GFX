@@ -100,6 +100,8 @@ namespace lgfx
 
     static int main(int(*fn)(bool*), uint32_t msec_step_exec = 512);
 
+    static void setShortcutKeymod(SDL_Keymod keymod) { _keymod = keymod; }
+
   protected:
     const char* _window_title = "LGFX Simulator";
     SDL_mutex *_sdl_mutex = nullptr;
@@ -123,6 +125,8 @@ namespace lgfx
     void render_texture(SDL_Texture* texture, int tx, int ty, int tw, int th, float angle);
     bool initFrameBuffer(size_t width, size_t height);
     void deinitFrameBuffer(void);
+
+    static SDL_Keymod _keymod;
 
     struct lock_t {
       lock_t(Panel_sdl* parent);
