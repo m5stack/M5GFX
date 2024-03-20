@@ -1593,18 +1593,9 @@ init_clear:
       break;
     }
 
-// #if defined (M5GFX_ROTATION)
-//     {
-//       if (M5GFX_ROTATION & 1)
-//       {
-//         auto t = w;
-//         w = h;
-//         h = t;
-//       }
-//       pnl_cfg.offset_rotation = ((pnl_cfg.offset_rotation + M5GFX_ROTATION) & 3)
-//                               + ((pnl_cfg.offset_rotation ^ M5GFX_ROTATION) & 4);
-//     }
-// #endif
+#if defined (M5GFX_SHORTCUT_MOD)
+    p->setShortcutKeymod(M5GFX_SHORTCUT_MOD);
+#endif
 
 #if defined (M5GFX_SHOW_FRAME)
     auto pf = getPictureFrame(board);

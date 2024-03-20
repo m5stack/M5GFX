@@ -38,6 +38,7 @@ namespace lgfx
 {
  inline namespace v1
  {
+  SDL_Keymod Panel_sdl::_keymod = KMOD_NONE;
   static SDL_semaphore *_update_in_semaphore = nullptr;
   static SDL_semaphore *_update_out_semaphore = nullptr;
   volatile static uint32_t _in_step_exec = 0;
@@ -72,9 +73,11 @@ namespace lgfx
         case SDLK_DOWN:  gpio = 38; break;
         case SDLK_RIGHT: gpio = 37; break;
         case SDLK_UP:    gpio = 36; break;
+
+        /// L/Rキーで画面回転
         case SDLK_r:
         case SDLK_l:
-          if (event.type == SDL_KEYDOWN)
+          if (event.type == SDL_KEYDOWN && event.key.keysym.mod == _keymod) 
           {
             if (mon != nullptr)
             {
@@ -88,8 +91,10 @@ namespace lgfx
             }
           }
           break;
+
+        /// 1～6キーで画面拡大率変更
         case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6:
-          if (event.type == SDL_KEYDOWN)
+          if (event.type == SDL_KEYDOWN && event.key.keysym.mod == _keymod) 
           {
             if (mon != nullptr)
             {
