@@ -143,7 +143,8 @@ public:
     int spi_mosi = GPIO_NUM_23;
     int spi_sclk = GPIO_NUM_18;
 
-    if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
+    auto axp_id = m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000);
+    if (axp_id == 0x03 || axp_id == 0x4A) // AXP192 & AXP2101
     { // M5Stack Core2 / Tough
 #if defined ( ESP_LOGD )
       ESP_LOGD("LGFX","ModuleDisplay with Core2/Tough");
