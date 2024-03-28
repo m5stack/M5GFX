@@ -648,6 +648,8 @@ namespace m5gfx
         {  //  check panel (ST7789)
           board = board_t::board_M5StickCPlus;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus");
+          bus_spi->release();
+          bus_cfg.spi_host = HSPI_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
           bus_spi->config(bus_cfg);
@@ -661,6 +663,8 @@ namespace m5gfx
         {  //  check panel (ST7735)
           board = board_t::board_M5StickC;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickC");
+          bus_spi->release();
+          bus_cfg.spi_host = HSPI_HOST;
           bus_cfg.freq_write = 27000000;
           bus_cfg.freq_read  = 14000000;
           bus_spi->config(bus_cfg);
@@ -744,6 +748,8 @@ namespace m5gfx
           _pin_level(GPIO_NUM_4, true);  // POWER_HOLD_PIN 4
           board = board_t::board_M5StickCPlus2;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus2");
+          bus_spi->release();
+          bus_cfg.spi_host = HSPI_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
           bus_spi->config(bus_cfg);
@@ -811,6 +817,8 @@ namespace m5gfx
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5Station");
               board = board_t::board_M5Station;
 
+              bus_spi->release();
+              bus_cfg.spi_host = HSPI_HOST;
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 15000000;
               bus_spi->config(bus_cfg);
