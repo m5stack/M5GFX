@@ -24,6 +24,10 @@
 #include "lgfx/v1/panel/Panel_M5HDMI.hpp"
 #include "M5GFX.h"
 
+#if defined (SDL_h_) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32) || !defined (CONFIG_IDF_TARGET) 
+#define M5MODULEDISPLAY_ENABLED
+#endif
+
 #ifndef M5MODULEDISPLAY_LOGICAL_WIDTH
 #define M5MODULEDISPLAY_LOGICAL_WIDTH 1280
 #endif
@@ -100,7 +104,8 @@ public:
       return true;
     }
 
-#if !defined (CONFIG_IDF_TARGET_ESP32C3)
+#if defined (M5MODULEDISPLAY_ENABLED)
+#undef M5MODULEDISPLAY_ENABLED
 
 #if defined (SDL_h_)
     auto p = new lgfx::Panel_sdl();
@@ -143,7 +148,8 @@ public:
     int spi_mosi = GPIO_NUM_23;
     int spi_sclk = GPIO_NUM_18;
 
-    if (0x03 == m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000))
+    auto axp_id = m5gfx::i2c::readRegister8(1, 0x34, 0x03, 400000);
+    if (axp_id == 0x03 || axp_id == 0x4A) // AXP192 & AXP2101
     { // M5Stack Core2 / Tough
 #if defined ( ESP_LOGD )
       ESP_LOGD("LGFX","ModuleDisplay with Core2/Tough");
