@@ -24,6 +24,10 @@
 #include "lgfx/v1/panel/Panel_M5HDMI.hpp"
 #include "M5GFX.h"
 
+#if defined (SDL_h_) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32) || !defined (CONFIG_IDF_TARGET) 
+#define M5MODULEDISPLAY_ENABLED
+#endif
+
 #ifndef M5MODULEDISPLAY_LOGICAL_WIDTH
 #define M5MODULEDISPLAY_LOGICAL_WIDTH 1280
 #endif
@@ -100,7 +104,8 @@ public:
       return true;
     }
 
-#if !defined (CONFIG_IDF_TARGET_ESP32C3)
+#if defined (M5MODULEDISPLAY_ENABLED)
+#undef M5MODULEDISPLAY_ENABLED
 
 #if defined (SDL_h_)
     auto p = new lgfx::Panel_sdl();
