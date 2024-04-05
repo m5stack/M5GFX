@@ -956,7 +956,7 @@ typedef unsigned char mz_validate_uint64[sizeof(mz_uint64)==8 ? 1 : -1];
   #define MZ_FREE(x) (void)x, ((void)0)
   #define MZ_REALLOC(p, x) NULL
 #else
-  #ifdef BOARD_HAS_PSRAM
+  #if defined (ESP_PLATFORM) && (BOARD_HAS_PSRAM)
     #if __has_include(<esp32/spiram.h>)
       #include <esp32/spiram.h>
     #elif __has_include(<esp_spiram.h>)

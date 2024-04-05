@@ -49,6 +49,7 @@ namespace lgfx
 
   color_depth_t Panel_GDEW0154D67::setColorDepth(color_depth_t depth)
   {
+    (void)depth;
     _write_depth = color_depth_t::rgb565_2Byte;
     _read_depth = color_depth_t::rgb565_2Byte;
     return color_depth_t::rgb565_2Byte;
@@ -402,8 +403,8 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
     if (_cfg.pin_busy >= 0 && gpio_in(_cfg.pin_busy))
     {
       uint32_t start_time = millis();
-      int delay_msec = _refresh_msec - (start_time - _send_msec);
-      if (delay_msec > 0 && delay_msec < timeout) { delay(delay_msec); }
+      uint32_t delay_msec = _refresh_msec - (start_time - _send_msec);
+      if (delay_msec && delay_msec < timeout) { delay(delay_msec); }
       do
       {
         if (millis() - start_time > timeout) {

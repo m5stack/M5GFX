@@ -1502,6 +1502,7 @@ init_clear:
 
   board_t M5GFX::autodetect(bool use_reset, board_t board)
   {
+    (void)use_reset;
     auto p = new Panel_sdl();
     _panel_last.reset(p);
     auto pnl_cfg = p->config();

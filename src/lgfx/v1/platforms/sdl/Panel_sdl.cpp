@@ -400,6 +400,10 @@ namespace lgfx
 
   void Panel_sdl::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
+    (void)x;
+    (void)y;
+    (void)w;
+    (void)h;
     if (_in_step_exec)
     {
       if (_display_counter != _modified_counter) {
@@ -414,6 +418,7 @@ namespace lgfx
 
   uint_fast8_t Panel_sdl::getTouchRaw(touch_point_t* tp, uint_fast8_t count)
   {
+    (void)count;
     tp->x = monitor.touch_x;
     tp->y = monitor.touch_y;
     tp->size = monitor.touched ? 1 : 0;
@@ -617,7 +622,7 @@ namespace lgfx
 
     auto fb = framebuffer;
     {
-      for (int y = 0; y < height; ++y)
+      for (size_t y = 0; y < height; ++y)
       {
         lineArray[y] = fb;
         fb += width;
