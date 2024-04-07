@@ -1419,6 +1419,7 @@ namespace m5gfx
             cfg.readable = true;
             cfg.invert = true;
             p->config(cfg);
+            p->setRotation(1);
           }
           _panel_last.reset(p);
           _set_pwm_backlight(GPIO_NUM_38, 7, 256, false, 16);
