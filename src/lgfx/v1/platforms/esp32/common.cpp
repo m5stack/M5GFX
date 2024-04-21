@@ -1384,8 +1384,8 @@ namespace lgfx
         i2c_set_cmd(dev, 0, i2c_cmd_read, len, last_nack && length == 0);
         i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
         updateDev(dev);
-        dev->ctr.trans_start = 1;
         dev->int_clr.val = intmask;
+        dev->ctr.trans_start = 1;
 
         do
         {
