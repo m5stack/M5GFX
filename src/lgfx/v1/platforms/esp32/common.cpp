@@ -961,8 +961,9 @@ namespace lgfx
         {
           i2c_set_cmd(dev, 0, i2c_cmd_stop, 0);
           i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
-          dev->ctr.trans_start = 1;
           static constexpr uint32_t intmask_ = I2C_ACK_ERR_INT_RAW_M | I2C_TIME_OUT_INT_RAW_M | I2C_END_DETECT_INT_RAW_M | I2C_ARBITRATION_LOST_INT_RAW_M | I2C_TRANS_COMPLETE_INT_RAW_M;
+          dev->int_clr.val = intmask_;
+          dev->ctr.trans_start = 1;
           uint32_t ms = lgfx::millis();
           taskYIELD();
           while (!(dev->int_raw.val & intmask_) && ((millis() - ms) < 14));
@@ -1331,14 +1332,15 @@ namespace lgfx
           ESP_LOGV("LGFX", "i2c write error : ack wait");
           break;
         }
+        i2c_set_cmd(dev, 0, i2c_cmd_write, len);
+        i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
         size_t idx = 0;
         do
         {
           *fifo_addr = data[idx];
         } while (++idx != len);
-        i2c_set_cmd(dev, 0, i2c_cmd_write, len);
-        i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
         updateDev(dev);
+        dev->int_clr.val = 0x1FFFF;
         dev->ctr.trans_start = 1;
         i2c_context[i2c_port].wait_ack_stage = 2;
         data += len;
