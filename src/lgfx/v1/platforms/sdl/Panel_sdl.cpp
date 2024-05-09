@@ -58,6 +58,28 @@ namespace lgfx
   }
 //----------------------------------------------------------------------------
 
+  static std::vector<Panel_sdl::KeyCodeMapping_t> _key_code_map;
+
+  void Panel_sdl::addKeyCodeMapping(SDL_KeyCode keyCode, uint8_t gpio)
+  {
+    if (gpio > EMULATED_GPIO_MAX)
+      return;
+    KeyCodeMapping_t map;
+    map.keycode = keyCode;
+    map.gpio = gpio;
+    _key_code_map.push_back(map);
+  }
+
+  int Panel_sdl::getKeyCodeMapping(SDL_KeyCode keyCode)
+  {
+    for (const auto& i : _key_code_map)
+    {
+      if (i.keycode == keyCode)
+        return i.gpio;
+    }
+    return -1;
+  }
+
   void Panel_sdl::_event_proc(void)
   {
     SDL_Event event;
@@ -67,43 +89,49 @@ namespace lgfx
       {
         auto mon = getMonitorByWindowID(event.button.windowID);
         int gpio = -1;
-        switch (event.key.keysym.sym)
-        { /// M5StackのBtnA～BtnCのエミュレート;
-        case SDLK_LEFT:  gpio = 39; break;
-        case SDLK_DOWN:  gpio = 38; break;
-        case SDLK_RIGHT: gpio = 37; break;
-        case SDLK_UP:    gpio = 36; break;
 
-        /// L/Rキーで画面回転
-        case SDLK_r:
-        case SDLK_l:
-          if (event.type == SDL_KEYDOWN && event.key.keysym.mod == _keymod) 
-          {
-            if (mon != nullptr)
+        /// Check key mapping
+        gpio = getKeyCodeMapping((SDL_KeyCode)event.key.keysym.sym);
+        if (gpio < 0)
+        {
+          switch (event.key.keysym.sym)
+          { /// M5StackのBtnA～BtnCのエミュレート;
+          // case SDLK_LEFT:  gpio = 39; break;
+          // case SDLK_DOWN:  gpio = 38; break;
+          // case SDLK_RIGHT: gpio = 37; break;
+          // case SDLK_UP:    gpio = 36; break;
+    
+          /// L/Rキーで画面回転
+          case SDLK_r:
+          case SDLK_l:
+            if (event.type == SDL_KEYDOWN && event.key.keysym.mod == _keymod) 
             {
-              mon->frame_rotation = (mon->frame_rotation += event.key.keysym.sym == SDLK_r ? 1 : -1);
-              int x, y, w, h;
-              SDL_GetWindowSize(mon->window, &w, &h);
-              SDL_GetWindowPosition(mon->window, &x, &y);
-              SDL_SetWindowSize(mon->window, h, w);
-              SDL_SetWindowPosition(mon->window, x + (w-h)/2, y + (h-w)/2);
-              mon->panel->sdl_invalidate();
+              if (mon != nullptr)
+              {
+                mon->frame_rotation = (mon->frame_rotation += event.key.keysym.sym == SDLK_r ? 1 : -1);
+                int x, y, w, h;
+                SDL_GetWindowSize(mon->window, &w, &h);
+                SDL_GetWindowPosition(mon->window, &x, &y);
+                SDL_SetWindowSize(mon->window, h, w);
+                SDL_SetWindowPosition(mon->window, x + (w-h)/2, y + (h-w)/2);
+                mon->panel->sdl_invalidate();
+              }
             }
-          }
-          break;
+            break;
 
-        /// 1～6キーで画面拡大率変更
-        case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6:
-          if (event.type == SDL_KEYDOWN && event.key.keysym.mod == _keymod) 
-          {
-            if (mon != nullptr)
+          /// 1～6キーで画面拡大率変更
+          case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6:
+            if (event.type == SDL_KEYDOWN && event.key.keysym.mod == _keymod) 
             {
-              int size = 1 + (event.key.keysym.sym - SDLK_1);
-              _update_scaling(mon, size, size);
+              if (mon != nullptr)
+              {
+                int size = 1 + (event.key.keysym.sym - SDLK_1);
+                _update_scaling(mon, size, size);
+              }
             }
+            break;
+          default: continue;
           }
-          break;
-        default: continue;
         }
         if (event.type == SDL_KEYDOWN) {
           gpio_lo(gpio);
@@ -215,6 +243,13 @@ namespace lgfx
   {
     if (_inited) return 1;
     _inited = true;
+
+    /// Add default keycode mapping
+    /// M5StackのBtnA～BtnCのエミュレート;
+    addKeyCodeMapping(SDLK_LEFT, 39);
+    addKeyCodeMapping(SDLK_DOWN, 38);
+    addKeyCodeMapping(SDLK_RIGHT, 37);
+    addKeyCodeMapping(SDLK_UP, 36);
 
     SDL_CreateThread((SDL_ThreadFunction)detectDebugger, "dbg", &_inited);
 

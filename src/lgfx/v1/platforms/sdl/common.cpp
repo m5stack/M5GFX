@@ -18,6 +18,7 @@ Contributors:
 Porting for SDL:
  [imliubo](https://github.com/imliubo)
 /----------------------------------------------------------------------------*/
+#include <cstdint>
 #if !defined (ARDUINO)
 
 #include "common.hpp"
@@ -26,6 +27,7 @@ Porting for SDL:
 
 #include <chrono>
 #include <thread>
+#include <vector>
 
 namespace lgfx
 {
