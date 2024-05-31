@@ -1383,7 +1383,7 @@ namespace m5gfx
         bus_spi->release();
       }
 
-      if (board == 0 || board == board_t::board_M5Cardputer)
+      if (board == 0 || board == board_t::board_M5Cardputer || board == board_t::board_M5VAMeter)
       {
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_35;
@@ -1395,10 +1395,22 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_37);
+        //  check panel (ST7789)
         if ((id & 0xFB) == 0x81) // 0x81 or 0x85
-        {  //  check panel (ST7789)
-          board = board_t::board_M5Cardputer;
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
+        {
+          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_44 };
+          auto result = lgfx::gpio::command(
+            (const uint8_t[]) {
+            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_44, // Cardputer = IrDA_TXD
+            lgfx::gpio::command_mode_input_pullup  , GPIO_NUM_44,
+            lgfx::gpio::command_read               , GPIO_NUM_44,
+            lgfx::gpio::command_end
+            }
+          );
+          for (auto &bup : backup_pins) { bup.restore(); }
+          // In "Cardputer", even if GPIO44 are set to Input_pullup, LOW is output.
+          // This characteristic can be used to distinguish between the two models.
+          board = (result == 0) ? board_t::board_M5Cardputer : board_t::board_M5VAMeter;
           bus_spi->release();
           bus_cfg.spi_host = SPI3_HOST;
           bus_cfg.freq_write = 40000000;
@@ -1411,18 +1423,32 @@ namespace m5gfx
             auto cfg = p->config();
             cfg.pin_cs  = GPIO_NUM_37;
             cfg.pin_rst = GPIO_NUM_33;
-            cfg.panel_width = 135;
             cfg.panel_height = 240;
-            cfg.offset_x     = 52;
-            cfg.offset_y     = 40;
             cfg.offset_rotation = 0;
             cfg.readable = true;
             cfg.invert = true;
+            int rotation = 0;
+            int bl_freq = 256;
+            int bl_offset = 16;
+            if (board == board_t::board_M5Cardputer) {
+              ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
+              cfg.panel_width = 135;
+              cfg.offset_x     = 52;
+              cfg.offset_y     = 40;
+              rotation = 1;
+            } else {
+              ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5VAMeter");
+              cfg.panel_width = 240;
+              cfg.offset_x     = 0;
+              cfg.offset_y     = 0;
+              bl_freq = 512;
+              bl_offset = 64;
+            }
             p->config(cfg);
-            p->setRotation(1);
+            p->setRotation(rotation);
+            _panel_last.reset(p);
+            _set_pwm_backlight(GPIO_NUM_38, 7, bl_freq, false, bl_offset);
           }
-          _panel_last.reset(p);
-          _set_pwm_backlight(GPIO_NUM_38, 7, 256, false, 16);
 
           goto init_clear;
         }
@@ -1539,6 +1565,7 @@ init_clear:
     case board_M5Cardputer:    title = "M5Cardputer";    break;
     case board_M5DinMeter:     title = "M5DinMeter";     break;
     case board_M5AirQ:         title = "M5AirQ";         break;
+    case board_M5VAMeter:      title = "M5VAMeter";      break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -1595,6 +1622,11 @@ init_clear:
       break;
 
     case board_M5Dial:
+      w = 240;
+      h = 240;
+      break;
+
+    case board_M5VAMeter:
       w = 240;
       h = 240;
       break;
