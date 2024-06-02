@@ -110,11 +110,12 @@ Contributors:
  #if !defined (DMA_IN_PERI_SEL_CH0_REG)
   #define DMA_IN_PERI_SEL_CH0_REG  GDMA_IN_PERI_SEL_CH0_REG
  #endif
+
+ #if !defined (SOC_GDMA_PAIRS_PER_GROUP_MAX)
+  #define SOC_GDMA_PAIRS_PER_GROUP_MAX SOC_GDMA_PAIRS_PER_GROUP
+ #endif
 #endif
 
-#if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0))
- #define SOC_GDMA_PAIRS_PER_GROUP_MAX SOC_GDMA_PAIRS_PER_GROUP
-#endif
 
 #if defined ( ARDUINO )
  #if __has_include (<SPI.h>)
@@ -675,7 +676,7 @@ namespace lgfx
 #endif
     }
 
-#if defined ( CONFIG_IDF_TARGET_ESP32 ) || !defined ( CONFIG_IDF_TARGET )
+#if defined ( CONFIG_IDF_TARGET_ESP32 ) || defined ( CONFIG_IDF_TARGET_ESP32S2 ) || !defined ( CONFIG_IDF_TARGET )
 
     static void updateDev(i2c_dev_t* dev)
     {
@@ -901,7 +902,7 @@ namespace lgfx
 
     static cpp::result<void, error_t> i2c_wait(int i2c_port, bool flg_stop = false)
     {
-      if (i2c_context[i2c_port].state.has_error()) { return cpp::fail(i2c_context[i2c_port].state.error()); }
+      if (flg_stop == false && i2c_context[i2c_port].state.has_error()) { return cpp::fail(i2c_context[i2c_port].state.error()); }
       cpp::result<void, error_t> res = {};
       if (i2c_context[i2c_port].state == i2c_context_t::state_disconnect) { return res; }
       auto dev = getDev(i2c_port);
@@ -961,8 +962,9 @@ namespace lgfx
         {
           i2c_set_cmd(dev, 0, i2c_cmd_stop, 0);
           i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
-          dev->ctr.trans_start = 1;
           static constexpr uint32_t intmask_ = I2C_ACK_ERR_INT_RAW_M | I2C_TIME_OUT_INT_RAW_M | I2C_END_DETECT_INT_RAW_M | I2C_ARBITRATION_LOST_INT_RAW_M | I2C_TRANS_COMPLETE_INT_RAW_M;
+          dev->int_clr.val = intmask_;
+          dev->ctr.trans_start = 1;
           uint32_t ms = lgfx::millis();
           taskYIELD();
           while (!(dev->int_raw.val & intmask_) && ((millis() - ms) < 14));
@@ -1331,14 +1333,15 @@ namespace lgfx
           ESP_LOGV("LGFX", "i2c write error : ack wait");
           break;
         }
+        i2c_set_cmd(dev, 0, i2c_cmd_write, len);
+        i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
         size_t idx = 0;
         do
         {
           *fifo_addr = data[idx];
         } while (++idx != len);
-        i2c_set_cmd(dev, 0, i2c_cmd_write, len);
-        i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
         updateDev(dev);
+        dev->int_clr.val = 0x1FFFF;
         dev->ctr.trans_start = 1;
         i2c_context[i2c_port].wait_ack_stage = 2;
         data += len;
@@ -1384,8 +1387,8 @@ namespace lgfx
         i2c_set_cmd(dev, 0, i2c_cmd_read, len, last_nack && length == 0);
         i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
         updateDev(dev);
-        dev->ctr.trans_start = 1;
         dev->int_clr.val = intmask;
+        dev->ctr.trans_start = 1;
 
         do
         {
@@ -1396,10 +1399,10 @@ namespace lgfx
           if (delayus > 0) {
             delayMicroseconds(delayus);
           }
-          while (0 == getRxFifoCount(dev) && !(dev->int_raw.val & intmask) && ((lgfx::micros() - us) <= us_limit + 1024))
+          do
           {
             taskYIELD();
-          }
+          } while (0 == getRxFifoCount(dev) && !(dev->int_raw.val & intmask) && ((lgfx::micros() - us) <= us_limit + 1024));
 
           if (0 == getRxFifoCount(dev))
           {
@@ -1407,6 +1410,7 @@ namespace lgfx
             ESP_LOGW("LGFX", "i2c read error : read timeout");
             res = cpp::fail(error_t::connection_lost);
             i2c_context[i2c_port].state = cpp::fail(error_t::connection_lost);
+            i2c_context[i2c_port].wait_ack_stage = 0;
             return res;
           }
           *readdata++ = *fifo_addr; //dev->fifo_data.data;
@@ -1420,24 +1424,24 @@ namespace lgfx
     {
       cpp::result<void, error_t> res;
       if ((res = beginTransaction(i2c_port, addr, freq, false)).has_value()
-       && (res = writeBytes(i2c_port, writedata, writelen)).has_value()
       )
       {
-        res = endTransaction(i2c_port);
+        res = writeBytes(i2c_port, writedata, writelen);
       }
-      return res;
+      auto last = endTransaction(i2c_port);
+      return res.has_error() ? res : last;
     }
 
     cpp::result<void, error_t> transactionRead(int i2c_port, int addr, uint8_t *readdata, uint8_t readlen, uint32_t freq)
     {
       cpp::result<void, error_t> res;
       if ((res = beginTransaction(i2c_port, addr, freq, true)).has_value()
-       && (res = readBytes(i2c_port, readdata, readlen, true)).has_value()
       )
       {
-        res = endTransaction(i2c_port);
+        res = readBytes(i2c_port, readdata, readlen, true);
       }
-      return res;
+      auto last = endTransaction(i2c_port);
+      return res.has_error() ? res : last;
     }
 
     cpp::result<void, error_t> transactionWriteRead(int i2c_port, int addr, const uint8_t *writedata, uint8_t writelen, uint8_t *readdata, size_t readlen, uint32_t freq)
@@ -1446,12 +1450,12 @@ namespace lgfx
       if ((res = beginTransaction(i2c_port, addr, freq, false)).has_value()
        && (res = writeBytes(i2c_port, writedata, writelen)).has_value()
        && (res = restart(i2c_port, addr, freq, true)).has_value()
-       && (res = readBytes(i2c_port, readdata, readlen, true)).has_value()
       )
       {
-        res = endTransaction(i2c_port);
+        res = readBytes(i2c_port, readdata, readlen, true);
       }
-      return res;
+      auto last = endTransaction(i2c_port);
+      return res.has_error() ? res : last;
     }
 
     cpp::result<uint8_t, error_t> readRegister8(int i2c_port, int addr, uint8_t reg, uint32_t freq)

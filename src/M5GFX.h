@@ -205,6 +205,14 @@ namespace m5gfx
                       , uint32_t pixel_clock    = 74250000
                       )
     {
+      (void)logical_width;
+      (void)logical_height;
+      (void)refresh_rate;
+      (void)output_width;
+      (void)output_height;
+      (void)scale_w;
+      (void)scale_h;
+      (void)pixel_clock;
 #if defined (__M5GFX_M5ATOMDISPLAY__) || defined (__M5GFX_M5MODULEDISPLAY__)
       auto board = getBoard();
       if (board == board_t::board_M5AtomDisplay || board == board_t::board_M5ModuleDisplay)
