@@ -325,6 +325,7 @@ namespace m5gfx
   static constexpr int32_t i2c_freq = 400000;
   static constexpr int_fast16_t aw9523_i2c_addr = 0x58;  // AW9523B
   static constexpr int_fast16_t axp_i2c_addr = 0x34;     // AXP2101
+  static constexpr int_fast16_t gc0308_i2c_addr = 0x21;  // GC0308
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
   static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
@@ -1183,7 +1184,8 @@ namespace m5gfx
             m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x12, 0b11111111);  // LEDMODE_P0
             m5gfx::i2c::writeRegister8(i2c_port, aw9523_i2c_addr, 0x13, 0b11111111);  // LEDMODE_P1
             m5gfx::i2c::writeRegister8(i2c_port, axp_i2c_addr, 0x90, 0xBF); // LDOS ON/OFF control 0
-            m5gfx::i2c::writeRegister8(i2c_port, axp_i2c_addr, 0x95, 0x28); // ALDO3 set to 3.3v // for TF card slot
+            m5gfx::i2c::writeRegister8(i2c_port, axp_i2c_addr, 0x94, 33 - 5); // ALDO3 set to 3.3v // for GC0308 Camera
+            m5gfx::i2c::writeRegister8(i2c_port, axp_i2c_addr, 0x95, 33 - 5); // ALDO4 set to 3.3v // for TF card slot
 
             bus_cfg.pin_mosi = GPIO_NUM_37;
             bus_cfg.pin_miso = GPIO_NUM_35;
@@ -1199,31 +1201,14 @@ namespace m5gfx
             id = _read_panel_id(bus_spi, GPIO_NUM_3);
             if ((id & 0xFF) == 0xE3)
             {  //  check panel (ILI9342)
-              gpio::pin_backup_t backup_pins[] = { GPIO_NUM_38, GPIO_NUM_45, GPIO_NUM_46 };
-              auto result = lgfx::gpio::command(
-                (const uint8_t[]) {
-                lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_38, // CoreS3 = CAM_HREF
-                lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_45, // CoreS3 = CAM_PCLK
-                lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_46, // CoreS3 = CAM_VSYNC
-                lgfx::gpio::command_mode_input_pullup  , GPIO_NUM_38,
-                lgfx::gpio::command_read               , GPIO_NUM_38,
-                lgfx::gpio::command_mode_input_pullup  , GPIO_NUM_45,
-                lgfx::gpio::command_read               , GPIO_NUM_45,
-                lgfx::gpio::command_mode_input_pullup  , GPIO_NUM_46,
-                lgfx::gpio::command_read               , GPIO_NUM_46,
-                lgfx::gpio::command_end
-                }
-              );
-              for (auto &bup : backup_pins) { bup.restore(); }
-
-          // In "CoreS3", even if GPIO38,45,46 are set to Input_pullup, LOW is output.
-          // This characteristic can be used to distinguish between the two models.
               board = board_t::board_M5StackCoreS3;
-              if (result == 0b111) {
+              // Camera GC0308 check (not found == M5StackCoreS3SE)
+              auto chk_gc  = lgfx::i2c::readRegister8(i2c_port, gc0308_i2c_addr, 0x00, i2c_freq);
+              if (chk_gc .has_value() && chk_gc .value() == 0x9b) {
+                ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5StackCoreS3");
+              } else {
                 board = board_M5StackCoreS3SE;
                 ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5StackCoreS3SE");
-              } else {
-                ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5StackCoreS3");
               }
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 16000000;
