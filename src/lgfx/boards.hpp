@@ -52,6 +52,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5UnitRCA
     , board_M5ModuleDisplay
     , board_M5ModuleRCA
+
+    , board_FrameBuffer = 300
     };
   }
   using namespace boards;
