@@ -580,7 +580,8 @@ namespace lgfx
 
       uint32_t user = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN;
       if (spi_mode == 1 || spi_mode == 2) user |= SPI_CK_OUT_EDGE;
-      uint32_t pin = 0
+      uint32_t pin = (spi_mode & 2) ? SPI_CK_IDLE_EDGE : 0;
+      pin = pin
 #if defined ( SPI_CS0_DIS )
             | SPI_CS0_DIS
 #endif
@@ -600,7 +601,6 @@ namespace lgfx
             | SPI_CS5_DIS
 #endif
       ;
-      if (spi_mode & 2) pin = SPI_CK_IDLE_EDGE;
 
       beginTransaction(spi_host);
 
@@ -630,13 +630,7 @@ namespace lgfx
 
     void endTransaction(int spi_host, int spi_cs)
     {
-      if (_spi_dev_handle[spi_host]) {
-#if defined (ARDUINO) // Arduino ESP32
-        spiEndTransaction(_spi_handle[spi_host]);
-#else // ESP-IDF
-        spi_device_release_bus(_spi_dev_handle[spi_host]);
-#endif
-      }
+      endTransaction(spi_host);
       gpio_hi(spi_cs);
     }
 
