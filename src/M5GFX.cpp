@@ -429,8 +429,9 @@ namespace m5gfx
   {
     bool init(uint8_t brightness) override
     {
+      lgfx::i2c::init(i2c_port, GPIO_NUM_45, GPIO_NUM_0);
       lgfx::i2c::writeRegister8(i2c_port, 48, 0x00, 0b01000000, 0, i2c_freq);
-      delay(1);
+      lgfx::delay(1);
       lgfx::i2c::writeRegister8(i2c_port, 48, 0x08, 0b00000001, 0, i2c_freq);
       lgfx::i2c::writeRegister8(i2c_port, 48, 0x70, 0b00000000, 0, i2c_freq);
 
