@@ -937,9 +937,8 @@ namespace lgfx
 #else
           uint32_t us_limit = (dev->scl_high_period.period + dev->scl_low_period.period + 16 ) * (1 + dev->status_reg.tx_fifo_cnt);
 #endif
-          if (i2c_context[i2c_port].wait_ack_stage == 2) {
-            us_limit += 1024;
-          }
+          us_limit += 512 << i2c_context[i2c_port].wait_ack_stage;
+
           do
           {
             taskYIELD();
@@ -977,6 +976,7 @@ namespace lgfx
           i2c_set_cmd(dev, 0, i2c_cmd_stop, 0);
           i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
           static constexpr uint32_t intmask_ = I2C_ACK_ERR_INT_RAW_M | I2C_TIME_OUT_INT_RAW_M | I2C_END_DETECT_INT_RAW_M | I2C_ARBITRATION_LOST_INT_RAW_M | I2C_TRANS_COMPLETE_INT_RAW_M;
+          updateDev(dev);
           dev->int_clr.val = intmask_;
           dev->ctr.trans_start = 1;
           uint32_t ms = lgfx::millis();
@@ -1410,19 +1410,19 @@ namespace lgfx
         dev->int_clr.val = intmask;
         dev->ctr.trans_start = 1;
 
+        uint32_t us = lgfx::micros();
+        taskYIELD();
+        int delayus = ((us_limit + 2) >> 2) - (lgfx::micros() - us);
+        if (delayus > 0) {
+          delayMicroseconds(delayus);
+        }
         do
         {
-          uint32_t us = lgfx::micros();
-          taskYIELD();
-          us = lgfx::micros() - us;
-          int delayus = ((us_limit + 2) >> 2) - us;
-          if (delayus > 0) {
-            delayMicroseconds(delayus);
-          }
+          us = lgfx::micros();
           do
           {
             taskYIELD();
-          } while (0 == getRxFifoCount(dev) && !(dev->int_raw.val & intmask) && ((lgfx::micros() - us) <= us_limit + 1024));
+          } while ((len>>1) >= getRxFifoCount(dev) && !(dev->int_raw.val & intmask) && ((lgfx::micros() - us) <= us_limit + 1024));
 
           if (0 == getRxFifoCount(dev))
           {
@@ -1433,7 +1433,7 @@ namespace lgfx
             i2c_context[i2c_port].wait_ack_stage = 0;
             return res;
           }
-          *readdata++ = *fifo_addr; //dev->fifo_data.data;
+          *readdata++ = *fifo_addr;
         } while (--len);
       } while (length);
 
