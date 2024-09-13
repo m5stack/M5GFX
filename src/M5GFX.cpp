@@ -1255,49 +1255,6 @@ namespace m5gfx
         lgfx::i2c::release(i2c_port);
       }
 
-      if (board == 0 || board == board_t::board_M5AtomS3)
-      {
-        _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_21;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_17;
-        bus_cfg.pin_dc   = GPIO_NUM_33;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_15);
-        if ((id & 0xFFFFFF) == 0x079100)
-        {  //  check panel (GC9107)
-          board = board_t::board_M5AtomS3;
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3");
-          bus_spi->release();
-          bus_cfg.spi_host = SPI3_HOST;
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          auto p = new Panel_GC9107();
-          p->bus(bus_spi);
-          {
-            auto cfg = p->config();
-            cfg.pin_cs  = GPIO_NUM_15;
-            cfg.pin_rst = GPIO_NUM_34;
-            cfg.panel_width = 128;
-            cfg.panel_height = 128;
-            cfg.offset_y = 32;
-            cfg.readable = false;
-            p->config(cfg);
-          }
-          _panel_last.reset(p);
-          _set_pwm_backlight(GPIO_NUM_16, 7, 256, false, 48);
-
-          goto init_clear;
-        }
-        lgfx::pinMode(GPIO_NUM_48, lgfx::pin_mode_t::input); // LCD RST
-        bus_spi->release();
-      }
-
       if (board == 0 || board == board_t::board_M5AtomS3R)
       {
         _pin_reset(GPIO_NUM_48, use_reset); // LCD RST
@@ -1335,6 +1292,49 @@ namespace m5gfx
           }
           _panel_last.reset(p);
           _set_backlight(new Light_M5StackAtomS3R());
+
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_48, lgfx::pin_mode_t::input); // LCD RST
+        bus_spi->release();
+      }
+
+      if (board == 0 || board == board_t::board_M5AtomS3)
+      {
+        _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
+        bus_cfg.pin_mosi = GPIO_NUM_21;
+        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
+        bus_cfg.pin_sclk = GPIO_NUM_17;
+        bus_cfg.pin_dc   = GPIO_NUM_33;
+        bus_cfg.spi_mode = 0;
+        bus_cfg.spi_3wire = true;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+        id = _read_panel_id(bus_spi, GPIO_NUM_15);
+        if ((id & 0xFFFFFF) == 0x079100)
+        {  //  check panel (GC9107)
+          board = board_t::board_M5AtomS3;
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3");
+          bus_spi->release();
+          bus_cfg.spi_host = SPI3_HOST;
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          auto p = new Panel_GC9107();
+          p->bus(bus_spi);
+          {
+            auto cfg = p->config();
+            cfg.pin_cs  = GPIO_NUM_15;
+            cfg.pin_rst = GPIO_NUM_34;
+            cfg.panel_width = 128;
+            cfg.panel_height = 128;
+            cfg.offset_y = 32;
+            cfg.readable = false;
+            p->config(cfg);
+          }
+          _panel_last.reset(p);
+          _set_pwm_backlight(GPIO_NUM_16, 7, 256, false, 48);
 
           goto init_clear;
         }
