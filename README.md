@@ -12,6 +12,7 @@ Supported device
 ----------------
 - M5Stack ( Basic / Gray / GO / Fire )
 - M5Stack Core2
+- M5Stack CoreS3 / CoreS3SE
 - M5Stack CoreInk
 - M5Stick C
 - M5Stick C Plus
@@ -23,6 +24,7 @@ Supported device
 - M5Dial
 - M5DinMeter
 - M5Cardputer
+- M5VAMeter
 - UnitOLED
 - UnitMiniOLED
 - UnitLCD
