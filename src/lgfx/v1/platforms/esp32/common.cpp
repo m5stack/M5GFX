@@ -808,7 +808,13 @@ namespace lgfx
    #endif
   #endif
  #endif
+
+#if SOC_I2C_NUM == 1 || defined CONFIG_IDF_TARGET_ESP32C6
+        auto twowire = &Wire;
+#else
         auto twowire = ((dev == &I2C0) ? &Wire : &Wire1);
+#endif
+
  #if defined ( USE_TWOWIRE_SETPINS )
         twowire->setPins(sda, scl);
  #else
@@ -1014,7 +1020,11 @@ namespace lgfx
  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
   #if defined ARDUINO_ESP32_GIT_VER
     #if ARDUINO_ESP32_GIT_VER != 0x44c11981
+      #if SOC_I2C_NUM == 1 || defined CONFIG_IDF_TARGET_ESP32C6
+        auto twowire = &Wire;
+      #else
         auto twowire = ((i2c_port == 1) ? &Wire1 : &Wire);
+      #endif
         twowire->end();
     #endif
   #endif
@@ -1063,7 +1073,12 @@ namespace lgfx
   #endif
  #endif
  #if defined ( USE_TWOWIRE_SETPINS )
+
+#if SOC_I2C_NUM == 1 || defined CONFIG_IDF_TARGET_ESP32C6
+      auto twowire = &Wire;
+#else
       auto twowire = ((i2c_port == 1) ? &Wire1 : &Wire);
+#endif
       twowire->setPins(pin_sda, pin_scl);
  #endif
 #endif
@@ -1085,7 +1100,11 @@ namespace lgfx
       }
 
 #if defined ( ARDUINO ) && __has_include (<Wire.h>)
+#if SOC_I2C_NUM == 1 || defined CONFIG_IDF_TARGET_ESP32C6
+      auto twowire = &Wire;
+#else
       auto twowire = ((i2c_port == 1) ? &Wire1 : &Wire);
+#endif
  #if defined ( USE_TWOWIRE_SETPINS )
       twowire->begin();
  #else
