@@ -150,7 +150,7 @@ public:
 
     std::uint32_t pkg_ver = lgfx::get_pkg_ver();
 #if defined ( ESP_LOGD )
-    ESP_LOGD("LGFX","pkg:%d", pkg_ver);
+    ESP_LOGD("LGFX","pkg:%d", (int)pkg_ver);
 #endif
     switch (pkg_ver)
     {
