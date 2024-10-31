@@ -28,8 +28,8 @@ namespace lgfx // This should not be changed to "m5gfx"
 
 /// non display boards 
     , board_M5AtomLite = 128
-    , board_M5ATOM = board_M5AtomLite
-    , board_M5Atom = board_M5AtomLite
+    , board_M5ATOM __attribute__ ((deprecated)) = board_M5AtomLite
+    , board_M5Atom __attribute__ ((deprecated)) = board_M5AtomLite
     , board_M5AtomPsram
     , board_M5AtomU
     , board_M5Camera
