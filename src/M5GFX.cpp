@@ -1550,7 +1550,7 @@ namespace m5gfx
         bus_spi->config(bus_cfg);
         bus_spi->init();
         id = _read_panel_id(bus_spi, GPIO_NUM_14);
-        // if ((id & 0xFFFFFF) == 0x079100)
+        if ((id & 0xFFFFFF) == 0x079100)
         {  //  check panel (GC9107)
           board = board_t::board_M5AtomS3R;
           ESP_LOGW(LIBRARY_NAME, "[Autodetect] board_M5AtomS3R");

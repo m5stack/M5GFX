@@ -44,7 +44,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5NanoC6
     , board_M5AtomMatrix
     , board_M5AtomEcho
-    , board_M5AtomS3RProto
+    , board_M5AtomS3RExt
     , board_M5AtomS3RCam
 
 /// external displays
