@@ -608,6 +608,7 @@ namespace lgfx
           goto label_start;
           do
           {
+            vTaskDelay(1 / portTICK_PERIOD_MS);
             while (*cmd & SPI_USR) {}
 label_start:
             exec_spi();
