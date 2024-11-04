@@ -148,7 +148,7 @@ public:
     int spi_miso = GPIO_NUM_22;
     int spi_sclk = GPIO_NUM_5;
 
-    std::uint32_t pkg_ver = lgfx::get_pkg_ver();
+    uint32_t pkg_ver = lgfx::get_pkg_ver();
 #if defined ( ESP_LOGD )
     ESP_LOGD("LGFX","pkg:%d", (int)pkg_ver);
 #endif
