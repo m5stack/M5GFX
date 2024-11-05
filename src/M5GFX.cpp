@@ -1304,7 +1304,7 @@ namespace m5gfx
       {
         _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_5;
-        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_6;
         bus_cfg.pin_dc   = GPIO_NUM_4;
         bus_cfg.spi_mode = 0;
@@ -1373,7 +1373,7 @@ namespace m5gfx
       {
         _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_5;
-        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_6;
         bus_cfg.pin_dc   = GPIO_NUM_4;
         bus_cfg.spi_mode = 0;
@@ -1418,7 +1418,7 @@ namespace m5gfx
       {
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_35;
-        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_36;
         bus_cfg.pin_dc   = GPIO_NUM_34;
         bus_cfg.spi_mode = 0;
@@ -1491,7 +1491,7 @@ namespace m5gfx
       {
         _pin_reset( GPIO_NUM_2, true); // EPDがDeepSleepしている場合は自動認識に失敗する。そのためRST制御を必ず行う。;
         bus_cfg.pin_mosi = GPIO_NUM_6;
-        bus_cfg.pin_miso = GPIO_NUM_NC;
+        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
         bus_cfg.pin_sclk = GPIO_NUM_5;
         bus_cfg.pin_dc   = GPIO_NUM_3;
         bus_cfg.spi_3wire = true;
