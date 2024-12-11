@@ -64,8 +64,8 @@ namespace lgfx
     Panel_HasBuffer::init(use_reset);
 
     epd_set_board(_config_detail.epd_board);
-
     _buf = epd_hl_get_framebuffer(_config_detail.epd_hl);
+    epd_poweron();
 
     startWrite();
     memset(_buf, 0, _cfg.memory_width * _cfg.memory_height / 2);
@@ -80,12 +80,10 @@ namespace lgfx
   void Panel_EPDiy::beginTransaction(void)
   {
     epd_set_board(_config_detail.epd_board);
-    epd_poweron();
   }
 
   void Panel_EPDiy::endTransaction(void)
   {
-    epd_poweroff();
   }
 
   void Panel_EPDiy::waitDisplay(void)
@@ -105,10 +103,20 @@ namespace lgfx
 
   void Panel_EPDiy::setSleep(bool flg)
   {
+    if (flg) {
+      epd_poweroff();
+    } else {
+      epd_poweron();
+    }
   }
 
   void Panel_EPDiy::setPowerSave(bool flg)
   {
+    if (flg) {
+      epd_poweroff();
+    } else {
+      epd_poweron();
+    }
   }
 
   void Panel_EPDiy::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)

@@ -27,16 +27,16 @@
 #if defined ( CONFIG_IDF_TARGET_ESP32S3 )
 
 // for M5PaperS3
-#if __has_include (<epdiy.h>) && defined(CONFIG_ESP32S3_SPIRAM_SUPPORT) && defined (CONFIG_SPIRAM_MODE_OCT)
+#if __has_include (<epdiy.h>) && defined (CONFIG_ESP32S3_SPIRAM_SUPPORT) && defined (CONFIG_SPIRAM_MODE_OCT)
 
-#include <lgfx/v1/panel/Panel_EPDiy.hpp>
 extern "C" {
-  #include <epd_board.h>
   #include <epdiy.h>
+  #include <epd_board.h>
   #include <epd_highlevel.h>
   #include <output_lcd/lcd_driver.h>
   #include <output_common/render_method.h>
 };
+#include <lgfx/v1/panel/Panel_EPDiy.hpp>
 static EpdBoardDefinition _epd_board;
 static EpdiyHighlevelState _epd_hl;
 
