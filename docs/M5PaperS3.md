@@ -25,5 +25,5 @@ board = esp32-s3-devkitm-1
 framework = arduino
 board_build.arduino.memory_type = qio_opi
 build_flags = -DBOARD_HAS_PSRAM
-lib_deps = epdiy=https://github.com/vroland/epdiygit
+lib_deps = epdiy=https://github.com/vroland/epdiy.git
 ```
