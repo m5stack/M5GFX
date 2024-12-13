@@ -18,6 +18,7 @@ Supported device
 - M5Stick C Plus
 - M5Stick C Plus2
 - M5Paper
+- M5PaperS3 [need EPDiy library](https://github.com/vroland/epdiy/)
 - M5Tough
 - M5Station
 - M5ATOMS3
