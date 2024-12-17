@@ -257,7 +257,7 @@ namespace lgfx
     uint_fast8_t value;
     bool fast = _epd_mode == epd_mode_t::epd_fast || _epd_mode == epd_mode_t::epd_fastest;
     if (fast) {
-      value = (sum + btbl[x & 3] * 16 < 512 ? 0 : 0xF) << shift;
+      value = ((int32_t)sum + btbl[x & 3] * 16 < 512 ? 0 : 0xF) << shift;
     } else {
       value = (std::min<int32_t>(15, std::max<int32_t>(0, sum + btbl[x & 3]) >> 6) & 0x0F) << shift;
     }

@@ -1362,8 +1362,8 @@ namespace m5gfx
                 _epd_board.poweroff = epd_board_poweroff;
                 _epd_board.get_temperature = epd_board_ambient_temperature;
                 _epd_board.set_vcom = set_vcom;
-                auto epd_display = &ED047TC1;
-                // auto epd_display = &ED047TC2;
+                // auto epd_display = &ED047TC1;
+                auto epd_display = &ED047TC2;
 
                 epd_init(&_epd_board, epd_display, EPD_LUT_64K);
                 _epd_hl = epd_hl_init(EPD_BUILTIN_WAVEFORM);
