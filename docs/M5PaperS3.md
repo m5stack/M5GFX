@@ -23,6 +23,8 @@ platformio.ini
 platform = espressif32
 board = esp32-s3-devkitm-1
 framework = arduino
+board_upload.flash_size = 16MB
+board_upload.maximum_size = 16777216
 board_build.arduino.memory_type = qio_opi
 build_flags = -DBOARD_HAS_PSRAM
 lib_deps = epdiy=https://github.com/vroland/epdiy.git
