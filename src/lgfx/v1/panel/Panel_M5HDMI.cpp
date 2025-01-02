@@ -919,7 +919,7 @@ namespace lgfx
         scale_w = output_width  / logical_width;
       }
       uint32_t w = output_width / scale_w;
-      while (scale_w > SCALE_MAX || w * scale_w != output_width || logical_width * scale_w > output_width)
+      while (scale_w > 1 && (scale_w > SCALE_MAX || w * scale_w != output_width || logical_width * scale_w > output_width))
       {
         w = output_width / --scale_w;
       }
