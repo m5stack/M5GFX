@@ -34,6 +34,12 @@ Contributors:
 #include <soc/gpio_sig_map.h>
 #include <esp_timer.h>
 
+#if __has_include(<esp_memory_utils.h>)
+ #include <esp_memory_utils.h>
+#else
+ #include <soc/soc_memory_types.h>
+#endif
+
 #if defined ( ARDUINO )
  #if __has_include (<SPI.h>)
   #include <SPI.h>
