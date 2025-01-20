@@ -3516,6 +3516,10 @@ namespace lgfx
       }
       if (getPanel()->init(use_reset))
       {
+        if (use_clear)
+        {
+          getPanel()->clearDisplay();
+        }
         startWrite();
         invertDisplay(_panel->getInvert());
         setColorDepth(_panel->getWriteDepth());

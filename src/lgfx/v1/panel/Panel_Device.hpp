@@ -112,6 +112,7 @@ namespace lgfx
     void config(const config_t& cfg) { _cfg = cfg; }
 
     virtual bool init(bool use_reset);
+    virtual bool clearDisplay() { return false; }
     virtual bool initTouch(void);
 
     virtual void initBus(void);

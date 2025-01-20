@@ -1409,6 +1409,7 @@ namespace lgfx
     bool init(void)               { return init_impl(true , true); };
     bool begin(void)              { return init_impl(true , true); };
     bool init_without_reset(void) { return init_impl(false, false); };
+    bool init_with_option(bool use_reset, bool use_clear) { return init_impl(use_reset, use_clear); };
     board_t getBoard(void) const { return _board; }
     void initBus(void);
     void releaseBus(void);
