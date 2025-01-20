@@ -53,6 +53,7 @@ namespace lgfx
 
     bool init(bool use_reset) override;
 
+    bool clearDisplay(void) override;
     void waitDisplay(void) override;
     bool displayBusy(void) override;
     color_depth_t setColorDepth(color_depth_t depth) override;

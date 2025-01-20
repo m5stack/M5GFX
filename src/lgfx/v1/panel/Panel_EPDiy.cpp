@@ -67,6 +67,13 @@ namespace lgfx
     _buf = epd_hl_get_framebuffer(_config_detail.epd_hl);
     epd_poweron();
 
+    return true;
+  }
+
+  bool Panel_EPDiy::clearDisplay(void)
+  {
+    if(_buf == nullptr) return false;
+
     startWrite();
     memset(_buf, 0, _cfg.memory_width * _cfg.memory_height / 2);
     display(0, 0, _cfg.panel_width, _cfg.panel_height);
