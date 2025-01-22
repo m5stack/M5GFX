@@ -299,10 +299,10 @@ namespace lgfx
     LGFX_INLINE_T void fillScreen  ( const T& color) { setColor(color); fillRect(0, 0, width(), height()); }
     LGFX_INLINE   void fillScreen  ( void )          {                  fillRect(0, 0, width(), height()); }
 
-    LGFX_INLINE_T void clear       ( const T& color) { setBaseColor(color); clear(); }
-    LGFX_INLINE   void clear       ( void )          { setColor(_base_rgb888); fillScreen(); }
-    LGFX_INLINE_T void clearDisplay( const T& color) { setBaseColor(color); clear(); }
-    LGFX_INLINE   void clearDisplay( void )          { setColor(_base_rgb888); fillScreen(); }
+    LGFX_INLINE_T void clear       ( const T& color) { setBaseColor(color); clearDisplay(); }
+    LGFX_INLINE   void clear       ( void )          { clearDisplay(); }
+    LGFX_INLINE_T void clearDisplay( const T& color) { setBaseColor(color); clearDisplay(); }
+    LGFX_INLINE   void clearDisplay( void )          { fillScreen(~_base_rgb888);  fillScreen(_base_rgb888); }
 
     LGFX_INLINE   void  setPivot(float x, float y) { _xpivot = x; _ypivot = y; }
     LGFX_INLINE   float getPivotX(void) const { return _xpivot; }

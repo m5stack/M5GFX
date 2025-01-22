@@ -67,10 +67,10 @@ namespace lgfx
     _buf = epd_hl_get_framebuffer(_config_detail.epd_hl);
     epd_poweron();
 
-    memset(_buf, 0, _cfg.memory_width * _cfg.memory_height / 2);
-    startWrite();
-    display(0, 0, _cfg.panel_width, _cfg.panel_height);
-    endWrite();
+    _range_mod.top    = INT16_MAX;
+    _range_mod.left   = INT16_MAX;
+    _range_mod.right  = 0;
+    _range_mod.bottom = 0;
 
     return true;
   }
