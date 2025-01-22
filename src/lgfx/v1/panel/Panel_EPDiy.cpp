@@ -67,10 +67,8 @@ namespace lgfx
     _buf = epd_hl_get_framebuffer(_config_detail.epd_hl);
     epd_poweron();
 
-    startWrite();
     memset(_buf, 0, _cfg.memory_width * _cfg.memory_height / 2);
-    display(0, 0, _cfg.panel_width, _cfg.panel_height);
-    memset(_buf, 0xFF, _cfg.memory_width * _cfg.memory_height / 2);
+    startWrite();
     display(0, 0, _cfg.panel_width, _cfg.panel_height);
     endWrite();
 
@@ -79,7 +77,6 @@ namespace lgfx
 
   void Panel_EPDiy::beginTransaction(void)
   {
-    epd_set_board(_config_detail.epd_board);
   }
 
   void Panel_EPDiy::endTransaction(void)

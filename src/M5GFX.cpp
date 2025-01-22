@@ -1340,6 +1340,9 @@ namespace m5gfx
             if (gt911_found) {
               board = board_t::board_M5PaperS3;
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5PaperS3");
+              // PWROFF_PULSE_PIN
+              lgfx::pinMode(GPIO_NUM_44, lgfx::pin_mode_t::output);
+              lgfx::gpio_lo(GPIO_NUM_44);
 
 #if !__has_include (<epdiy.h>)
               ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need install EPDiy library");
