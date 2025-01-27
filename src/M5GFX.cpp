@@ -1340,6 +1340,9 @@ namespace m5gfx
             if (gt911_found) {
               board = board_t::board_M5PaperS3;
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5PaperS3");
+              // PWROFF_PULSE_PIN
+              lgfx::pinMode(GPIO_NUM_44, lgfx::pin_mode_t::output);
+              lgfx::gpio_lo(GPIO_NUM_44);
 
 #if !__has_include (<epdiy.h>)
               ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need install EPDiy library");
@@ -1670,19 +1673,27 @@ namespace m5gfx
         //  check panel (ST7789)
         if ((id & 0xFB) == 0x81) // 0x81 or 0x85
         {
-          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_44 };
+          board = board_t::board_M5Cardputer;
+          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_5, GPIO_NUM_6 };
           auto result = lgfx::gpio::command(
             (const uint8_t[]) {
-            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_44, // Cardputer = IrDA_TXD
-            lgfx::gpio::command_mode_input_pullup  , GPIO_NUM_44,
-            lgfx::gpio::command_read               , GPIO_NUM_44,
+            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_6,
+            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_5,
+            lgfx::gpio::command_read               , GPIO_NUM_6,
+            lgfx::gpio::command_read               , GPIO_NUM_5,
             lgfx::gpio::command_end
             }
           );
           for (auto &bup : backup_pins) { bup.restore(); }
-          // In "Cardputer", even if GPIO44 are set to Input_pullup, LOW is output.
-          // This characteristic can be used to distinguish between the two models.
-          board = (result == 0) ? board_t::board_M5Cardputer : board_t::board_M5VAMeter;
+          if (result == 3) {
+            m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_5, GPIO_NUM_6);
+            result = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
+                    && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
+            backup_i2c_setting.restore();
+            if (result) {
+              board = board_t::board_M5VAMeter;
+            }
+          }
           bus_spi->release();
           bus_cfg.spi_host = SPI3_HOST;
           bus_cfg.freq_write = 40000000;
