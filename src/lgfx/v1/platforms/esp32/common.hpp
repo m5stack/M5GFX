@@ -36,8 +36,13 @@ Contributors:
 
 #if __has_include(<esp_memory_utils.h>)
  #include <esp_memory_utils.h>
-#else
+#elif __has_include(<soc/soc_memory_types.h>)
  #include <soc/soc_memory_types.h>
+#elif __has_include(<soc/soc_memory_layout.h>)
+ #include <soc/soc_memory_layout.h>
+#else
+ __attribute((weak))
+ bool esp_ptr_dma_capable(const void*) { return false; }
 #endif
 
 #if defined ( ARDUINO )
