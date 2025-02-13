@@ -583,6 +583,47 @@ namespace m5gfx
     }
   };
 
+  struct Light_M5StackStampPLC : public lgfx::ILight
+  {
+    bool _is_backlight_inited = false;
+
+    bool init(uint8_t brightness) override
+    {
+      lgfx::i2c::init(i2c_port, GPIO_NUM_13, GPIO_NUM_15);
+
+      // set direction: output
+      auto value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x03, i2c_freq).has_value();
+      value |= (1 << 7);
+      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x03, value, 0, i2c_freq);
+
+      // set pull mode: down
+      value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x0d, i2c_freq).has_value();
+      value &= ~(1 << 7);
+      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x0d, value, 0, i2c_freq);
+
+      // set high impedance: off
+      value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x07, i2c_freq).has_value();
+      value &= ~(1 << 7);
+      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x07, value, 0, i2c_freq);
+
+      _is_backlight_inited = true;
+      setBrightness(brightness);
+      return true;
+    }
+
+    void setBrightness(uint8_t brightness) override
+    {
+      if (!_is_backlight_inited) init(127);
+
+      auto value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x05, i2c_freq).has_value();
+      if (brightness == 0) {
+        value |= (1 << 7);
+      } else {
+        value &= ~(1 << 7);
+      }
+      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x05, value, 0, i2c_freq);
+    }
+  };
 #endif
 
   __attribute__ ((unused))
@@ -691,6 +732,8 @@ namespace m5gfx
       ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%d", (int)nvs_board);
     }
 
+    ESP_LOGI(LIBRARY_NAME, "init_impl: nvs_board=%d, M5GFX_BOARD=%d", (int)nvs_board, M5GFX_BOARD);
+
     if (0 == nvs_board)
     {
 #if defined ( M5GFX_BOARD )
@@ -734,7 +777,7 @@ namespace m5gfx
     }
 
     auto board = (board_t)nvs_board;
-
+    ESP_LOGI(LIBRARY_NAME,"autodetect board:%d", (int)board);
     int retry = 4;
     do
     {
@@ -1304,10 +1347,10 @@ namespace m5gfx
     std::uint32_t id;
 
     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
-//  ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
+ ESP_LOGI(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
     switch (pkg_ver) {
     case 0: // EFUSE_PKG_VERSION_ESP32S3:     // QFN56
-
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] EFUSE_PKG_VERSION_ESP32S3");
       if (board == 0 || board == board_t::board_M5PaperS3)
       {
         static constexpr int_fast16_t papers3_i2c_sda = GPIO_NUM_41;
@@ -1787,6 +1830,55 @@ namespace m5gfx
         bus_spi->release();
       }
 
+      if (board == 0 || board == board_t::board_M5StampPLC)
+      {
+        _pin_reset(GPIO_NUM_3, use_reset); // LCD RST
+        bus_cfg.pin_mosi = GPIO_NUM_8;
+        bus_cfg.pin_miso = GPIO_NUM_9;
+        bus_cfg.pin_sclk = GPIO_NUM_7;
+        bus_cfg.pin_dc   = GPIO_NUM_6;
+        bus_cfg.spi_mode = 0;
+        bus_cfg.spi_3wire = false;
+        bus_spi->config(bus_cfg);
+        bus_spi->init();
+
+        _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_10);
+
+        id = _read_panel_id(bus_spi, GPIO_NUM_12);
+        ESP_LOGI(LIBRARY_NAME, "[Autodetect] panid :%x", (int)id);
+        if (1) // FIXME: check panel
+        {  //  check panel (ST7789)
+          board = board_t::board_M5StampPLC;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StampPLC");
+          bus_spi->release();
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          auto p = new Panel_ST7789();
+          p->bus(bus_spi);
+          {
+            auto cfg = p->config();
+            cfg.pin_cs  = GPIO_NUM_12;
+            cfg.pin_rst = GPIO_NUM_3;
+            cfg.panel_width = 135;
+            cfg.panel_height = 240;
+            cfg.offset_x     = 52;
+            cfg.offset_y     = 40;
+            cfg.offset_rotation = 1;
+            cfg.readable = true;
+            cfg.invert = true;
+            cfg.bus_shared = true;
+            p->config(cfg);
+          }
+          _panel_last.reset(p);
+          _set_backlight(new Light_M5StackStampPLC());
+          goto init_clear;
+        }
+        lgfx::pinMode(GPIO_NUM_3, lgfx::pin_mode_t::input); // LCD RST
+        bus_spi->release();
+      }
+
       break;
     case 1: // EFUSE_PKG_VERSION_ESP32S3PICO: // LGA56
 
@@ -1903,6 +1995,7 @@ init_clear:
     case board_M5DinMeter:     title = "M5DinMeter";     break;
     case board_M5AirQ:         title = "M5AirQ";         break;
     case board_M5VAMeter:      title = "M5VAMeter";      break;
+    case board_M5StampPLC:     title = "M5StampPLC";     break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -1945,6 +2038,7 @@ init_clear:
     case board_M5StickCPlus:
     case board_M5StickCPlus2:
     case board_M5DinMeter:
+    case board_M5StampPLC:
       w = 135;
       h = 240;
       break;
