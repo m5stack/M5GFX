@@ -26,6 +26,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5StackCoreS3SE
     , board_M5AtomS3R
     , board_M5PaperS3
+    , board_M5CoreMP135
     , board_M5StampPLC
 
 /// non display boards 
