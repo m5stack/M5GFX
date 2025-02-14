@@ -1850,7 +1850,7 @@ namespace m5gfx
           bus_spi->release();
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
-          bus_cfg.spi_3wire = false;
+          bus_cfg.spi_3wire = true;
           bus_spi->config(bus_cfg);
           bus_spi->init();
           auto p = new Panel_ST7789();
@@ -1863,11 +1863,12 @@ namespace m5gfx
             cfg.panel_height = 240;
             cfg.offset_x     = 52;
             cfg.offset_y     = 40;
-            cfg.offset_rotation = 1;
+            cfg.offset_rotation = 0;
             cfg.readable = true;
             cfg.invert = true;
             cfg.bus_shared = true;
             p->config(cfg);
+            p->setRotation(1);
           }
           _panel_last.reset(p);
           _set_backlight(new Light_M5StackStampPLC());
