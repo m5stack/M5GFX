@@ -1349,112 +1349,6 @@ namespace m5gfx
     switch (pkg_ver) {
     case 0: // EFUSE_PKG_VERSION_ESP32S3:     // QFN56
 
-      if (board == 0 || board == board_t::board_M5PaperS3)
-      {
-        static constexpr int_fast16_t papers3_i2c_sda = GPIO_NUM_41;
-        static constexpr int_fast16_t papers3_i2c_scl = GPIO_NUM_42;
-        static constexpr const uint8_t gt911_i2c_addr[] = { 0x14, 0x5D };
-// static constexpr
-        gpio::pin_backup_t backup_pins[] = { papers3_i2c_sda, papers3_i2c_scl };
-        auto result = lgfx::gpio::command(
-          (const uint8_t[]) {
-          lgfx::gpio::command_mode_input_pulldown, papers3_i2c_sda,
-          lgfx::gpio::command_mode_input_pulldown, papers3_i2c_scl,
-          lgfx::gpio::command_read               , papers3_i2c_sda,
-          lgfx::gpio::command_read               , papers3_i2c_scl,
-          lgfx::gpio::command_end
-          }
-        );
-        // Check G41,G42 HIGH
-        if (result == 0x03) {
-          lgfx::i2c::init(i2c_port, papers3_i2c_sda, papers3_i2c_scl);
-          {
-            bool gt911_found = false;
-            for (auto addr: gt911_i2c_addr) {
-              if (lgfx::i2c::beginTransaction(i2c_port, addr, 400000).has_value()) {
-                gt911_found = lgfx::i2c::endTransaction(i2c_port).has_value();
-                if (gt911_found) {
-                  break;
-                }
-              }
-            }
-            if (gt911_found) {
-              board = board_t::board_M5PaperS3;
-              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5PaperS3");
-              // PWROFF_PULSE_PIN
-              lgfx::pinMode(GPIO_NUM_44, lgfx::pin_mode_t::output);
-              lgfx::gpio_lo(GPIO_NUM_44);
-
-#if !__has_include (<epdiy.h>)
-              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need install EPDiy library");
-#elif !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
-              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need OPI-PSRAM enabled");
-#elif !defined (CONFIG_SPIRAM_MODE_OCT)
-              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need OPI-PSRAM enabled");
-#else
-              auto p = new lgfx::Panel_EPDiy();
-              _panel_last.reset(p);
-
-              {
-                auto cfg_detail = p->config_detail();
-
-                memset(&_epd_board, 0, sizeof(_epd_board));
-                _epd_board.init = epd_board_init;
-                _epd_board.deinit = epd_board_deinit;
-                _epd_board.set_ctrl = epd_board_set_ctrl;
-                _epd_board.poweron = epd_board_poweron;
-                _epd_board.poweroff = epd_board_poweroff;
-                _epd_board.get_temperature = epd_board_ambient_temperature;
-                _epd_board.set_vcom = set_vcom;
-                // auto epd_display = &ED047TC1;
-                auto epd_display = &ED047TC2;
-
-                epd_init(&_epd_board, epd_display, EPD_LUT_64K);
-                _epd_hl = epd_hl_init(EPD_BUILTIN_WAVEFORM);
-                cfg_detail.epd_board = &_epd_board;
-                cfg_detail.epd_hl = &_epd_hl;
-
-                p->config_detail(cfg_detail);
-
-                auto cfg = p->config();
-                cfg.memory_width = epd_display->width;
-                cfg.memory_height = epd_display->height;
-                cfg.panel_width = cfg.memory_width;
-                cfg.panel_height = cfg.memory_height;
-                cfg.offset_rotation = 3;
-                cfg.offset_x = 0;
-                cfg.offset_y = 0;
-                p->config(cfg);
-              }
-
-              {
-                auto t = new lgfx::Touch_GT911();
-                _touch_last.reset(t);
-                auto cfg = t->config();
-                cfg.pin_int = 48; // GPIO_NUM_48
-                cfg.pin_sda = 41; // GPIO_NUM_41
-                cfg.pin_scl = 42; // GPIO_NUM_42
-                cfg.freq = 400000;
-                cfg.i2c_port = I2C_NUM_1;
-                cfg.x_min = 0;
-                cfg.x_max = 539;
-                cfg.y_min = 0;
-                cfg.y_max = 959;
-                cfg.offset_rotation = 1;
-                cfg.bus_shared = false;
-                t->config(cfg);
-                _panel_last->touch(t);
-                p->touch(t);
-              }
-#endif
-              goto init_clear;
-            }
-          }
-          lgfx::i2c::release(i2c_port);
-        }
-        for (auto &bup : backup_pins) { bup.restore(); }
-      }
-
       if (board == 0 || board == board_t::board_M5StackCoreS3 || board == board_t::board_M5StackCoreS3SE)
       {
         lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
@@ -1876,6 +1770,112 @@ namespace m5gfx
         }
         lgfx::pinMode(GPIO_NUM_3, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+      }
+
+      if (board == 0 || board == board_t::board_M5PaperS3)
+      {
+        static constexpr int_fast16_t papers3_i2c_sda = GPIO_NUM_41;
+        static constexpr int_fast16_t papers3_i2c_scl = GPIO_NUM_42;
+        static constexpr const uint8_t gt911_i2c_addr[] = { 0x14, 0x5D };
+// static constexpr
+        gpio::pin_backup_t backup_pins[] = { papers3_i2c_sda, papers3_i2c_scl };
+        auto result = lgfx::gpio::command(
+          (const uint8_t[]) {
+          lgfx::gpio::command_mode_input_pulldown, papers3_i2c_sda,
+          lgfx::gpio::command_mode_input_pulldown, papers3_i2c_scl,
+          lgfx::gpio::command_read               , papers3_i2c_sda,
+          lgfx::gpio::command_read               , papers3_i2c_scl,
+          lgfx::gpio::command_end
+          }
+        );
+        // Check G41,G42 HIGH
+        if (result == 0x03) {
+          lgfx::i2c::init(i2c_port, papers3_i2c_sda, papers3_i2c_scl);
+          {
+            bool gt911_found = false;
+            for (auto addr: gt911_i2c_addr) {
+              if (lgfx::i2c::beginTransaction(i2c_port, addr, 400000).has_value()) {
+                gt911_found = lgfx::i2c::endTransaction(i2c_port).has_value();
+                if (gt911_found) {
+                  break;
+                }
+              }
+            }
+            if (gt911_found) {
+              board = board_t::board_M5PaperS3;
+              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5PaperS3");
+              // PWROFF_PULSE_PIN
+              lgfx::pinMode(GPIO_NUM_44, lgfx::pin_mode_t::output);
+              lgfx::gpio_lo(GPIO_NUM_44);
+
+#if !__has_include (<epdiy.h>)
+              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need install EPDiy library");
+#elif !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
+              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need OPI-PSRAM enabled");
+#elif !defined (CONFIG_SPIRAM_MODE_OCT)
+              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need OPI-PSRAM enabled");
+#else
+              auto p = new lgfx::Panel_EPDiy();
+              _panel_last.reset(p);
+
+              {
+                auto cfg_detail = p->config_detail();
+
+                memset(&_epd_board, 0, sizeof(_epd_board));
+                _epd_board.init = epd_board_init;
+                _epd_board.deinit = epd_board_deinit;
+                _epd_board.set_ctrl = epd_board_set_ctrl;
+                _epd_board.poweron = epd_board_poweron;
+                _epd_board.poweroff = epd_board_poweroff;
+                _epd_board.get_temperature = epd_board_ambient_temperature;
+                _epd_board.set_vcom = set_vcom;
+                // auto epd_display = &ED047TC1;
+                auto epd_display = &ED047TC2;
+
+                epd_init(&_epd_board, epd_display, EPD_LUT_64K);
+                _epd_hl = epd_hl_init(EPD_BUILTIN_WAVEFORM);
+                cfg_detail.epd_board = &_epd_board;
+                cfg_detail.epd_hl = &_epd_hl;
+
+                p->config_detail(cfg_detail);
+
+                auto cfg = p->config();
+                cfg.memory_width = epd_display->width;
+                cfg.memory_height = epd_display->height;
+                cfg.panel_width = cfg.memory_width;
+                cfg.panel_height = cfg.memory_height;
+                cfg.offset_rotation = 3;
+                cfg.offset_x = 0;
+                cfg.offset_y = 0;
+                p->config(cfg);
+              }
+
+              {
+                auto t = new lgfx::Touch_GT911();
+                _touch_last.reset(t);
+                auto cfg = t->config();
+                cfg.pin_int = 48; // GPIO_NUM_48
+                cfg.pin_sda = 41; // GPIO_NUM_41
+                cfg.pin_scl = 42; // GPIO_NUM_42
+                cfg.freq = 400000;
+                cfg.i2c_port = I2C_NUM_1;
+                cfg.x_min = 0;
+                cfg.x_max = 539;
+                cfg.y_min = 0;
+                cfg.y_max = 959;
+                cfg.offset_rotation = 1;
+                cfg.bus_shared = false;
+                t->config(cfg);
+                _panel_last->touch(t);
+                p->touch(t);
+              }
+#endif
+              goto init_clear;
+            }
+          }
+          lgfx::i2c::release(i2c_port);
+        }
+        for (auto &bup : backup_pins) { bup.restore(); }
       }
 
       break;
