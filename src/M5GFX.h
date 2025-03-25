@@ -14,6 +14,34 @@
 #undef setFont
 #endif
 
+#ifndef M5GFX_PORTA_DEFAULT_SDA
+ #if defined ( ARDUINO )
+  #define M5GFX_PORTA_DEFAULT_SDA SDA
+ #elif defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C6)
+  #define M5GFX_PORTA_DEFAULT_SDA 2
+ #elif defined (CONFIG_IDF_TARGET_ESP32C3)
+  #define M5GFX_PORTA_DEFAULT_SDA 1
+  #elif defined (CONFIG_IDF_TARGET_ESP32P4)
+  #define M5GFX_PORTA_DEFAULT_SDA 53
+ #else
+  #define M5GFX_PORTA_DEFAULT_SDA 21
+ #endif
+#endif
+
+#ifndef M5GFX_PORTA_DEFAULT_SCL
+ #if defined ( ARDUINO )
+  #define M5GFX_PORTA_DEFAULT_SCL SCL
+ #elif defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C6)
+  #define M5GFX_PORTA_DEFAULT_SCL 1
+ #elif defined (CONFIG_IDF_TARGET_ESP32C3)
+  #define M5GFX_PORTA_DEFAULT_SCL 0
+  #elif defined (CONFIG_IDF_TARGET_ESP32P4)
+  #define M5GFX_PORTA_DEFAULT_SCL 54
+ #else
+  #define M5GFX_PORTA_DEFAULT_SCL 22
+ #endif
+#endif
+
 #define LGFX_USE_V1
 #include "lgfx/v1/gitTagVersion.h"
 #include "lgfx/v1/platforms/device.hpp"

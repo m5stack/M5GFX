@@ -17,27 +17,11 @@
 #include "M5GFX.h"
 
 #ifndef M5UNITGLASS_SDA
- #if defined ( ARDUINO )
-  #define M5UNITGLASS_SDA SDA
- #elif defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C6)
-  #define M5UNITGLASS_SDA 2
- #elif defined (CONFIG_IDF_TARGET_ESP32C3)
-  #define M5UNITGLASS_SDA 1
- #else
-  #define M5UNITGLASS_SDA 21
- #endif
+ #define M5UNITGLASS_SDA M5GFX_PORTA_DEFAULT_SDA
 #endif
 
 #ifndef M5UNITGLASS_SCL
- #if defined ( ARDUINO )
-  #define M5UNITGLASS_SCL SCL
- #elif defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C6)
-  #define M5UNITGLASS_SCL 1
- #elif defined (CONFIG_IDF_TARGET_ESP32C3)
-  #define M5UNITGLASS_SCL 0
- #else
-  #define M5UNITGLASS_SCL 22
- #endif
+ #define M5UNITGLASS_SCL M5GFX_PORTA_DEFAULT_SCL
 #endif
 
 #ifndef M5UNITGLASS_ADDR
