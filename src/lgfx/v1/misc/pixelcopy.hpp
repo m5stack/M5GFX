@@ -112,6 +112,7 @@ namespace lgfx
                                            ? copy_rgb_affine<bgr888_t, bgr888_t>
                                            : copy_rgb_affine<bgr666_t, TSrc>)
            : (dst_depth == grayscale_8bit) ? copy_rgb_affine<grayscale_t, TSrc>
+           : (dst_depth == rgb565_nonswapped) ? copy_rgb_affine<rgb565_t, TSrc>
            : nullptr;
     }
 
@@ -135,6 +136,7 @@ namespace lgfx
            : (dst_depth == rgb888_3Byte) ? copy_palette_affine<bgr888_t , TPalette>
            : (dst_depth == rgb666_3Byte) ? copy_palette_affine<bgr666_t , TPalette>
            : (dst_depth == grayscale_8bit) ? copy_palette_affine<grayscale_t, TPalette>
+           : (dst_depth == rgb565_nonswapped) ? copy_palette_affine<rgb565_t, TPalette>
            : nullptr;
     }
 
