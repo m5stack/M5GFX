@@ -24,7 +24,13 @@
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
 #include "lgfx/v1/touch/Touch_GT911.hpp"
 
-#if defined ( CONFIG_IDF_TARGET_ESP32S3 )
+#if defined ( CONFIG_IDF_TARGET_ESP32P4 )
+
+#include "lgfx/v1/platforms/esp32p4/Panel_ILI9881C.hpp"
+
+static constexpr int_fast16_t in_i2c_port = I2C_NUM_1;
+
+#elif defined ( CONFIG_IDF_TARGET_ESP32S3 )
 
 // for M5PaperS3
 #if __has_include (<epdiy.h>) && defined (CONFIG_ESP32S3_SPIRAM_SUPPORT) && defined (CONFIG_SPIRAM_MODE_OCT)
@@ -191,6 +197,8 @@ namespace m5gfx
     }
   }
 
+  static constexpr std::uint_fast8_t pi4io1_i2c_addr = 0x43;
+  static constexpr std::uint_fast8_t pi4io2_i2c_addr = 0x44;
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
   static constexpr std::int32_t axp_i2c_freq = 400000;
   static constexpr std::uint_fast8_t axp_i2c_addr = 0x34;
@@ -592,19 +600,19 @@ namespace m5gfx
       lgfx::i2c::init(i2c_port, GPIO_NUM_13, GPIO_NUM_15);
 
       // set direction: output
-      auto value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x03, i2c_freq).has_value();
+      auto value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x03, i2c_freq).has_value();
       value |= (1 << 7);
-      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x03, value, 0, i2c_freq);
+      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x03, value, 0, i2c_freq);
 
       // set pull mode: down
-      value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x0d, i2c_freq).has_value();
+      value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x0d, i2c_freq).has_value();
       value &= ~(1 << 7);
-      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x0d, value, 0, i2c_freq);
+      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x0d, value, 0, i2c_freq);
 
       // set high impedance: off
-      value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x07, i2c_freq).has_value();
+      value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x07, i2c_freq).has_value();
       value &= ~(1 << 7);
-      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x07, value, 0, i2c_freq);
+      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x07, value, 0, i2c_freq);
 
       _is_backlight_inited = true;
       setBrightness(brightness);
@@ -615,13 +623,13 @@ namespace m5gfx
     {
       if (!_is_backlight_inited) init(127);
 
-      auto value = lgfx::i2c::readRegister8(i2c_port, 0x43, 0x05, i2c_freq).has_value();
+      auto value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x05, i2c_freq).has_value();
       if (brightness == 0) {
         value |= (1 << 7);
       } else {
         value &= ~(1 << 7);
       }
-      lgfx::i2c::writeRegister8(i2c_port, 0x43, 0x05, value, 0, i2c_freq);
+      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x05, value, 0, i2c_freq);
     }
   };
 #endif
@@ -1930,6 +1938,101 @@ namespace m5gfx
     default: break;
     }
 
+#elif defined (CONFIG_IDF_TARGET_ESP32P4)
+
+    std::uint32_t id;
+
+    std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
+    ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
+
+    if (true) // pkg_ver == EFUSE_RD_CHIP_VER_PKG_
+    {
+      if (board == 0 || board == board_t::board_M5Tab5)
+      {
+        // SDA = GPIO_NUM_31
+        // SCL = GPIO_NUM_32
+        // TP INT = GPIO_NUM_23
+        lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::output); // TP INT
+        lgfx::gpio_hi(GPIO_NUM_23); // select I2C Addr (high=0x14 / low=0x5D)
+        lgfx::i2c::init(in_i2c_port, GPIO_NUM_31, GPIO_NUM_32);
+
+        id = lgfx::i2c::readRegister8(in_i2c_port, pi4io1_i2c_addr, 0x01).has_value()
+          && lgfx::i2c::readRegister8(in_i2c_port, pi4io2_i2c_addr, 0x01).has_value();
+        if (id != 0) {
+          board = board_t::board_M5Tab5;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Tab5");
+
+          static constexpr const uint8_t reg_data_io1_1[] = {
+            0x03, 0b01111111, 0,   // PI4IO_REG_IO_DIR
+            0x05, 0b01010110, 0,   // PI4IO_REG_OUT_SET (bit5=GT911 TouchReset LOW)
+            0x07, 0b00000000, 0,   // PI4IO_REG_OUT_H_IM
+            0x0D, 0b01111111, 0,   // PI4IO_REG_PULL_SEL
+            0x0B, 0b01111111, 0,   // PI4IO_REG_PULL_EN
+            0xFF,0xFF,0xFF,
+          };
+          static constexpr const uint8_t reg_data_io1_2[] = {
+            0x05, 0b01110110, 0,   // PI4IO_REG_OUT_SET (bit5=GT911 TouchReset HIGH)
+            0xFF,0xFF,0xFF,
+          };
+
+          static constexpr const uint8_t reg_data_io2[] = {
+            0x03, 0b10111001, 0,   // PI4IO_REG_IO_DIR
+            0x07, 0b00000110, 0,   // PI4IO_REG_OUT_H_IM
+            0x0D, 0b10111001, 0,   // PI4IO_REG_PULL_SEL
+            0x0B, 0b11111001, 0,   // PI4IO_REG_PULL_EN
+            0x09, 0b01000000, 0,   // PI4IO_REG_IN_DEF_STA
+            0x11, 0b10111111, 0,   // PI4IO_REG_INT_MASK
+            0x05, 0b10001001, 0,   // PI4IO_REG_OUT_SET
+            0xFF,0xFF,0xFF,
+          };
+
+          i2c_write_register8_array(in_i2c_port, pi4io1_i2c_addr, reg_data_io1_1, 400000);
+          i2c_write_register8_array(in_i2c_port, pi4io2_i2c_addr, reg_data_io2, 400000);
+          i2c_write_register8_array(in_i2c_port, pi4io1_i2c_addr, reg_data_io1_2, 400000);
+
+          auto p = new Panel_ILI9881C();
+          {
+            auto cfg = p->config();
+            cfg.panel_width = 720;
+            cfg.panel_height = 1280;
+            cfg.memory_width = 720;
+            cfg.memory_height = 1280;
+            cfg.readable = true;
+            p->config(cfg);
+          }
+          _panel_last.reset(p);
+          _set_pwm_backlight(GPIO_NUM_22, 7, 44100);
+
+          {
+            auto t = new m5gfx::Touch_GT911();
+            if (t) {
+              _touch_last.reset(t);
+
+              auto cfg = t->config();
+
+              cfg.pin_rst = -1;
+              cfg.pin_sda = GPIO_NUM_31;
+              cfg.pin_scl = GPIO_NUM_32;
+              cfg.pin_int = GPIO_NUM_23;
+              cfg.freq = 400000;
+              cfg.x_min = 0;
+              cfg.x_max = 719;
+              cfg.y_min = 0;
+              cfg.y_max = 1279;
+              cfg.i2c_port = 1;
+              cfg.bus_shared = true;
+              cfg.offset_rotation = 0;
+              t->config(cfg);
+
+              _panel_last->touch(t);
+            }
+          }
+
+          goto init_clear;
+        }
+      }
+    }
+
 #endif
 
     board = board_t::board_unknown;
@@ -1995,6 +2098,7 @@ init_clear:
     case board_M5AirQ:         title = "M5AirQ";         break;
     case board_M5VAMeter:      title = "M5VAMeter";      break;
     case board_M5StampPLC:     title = "M5StampPLC";     break;
+    case board_M5Tab5:         title = "M5Tab5";         break;
     default:                   title = "M5GFX";          break;
     }
     p->setWindowTitle(title);
@@ -2058,9 +2162,14 @@ init_clear:
       h = 240;
       break;
 
-    case board_M5VAMeter:
+      case board_M5VAMeter:
       w = 240;
       h = 240;
+      break;
+
+    case board_M5Tab5:
+      w = 720;
+      h = 1280;
       break;
 
     default:
