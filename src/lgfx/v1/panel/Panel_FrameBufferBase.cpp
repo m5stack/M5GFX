@@ -26,6 +26,8 @@ Contributors:
 
  #if __has_include(<esp_cache.h>)
   #include <esp_cache.h>
+ #endif
+ #if defined (ESP_CACHE_MSYNC_FLAG_DIR_C2M)
   __attribute__((weak))
   int Cache_WriteBack_Addr(uint32_t addr, uint32_t size)
   {
