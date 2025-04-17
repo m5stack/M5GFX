@@ -37,7 +37,6 @@ namespace lgfx
 bool Bus_EPD::notify_line_done(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
   auto me = (Bus_EPD*)user_ctx;
-  // me->scanlineDone();
   me->_bus_busy = false;
   return false;
 }
@@ -71,10 +70,10 @@ void Bus_EPD::scanlineDone(void)
   auto ckv = _config.pin_ckv;
   auto le = _config.pin_le;
 
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(1);
-  lgfx::gpio_hi(le);   lgfx::delayMicroseconds(1);//300ns
-  lgfx::gpio_lo(le);   lgfx::delayMicroseconds(1);
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1);
+  lgfx::gpio_lo(ckv); lgfx::gpio_lo(ckv);
+  lgfx::gpio_hi(le);  lgfx::gpio_hi(le);
+  lgfx::gpio_lo(le);  lgfx::gpio_lo(le);
+  lgfx::gpio_hi(ckv);
 }
 
 bool Bus_EPD::powerControl(bool flg_on)

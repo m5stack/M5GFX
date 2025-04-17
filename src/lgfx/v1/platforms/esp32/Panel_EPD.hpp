@@ -41,10 +41,10 @@ namespace lgfx
     virtual ~Panel_EPD(void);
 
     struct config_detail_t {
-      const uint8_t *lut_quality = nullptr;
-      const uint8_t *lut_text = nullptr;
-      const uint8_t *lut_fast = nullptr;
-      const uint8_t *lut_fastest = nullptr;
+      const uint32_t *lut_quality = nullptr;
+      const uint32_t *lut_text = nullptr;
+      const uint32_t *lut_fast = nullptr;
+      const uint32_t *lut_fastest = nullptr;
       size_t lut_quality_step = 0;
       size_t lut_text_step = 0;
       size_t lut_fast_step = 0;

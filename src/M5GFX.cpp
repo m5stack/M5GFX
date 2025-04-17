@@ -1974,6 +1974,7 @@ init_clear:
     case board_M5StickCPlus2:  title = "M5StickCPlus2";  break;
     case board_M5StackCoreInk: title = "M5StackCoreInk"; break;
     case board_M5Paper:        title = "M5Paper";        break;
+    case board_M5PaperS3:      title = "M5PaperS3";      break;
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5Station:      title = "M5Station";      break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
@@ -1997,6 +1998,7 @@ init_clear:
       break;
 
     case board_M5Paper:
+    case board_M5PaperS3:
       w = 960;
       h = 540;
       pnl_cfg.offset_rotation = 3;
