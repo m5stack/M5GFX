@@ -219,6 +219,7 @@ namespace lgfx
 
     if (init_intenal()) {
       _buf = _frame_buffer;
+      memset(_buf, 0xFF, _cfg.memory_width * _cfg.memory_height / 2);
       _range_mod.top    = INT16_MAX;
       _range_mod.left   = INT16_MAX;
       _range_mod.right  = 0;
