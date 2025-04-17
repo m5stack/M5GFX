@@ -52,7 +52,7 @@ namespace lgfx
       uint8_t line_padding = 0;
   
       /// background epd writer task priority
-      uint8_t task_priority = 25;
+      uint8_t task_priority = 24;
   
       /// background epd writer task pinned core. (APP_CPU_NUM or PRO_CPU_NUM)
       uint8_t task_pinned_core = -1;
