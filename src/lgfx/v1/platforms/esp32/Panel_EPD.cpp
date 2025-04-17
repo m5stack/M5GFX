@@ -310,6 +310,9 @@ namespace lgfx
 
   void Panel_EPD::waitDisplay(void)
   {
+    while (_display_busy) {
+      vTaskDelay(1);
+    }
   }
 
   void Panel_EPD::setInvert(bool invert)
@@ -557,6 +560,7 @@ namespace lgfx
         }
         bus->endTransaction();
         bus->powerControl(false);
+        vTaskDelay(1);
         me->_display_busy = false;
       }
 
