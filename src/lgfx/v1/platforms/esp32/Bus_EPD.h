@@ -90,7 +90,7 @@ class Bus_EPD : public Bus_NULL
   void writeBytes(const uint8_t *data, uint32_t length);
 
   void beginTransaction(void) override;
-  void endTransaction(void) override { wait(); }
+  void endTransaction(void) override;
 
   virtual bool powerControl(bool power_on);
   virtual void scanlineDone(void);

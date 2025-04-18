@@ -102,8 +102,7 @@ namespace lgfx
       uint16_t y;
       uint16_t w;
       uint16_t h;
-      uint8_t lut_offset;
-      uint8_t remain;
+      epd_mode_t mode;
     };
   
     static void task_update(Panel_EPD* me);
@@ -112,12 +111,12 @@ namespace lgfx
     QueueHandle_t _update_queue_handle = nullptr;
   
     uint8_t* _dma_bufs[2] = { 0, 0 };
-    uint8_t* _frame_buffer = nullptr;
+    uint16_t* _step_framebuf = nullptr;
     uint16_t* _step_table = nullptr;
     uint8_t* _lut_2pixel = nullptr;
   
-    uint8_t _lut_step_offset[6] = { 0, };
-    uint8_t _lut_mode_remain[6] = { 0, };
+    uint8_t _lut_offset_table[6] = { 0, };
+    uint8_t _lut_remain_table[6] = { 0, };
     volatile bool _display_busy = false;
   };
 

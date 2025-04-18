@@ -34,7 +34,7 @@ namespace lgfx
  {
 
 //----------------------------------------------------------------------------
-bool Bus_EPD::notify_line_done(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+bool IRAM_ATTR Bus_EPD::notify_line_done(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
   auto me = (Bus_EPD*)user_ctx;
   me->_bus_busy = false;
@@ -64,6 +64,11 @@ void Bus_EPD::beginTransaction(void)
   lgfx::gpio_hi(ckv);
 }
 
+void Bus_EPD::endTransaction(void)
+{
+  wait();
+}
+
 void Bus_EPD::scanlineDone(void)
 {
   wait();
@@ -88,9 +93,11 @@ bool Bus_EPD::powerControl(bool flg_on)
       lgfx::delayMicroseconds(100);
       lgfx::gpio_hi(_config.pin_spv);
       lgfx::gpio_hi(_config.pin_sph);
-    } else {
-      lgfx::gpio_lo(_config.pin_pwr);
       lgfx::delay(1);
+    } else {
+      lgfx::delay(1);
+      lgfx::gpio_lo(_config.pin_pwr);
+      lgfx::delayMicroseconds(10);
       lgfx::gpio_lo(_config.pin_oe);
       lgfx::delayMicroseconds(100);
       lgfx::gpio_lo(_config.pin_spv);

@@ -79,18 +79,19 @@ namespace lgfx
 // LUTの縦軸は時間軸。上から順に下に向かって処理が進んでいく。
 // 値の意味は 0 == neutral / 1 == to black / 2 == to white / 3 == no operation
   static constexpr const uint32_t lut_quality[] = {
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     LUT_MAKE(0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
@@ -118,6 +119,7 @@ namespace lgfx
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 
   static constexpr const uint32_t lut_text[] = {
@@ -144,24 +146,24 @@ namespace lgfx
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 
   static constexpr const uint32_t lut_fast[] = {
     LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 
   static constexpr const uint32_t lut_fastest[] = {
@@ -174,6 +176,7 @@ namespace lgfx
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 #undef LUT_MAKE
 
@@ -218,7 +221,6 @@ namespace lgfx
     Panel_HasBuffer::init(use_reset);
 
     if (init_intenal()) {
-      _buf = _frame_buffer;
       memset(_buf, 0xFF, _cfg.memory_width * _cfg.memory_height / 2);
       _range_mod.top    = INT16_MAX;
       _range_mod.left   = INT16_MAX;
@@ -245,20 +247,27 @@ namespace lgfx
     // EPD制御用LUT (2ピクセルセット)
     _lut_2pixel = (uint8_t *)heap_caps_malloc(lut_total_step * 256 * sizeof(uint16_t), MALLOC_CAP_DMA);
 
+    // リフレッシュの進行状況付きフレームバッファ (下位8bitはピクセル2個分の16階調値そのまま)
+    _step_framebuf = (uint16_t *)heap_caps_aligned_alloc(16, (memory_w * memory_h), MALLOC_CAP_SPIRAM); // current pixels
+
     // 面積分のフレームバッファ (1Byte=2pixel)
-    _frame_buffer = (uint8_t *)heap_caps_aligned_alloc(16, (memory_w * memory_h) / 2, MALLOC_CAP_SPIRAM); // current pixels
-    _step_table = (uint16_t *)heap_caps_malloc(memory_w + 16, MALLOC_CAP_DMA);
+    _buf = (uint8_t *)heap_caps_aligned_alloc(16, (memory_w * memory_h) / 2, MALLOC_CAP_SPIRAM); // current pixels
+
+    // DMA転送用バッファx2 (1Byte=4pixel)
     _dma_bufs[0] = (uint8_t *)heap_caps_malloc((memory_w / 4) + _config_detail.line_padding + 16, MALLOC_CAP_DMA);
     _dma_bufs[1] = (uint8_t *)heap_caps_malloc((memory_w / 4) + _config_detail.line_padding + 16, MALLOC_CAP_DMA);
 
-    if (!_frame_buffer || !_step_table || !_dma_bufs[0] || !_dma_bufs[1] || !_lut_2pixel) {
-      if (_frame_buffer) { heap_caps_free(_frame_buffer); _frame_buffer = nullptr; }
-      if (_step_table) { heap_caps_free(_step_table); _step_table = nullptr; }
+    if (!_step_framebuf || !_buf || !_dma_bufs[0] || !_dma_bufs[1] || !_lut_2pixel) {
+      if (_buf) { heap_caps_free(_buf); _buf = nullptr; }
       if (_dma_bufs[0]) { heap_caps_free(_dma_bufs[0]); _dma_bufs[0] = nullptr; }
       if (_dma_bufs[1]) { heap_caps_free(_dma_bufs[1]); _dma_bufs[1] = nullptr; }
       if (_lut_2pixel) { heap_caps_free(_lut_2pixel); _lut_2pixel = nullptr; }
 
       return false;
+    }
+    // リフレッシュの進行状況付きフレームバッファ初期値を中間色相当にしておく
+    for (int i = 0; i < memory_w * memory_h >> 1; ++i) {
+      _step_framebuf[i] = 0x0088u;
     }
 
     auto dst = _lut_2pixel;
@@ -275,9 +284,10 @@ namespace lgfx
         case epd_mode_t::epd_fastest: lut_src = _config_detail.lut_fastest; lut_step = _config_detail.lut_fastest_step; break;
       }
       if (lut_src == nullptr) { continue; }
-      _lut_step_offset[epd_mode] = lindex >> 8;
-      _lut_mode_remain[epd_mode] = lut_step;
-
+      _lut_offset_table[epd_mode] = lindex >> 8;
+      _lut_remain_table[epd_mode] = lut_step;
+// ESP_LOGV("dbg", "\n\nepd_mode: %d, offset: %d, remain: %d\n", epd_mode, _lut_offset_table[epd_mode], _lut_remain_table[epd_mode]);
+// printf("\nepd_mode: %d, offset: %d, remain: %d\n\n", epd_mode, _lut_offset_table[epd_mode], _lut_remain_table[epd_mode]);
       for (int step = 0; step < lut_step; ++step) {
         auto lu = lut_src[0];
         for (int lv = 0; lv < 256; ++lv) {
@@ -324,10 +334,12 @@ namespace lgfx
 
   void Panel_EPD::setSleep(bool flg)
   {
+    getBusEPD()->powerControl(!flg);
   }
 
   void Panel_EPD::setPowerSave(bool flg)
   {
+    getBusEPD()->powerControl(!flg);
   }
 
   void Panel_EPD::writeFillRectPreclipped(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, uint32_t rawcolor)
@@ -506,22 +518,19 @@ namespace lgfx
 
     if (_range_mod.empty()) { return; }
 
-    uint_fast16_t xs = (_range_mod.left + _cfg.offset_x) & ~ 3;
-    uint_fast16_t xe = (_range_mod.right + _cfg.offset_x + 3) | 3;
+    uint_fast16_t xs = _range_mod.left + _cfg.offset_x;
+    uint_fast16_t xe = _range_mod.right + _cfg.offset_x;
     uint_fast16_t ys = _range_mod.top    + _cfg.offset_y;
     uint_fast16_t ye = _range_mod.bottom + _cfg.offset_y;
 
-
     update_data_t upd;
-
-    upd.lut_offset = _lut_step_offset[_epd_mode];
-    upd.remain = _lut_mode_remain[_epd_mode];
     upd.x = xs;
     upd.w = xe - xs + 1;
     upd.y = ys;
     upd.h = ye - ys + 1;
+    upd.mode = _epd_mode;
 
-    cacheWriteBack(&_frame_buffer[y * _cfg.memory_width >> 1], h * _cfg.memory_width >> 1);
+    cacheWriteBack(&_buf[y * _cfg.memory_width >> 1], h * _cfg.memory_width >> 1);
     bool res = xQueueSend(_update_queue_handle, &upd, 128 / portTICK_PERIOD_MS) == pdTRUE;
     vTaskDelay(1);
     if (res)
@@ -533,10 +542,9 @@ namespace lgfx
     }
   }
 
-//----------------------------------------------------------------------------
   void Panel_EPD::task_update(Panel_EPD* me)
   {
-    std::vector<update_data_t> _update_data;
+    me->_display_busy = true;
     update_data_t new_data;
 
     const size_t data_len = me->_cfg.memory_width;
@@ -545,87 +553,80 @@ namespace lgfx
 
     auto bus = me->getBusEPD();
 
-    uint16_t* step_buf = me->_step_table;
+    bus->powerControl(true);
+
+    uint32_t nodata_counter = 0;
+
     for (;;) {
-      vTaskDelay(1);
-      if (_update_data.empty())
-      { // 処理対象が無い場合は EPDの電力停止
-        // 全ピクセル ニュートラル化して電源を切る
-        uint8_t *dma_buf = me->_dma_bufs[0];
-        memset(dma_buf, 0, write_len);
-        bus->powerControl(true);
-        bus->beginTransaction();
-        for (uint_fast16_t y = 0; y < mh; y++) {
-          bus->writeBytes(dma_buf, write_len);
-          bus->scanlineDone();
-        }
-        bus->endTransaction();
-        bus->powerControl(false);
-        vTaskDelay(1);
-        me->_display_busy = false;
-      }
-
-      if (_update_data.size() < 64)
-      {
-        TickType_t wait_tick = _update_data.empty() ? portMAX_DELAY : 0;
-        if (xQueueReceive(me->_update_queue_handle, &new_data, wait_tick)) {
-          me->_display_busy = true;
+      me->_display_busy = nodata_counter;
+      TickType_t wait_tick = nodata_counter ? 0 : portMAX_DELAY;
+      if (xQueueReceive(me->_update_queue_handle, &new_data, wait_tick)) {
+        me->_display_busy = true;
+        do {
+          auto lut_remain = me->_lut_remain_table[new_data.mode];
+          if (nodata_counter < lut_remain) {
+            nodata_counter = lut_remain;
+          }
+          // 範囲内のピクセルをすべて操作し変化分を反映する
+          size_t idx = (new_data.x + new_data.y * data_len) >> 1;
+          auto src = &me->_buf[idx];
+          auto dst = &me->_step_framebuf[idx];
+          size_t h = new_data.h;
+          size_t w = (((new_data.x & 1) + new_data.w) >> 1) + 1;
+          uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
+          bool force = new_data.mode == epd_mode_t::epd_quality || new_data.mode == epd_mode_t::epd_text;
           do {
-  // printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
-            _update_data.push_back(new_data);
-          } while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
-          // remainが小さい順にソート
-          std::stable_sort(_update_data.begin(), _update_data.end(), [](const update_data_t& a, const update_data_t& b) {
-            return a.remain < b.remain;
-          });
-        }
+            auto s = src;
+            auto d = dst;
+            src += data_len >> 1;
+            dst += data_len >> 1;
+            for (int i = 0; i < w; ++i) {
+              auto dval = *d;
+              auto sval = *s;
+              if (force || (dval & 0xFF) != sval)
+              {
+                *d = sval + lut_offset;
+              }
+              s++;
+              d++;
+            }
+          } while (--h);
+        // printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
+        } while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
+      } else {
+        vTaskDelay(1);
       }
-      if (_update_data.empty()) { continue; }
-
+      if (nodata_counter == 0) {
+        bus->powerControl(false);
+        continue;
+      }
+      --nodata_counter;
+      // 待機中にスリープ操作されている可能性があるので、ここで電源ON
       bus->powerControl(true);
+
+      auto lut = me->_lut_2pixel;
       for (uint_fast16_t y = 0; y < mh; y++) {
-        memset(step_buf, 0, data_len);
-        int x = UINT16_MAX;
-        int x2 = 0;
-        for (const auto& data: _update_data) {
-          if (y < data.y || y >= data.y + data.h) { continue; }
-          int tx = data.x >> 1;
-          int tw = (data.w + 1) >> 1;
-          if (x > tx) { x = tx; }
-          if (x2 < tx + tw) { x2 = tx + tw; }
-          uint16_t value = data.lut_offset << 8;
-          while (tw--) {
-            step_buf[tx++] = value;
-          }
-        }
+        int x = 0;
+        int w = data_len >> 2;
         uint8_t *dma_buf = me->_dma_bufs[y & 1];
-        x >>= 1;
-        x2 = (x2 + 1) >> 1;
-        memset(dma_buf + x2, 0xFF, write_len - x2);
-        if (x < x2) {
-          auto lut = me->_lut_2pixel;
-          auto sb = step_buf;
+        {
+          auto sb = &me->_step_framebuf[y * data_len >> 1];
           auto dst = dma_buf;
-          uint8_t* fb = &me->_frame_buffer[y * data_len >> 1];
-          if (x) {
-            memset(dma_buf, 0xFF, x);
-            fb += x << 1;
-            sb += x << 1;
-            dst += x;
-            x2 -= x;
-          }
-          while (x2--) {
-            auto fb0 = fb[0];
-            auto sb0 = sb[0];
-            auto fb1 = fb[1];
-            auto sb1 = sb[1];
-            sb0 += fb0;
-            fb0 = lut[sb0];
-            sb1 += fb1;
-            fb1 = lut[sb1];
-            sb += 2;
-            fb += 2;
+          auto sb0 = sb[0];
+          auto sb1 = sb[1];
+          while (w--) {
+            auto fb0 = lut[sb0];
+            auto fb1 = lut[sb1];
+            if (fb0 != 0x0F) {
+              sb[0] = sb0 + 256;
+            }
+            if (fb1 != 0x0F) {
+              sb[1] = sb1 + 256;
+            }
             dst[0] = (fb0 << 4) + fb1;
+            sb += 2;
+            sb0 = sb[0];
+            sb1 = sb[1];
             dst++;
           }
         }
@@ -637,18 +638,6 @@ namespace lgfx
         bus->writeBytes(dma_buf, write_len);
       }
 
-      // _update_dataの処理を進め、remainが 0になったものを除去する
-      for (auto it = _update_data.begin(); it != _update_data.end();) {
-        if (it->remain != 0) {
-          it->remain--;
-          if (it->remain != 0) {
-            it->lut_offset++;
-            ++it;
-            continue;
-          }
-        }
-        it = _update_data.erase(it);
-      }
       bus->scanlineDone();
       bus->endTransaction();
     }
