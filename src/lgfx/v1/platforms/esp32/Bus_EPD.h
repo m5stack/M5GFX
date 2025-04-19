@@ -87,7 +87,7 @@ class Bus_EPD : public Bus_NULL
   void config(const config_t& cfg) { _config = cfg; };
   const config_t& config(void) { return _config; };
 
-  void writeBytes(const uint8_t *data, uint32_t length);
+  void writeScanLine(const uint8_t *data, uint32_t length);
 
   void beginTransaction(void) override;
   void endTransaction(void) override;

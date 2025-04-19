@@ -106,7 +106,7 @@ bool Bus_EPD::powerControl(bool flg_on)
   return true;
 }
 
-void Bus_EPD::writeBytes(const uint8_t *data, uint32_t length)
+void Bus_EPD::writeScanLine(const uint8_t *data, uint32_t length)
 {
   wait();
   _bus_busy = true;

@@ -72,88 +72,70 @@ namespace lgfx
 //----------------------------------------------------------------------------
 
   static constexpr int8_t Bayer[16] = {-30, 2, -22, 10, 18, -14, 26, -6, -18, 14, -26, 6, 30, -2, 22, -10};
+  // static constexpr int8_t Bayer[16] = { 0, };
 
 #define LUT_MAKE(d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,da,db,dc,dd,de,df) (uint32_t)((d0<< 0)|(d1<< 2)|(d2<< 4)|(d3<< 6)|(d4<< 8)|(d5<<10)|(d6<<12)|(d7<<14)|(d8<<16)|(d9<<18)|(da<<20)|(db<<22)|(dc<<24)|(dd<<26)|(de<<28)|(df<<30))
 
 // LUTの横軸は色の濃さ。左端が 黒、右端が白の16段階のグレースケール。
 // LUTの縦軸は時間軸。上から順に下に向かって処理が進んでいく。
-// 値の意味は 0 == neutral / 1 == to black / 2 == to white / 3 == no operation
+// 値の意味は 0 == no operation / 1 == to black / 2 == to white / 3 == end of data
   static constexpr const uint32_t lut_quality[] = {
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-    LUT_MAKE(0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1),
-    LUT_MAKE(0, 2, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1),
-    LUT_MAKE(2, 2, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1),
-    LUT_MAKE(0, 2, 2, 2, 2, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1),
-    LUT_MAKE(0, 2, 2, 2, 2, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1),
-    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 0, 2, 0, 0, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 0, 2, 2, 0, 2, 0, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 0, 2, 2, 0, 2, 0, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 2, 2, 2, 2, 0, 2, 0, 1, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0, 1, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 0, 2, 2, 2, 2, 1, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 0, 1, 1, 0, 2, 2, 2, 2, 1, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 0, 0, 0, 1, 1, 0, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),  
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 2, 2, 0),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 
   static constexpr const uint32_t lut_text[] = {
-    LUT_MAKE(0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(2, 2, 2, 2, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    LUT_MAKE(0, 2, 2, 2, 2, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1),
-    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 0, 2, 0, 0, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 0, 2, 2, 0, 2, 0, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 0, 2, 2, 0, 2, 0, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 2, 2, 2, 2, 0, 2, 0, 1, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0, 1, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 0, 2, 2, 2, 2, 1, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 0, 1, 1, 0, 2, 2, 2, 2, 1, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 0, 0, 0, 1, 1, 0, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 2, 2, 0),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 
   static constexpr const uint32_t lut_fast[] = {
-    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
@@ -167,8 +149,8 @@ namespace lgfx
   };
 
   static constexpr const uint32_t lut_fastest[] = {
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
@@ -298,7 +280,7 @@ namespace lgfx
       }
     }
 
-    _update_queue_handle = xQueueCreate(16, sizeof(update_data_t));
+    _update_queue_handle = xQueueCreate(4, sizeof(update_data_t));
     auto task_priority = _config_detail.task_priority;
     auto task_pinned_core = _config_detail.task_pinned_core;
     if (task_pinned_core >= portNUM_PROCESSORS)
@@ -321,10 +303,18 @@ namespace lgfx
 
   void Panel_EPD::waitDisplay(void)
   {
-    while (_display_busy) {
-      vTaskDelay(1);
-    }
+    while (_display_busy) { vTaskDelay(1); }
   }
+
+  bool Panel_EPD::displayBusy(void)
+  {
+// キュー _update_queue_handle に余裕があるか調べる
+    if (_update_queue_handle && uxQueueSpacesAvailable(_update_queue_handle) == 0) {
+      return true;
+    }
+    return false;
+  };
+
 
   void Panel_EPD::setInvert(bool invert)
   {
@@ -531,8 +521,10 @@ namespace lgfx
     upd.mode = _epd_mode;
 
     cacheWriteBack(&_buf[y * _cfg.memory_width >> 1], h * _cfg.memory_width >> 1);
+    vTaskDelay(1);
     bool res = xQueueSend(_update_queue_handle, &upd, 128 / portTICK_PERIOD_MS) == pdTRUE;
     vTaskDelay(1);
+// printf("\nres: %d, xs: %d, xe: %d, ys: %d, ye: %d\n", res, xs, xe, ys, ye);
     if (res)
     {
       _range_mod.top    = INT16_MAX;
@@ -555,17 +547,19 @@ namespace lgfx
 
     bus->powerControl(true);
 
-    uint32_t nodata_counter = 0;
+    uint32_t remain = 0;
 
     for (;;) {
-      me->_display_busy = nodata_counter;
-      TickType_t wait_tick = nodata_counter ? 0 : portMAX_DELAY;
+      vTaskDelay(1);
+      me->_display_busy = (remain != 0);
+      TickType_t wait_tick = remain ? 0 : portMAX_DELAY;
       if (xQueueReceive(me->_update_queue_handle, &new_data, wait_tick)) {
         me->_display_busy = true;
+        uint32_t retry = 4;
         do {
           auto lut_remain = me->_lut_remain_table[new_data.mode];
-          if (nodata_counter < lut_remain) {
-            nodata_counter = lut_remain;
+          if (remain < lut_remain) {
+            remain = lut_remain;
           }
           // 範囲内のピクセルをすべて操作し変化分を反映する
           size_t idx = (new_data.x + new_data.y * data_len) >> 1;
@@ -574,34 +568,38 @@ namespace lgfx
           size_t h = new_data.h;
           size_t w = (((new_data.x & 1) + new_data.w) >> 1) + 1;
           uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
-          bool force = new_data.mode == epd_mode_t::epd_quality || new_data.mode == epd_mode_t::epd_text;
+          uint_fast16_t lut_last = lut_offset + ((me->_lut_remain_table[new_data.mode]) << 8);
+          if (new_data.mode != epd_mode_t::epd_fastest) { lut_last -= 256; }
+// printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
           do {
-            auto s = src;
-            auto d = dst;
+            auto s = src - 1;
+            auto d = dst - 1;
             src += data_len >> 1;
             dst += data_len >> 1;
-            for (int i = 0; i < w; ++i) {
-              auto dval = *d;
-              auto sval = *s;
-              if (force || (dval & 0xFF) != sval)
-              {
-                *d = sval + lut_offset;
+            {
+              for (int i = 0; i < w; ++i) {
+                auto dval = d[1];
+                auto sval = s[1];
+                d++;
+                s++;
+                if ((dval >= lut_last) || (dval < lut_offset) || ((dval & 0xFF) != sval))
+                {
+                  *d = sval + lut_offset;
+                }
               }
-              s++;
-              d++;
             }
           } while (--h);
-        // printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
+          if (--retry == 0) {
+            break;
+          }
         } while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
-      } else {
-        vTaskDelay(1);
       }
-      if (nodata_counter == 0) {
+      if (remain == 0) {
         bus->powerControl(false);
         continue;
       }
-      --nodata_counter;
-      // 待機中にスリープ操作されている可能性があるので、ここで電源ON
+      --remain;
+
       bus->powerControl(true);
 
       auto lut = me->_lut_2pixel;
@@ -612,9 +610,9 @@ namespace lgfx
         {
           auto sb = &me->_step_framebuf[y * data_len >> 1];
           auto dst = dma_buf;
-          auto sb0 = sb[0];
-          auto sb1 = sb[1];
-          while (w--) {
+          do {
+            auto sb0 = sb[0];
+            auto sb1 = sb[1];
             auto fb0 = lut[sb0];
             auto fb1 = lut[sb1];
             if (fb0 != 0x0F) {
@@ -625,17 +623,15 @@ namespace lgfx
             }
             dst[0] = (fb0 << 4) + fb1;
             sb += 2;
-            sb0 = sb[0];
-            sb1 = sb[1];
-            dst++;
-          }
+            dst += 1;
+          } while (--w);
         }
         if (y == 0) {
           bus->beginTransaction();
         } else {
           bus->scanlineDone();
         }
-        bus->writeBytes(dma_buf, write_len);
+        bus->writeScanLine(dma_buf, write_len);
       }
 
       bus->scanlineDone();

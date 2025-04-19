@@ -24,7 +24,6 @@ Contributors:
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
-#include <vector>
 
 #include "lgfx/v1/panel/Panel_HasBuffer.hpp"
 #include "lgfx/v1/misc/range.hpp"
@@ -67,7 +66,7 @@ namespace lgfx
     bool init(bool use_reset) override;
 
     void waitDisplay(void) override;
-    bool displayBusy(void) override { return _display_busy; };
+    bool displayBusy(void) override;
     color_depth_t setColorDepth(color_depth_t depth) override;
 
     void setInvert(bool invert) override;
