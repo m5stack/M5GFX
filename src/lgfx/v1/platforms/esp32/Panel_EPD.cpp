@@ -225,8 +225,9 @@ namespace lgfx
     _buf = (uint8_t *)heap_caps_aligned_alloc(16, (memory_w * memory_h) / 2, MALLOC_CAP_SPIRAM); // current pixels
 
     // DMA転送用バッファx2 (1Byte=4pixel)
-    _dma_bufs[0] = (uint8_t *)heap_caps_malloc((memory_w / 4) + _config_detail.line_padding + 16, MALLOC_CAP_DMA);
-    _dma_bufs[1] = (uint8_t *)heap_caps_malloc((memory_w / 4) + _config_detail.line_padding + 16, MALLOC_CAP_DMA);
+    const auto dma_len = memory_w / 4 + _config_detail.line_padding;
+    _dma_bufs[0] = (uint8_t *)heap_caps_malloc(dma_len, MALLOC_CAP_DMA);
+    _dma_bufs[1] = (uint8_t *)heap_caps_malloc(dma_len, MALLOC_CAP_DMA);
 
     if (!_step_framebuf || !_buf || !_dma_bufs[0] || !_dma_bufs[1] || !_lut_2pixel) {
       if (_buf) { heap_caps_free(_buf); _buf = nullptr; }
@@ -236,6 +237,9 @@ namespace lgfx
 
       return false;
     }
+    memset(_dma_bufs[0], 0, dma_len);
+    memset(_dma_bufs[1], 0, dma_len);
+
     // リフレッシュの進行状況付きフレームバッファ初期値を中間色相当にしておく
     for (int i = 0; i < memory_w * memory_h >> 1; ++i) {
       _step_framebuf[i] = 0x0088u;
@@ -269,7 +273,7 @@ namespace lgfx
       }
     }
 
-    _update_queue_handle = xQueueCreate(4, sizeof(update_data_t));
+    _update_queue_handle = xQueueCreate(8, sizeof(update_data_t));
     auto task_priority = _config_detail.task_priority;
     auto task_pinned_core = _config_detail.task_pinned_core;
     if (task_pinned_core >= portNUM_PROCESSORS)
@@ -497,14 +501,14 @@ namespace lgfx
 
     if (_range_mod.empty()) { return; }
 
-    uint_fast16_t xs = _range_mod.left + _cfg.offset_x;
-    uint_fast16_t xe = _range_mod.right + _cfg.offset_x;
+    uint_fast16_t xs = _range_mod.left + _cfg.offset_x & ~3u;
+    uint_fast16_t xe = _range_mod.right + _cfg.offset_x & ~3u;
     uint_fast16_t ys = _range_mod.top    + _cfg.offset_y;
     uint_fast16_t ye = _range_mod.bottom + _cfg.offset_y;
 
     update_data_t upd;
     upd.x = xs;
-    upd.w = xe - xs + 1;
+    upd.w = xe - xs + 4;
     upd.y = ys;
     upd.h = ye - ys + 1;
     upd.mode = _epd_mode;
@@ -525,7 +529,6 @@ namespace lgfx
 
   void Panel_EPD::task_update(Panel_EPD* me)
   {
-    me->_display_busy = true;
     update_data_t new_data;
 
     const size_t data_len = me->_cfg.memory_width;
@@ -533,8 +536,6 @@ namespace lgfx
     const size_t mh = me->_cfg.memory_height;
 
     auto bus = me->getBusEPD();
-
-    bus->powerControl(true);
 
     uint32_t remain = 0;
 
@@ -544,50 +545,69 @@ namespace lgfx
       TickType_t wait_tick = remain ? 0 : portMAX_DELAY;
       if (xQueueReceive(me->_update_queue_handle, &new_data, wait_tick)) {
         me->_display_busy = true;
-        uint32_t retry = 4;
+        uint32_t usec = lgfx::micros();
+        bool refresh = ( remain == 0 );
         do {
+// printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
           auto lut_remain = me->_lut_remain_table[new_data.mode];
           if (remain < lut_remain) {
             remain = lut_remain;
           }
-          // 範囲内のピクセルをすべて操作し変化分を反映する
-          size_t idx = (new_data.x + new_data.y * data_len) >> 1;
+          size_t idx = ((new_data.x + new_data.y * data_len) >> 1) & ~1u;
           auto src = &me->_buf[idx];
           auto dst = &me->_step_framebuf[idx];
           size_t h = new_data.h;
-          size_t w = (((new_data.x & 1) + new_data.w) >> 1) + 1;
+          size_t w = new_data.w >> 2;
           uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
           uint_fast16_t lut_last = lut_offset + ((me->_lut_remain_table[new_data.mode]) << 8);
-          if (new_data.mode != epd_mode_t::epd_fastest) { lut_last -= 256; }
-// printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
-          do {
-            auto s = src - 1;
-            auto d = dst - 1;
-            src += data_len >> 1;
-            dst += data_len >> 1;
-            {
+
+          if (refresh && (new_data.mode != epd_mode_t::epd_fastest)) {
+            do {
+              auto s = src;
+              auto d = dst;
+              src += data_len >> 1;
+              dst += data_len >> 1;
               for (int i = 0; i < w; ++i) {
-                auto dval = d[1];
-                auto sval = s[1];
-                d++;
-                s++;
-                if ((dval >= lut_last) || (dval < lut_offset) || ((dval & 0xFF) != sval))
-                {
-                  *d = sval + lut_offset;
+                auto d0 = d[0];
+                auto s0 = s[0];
+                auto d1 = d[1];
+                auto s1 = s[1];
+                d[0] = s0 + lut_offset;
+                d[1] = s1 + lut_offset;
+                d += 2;
+                s += 2;
+              }
+            } while (--h);
+          } else {
+            do {
+              auto s = src;
+              auto d = dst;
+              src += data_len >> 1;
+              dst += data_len >> 1;
+              {
+                for (int i = 0; i < w; ++i) {
+                  auto d0 = d[0];
+                  auto s0 = s[0];
+                  auto d1 = d[1];
+                  auto s1 = s[1];
+                  if ((d0 >= lut_last) || (d1 >= lut_last)
+                   || (d0 < lut_offset) || (d1 < lut_offset)
+                   || ((d0 & 0xFF) != s0) || ((d1 & 0xFF) != s1))
+                  {
+                    d[0] = s0 + lut_offset;
+                    d[1] = s1 + lut_offset;
+                  }
+                  d += 2;
+                  s += 2;
                 }
               }
-            }
-          } while (--h);
-          if (--retry == 0) {
+            } while (--h);
+          }
+          if (lgfx::micros() - usec > 1024) {
             break;
           }
         } while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
       }
-      if (remain == 0) {
-        bus->powerControl(false);
-        continue;
-      }
-      --remain;
 
       bus->powerControl(true);
 
@@ -606,8 +626,6 @@ namespace lgfx
             auto fb1 = lut[sb1];
             if (fb0 != 0x0F) {
               sb[0] = sb0 + 256;
-            }
-            if (fb1 != 0x0F) {
               sb[1] = sb1 + 256;
             }
             dst[0] = (fb0 << 4) + fb1;
@@ -625,6 +643,12 @@ namespace lgfx
 
       bus->scanlineDone();
       bus->endTransaction();
+
+      if (remain == 0) {
+        bus->powerControl(false);
+      } else {
+        --remain;
+      }
     }
   }
 

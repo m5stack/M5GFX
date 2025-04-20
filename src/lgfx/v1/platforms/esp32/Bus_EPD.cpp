@@ -83,7 +83,7 @@ void Bus_EPD::scanlineDone(void)
 
 bool Bus_EPD::powerControl(bool flg_on)
 {
-  if (flg_on != _pwr_on) {
+  if (_pwr_on != flg_on) {
     _pwr_on = flg_on;
     wait();
     if (flg_on) {
@@ -119,6 +119,7 @@ void Bus_EPD::writeScanLine(const uint8_t *data, uint32_t length)
 bool Bus_EPD::init(void)
 {
   _bus_busy = false;
+  _pwr_on = false;
 
   lgfx::pinMode(_config.pin_spv, lgfx::pin_mode_t::output);
   lgfx::pinMode(_config.pin_ckv, lgfx::pin_mode_t::output);
