@@ -72,52 +72,54 @@ namespace lgfx
 //----------------------------------------------------------------------------
 
   static constexpr int8_t Bayer[16] = {-30, 2, -22, 10, 18, -14, 26, -6, -18, 14, -26, 6, 30, -2, 22, -10};
-  // static constexpr int8_t Bayer[16] = { 0, };
 
 #define LUT_MAKE(d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,da,db,dc,dd,de,df) (uint32_t)((d0<< 0)|(d1<< 2)|(d2<< 4)|(d3<< 6)|(d4<< 8)|(d5<<10)|(d6<<12)|(d7<<14)|(d8<<16)|(d9<<18)|(da<<20)|(db<<22)|(dc<<24)|(dd<<26)|(de<<28)|(df<<30))
 
 // LUTの横軸は色の濃さ。左端が 黒、右端が白の16段階のグレースケール。
 // LUTの縦軸は時間軸。上から順に下に向かって処理が進んでいく。
 // 値の意味は 0 == no operation / 1 == to black / 2 == to white / 3 == end of data
+// LUT_MAKE１行あたり 1フレーム分の16階調それぞれの動作が定義される。
   static constexpr const uint32_t lut_quality[] = {
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 1, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 1, 1, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2),
+    LUT_MAKE(1, 1, 2, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 2, 1, 2, 2, 2),
+    LUT_MAKE(1, 1, 0, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2),
+    LUT_MAKE(0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 2, 2, 0),
+    LUT_MAKE(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
-
   static constexpr const uint32_t lut_text[] = {
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 1, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 2, 2),
-    LUT_MAKE(1, 1, 0, 1, 1, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 2, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 2, 2, 0),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 
@@ -147,6 +149,8 @@ namespace lgfx
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
   };
 #undef LUT_MAKE
@@ -163,8 +167,8 @@ namespace lgfx
 
   color_depth_t Panel_EPD::setColorDepth(color_depth_t depth)
   {
-    _write_depth = color_depth_t::rgb888_3Byte;
-    _read_depth = color_depth_t::rgb888_3Byte;
+    _write_depth = color_depth_t::grayscale_8bit;
+    _read_depth = color_depth_t::grayscale_8bit;
     return depth;
   }
 
@@ -240,11 +244,6 @@ namespace lgfx
     memset(_dma_bufs[0], 0, dma_len);
     memset(_dma_bufs[1], 0, dma_len);
 
-    // リフレッシュの進行状況付きフレームバッファ初期値を中間色相当にしておく
-    for (int i = 0; i < memory_w * memory_h >> 1; ++i) {
-      _step_framebuf[i] = 0x0088u;
-    }
-
     auto dst = _lut_2pixel;
     memset(dst, 0x0F, 256);
     size_t lindex = 256;
@@ -271,6 +270,11 @@ namespace lgfx
         }
         ++lut_src;
       }
+    }
+
+    // 白ピクセルの初期値をセット
+    for (int i = 0; i < memory_w * memory_h >> 1; ++i) {
+      _step_framebuf[i] = 0x00FFu;
     }
 
     _update_queue_handle = xQueueCreate(8, sizeof(update_data_t));
@@ -335,8 +339,7 @@ namespace lgfx
     _ye = ye;
     _update_transferred_rect(xs, ys, xe, ye);
 
-    bgr888_t color { rawcolor };
-    int32_t sum = (color.R8() + (color.G8() << 1) + color.B8());
+    int32_t sum = rawcolor << 2;
 
     bool fast = _epd_mode == epd_mode_t::epd_fast || _epd_mode == epd_mode_t::epd_fastest;
     y = ys;
@@ -372,7 +375,7 @@ namespace lgfx
     uint_fast16_t ys = y, ye = y + h - 1;
     _update_transferred_rect(xs, ys, xe, ye);
 
-    auto readbuf = (bgr888_t*)alloca(w * sizeof(bgr888_t));
+    auto readbuf = (grayscale_t*)alloca(w * sizeof(grayscale_t));
     auto sx = param->src_x32;
     h += y;
     do
@@ -385,8 +388,7 @@ namespace lgfx
         {
           do
           {
-            auto color = readbuf[prev_pos];
-            _draw_pixel(x + prev_pos, y, (color.R8() + (color.G8() << 1) + color.B8()));
+            _draw_pixel(x + prev_pos, y, readbuf[prev_pos].get());
           } while (new_pos != ++prev_pos);
         }
       } while (w != new_pos && w != (prev_pos = param->fp_skip(new_pos, w, param)));
@@ -412,7 +414,7 @@ namespace lgfx
     uint_fast16_t ypos = _ypos;
 
     static constexpr uint32_t buflen = 16;
-    bgr888_t colors[buflen];
+    grayscale_t colors[buflen];
     int bufpos = buflen;
     do
     {
@@ -421,7 +423,7 @@ namespace lgfx
         bufpos = 0;
       }
       auto color = colors[bufpos++];
-      _draw_pixel(xpos, ypos, (color.R8() + (color.G8() << 1) + color.B8()));
+      _draw_pixel(xpos, ypos, color.get());
       if (++xpos > xe)
       {
         xpos = xs;
@@ -437,7 +439,7 @@ namespace lgfx
 
   void Panel_EPD::readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* __restrict dst, pixelcopy_t* param)
   {
-    auto readbuf = (bgr888_t*)alloca(w * sizeof(bgr888_t));
+    auto readbuf = (grayscale_t*)alloca(w * sizeof(grayscale_t));
     param->src_data = readbuf;
     int32_t readpos = 0;
     h += y;
@@ -446,16 +448,17 @@ namespace lgfx
       uint32_t idx = 0;
       do
       {
-        readbuf[idx] = 0x010101u * (_read_pixel(x + idx, y) * 16 + 8);
+        readbuf[idx] = _read_pixel(x + idx, y);
       } while (++idx != w);
       param->src_x32 = 0;
       readpos = param->fp_copy(dst, readpos, readpos + w, param);
     } while (++y < h);
   }
 
-  void Panel_EPD::_draw_pixel(uint_fast16_t x, uint_fast16_t y, uint32_t sum)
+  void Panel_EPD::_draw_pixel(uint_fast16_t x, uint_fast16_t y, uint32_t rawcolor)
   {
     _rotate_pos(x, y);
+    int32_t sum = rawcolor << 2;
 
     auto btbl = &Bayer[(y & 3) << 2];
     size_t idx = (x >> 1) + (y * ((_cfg.panel_width + 1) >> 1));
@@ -474,9 +477,9 @@ namespace lgfx
   {
     _rotate_pos(x, y);
     size_t idx = (x >> 1) + (y * ((_cfg.panel_width + 1) >> 1));
-    return (x & 1)
+    return 0x11u * ((x & 1)
          ? (_buf[idx] & 0x0F)
-         : (_buf[idx] >> 4)
+         : (_buf[idx] >> 4))
          ;
   }
 
@@ -568,9 +571,7 @@ namespace lgfx
               src += data_len >> 1;
               dst += data_len >> 1;
               for (int i = 0; i < w; ++i) {
-                auto d0 = d[0];
                 auto s0 = s[0];
-                auto d1 = d[1];
                 auto s1 = s[1];
                 d[0] = s0 + lut_offset;
                 d[1] = s1 + lut_offset;
@@ -579,31 +580,28 @@ namespace lgfx
               }
             } while (--h);
           } else {
+            uint_fast16_t lut_last = lut_offset + (lut_remain << 8);
             do {
               auto s = src;
               auto d = dst;
               src += data_len >> 1;
               dst += data_len >> 1;
-              {
-                for (int i = 0; i < w; ++i) {
-                  auto d0 = d[0];
-                  auto s0 = s[0];
-                  auto d1 = d[1];
-                  auto s1 = s[1];
-                  if ((d0 >= lut_last) || (d1 >= lut_last)
-                   || (d0 < lut_offset) || (d1 < lut_offset)
-                   || ((d0 & 0xFF) != s0) || ((d1 & 0xFF) != s1))
-                  {
-                    d[0] = s0 + lut_offset;
-                    d[1] = s1 + lut_offset;
-                  }
-                  d += 2;
-                  s += 2;
+              for (int i = 0; i < w; ++i) {
+                auto d0 = d[0];
+                auto s0 = s[0];
+                auto d1 = d[1];
+                auto s1 = s[1];
+                if (((d0 & 0xFF) != s0) || ((d1 & 0xFF) != s1))
+                {
+                  d[0] = s0 + lut_offset;
+                  d[1] = s1 + lut_offset;
                 }
+                s += 2;
+                d += 2;
               }
             } while (--h);
           }
-          if (lgfx::micros() - usec > 1024) {
+          if (lgfx::micros() - usec >= 2048) {
             break;
           }
         } while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
@@ -614,25 +612,55 @@ namespace lgfx
       auto lut = me->_lut_2pixel;
       for (uint_fast16_t y = 0; y < mh; y++) {
         int x = 0;
-        int w = data_len >> 2;
         uint8_t *dma_buf = me->_dma_bufs[y & 1];
-        {
-          auto sb = &me->_step_framebuf[y * data_len >> 1];
-          auto dst = dma_buf;
-          do {
+        int w = (data_len + 15) >> 4;
+        auto sb = &me->_step_framebuf[y * data_len >> 1];
+        auto dst = dma_buf;
+        do {
+          *(uint32_t*)dst = ~0u;
+          {
             auto sb0 = sb[0];
-            auto sb1 = sb[1];
+            auto sb2 = sb[2];
             auto fb0 = lut[sb0];
-            auto fb1 = lut[sb1];
+            auto fb2 = lut[sb2];
             if (fb0 != 0x0F) {
+              auto sb1 = sb[1];
               sb[0] = sb0 + 256;
+              auto fb1 = lut[sb1];
               sb[1] = sb1 + 256;
+              dst[0] = (fb0 << 4) + fb1;
             }
-            dst[0] = (fb0 << 4) + fb1;
-            sb += 2;
-            dst += 1;
-          } while (--w);
-        }
+            if (fb2 != 0x0F) {
+              auto sb3 = sb[3];
+              sb[2] = sb2 + 256;
+              auto fb3 = lut[sb3];
+              sb[3] = sb3 + 256;
+              dst[1] = (fb2 << 4) + fb3;
+            }
+          }
+          {
+            auto sb4 = sb[4];
+            auto sb6 = sb[6];
+            auto fb4 = lut[sb4];
+            auto fb6 = lut[sb6];
+            if (fb4 != 0x0F) {
+              auto sb5 = sb[5];
+              sb[4] = sb4 + 256;
+              auto fb5 = lut[sb5];
+              sb[5] = sb5 + 256;
+              dst[2] = (fb4 << 4) + fb5;
+            }
+            if (fb6 != 0x0F) {
+              auto sb7 = sb[7];
+              sb[6] = sb6 + 256;
+              auto fb7 = lut[sb7];
+              sb[7] = sb7 + 256;
+              dst[3] = (fb6 << 4) + fb7;
+            }
+          }
+          sb += 8;
+          dst += 4;
+        } while (--w);
         if (y == 0) {
           bus->beginTransaction();
         } else {
