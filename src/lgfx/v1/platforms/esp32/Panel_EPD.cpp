@@ -555,7 +555,6 @@ namespace lgfx
           size_t h = new_data.h;
           size_t w = new_data.w >> 2;
           uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
-          uint_fast16_t lut_last = lut_offset + ((me->_lut_remain_table[new_data.mode]) << 8);
 
           if (refresh && (new_data.mode != epd_mode_t::epd_fastest)) {
             do {
@@ -573,7 +572,6 @@ namespace lgfx
               }
             } while (--h);
           } else {
-            uint_fast16_t lut_last = lut_offset + (lut_remain << 8);
             do {
               auto s = src;
               auto d = dst;
@@ -604,7 +602,6 @@ namespace lgfx
 
       auto lut = me->_lut_2pixel;
       for (uint_fast16_t y = 0; y < mh; y++) {
-        int x = 0;
         uint8_t *dma_buf = me->_dma_bufs[y & 1];
         int w = (data_len + 15) >> 4;
         auto sb = &me->_step_framebuf[y * data_len >> 1];
