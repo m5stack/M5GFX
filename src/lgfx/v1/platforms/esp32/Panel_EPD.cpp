@@ -125,10 +125,6 @@ namespace lgfx
 
   static constexpr const uint32_t lut_fast[] = {
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
@@ -142,9 +138,6 @@ namespace lgfx
   };
 
   static constexpr const uint32_t lut_fastest[] = {
-    LUT_MAKE(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     LUT_MAKE(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
@@ -504,8 +497,8 @@ namespace lgfx
 
     if (_range_mod.empty()) { return; }
 
-    uint_fast16_t xs = _range_mod.left + _cfg.offset_x & ~3u;
-    uint_fast16_t xe = _range_mod.right + _cfg.offset_x & ~3u;
+    uint_fast16_t xs = (_range_mod.left + _cfg.offset_x) & ~3u;
+    uint_fast16_t xe = (_range_mod.right + _cfg.offset_x) & ~3u;
     uint_fast16_t ys = _range_mod.top    + _cfg.offset_y;
     uint_fast16_t ye = _range_mod.bottom + _cfg.offset_y;
 
@@ -617,7 +610,7 @@ namespace lgfx
         auto sb = &me->_step_framebuf[y * data_len >> 1];
         auto dst = dma_buf;
         do {
-          *(uint32_t*)dst = ~0u;
+          *(uint32_t*)dst = 0u;
           {
             auto sb0 = sb[0];
             auto sb2 = sb[2];
