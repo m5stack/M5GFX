@@ -45,9 +45,9 @@ void Bus_EPD::wait(void) { while (_bus_busy) taskYIELD(); }
 
 void Bus_EPD::beginTransaction(void)
 {
-  wait();
   auto ckv = _config.pin_ckv;
   auto spv = _config.pin_spv;
+  while (_bus_busy) taskYIELD();
 
   lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1);
   lgfx::gpio_lo(spv);  lgfx::delayMicroseconds(1); //100ns
@@ -60,25 +60,23 @@ void Bus_EPD::beginTransaction(void)
   lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1); //0.5us
   lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(1); //0.5us
   lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(1); //0.5us
-  lgfx::gpio_hi(ckv);
+  lgfx::gpio_lo(ckv);
 }
 
 void Bus_EPD::endTransaction(void)
 {
-  wait();
+  while (_bus_busy) taskYIELD();
 }
 
 void Bus_EPD::scanlineDone(void)
 {
-  wait();
   auto ckv = _config.pin_ckv;
   auto le = _config.pin_le;
+  while (_bus_busy) taskYIELD();
 
   lgfx::gpio_lo(ckv); lgfx::gpio_lo(ckv);
   lgfx::gpio_hi(le);  lgfx::gpio_hi(le);
-  lgfx::gpio_lo(le);  lgfx::gpio_lo(le);
-  lgfx::gpio_hi(ckv);
+  lgfx::gpio_lo(le);
 }
 
 bool Bus_EPD::powerControl(bool flg_on)

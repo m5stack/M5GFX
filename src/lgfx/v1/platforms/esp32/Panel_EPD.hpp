@@ -49,10 +49,10 @@ namespace lgfx
       size_t lut_fast_step = 0;
       size_t lut_fastest_step = 0;
       uint8_t line_padding = 0;
-  
+
       /// background epd writer task priority
-      uint8_t task_priority = 24;
-  
+      uint8_t task_priority = 2;
+
       /// background epd writer task pinned core. (APP_CPU_NUM or PRO_CPU_NUM)
       uint8_t task_pinned_core = -1;
     };

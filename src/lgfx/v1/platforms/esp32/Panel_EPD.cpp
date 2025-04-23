@@ -510,9 +510,7 @@ namespace lgfx
     upd.mode = _epd_mode;
 
     cacheWriteBack(&_buf[y * _cfg.memory_width >> 1], h * _cfg.memory_width >> 1);
-    vTaskDelay(1);
     bool res = xQueueSend(_update_queue_handle, &upd, 128 / portTICK_PERIOD_MS) == pdTRUE;
-    vTaskDelay(1);
 // printf("\nres: %d, xs: %d, xe: %d, ys: %d, ye: %d\n", res, xs, xe, ys, ye);
     if (res)
     {
@@ -522,6 +520,169 @@ namespace lgfx
       _range_mod.bottom = 0;
     }
   }
+
+
+  #if defined( __XTENSA__ )
+  __attribute__((noinline,noclone))
+  static void blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
+  {
+#define DST "a2"  // a2 == dst
+#define SRC "a3"  // a3 == src
+#define LUT "a4"  // a4 == lut
+                  // a5 == len
+#define X00 "a8"  // value 0
+#define X0F "a9"  // value 0x0F (15)
+#define ADV "a10" // value 0x01000100
+#define P_0 "a11" // pixel 0 value
+#define P_1 "a12" // pixel 1 value
+#define PNX "a13" // pixel section2 value
+#define PNY "a14" // pixel section3 value
+#define PNZ "a15" // pixel section4 value
+#define P32 "a5"  // pixel (uint32) value
+
+  __asm__ __volatile(
+    " movi   " X00 ", 0                    \n"
+    " movi   " X0F ", 0x0F                 \n"
+    " movi   " ADV ", 0x01000100           \n"
+    " loop     a5, BLT_BUFFER_END          \n"
+
+    " s32i   " X00 "," DST ", 0            \n"
+    " l16ui  " P_0 "," SRC ", 0            \n"  // px0 = src[0];
+    " l16ui  " PNX "," SRC ", 4            \n"  // pnx = src[2];
+    " l16ui  " PNY "," SRC ", 8            \n"  // pnx = src[4];
+    " l16ui  " PNZ "," SRC ", 12           \n"  // pnx = src[6];
+    " add    " P_0 "," P_0 "," LUT "       \n"  // px0 = &lut[px0]
+    " add    " PNX "," PNX "," LUT "       \n"  // pnx = &lut[pnx]
+    " add    " PNY "," PNY "," LUT "       \n"  // pny = &lut[pny]
+    " add    " PNZ "," PNZ "," LUT "       \n"  // pnz = &lut[pnz]
+    " l8ui   " P_0 "," P_0 ", 0            \n"  // px0 = *px0
+    " l8ui   " PNX "," PNX ", 0            \n"  // pnx = *pnx
+    " l8ui   " PNY "," PNY ", 0            \n"  // pny = *pny
+    " l8ui   " PNZ "," PNZ ", 0            \n"  // pnz = *pnz
+    " bne    " P_0 "," X0F ", BLT_SECTION1 \n"
+    " bne    " PNX "," X0F ", BLT_SECTION2 \n"
+    "BLT_RETURN2:                          \n"
+    " bne    " PNY "," X0F ", BLT_SECTION3 \n"
+    "BLT_RETURN3:                          \n"
+    " bne    " PNZ "," X0F ", BLT_SECTION4 \n"
+    "BLT_RETURN4:                          \n"
+    " addi   " SRC "," SRC ",  16          \n"
+    " addi   " DST "," DST ",  4           \n"
+    "BLT_BUFFER_END:                       \n"
+    " j                       BLT_END      \n"
+
+    "BLT_SECTION1:                         \n"
+    " l16ui  " P_1 "," SRC ", 2            \n"  // px1 = src[1];
+    " l32i   " P32 "," SRC ", 0            \n"  // p32 = *(int32_t*)&src[0];
+    " add    " P_1 "," P_1 "," LUT "       \n"  // px1 = &lut[px1]
+    " l8ui   " P_1 "," P_1 ", 0            \n"  // px1 = *px1
+    " slli   " P_0 "," P_0 ", 4            \n"  // px0 <<= 4
+    " add    " P_0 "," P_0 "," P_1 "       \n"  // px0 += px1
+    " s8i    " P_0 "," DST ", 0            \n"  // dst[0] = px0
+    " add    " P32 "," P32 "," ADV "       \n"  // p32 += 0x01000100
+    " s32i   " P32 "," SRC ", 0            \n"  // *(int32_t*)&src[0] = p32;
+    " beq    " PNX "," X0F ", BLT_RETURN2  \n"
+  
+    "BLT_SECTION2:                         \n"
+    " l16ui  " P_1 "," SRC ", 6            \n"  // px1 = src[3];
+    " l32i   " P32 "," SRC ", 4            \n"  // p32 = *(int32_t*)&src[2];
+    " add    " P_1 "," P_1 "," LUT "       \n"  // px1 = &lut[px1]
+    " l8ui   " P_1 "," P_1 ", 0            \n"  // px1 = *px1
+    " slli   " P_0 "," PNX ", 4            \n"  // px0 <<= 4
+    " add    " P_0 "," P_0 "," P_1 "       \n"  // px0 += px1
+    " s8i    " P_0 "," DST ", 1            \n"  // dst[1] = px0
+    " add    " P32 "," P32 "," ADV "       \n"  // p32 += 0x01000100
+    " s32i   " P32 "," SRC ", 4            \n"  // *(int32_t*)&src[2] = p32;
+    " beq    " PNY "," X0F ", BLT_RETURN3  \n"
+
+    "BLT_SECTION3:                         \n"
+    " l16ui  " P_1 "," SRC ", 10           \n"  // px1 = src[5];
+    " l32i   " P32 "," SRC ", 8            \n"  // p32 = *(int32_t*)&src[4];
+    " add    " P_1 "," P_1 "," LUT "       \n"  // px1 = &lut[px1]
+    " l8ui   " P_1 "," P_1 ", 0            \n"  // px1 = *px1
+    " slli   " P_0 "," PNY ", 4            \n"  // px0 <<= 4
+    " add    " P_0 "," P_0 "," P_1 "       \n"  // px0 += px1
+    " s8i    " P_0 "," DST ", 2            \n"  // dst[2] = px0
+    " add    " P32 "," P32 "," ADV "       \n"  // p32 += 0x01000100
+    " s32i   " P32 "," SRC ", 8            \n"  // *(int32_t*)&src[4] = p32;
+    " beq    " PNZ "," X0F ", BLT_RETURN4  \n"
+
+    "BLT_SECTION4:                         \n"
+    " l16ui  " P_1 "," SRC ", 14           \n"  // px1 = src[7];
+    " l32i   " P32 "," SRC ", 12           \n"  // p32 = *(int32_t*)&src[6];
+    " add    " P_1 "," P_1 "," LUT "       \n"  // px1 = &lut[px1]
+    " l8ui   " P_1 "," P_1 ", 0            \n"  // px1 = *px1
+    " slli   " P_0 "," PNZ ", 4            \n"  // px0 = pnx << 4
+    " add    " P_0 "," P_0 "," P_1 "       \n"  // px0 += px1
+    " s8i    " P_0 "," DST ", 3            \n"  // dst[3] = px0
+    " add    " P32 "," P32 "," ADV "       \n"  // p32 += 0x01000100
+    " s32i   " P32 "," SRC ", 12           \n"  // *(int32_t*)&src[6] = p32;
+    " j                       BLT_RETURN4  \n"
+    "BLT_END:                              \n"
+  );
+#undef DST
+#undef SRC
+#undef LUT
+#undef X00
+#undef X0F
+#undef ADV
+#undef PX0
+#undef PX1
+#undef PNX
+#undef P32
+}
+#else
+  __attribute((optimize("-O3")))
+  static void blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
+  {
+    while (len--)
+    {
+      dst[0] = 0u;
+      {
+        auto sb0 = src[0];
+        auto sb2 = src[2];
+        auto fb0 = lut[sb0];
+        auto fb2 = lut[sb2];
+        if (fb0 != 0x0F) {
+          auto sb1 = src[1];
+          src[0] = sb0 + 256;
+          auto fb1 = lut[sb1];
+          src[1] = sb1 + 256;
+          ((uint8_t*)dst)[0] = (fb0 << 4) + fb1;
+        }
+        if (fb2 != 0x0F) {
+          auto sb3 = src[3];
+          src[2] = sb2 + 256;
+          auto fb3 = lut[sb3];
+          src[3] = sb3 + 256;
+          ((uint8_t*)dst)[1] = (fb2 << 4) + fb3;
+        }
+      }
+      {
+        auto sb4 = src[4];
+        auto sb6 = src[6];
+        auto fb4 = lut[sb4];
+        auto fb6 = lut[sb6];
+        if (fb4 != 0x0F) {
+          auto sb5 = src[5];
+          src[4] = sb4 + 256;
+          auto fb5 = lut[sb5];
+          src[5] = sb5 + 256;
+          ((uint8_t*)dst)[2] = (fb4 << 4) + fb5;
+        }
+        if (fb6 != 0x0F) {
+          auto sb7 = src[7];
+          src[6] = sb6 + 256;
+          auto fb7 = lut[sb7];
+          src[7] = sb7 + 256;
+          ((uint8_t*)dst)[3] = (fb6 << 4) + fb7;
+        }
+      }
+      src += 8;
+      dst ++;
+    }
+  }
+#endif
 
   void Panel_EPD::task_update(Panel_EPD* me)
   {
@@ -573,22 +734,24 @@ namespace lgfx
             } while (--h);
           } else {
             do {
-              auto s = src;
-              auto d = dst;
+              auto s = src - 2;
+              auto d = dst - 2;
               src += data_len >> 1;
               dst += data_len >> 1;
               for (int i = 0; i < w; ++i) {
+                s += 2;
+                d += 2;
                 auto d0 = d[0];
-                auto s0 = s[0];
                 auto d1 = d[1];
+                d0 &= 0xFF;
+                d1 &= 0xFF;
+                auto s0 = s[0];
                 auto s1 = s[1];
-                if (((d0 & 0xFF) != s0) || ((d1 & 0xFF) != s1))
+                if ((d0 != s0) || (d1 != s1))
                 {
                   d[0] = s0 + lut_offset;
                   d[1] = s1 + lut_offset;
                 }
-                s += 2;
-                d += 2;
               }
             } while (--h);
           }
@@ -600,63 +763,16 @@ namespace lgfx
 
       bus->powerControl(true);
 
-      auto lut = me->_lut_2pixel;
+      int w = (data_len + 15) >> 4;
       for (uint_fast16_t y = 0; y < mh; y++) {
-        uint8_t *dma_buf = me->_dma_bufs[y & 1];
-        int w = (data_len + 15) >> 4;
-        auto sb = &me->_step_framebuf[y * data_len >> 1];
-        auto dst = dma_buf;
-        do {
-          *(uint32_t*)dst = 0u;
-          {
-            auto sb0 = sb[0];
-            auto sb2 = sb[2];
-            auto fb0 = lut[sb0];
-            auto fb2 = lut[sb2];
-            if (fb0 != 0x0F) {
-              auto sb1 = sb[1];
-              sb[0] = sb0 + 256;
-              auto fb1 = lut[sb1];
-              sb[1] = sb1 + 256;
-              dst[0] = (fb0 << 4) + fb1;
-            }
-            if (fb2 != 0x0F) {
-              auto sb3 = sb[3];
-              sb[2] = sb2 + 256;
-              auto fb3 = lut[sb3];
-              sb[3] = sb3 + 256;
-              dst[1] = (fb2 << 4) + fb3;
-            }
-          }
-          {
-            auto sb4 = sb[4];
-            auto sb6 = sb[6];
-            auto fb4 = lut[sb4];
-            auto fb6 = lut[sb6];
-            if (fb4 != 0x0F) {
-              auto sb5 = sb[5];
-              sb[4] = sb4 + 256;
-              auto fb5 = lut[sb5];
-              sb[5] = sb5 + 256;
-              dst[2] = (fb4 << 4) + fb5;
-            }
-            if (fb6 != 0x0F) {
-              auto sb7 = sb[7];
-              sb[6] = sb6 + 256;
-              auto fb7 = lut[sb7];
-              sb[7] = sb7 + 256;
-              dst[3] = (fb6 << 4) + fb7;
-            }
-          }
-          sb += 8;
-          dst += 4;
-        } while (--w);
+        auto dma_buf = (uint32_t*)me->_dma_bufs[y & 1];
+        blit_dmabuf(dma_buf, &me->_step_framebuf[y * data_len >> 1], me->_lut_2pixel, w);
         if (y == 0) {
           bus->beginTransaction();
         } else {
           bus->scanlineDone();
         }
-        bus->writeScanLine(dma_buf, write_len);
+        bus->writeScanLine((const uint8_t*)dma_buf, write_len);
       }
 
       bus->scanlineDone();
