@@ -1473,6 +1473,7 @@ namespace m5gfx
                 cfg.offset_rotation = 3;
                 cfg.offset_x = 0;
                 cfg.offset_y = 0;
+                cfg.bus_shared = false;
                 p->config(cfg);
               }
 
@@ -1480,9 +1481,9 @@ namespace m5gfx
                 auto t = new lgfx::Touch_GT911();
                 _touch_last.reset(t);
                 auto cfg = t->config();
-                cfg.pin_int = 48; // GPIO_NUM_48
-                cfg.pin_sda = 41; // GPIO_NUM_41
-                cfg.pin_scl = 42; // GPIO_NUM_42
+                cfg.pin_int = GPIO_NUM_48;
+                cfg.pin_sda = GPIO_NUM_41;
+                cfg.pin_scl = GPIO_NUM_42;
                 cfg.freq = 400000;
                 cfg.i2c_port = I2C_NUM_1;
                 cfg.x_min = 0;

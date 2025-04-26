@@ -89,7 +89,7 @@ namespace lgfx
 
     size_t _get_buffer_length(void) const override { return 0; }
     uint8_t _read_pixel(uint_fast16_t x, uint_fast16_t y);
-    void _draw_pixel(uint_fast16_t x, uint_fast16_t y, uint32_t value);
+    void _draw_pixels(uint_fast16_t x, uint_fast16_t y, const grayscale_t* values, size_t len);
     void _update_transferred_rect(uint_fast16_t &xs, uint_fast16_t &ys, uint_fast16_t &xe, uint_fast16_t &ye);
 
     bool init_intenal(void);
