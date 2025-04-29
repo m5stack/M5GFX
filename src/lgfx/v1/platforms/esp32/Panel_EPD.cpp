@@ -269,7 +269,7 @@ namespace lgfx
 
     // 白ピクセルの初期値をセット
     for (int i = 0; i < memory_w * memory_h >> 1; ++i) {
-      _step_framebuf[i] = 0x00FFu;
+      _step_framebuf[i] = 0xFFFFu;
     }
 
     _update_queue_handle = xQueueCreate(8, sizeof(update_data_t));
