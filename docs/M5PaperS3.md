@@ -2,6 +2,11 @@
 
 <img src="./M5PaperS3.jpg">
 
+
+# The following explanation is for v0.2.6 and earlier. EPDiy is no longer used from v0.2.7.
+
+# 以下の説明は v0.2.6以前のものです。 v0.2.7より EPDiy を使用しなくなりました。
+
 ### Notes.
 - You need to manually install another library called [EPDiy](https://github.com/vroland/epdiy/).
 - As of December 2024, the latest version of EPDiy is not registered in the library manager, so please obtain it from github.
