@@ -110,11 +110,14 @@ namespace lgfx
   static inline bool heap_capable_dma(const void* ptr) { return esp_ptr_dma_capable(ptr); }
 
   /// 引数のポインタが組込RAMか判定する  true=内部RAM / false=外部RAMやROM等;
+  static inline bool isEmbeddedMemory(const void* ptr) { return esp_ptr_in_dram(ptr); }
+/*
 #if defined ( CONFIG_IDF_TARGET_ESP32S3 )
   static inline bool isEmbeddedMemory(const void* ptr) { return (((uintptr_t)ptr & 0x3FF80000u) == 0x3FC80000u); }
 #else
   static inline bool isEmbeddedMemory(const void* ptr) { return (((uintptr_t)ptr & 0x3FF80000u) == 0x3FF00000u); }
 #endif
+*/
 
   enum pin_mode_t
   { output
@@ -129,7 +132,11 @@ namespace lgfx
     pinMode(pin, mode);
   }
 
-#if defined ( CONFIG_IDF_TARGET_ESP32C3 ) || defined ( CONFIG_IDF_TARGET_ESP32C6 )
+#if defined ( CONFIG_IDF_TARGET_ESP32P4 )
+  static inline volatile uint32_t* get_gpio_hi_reg(int_fast8_t pin) { return (pin & 32) ? &GPIO.out1_w1ts.val : &GPIO.out_w1ts.val; }
+  static inline volatile uint32_t* get_gpio_lo_reg(int_fast8_t pin) { return (pin & 32) ? &GPIO.out1_w1tc.val : &GPIO.out_w1tc.val; }
+  static inline bool gpio_in(int_fast8_t pin) { return ((pin & 32) ? GPIO.in1.val : GPIO.in.val) & (1 << (pin & 31)); }
+#elif defined ( CONFIG_IDF_TARGET_ESP32C3 ) || defined ( CONFIG_IDF_TARGET_ESP32C6 )
   static inline volatile uint32_t* get_gpio_hi_reg(int_fast8_t pin) { return &GPIO.out_w1ts.val; }
   static inline volatile uint32_t* get_gpio_lo_reg(int_fast8_t pin) { return &GPIO.out_w1tc.val; }
   static inline bool gpio_in(int_fast8_t pin) { return GPIO.in.val & (1 << (pin & 31)); }
@@ -186,9 +193,9 @@ namespace lgfx
       need_transaction = true;
     }
     int read(uint8_t *buf, uint32_t len) override { return _fp->read(buf, len); }
-    void skip(int32_t offset) override { _fp->seek(offset, SeekCur); }
-    bool seek(uint32_t offset) override { return _fp->seek(offset, SeekSet); }
-    bool seek(uint32_t offset, SeekMode mode) { return _fp->seek(offset, mode); }
+    void skip(int32_t offset) override { _fp->seek(offset, fs::SeekCur); }
+    bool seek(uint32_t offset) override { return _fp->seek(offset, fs::SeekSet); }
+    bool seek(uint32_t offset, fs::SeekMode mode) { return _fp->seek(offset, mode); }
     void close(void) override { if (_fp) _fp->close(); }
     int32_t tell(void) override { return _fp->position(); }
 protected:
