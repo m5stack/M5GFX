@@ -40,7 +40,22 @@ Contributors:
 #include <soc/i2c_reg.h>
 #include <soc/i2c_struct.h>
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0))
- //#include <soc/syscon_reg.h>
+ #if __has_include(<hal/i2c_ll.h>)
+  #include <hal/i2c_ll.h>
+  #if defined ( i2c_ll_reset_register )
+   #if SOC_PERIPH_CLK_CTRL_SHARED
+    #define I2C_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
+   #else
+    #define I2C_CLOCK_SRC_ATOMIC()
+   #endif
+   #if !SOC_RCC_IS_INDEPENDENT
+    #define I2C_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
+   #else
+    #define I2C_RCC_ATOMIC()
+   #endif
+  #endif
+ #endif
+
  #if __has_include(<soc/syscon_reg.h>)
   #include <soc/syscon_reg.h>
  #endif
@@ -109,20 +124,6 @@ Contributors:
 
 #if __has_include(<soc/i2c_periph.h>)
  #include <soc/i2c_periph.h>
-#endif
-
-#if __has_include(<hal/i2c_ll.h>)
- #include <hal/i2c_ll.h>
- #if SOC_PERIPH_CLK_CTRL_SHARED
-  #define I2C_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
- #else
-  #define I2C_CLOCK_SRC_ATOMIC()
- #endif
-#if !SOC_RCC_IS_INDEPENDENT
-  #define I2C_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
- #else
-  #define I2C_RCC_ATOMIC()
- #endif
 #endif
 
 #if defined (SOC_GDMA_SUPPORTED)  // for C3/S3
@@ -774,9 +775,9 @@ namespace lgfx
 #endif
     }
 
+#if defined ( I2C_CLOCK_SRC_ATOMIC )
     static void i2c_periph_enable(int i2c_num)
     {
-#if defined ( I2C_CLOCK_SRC_ATOMIC )
       I2C_RCC_ATOMIC() {
         i2c_ll_enable_bus_clock(i2c_num, true);
         i2c_ll_reset_register(i2c_num);
@@ -784,15 +785,10 @@ namespace lgfx
       I2C_CLOCK_SRC_ATOMIC() {
         i2c_ll_enable_controller_clock(I2C_LL_GET_HW(i2c_num), true);
       }
-#else
-      auto mod = getPeriphModule(i2c_num);
-      periph_module_enable(mod);
-#endif
     }
 
     static void i2c_periph_disable(int i2c_num)
     {
-#if defined ( I2C_CLOCK_SRC_ATOMIC )
       // periph_ll_disable_clk_clear_rst(mod);
       I2C_CLOCK_SRC_ATOMIC() {
         i2c_ll_enable_controller_clock(I2C_LL_GET_HW(i2c_num), false);
@@ -800,23 +796,33 @@ namespace lgfx
       I2C_RCC_ATOMIC() {
         i2c_ll_enable_bus_clock(i2c_num, false);
       }
-#else
-      auto mod = getPeriphModule(i2c_num);
-      periph_module_disable(mod);
-#endif
     }
 
     static void i2c_periph_reset(int i2c_num)
     {
-#if defined ( I2C_CLOCK_SRC_ATOMIC )
       I2C_RCC_ATOMIC() {
         i2c_ll_reset_register(i2c_num);
       }
+    }
 #else
+    static void i2c_periph_enable(int i2c_num)
+    {
+      auto mod = getPeriphModule(i2c_num);
+      periph_module_enable(mod);
+    }
+
+    static void i2c_periph_disable(int i2c_num)
+    {
+      auto mod = getPeriphModule(i2c_num);
+      periph_module_disable(mod);
+    }
+
+    static void i2c_periph_reset(int i2c_num)
+    {
       auto mod = getPeriphModule(i2c_num);
       periph_module_reset(mod);
-#endif
     }
+#endif
 
 #if defined ( CONFIG_IDF_TARGET_ESP32 ) || defined ( CONFIG_IDF_TARGET_ESP32S2 ) || !defined ( CONFIG_IDF_TARGET )
 
