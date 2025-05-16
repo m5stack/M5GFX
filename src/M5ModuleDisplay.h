@@ -24,7 +24,7 @@
 #include "lgfx/v1/panel/Panel_M5HDMI.hpp"
 #include "M5GFX.h"
 
-#if defined (SDL_h_) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32) || !defined (CONFIG_IDF_TARGET) 
+#if defined (SDL_h_) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32) || !defined (CONFIG_IDF_TARGET) 
 #define M5MODULEDISPLAY_ENABLED
 #endif
 
@@ -125,7 +125,18 @@ public:
 
 #else
 
-#if defined (CONFIG_IDF_TARGET_ESP32S3)
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+ #define M5GFX_SPI_HOST SPI2_HOST
+    // for Tab5
+    int i2c_port = 1;
+    int i2c_sda  = GPIO_NUM_31;
+    int i2c_scl  = GPIO_NUM_32;
+    int spi_cs   = GPIO_NUM_48;
+    int spi_mosi = GPIO_NUM_18;
+    int spi_miso = GPIO_NUM_19;
+    int spi_sclk = GPIO_NUM_5;
+
+#elif defined (CONFIG_IDF_TARGET_ESP32S3)
  #define M5GFX_SPI_HOST SPI2_HOST
 
     // for CoreS3

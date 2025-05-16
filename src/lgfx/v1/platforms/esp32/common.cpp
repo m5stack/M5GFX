@@ -559,7 +559,7 @@ namespace lgfx
       if (_spi_handle[spi_host] == nullptr)
       {
         auto spi_num = spi_port;
-#if  defined ( CONFIG_IDF_TARGET_ESP32S3 )
+#if defined ( CONFIG_IDF_TARGET_ESP32S3 ) || defined ( CONFIG_IDF_TARGET_ESP32P4 )
         spi_num = HSPI;
         if (spi_host == SPI2_HOST) { spi_num = FSPI; }
 #endif

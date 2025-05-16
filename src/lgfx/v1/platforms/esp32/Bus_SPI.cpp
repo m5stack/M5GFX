@@ -555,7 +555,14 @@ namespace lgfx
       length <<= 3;
       dc_control(dc);
       set_write_len(length);
+#if defined ( CONFIG_IDF_TARGET_ESP32P4 )
+// P4のペリフェラルレジスタへのmemcpyはうまく動作しないので処理を分岐する
+      for (int i = 0; i < aligned_len >> 2; ++i) {
+        spi_w0_reg[i] = ((uint32_t*)data)[i];
+      }
+#else
       memcpy((void*)spi_w0_reg, data, aligned_len);
+#endif
       exec_spi();
       return;
     }
@@ -649,7 +656,10 @@ label_start:
     dc_control(dc);
     set_write_len(len << 3);
 
-    memcpy((void*)spi_w0_reg, regbuf, (len + 3) & (~3));
+    for (int i = 0; i < (len + 3) >> 2; ++i) {
+      spi_w0_reg[i] = regbuf[i];
+    }
+
     exec_spi();
     if (0 == (length -= len)) return;
 
@@ -657,7 +667,10 @@ label_start:
     memcpy(regbuf, data, limit);
     wait_spi();
     set_write_len(limit << 3);
-    memcpy((void*)spi_w0_reg, regbuf, limit);
+    for (int i = 0; i < limit >> 2; ++i) {
+      spi_w0_reg[i] = regbuf[i];
+    }
+
     exec_spi();
     if (0 == (length -= limit)) return;
 
@@ -666,7 +679,9 @@ label_start:
       data += limit;
       memcpy(regbuf, data, limit);
       wait_spi();
-      memcpy((void*)spi_w0_reg, regbuf, limit);
+      for (int i = 0; i < limit >> 2; ++i) {
+        spi_w0_reg[i] = regbuf[i];
+      }
       exec_spi();
     } while (0 != (length -= limit));
 
