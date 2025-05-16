@@ -32,7 +32,7 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
-struct Panel_DSI : public Panel_FrameBufferBase
+  struct Panel_DSI : public Panel_FrameBufferBase
   {
   public:
 

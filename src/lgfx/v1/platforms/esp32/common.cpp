@@ -40,7 +40,22 @@ Contributors:
 #include <soc/i2c_reg.h>
 #include <soc/i2c_struct.h>
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0))
- //#include <soc/syscon_reg.h>
+ #if __has_include(<hal/i2c_ll.h>)
+  #include <hal/i2c_ll.h>
+  #if defined ( i2c_ll_reset_register )
+   #if SOC_PERIPH_CLK_CTRL_SHARED
+    #define I2C_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
+   #else
+    #define I2C_CLOCK_SRC_ATOMIC()
+   #endif
+   #if !SOC_RCC_IS_INDEPENDENT
+    #define I2C_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
+   #else
+    #define I2C_RCC_ATOMIC()
+   #endif
+  #endif
+ #endif
+
  #if __has_include(<soc/syscon_reg.h>)
   #include <soc/syscon_reg.h>
  #endif
@@ -544,7 +559,7 @@ namespace lgfx
       if (_spi_handle[spi_host] == nullptr)
       {
         auto spi_num = spi_port;
-#if  defined ( CONFIG_IDF_TARGET_ESP32S3 )
+#if defined ( CONFIG_IDF_TARGET_ESP32S3 ) || defined ( CONFIG_IDF_TARGET_ESP32P4 )
         spi_num = HSPI;
         if (spi_host == SPI2_HOST) { spi_num = FSPI; }
 #endif
@@ -759,6 +774,55 @@ namespace lgfx
       return num == 0 ? &I2C0 : &I2C1;
 #endif
     }
+
+#if defined ( I2C_CLOCK_SRC_ATOMIC )
+    static void i2c_periph_enable(int i2c_num)
+    {
+      I2C_RCC_ATOMIC() {
+        i2c_ll_enable_bus_clock(i2c_num, true);
+        i2c_ll_reset_register(i2c_num);
+      }
+      I2C_CLOCK_SRC_ATOMIC() {
+        i2c_ll_enable_controller_clock(I2C_LL_GET_HW(i2c_num), true);
+      }
+    }
+
+    static void i2c_periph_disable(int i2c_num)
+    {
+      // periph_ll_disable_clk_clear_rst(mod);
+      I2C_CLOCK_SRC_ATOMIC() {
+        i2c_ll_enable_controller_clock(I2C_LL_GET_HW(i2c_num), false);
+      }
+      I2C_RCC_ATOMIC() {
+        i2c_ll_enable_bus_clock(i2c_num, false);
+      }
+    }
+
+    static void i2c_periph_reset(int i2c_num)
+    {
+      I2C_RCC_ATOMIC() {
+        i2c_ll_reset_register(i2c_num);
+      }
+    }
+#else
+    static void i2c_periph_enable(int i2c_num)
+    {
+      auto mod = getPeriphModule(i2c_num);
+      periph_module_enable(mod);
+    }
+
+    static void i2c_periph_disable(int i2c_num)
+    {
+      auto mod = getPeriphModule(i2c_num);
+      periph_module_disable(mod);
+    }
+
+    static void i2c_periph_reset(int i2c_num)
+    {
+      auto mod = getPeriphModule(i2c_num);
+      periph_module_reset(mod);
+    }
+#endif
 
 #if defined ( CONFIG_IDF_TARGET_ESP32 ) || defined ( CONFIG_IDF_TARGET_ESP32S2 ) || !defined ( CONFIG_IDF_TARGET )
 
@@ -993,13 +1057,11 @@ namespace lgfx
 
 #if !defined (CONFIG_IDF_TARGET_ESP32C3)
 /// ESP32C3で periph_module_reset を使用すると以後通信不能になる問題が起きたため分岐;
-      auto mod = getPeriphModule(i2c_port);
-      periph_module_reset(mod);
+      i2c_periph_reset(i2c_port);
 #endif
       set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
 #else
-      auto mod = getPeriphModule(i2c_port);
-      periph_module_enable(mod);
+      i2c_periph_enable(i2c_port);
       auto dev = getDev(i2c_port);
       dev->scl_sp_conf.scl_rst_slv_num = 9;
       dev->scl_sp_conf.scl_rst_slv_en = 0;
@@ -1007,7 +1069,7 @@ namespace lgfx
       dev->scl_sp_conf.scl_rst_slv_en = 1;
       gpio_num_t sda_io = i2c_context[i2c_port].pin_sda;
       gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
-      periph_module_reset(mod);
+      i2c_periph_reset(i2c_port);
       set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
 #endif
     }
@@ -1122,8 +1184,7 @@ namespace lgfx
   #endif
  #endif
 #else
-        auto mod = getPeriphModule(i2c_port);
-        periph_module_disable(mod);
+        i2c_periph_disable(i2c_port);
 #endif
         if ((int)i2c_context[i2c_port].pin_scl >= 0)
         {
@@ -1213,8 +1274,7 @@ namespace lgfx
       twowire->begin((int)i2c_context[i2c_port].pin_sda, (int)i2c_context[i2c_port].pin_scl);
  #endif
 #else
-      auto mod = getPeriphModule(i2c_port);
-      periph_module_enable(mod);
+      i2c_periph_enable(i2c_port);
 #endif
 
       i2c_context[i2c_port].initialized = true;
