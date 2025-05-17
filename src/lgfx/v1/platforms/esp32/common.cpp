@@ -55,15 +55,14 @@ Contributors:
    #endif
   #endif
  #endif
-
- #if __has_include(<soc/syscon_reg.h>)
-  #include <soc/syscon_reg.h>
- #endif
-#else
- #if __has_include (<soc/apb_ctrl_reg.h>)
-  #include <soc/apb_ctrl_reg.h>
- #endif
 #endif
+
+#if __has_include(<soc/syscon_reg.h>)
+ #include <soc/syscon_reg.h>
+#elif __has_include (<soc/apb_ctrl_reg.h>)
+ #include <soc/apb_ctrl_reg.h>
+#endif
+
 #include <soc/efuse_reg.h>
 
 #include <esp_log.h>
@@ -757,6 +756,7 @@ namespace lgfx
  #define I2C_ACK_ERR_INT_RAW_M I2C_NACK_INT_RAW_M
 #endif
 
+    __attribute__ ((unused))
     static periph_module_t getPeriphModule(int num)
     {
 #if SOC_I2C_NUM == 1 || defined CONFIG_IDF_TARGET_ESP32C6
@@ -776,6 +776,7 @@ namespace lgfx
     }
 
 #if defined ( I2C_CLOCK_SRC_ATOMIC )
+    __attribute__ ((unused))
     static void i2c_periph_enable(int i2c_num)
     {
       I2C_RCC_ATOMIC() {
@@ -787,6 +788,7 @@ namespace lgfx
       }
     }
 
+    __attribute__ ((unused))
     static void i2c_periph_disable(int i2c_num)
     {
       // periph_ll_disable_clk_clear_rst(mod);
