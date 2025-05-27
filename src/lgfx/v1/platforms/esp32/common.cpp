@@ -161,6 +161,10 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
   static __attribute__ ((always_inline)) inline volatile uint32_t* reg(uint32_t addr) { return (volatile uint32_t *)ETS_UNCACHED_ADDR(addr); }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  static __attribute__ ((always_inline)) inline void writereg(uint32_t addr, uint32_t value) { *(volatile uint32_t*)addr = value; }
+#pragma GCC diagnostic pop
 
   static int search_pin_number(int peripheral_sig)
   {
@@ -604,13 +608,13 @@ namespace lgfx
         }
       }
 
-      *reg(SPI_USER_REG(spi_port)) = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN;  // need SD card access (full duplex setting)
-      *reg(SPI_CTRL_REG(spi_port)) = 0;
+      writereg(SPI_USER_REG(spi_port), SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN);  // need SD card access (full duplex setting)
+      writereg(SPI_CTRL_REG(spi_port), 0);
 #if defined ( SPI_CTRL1_REG )
-      *reg(SPI_CTRL1_REG(spi_port)) = 0;
+      writereg(SPI_CTRL1_REG(spi_port), 0);
 #endif
 #if defined ( SPI_CTRL2_REG )
-      *reg(SPI_CTRL2_REG(spi_port)) = 0;
+      writereg(SPI_CTRL2_REG(spi_port), 0);
 #endif
 
       return {};
@@ -689,16 +693,16 @@ namespace lgfx
 
       beginTransaction(spi_host);
 
-      *reg(SPI_USER_REG(spi_port)) = user;
+      writereg(SPI_USER_REG(spi_port), user);
 #if defined (SPI_PIN_REG)
-      *reg(SPI_PIN_REG(spi_port)) = pin;
+      writereg(SPI_PIN_REG(spi_port), pin);
 #else
-      *reg(SPI_MISC_REG( spi_port)) = pin;
+      writereg(SPI_MISC_REG( spi_port), pin);
 #endif
-      *reg(SPI_CLOCK_REG(spi_port)) = clkdiv;
+      writereg(SPI_CLOCK_REG(spi_port), clkdiv);
 
 #if defined ( SPI_UPDATE )
-      *reg(SPI_CMD_REG(spi_port)) = SPI_UPDATE;
+      writereg(SPI_CMD_REG(spi_port), SPI_UPDATE);
 #endif
     }
 
@@ -725,8 +729,8 @@ namespace lgfx
       (void)spi_port;
       if (len > 64) len = 64;
       memcpy(reinterpret_cast<void*>(SPI_W0_REG(spi_port)), data, (len + 3) & ~3);
-      *reg(SPI_MOSI_DLEN_REG(spi_port)) = (len << 3) - 1;
-      *reg(SPI_CMD_REG(      spi_port)) = SPI_EXECUTE;
+      writereg(SPI_MOSI_DLEN_REG(spi_port), (len << 3) - 1);
+      writereg(SPI_CMD_REG(      spi_port), SPI_EXECUTE);
       while (*reg(SPI_CMD_REG(spi_port)) & SPI_USR);
     }
 
@@ -736,8 +740,8 @@ namespace lgfx
       (void)spi_port;
       if (len > 64) len = 64;
       memcpy(reinterpret_cast<void*>(SPI_W0_REG(spi_port)), data, (len + 3) & ~3);
-      *reg(SPI_MOSI_DLEN_REG(spi_port)) = (len << 3) - 1;
-      *reg(SPI_CMD_REG(      spi_port)) = SPI_EXECUTE;
+      writereg(SPI_MOSI_DLEN_REG(spi_port), (len << 3) - 1);
+      writereg(SPI_CMD_REG(      spi_port), SPI_EXECUTE);
       while (*reg(SPI_CMD_REG(spi_port)) & SPI_USR);
 
       memcpy(data, reinterpret_cast<const void*>(SPI_W0_REG(spi_port)), len);
@@ -745,6 +749,7 @@ namespace lgfx
   }
 
 //----------------------------------------------------------------------------
+  static constexpr const int __DECLARE_RCC_ATOMIC_ENV = 0;
 
   namespace i2c
   {
@@ -782,9 +787,11 @@ namespace lgfx
       I2C_RCC_ATOMIC() {
         i2c_ll_enable_bus_clock(i2c_num, true);
         i2c_ll_reset_register(i2c_num);
+        (void)__DECLARE_RCC_ATOMIC_ENV;
       }
       I2C_CLOCK_SRC_ATOMIC() {
         i2c_ll_enable_controller_clock(I2C_LL_GET_HW(i2c_num), true);
+        (void)__DECLARE_RCC_ATOMIC_ENV;
       }
     }
 
@@ -794,9 +801,11 @@ namespace lgfx
       // periph_ll_disable_clk_clear_rst(mod);
       I2C_CLOCK_SRC_ATOMIC() {
         i2c_ll_enable_controller_clock(I2C_LL_GET_HW(i2c_num), false);
+        (void)__DECLARE_RCC_ATOMIC_ENV;
       }
       I2C_RCC_ATOMIC() {
         i2c_ll_enable_bus_clock(i2c_num, false);
+        (void)__DECLARE_RCC_ATOMIC_ENV;
       }
     }
 
@@ -804,6 +813,7 @@ namespace lgfx
     {
       I2C_RCC_ATOMIC() {
         i2c_ll_reset_register(i2c_num);
+        (void)__DECLARE_RCC_ATOMIC_ENV;
       }
     }
 #else
