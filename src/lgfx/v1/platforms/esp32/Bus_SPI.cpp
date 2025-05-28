@@ -105,6 +105,11 @@ namespace lgfx
  {
 //----------------------------------------------------------------------------
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  static __attribute__ ((always_inline)) inline void writereg(uint32_t addr, uint32_t value) { *(volatile uint32_t*)addr = value; }
+#pragma GCC diagnostic pop
+
   void Bus_SPI::config(const config_t& cfg)
   {
     _cfg = cfg;
@@ -248,8 +253,8 @@ namespace lgfx
     *_spi_user_reg = _user_reg;
     auto spi_port = _spi_port;
     (void)spi_port;
-    *reg(SPI_PIN_REG(spi_port)) = pin;
-    *reg(SPI_CLOCK_REG(spi_port)) = clkdiv_write;
+    writereg(SPI_PIN_REG(spi_port), pin);
+    writereg(SPI_CLOCK_REG(spi_port), clkdiv_write);
 #if defined ( SPI_UPDATE )
     *_spi_cmd_reg = SPI_UPDATE;
 #endif
@@ -1067,7 +1072,7 @@ label_start:
     {
       periph_module_reset( PERIPH_SPI3_DMA_MODULE );
     }
-#else
+#elif defined( CONFIG_IDF_TARGET_ESP32 ) || !defined( CONFIG_IDF_TARGET )
     periph_module_reset( PERIPH_SPI_DMA_MODULE );
 #endif
   }
