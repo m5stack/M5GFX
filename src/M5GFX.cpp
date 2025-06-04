@@ -1885,6 +1885,12 @@ namespace m5gfx
             cfg.memory_width = 720;
             cfg.memory_height = 1280;
             cfg.readable = true;
+            cfg.bus_shared = false;
+            cfg.offset_x = 0;
+            cfg.offset_y = 0;
+            cfg.offset_rotation = 0;
+            cfg.pin_cs = GPIO_NUM_NC;
+            cfg.pin_rst = GPIO_NUM_NC;
             p->config(cfg);
           }
           _panel_last.reset(p);
@@ -1907,7 +1913,7 @@ namespace m5gfx
               cfg.y_min = 0;
               cfg.y_max = 1279;
               cfg.i2c_port = 1;
-              cfg.bus_shared = true;
+              cfg.bus_shared = false;
               cfg.offset_rotation = 0;
               t->config(cfg);
 

@@ -1828,7 +1828,9 @@ namespace lgfx
     else               { if (dst_y < 0) { h += dst_y; src_y -= dst_y; dst_y = 0; } if (h > hei - src_y)  h = hei - src_y; }
     if (h < 1) return;
 
+    startWrite();
     _panel->copyRect(dst_x, dst_y, w, h, src_x, src_y);
+    endWrite();
   }
 
   void LGFXBase::read_rect(int32_t x, int32_t y, int32_t w, int32_t h, void* dst, pixelcopy_t* param)
