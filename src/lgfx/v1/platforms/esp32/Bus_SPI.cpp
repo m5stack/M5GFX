@@ -870,8 +870,8 @@ label_start:
                         | (_cfg.spi_3wire ? SPI_SIO : 0);
     dc_control(true);
     *_spi_user_reg = user;
-    *reg(SPI_PIN_REG(_spi_port)) = pin;
-    *reg(SPI_CLOCK_REG(_spi_port)) = _clkdiv_read;
+    writereg(SPI_PIN_REG(_spi_port), pin);
+    writereg(SPI_CLOCK_REG(_spi_port), _clkdiv_read);
 #if defined ( SPI_UPDATE )
     *_spi_cmd_reg = SPI_UPDATE;
 #endif
@@ -881,8 +881,8 @@ label_start:
   {
     uint32_t pin = (_cfg.spi_mode & 2) ? SPI_CK_IDLE_EDGE : 0;
     *_spi_user_reg = _user_reg;
-    *reg(SPI_PIN_REG(_spi_port)) = pin;
-    *reg(SPI_CLOCK_REG(_spi_port)) = _clkdiv_write;
+    writereg(SPI_PIN_REG(_spi_port), pin);
+    writereg(SPI_CLOCK_REG(_spi_port), _clkdiv_write);
 #if defined ( SPI_UPDATE )
     *_spi_cmd_reg = SPI_UPDATE;
 #endif
