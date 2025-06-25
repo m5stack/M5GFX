@@ -625,7 +625,7 @@ namespace lgfx
               return true;
             // setRotation(getRotation());
             // ESP_LOGD("Panel_AMOLED","Panel_AMOLED_Framebuffer init [%d x %d] %d", _width, _height, use_reset);
-            if( !initFramebuffer(_width, _height) )
+            if( !initFramebuffer(_cfg.panel_width, _cfg.panel_height) )
               return false;
             _internal_rotation = 0;
             return Panel_FrameBufferBase::init(false);
@@ -659,19 +659,20 @@ namespace lgfx
             _panel->setWindow(xs, ys, xe, ye);
             uint8_t bpp = _write_bits >> 3; // bytes per pixel
             size_t wb = w1 * bpp; // bytes per line
+            size_t stride = _cfg.panel_width * bpp; // bytes per line in framebuffer
             auto bus = _panel->getBus();
             uint8_t* buf[2];
             buf[0] = bus->getDMABuffer(wb);
             buf[1] = bus->getDMABuffer(wb);
 
             _panel->start_qspi();
-            int fbpos = ((ys * _width) + (xs)) * bpp;
+            int fbpos = ys * stride + (xs * bpp);
 
             for( int i = 0; i < h1; i++)
             {
                 auto lb = buf[i & 1];//s->getDMABuffer(wb);
                 memcpy(lb,  &_frame_buffer[fbpos], wb);
-                fbpos += _width * bpp; // next line
+                fbpos += stride; // next line
                 bus->writeBytes(lb, wb, false, true);
             }
 //*/
