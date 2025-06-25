@@ -77,6 +77,10 @@ namespace lgfx
     // キャッシュのライトバックを display メソッドで行うため、auto_displayで自動化する
     _auto_display = true;
 #endif
+    _range_mod.top = INT16_MAX;
+    _range_mod.left = INT16_MAX;
+    _range_mod.right = 0;
+    _range_mod.bottom = 0;
 
     setInvert(_invert);
     setRotation(_rotation);
