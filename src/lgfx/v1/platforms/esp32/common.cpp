@@ -917,6 +917,7 @@ namespace lgfx
       periph_module_disable(mod);
     }
 
+    __attribute__ ((unused))
     static void i2c_periph_reset(int i2c_num)
     {
       auto mod = getPeriphModule(i2c_num);
@@ -1133,10 +1134,12 @@ namespace lgfx
       static constexpr int I2C_CLR_BUS_SCL_NUM        = 9;
 
       gpio_num_t sda_io = i2c_context[i2c_port].pin_sda;
+      gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
+      gpio::pin_backup_t backup_pins[] = { sda_io, scl_io };
+
       gpio_set_level(sda_io, 1);
       gpio_set_direction(sda_io, GPIO_MODE_INPUT_OUTPUT_OD);
 
-      gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
       gpio_set_level(scl_io, 1);
       gpio_set_direction(scl_io, GPIO_MODE_OUTPUT_OD);
       delayMicroseconds(I2C_CLR_BUS_HALF_PERIOD_US);
@@ -1155,6 +1158,10 @@ namespace lgfx
         delayMicroseconds(I2C_CLR_BUS_HALF_PERIOD_US);
       } while (!gpio_get_level(sda_io) && (i++ < I2C_CLR_BUS_SCL_NUM));
 
+      for (auto &bup : backup_pins) { bup.restore(); }
+
+/*
+
 #if !defined (CONFIG_IDF_TARGET_ESP32C3)
 /// ESP32C3で periph_module_reset を使用すると以後通信不能になる問題が起きたため分岐;
       i2c_periph_reset(i2c_port);
@@ -1171,6 +1178,7 @@ namespace lgfx
       gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
       i2c_periph_reset(i2c_port);
       set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
+//*/
 #endif
     }
 
@@ -1350,9 +1358,11 @@ namespace lgfx
 
     cpp::result<void, error_t> init(int i2c_port)
     {
+      gpio_num_t pin_sda = i2c_context[i2c_port].pin_sda;
+      gpio_num_t pin_scl = i2c_context[i2c_port].pin_scl;
       if ((i2c_port >= I2C_NUM_MAX)
-       || ((uint32_t)i2c_context[i2c_port].pin_scl >= GPIO_NUM_MAX)
-       || ((uint32_t)i2c_context[i2c_port].pin_sda >= GPIO_NUM_MAX))
+       || ((uint32_t)pin_scl >= GPIO_NUM_MAX)
+       || ((uint32_t)pin_sda >= GPIO_NUM_MAX))
       {
         return cpp::fail(error_t::invalid_arg);
       }
@@ -1371,17 +1381,15 @@ namespace lgfx
  #if defined ( USE_TWOWIRE_SETPINS )
       twowire->begin();
  #else
-      twowire->begin((int)i2c_context[i2c_port].pin_sda, (int)i2c_context[i2c_port].pin_scl);
+      twowire->begin((int)pin_sda, (int)pin_scl);
  #endif
 #else
       i2c_periph_enable(i2c_port);
 #endif
+      set_pin((i2c_port_t)i2c_port, pin_sda, pin_scl);
 
       i2c_context[i2c_port].initialized = true;
-      auto dev = getDev(i2c_port);
-      i2c_context[i2c_port].save_reg(dev);
       i2c_stop(i2c_port);
-      i2c_context[i2c_port].load_reg(dev);
 
       return {};
     }

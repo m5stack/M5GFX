@@ -472,19 +472,13 @@ namespace m5gfx
       lgfx::i2c::init(i2c_port, GPIO_NUM_13, GPIO_NUM_15);
 
       // set direction: output
-      auto value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x03, i2c_freq).has_value();
-      value |= (1 << 7);
-      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x03, value, 0, i2c_freq);
+      lgfx::i2c::bitOn(i2c_port, pi4io1_i2c_addr, 0x03, 1 << 7, i2c_freq);
 
       // set pull mode: down
-      value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x0d, i2c_freq).has_value();
-      value &= ~(1 << 7);
-      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x0d, value, 0, i2c_freq);
+      lgfx::i2c::bitOff(i2c_port, pi4io1_i2c_addr, 0x0D, 1 << 7, i2c_freq);
 
       // set high impedance: off
-      value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x07, i2c_freq).has_value();
-      value &= ~(1 << 7);
-      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x07, value, 0, i2c_freq);
+      lgfx::i2c::bitOff(i2c_port, pi4io1_i2c_addr, 0x07, 1 << 7, i2c_freq);
 
       _is_backlight_inited = true;
       setBrightness(brightness);
@@ -495,13 +489,11 @@ namespace m5gfx
     {
       if (!_is_backlight_inited) init(127);
 
-      auto value = lgfx::i2c::readRegister8(i2c_port, pi4io1_i2c_addr, 0x05, i2c_freq).has_value();
       if (brightness == 0) {
-        value |= (1 << 7);
+        lgfx::i2c::bitOn(i2c_port, pi4io1_i2c_addr, 0x05, 1 << 7, i2c_freq);
       } else {
-        value &= ~(1 << 7);
+        lgfx::i2c::bitOff(i2c_port, pi4io1_i2c_addr, 0x05, 1 << 7, i2c_freq);
       }
-      lgfx::i2c::writeRegister8(i2c_port, pi4io1_i2c_addr, 0x05, value, 0, i2c_freq);
     }
   };
 
@@ -509,25 +501,24 @@ namespace m5gfx
 
   static constexpr int32_t i2c_freq = 400000;
   static constexpr int_fast16_t i2c_port = I2C_NUM_0;
-  static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
-  static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
-
+  
   struct Light_ArduinoNessoN1 : public lgfx::ILight
   {
+    // static constexpr int_fast16_t i2c_sda = GPIO_NUM_10;
+    // static constexpr int_fast16_t i2c_scl = GPIO_NUM_8;
     bool init(uint8_t brightness) override
     {
+      setBrightness(brightness);
       return true;
     }
 
     void setBrightness(uint8_t brightness) override
     {
-      auto value = lgfx::i2c::readRegister8(i2c_port, pi4io2_i2c_addr, 0x05, i2c_freq).has_value();
-      if (brightness == 0) {
-        value &= ~(1 << 6);
+      if (brightness) {
+        lgfx::i2c::bitOn(i2c_port, pi4io2_i2c_addr, 0x05, 1 << 6, i2c_freq);
       } else {
-        value |= (1 << 6);
+        lgfx::i2c::bitOff(i2c_port, pi4io2_i2c_addr, 0x05, 1 << 6, i2c_freq);
       }
-      lgfx::i2c::writeRegister8(i2c_port, pi4io2_i2c_addr, 0x05, value, 0, i2c_freq);
     }
   };
 
@@ -1955,6 +1946,9 @@ namespace m5gfx
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 
+    bus_cfg.spi_host = SPI2_HOST;
+    bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
+
     std::uint32_t id;
 
     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
@@ -1966,116 +1960,136 @@ namespace m5gfx
 
     if (board == 0 || board == board_t::board_ArduinoNessoN1)
     {
-
-    // PI4IO E0
-    //  P0 BTN1
-    //  P1 BTN2
-    //  P2-P5 NC
-    //  P7 LoRa Reset
-    //  P6 RF Switch
-    //  P5 LNA Enable
-      static constexpr const uint8_t reg_data_io1[] = {
-        0x03, 0b11100000, 0,   // PI4IO_REG_IO_DIR
-        0x05, 0b10000000, 0,   // PI4IO_REG_OUT_SET
-        0x07, 0b00011100, 0,   // PI4IO_REG_OUT_H_IM
-        0x0D, 0b11000011, 0,   // PI4IO_REG_PULL_SEL
-        0x0B, 0b11000011, 0,   // PI4IO_REG_PULL_EN
-        0x09, 0b00000011, 0,   // PI4IO_REG_IN_DEF_STA
-        0x11, 0b11111100, 0,   // PI4IO_REG_INT_MASK
-        0xFF,0xFF,0xFF,
+      gpio::pin_backup_t backup_pins[] =
+      { GPIO_NUM_8
+      , GPIO_NUM_10
+      , GPIO_NUM_16
+      , GPIO_NUM_17
+      , GPIO_NUM_20
+      , GPIO_NUM_21
+      , GPIO_NUM_22
       };
-    // PI4IO E1
-    // P0 Power OFF system
-    // P1 LCD_RST
-    // P2 EXT_PWR_EN
-    // P3 NC
-    // P4 NC
-    // P5 VIN_DET
-    // P6 LCD_BL
-    // P7 SYS_LEDG  Low-level light
-      static constexpr const uint8_t reg_data_io2[] = {
-        0x03, 0b11000111, 0,   // PI4IO_REG_IO_DIR
-        0x07, 0b00011000, 0,   // PI4IO_REG_OUT_H_IM
-        0x05, 0b00000000, 0,   // PI4IO_REG_OUT_SET
-        0x0D, 0b10000000, 0,   // PI4IO_REG_PULL_SEL
-        0x0B, 0b11111111, 0,   // PI4IO_REG_PULL_EN
-        0x05, 0b11000110, 0,   // PI4IO_REG_OUT_SET
-        0xFF,0xFF,0xFF,
-      };
-      lgfx::i2c::init(i2c_port, GPIO_NUM_10, GPIO_NUM_8);
-      i2c_write_register8_array(i2c_port, pi4io1_i2c_addr, reg_data_io1, 100000);
-      i2c_write_register8_array(i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
+      auto result = lgfx::gpio::command(
+        (const uint8_t[]) {
+        lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_8,
+        lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_10,
+        lgfx::gpio::command_read               , GPIO_NUM_8,
+        lgfx::gpio::command_read               , GPIO_NUM_10,
+        lgfx::gpio::command_end
+        }
+      );
 
+      if (result == 0x03) {
+      // PI4IO E0
+      //  P0 BTN1
+      //  P1 BTN2
+      //  P2-P5 NC
+      //  P5 LNA Enable
+      //  P6 RF Switch
+      //  P7 LoRa Reset
+        static constexpr const uint8_t reg_data_io1[] = {
+          0x03, 0b11100000, 0,   // PI4IO_REG_IO_DIR
+          0x05, 0b10000000, 0,   // PI4IO_REG_OUT_SET
+          0x07, 0b00011100, 0,   // PI4IO_REG_OUT_H_IM
+          0x0D, 0b11000011, 0,   // PI4IO_REG_PULL_SEL
+          0x0B, 0b11000011, 0,   // PI4IO_REG_PULL_EN
+          0x09, 0b00000011, 0,   // PI4IO_REG_IN_DEF_STA
+          0x11, 0b11111100, 0,   // PI4IO_REG_INT_MASK
+          0xFF,0xFF,0xFF,
+        };
+      // PI4IO E1
+      // P0 Power OFF system
+      // P1 LCD_RST
+      // P2 EXT_PWR_EN
+      // P3 NC
+      // P4 NC
+      // P5 VIN_DET
+      // P6 LCD_BL
+      // P7 SYS_LEDG  Low-level light
+        static constexpr const uint8_t reg_data_io2[] = {
+          0x03, 0b11000111, 0,   // PI4IO_REG_IO_DIR
+          0x07, 0b00011000, 0,   // PI4IO_REG_OUT_H_IM
+          0x05, 0b00000000, 0,   // PI4IO_REG_OUT_SET
+          0x0D, 0b10000000, 0,   // PI4IO_REG_PULL_SEL
+          0x0B, 0b11111111, 0,   // PI4IO_REG_PULL_EN
+          0x05, 0b10000010, 0,   // PI4IO_REG_OUT_SET
+          0xFF,0xFF,0xFF,
+        };
+        lgfx::i2c::init(i2c_port, GPIO_NUM_10, GPIO_NUM_8);
+        i2c_write_register8_array(i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
+        i2c_write_register8_array(i2c_port, pi4io1_i2c_addr, reg_data_io1, 100000);
 
-      bus_cfg.pin_mosi = GPIO_NUM_21;
-      bus_cfg.pin_miso = GPIO_NUM_22;
-      bus_cfg.pin_sclk = GPIO_NUM_20;
-      bus_cfg.pin_dc   = GPIO_NUM_16;
-      bus_cfg.spi_mode = 0;
-      bus_cfg.spi_3wire = true;
-      bus_spi->config(bus_cfg);
-      bus_spi->init();
-
-      id = _read_panel_id(bus_spi, GPIO_NUM_17);
-      //  check panel (ST7789)
-      if ((id & 0xFB) == 0x81) // 0x81 or 0x85
-      {
-        board = board_t::board_ArduinoNessoN1;
-        bus_spi->release();
-        bus_cfg.freq_write = 40000000;
-        bus_cfg.freq_read  = 16000000;
+        bus_cfg.pin_mosi = GPIO_NUM_21;
+        bus_cfg.pin_miso = GPIO_NUM_22;
+        bus_cfg.pin_sclk = GPIO_NUM_20;
+        bus_cfg.pin_dc   = GPIO_NUM_16;
+        bus_cfg.spi_mode = 0;
         bus_cfg.spi_3wire = true;
         bus_spi->config(bus_cfg);
         bus_spi->init();
-        auto p = new Panel_ST7789();
-        p->bus(bus_spi);
-        {
-          auto cfg = p->config();
-          cfg.pin_cs  = GPIO_NUM_17; // LCD CS
-          cfg.pin_rst = -1;
-          cfg.panel_width = 135;
-          cfg.panel_height = 240;
-          cfg.offset_x     = 52;
-          cfg.offset_y     = 40;
-          cfg.offset_rotation = 0;
-          cfg.readable = true;
-          cfg.invert = true;
-          cfg.bus_shared = false;
-          p->config(cfg);
-          p->setRotation(1);
-          _panel_last.reset(p);
-        }
-        {
-          auto t = new m5gfx::Touch_FT5x06();
-          if (t) {
-            _touch_last.reset(t);
 
-            auto cfg = t->config();
+        id = _read_panel_id(bus_spi, GPIO_NUM_17);
+        //  check panel (ST7789)
+        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+        {
+          board = board_t::board_ArduinoNessoN1;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_ArduinoNessoN1");
 
-            cfg.x_min = 0;
-            cfg.x_max = 134;
-            cfg.y_min = 0;
-            cfg.y_max = 239;
-            cfg.pin_int = GPIO_NUM_3;
-            cfg.bus_shared = false;
+          bus_spi->release();
+          bus_cfg.freq_write = 40000000;
+          bus_cfg.freq_read  = 16000000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          auto p = new Panel_ST7789();
+          p->bus(bus_spi);
+          {
+            _panel_last.reset(p);
+            auto cfg = p->config();
+            cfg.pin_cs  = GPIO_NUM_17; // LCD CS
+            cfg.pin_rst = -1;
+            cfg.panel_width = 135;
+            cfg.panel_height = 240;
+            cfg.offset_x     = 52;
+            cfg.offset_y     = 40;
             cfg.offset_rotation = 0;
-
-            cfg.i2c_port = 0;
-            cfg.i2c_addr = 0x38;
-            cfg.pin_sda = GPIO_NUM_11;
-            cfg.pin_scl = GPIO_NUM_12;
-            cfg.freq = 400000;
-
-            t->config(cfg);
-
-            _panel_last->setTouch(t);
+            cfg.readable = true;
+            cfg.invert = true;
+            cfg.bus_shared = true;
+            p->config(cfg);
+            p->setRotation(0);
           }
+
+          {
+            auto t = new m5gfx::Touch_FT5x06();
+            if (t) {
+              _touch_last.reset(t);
+              auto cfg = t->config();
+
+              cfg.x_min = 0;
+              cfg.x_max = 134;
+              cfg.y_min = 0;
+              cfg.y_max = 239;
+              cfg.bus_shared = true;
+              cfg.offset_rotation = 0;
+              
+              cfg.i2c_port = I2C_NUM_0;
+              cfg.i2c_addr = 0x38;
+              cfg.pin_rst = -1;
+              cfg.pin_int = GPIO_NUM_3;
+              cfg.pin_sda = GPIO_NUM_10;
+              cfg.pin_scl = GPIO_NUM_8;
+              cfg.freq = 400000;
+
+              t->config(cfg);
+              p->touch(t);
+            }
+          }
+          _set_backlight(new Light_ArduinoNessoN1());
+          goto init_clear;
         }
-        _set_backlight(new Light_ArduinoNessoN1());
-        goto init_clear;
+        bus_spi->release();
       }
-      // pinMode(LCD_RESET, INPUT); // LCD RST
-      bus_spi->release();
+      for (auto &bup : backup_pins) { bup.restore(); }
     }
 
 #endif
