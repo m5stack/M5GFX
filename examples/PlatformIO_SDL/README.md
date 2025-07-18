@@ -82,7 +82,7 @@ Click `PROJECT TASKS` -> `native` -> `General` -> `Upload`
 ![execute](img_00.png)
 
 ※ The window may start up with the window hidden behind. Check the task tray.
-
+※ Use Keyboard "L" or "R" can spin the image
 ---
 
 ## Step 5. Use debugger.
