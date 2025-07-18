@@ -895,6 +895,7 @@ namespace lgfx
       }
     }
 
+    __attribute__ ((unused))
     static void i2c_periph_reset(int i2c_num)
     {
       I2C_RCC_ATOMIC() {
@@ -1129,7 +1130,6 @@ namespace lgfx
 
     static void i2c_stop(int i2c_port)
     {
-#if 1 // !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
       static constexpr int I2C_CLR_BUS_HALF_PERIOD_US = 2;
       static constexpr int I2C_CLR_BUS_SCL_NUM        = 9;
 
@@ -1158,28 +1158,11 @@ namespace lgfx
         delayMicroseconds(I2C_CLR_BUS_HALF_PERIOD_US);
       } while (!gpio_get_level(sda_io) && (i++ < I2C_CLR_BUS_SCL_NUM));
 
-      for (auto &bup : backup_pins) { bup.restore(); }
-
-/*
-
 #if !defined (CONFIG_IDF_TARGET_ESP32C3)
 /// ESP32C3で periph_module_reset を使用すると以後通信不能になる問題が起きたため分岐;
       i2c_periph_reset(i2c_port);
 #endif
-      set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
-#else
-      i2c_periph_enable(i2c_port);
-      auto dev = getDev(i2c_port);
-      dev->scl_sp_conf.scl_rst_slv_num = 9;
-      dev->scl_sp_conf.scl_rst_slv_en = 0;
-      updateDev(dev);
-      dev->scl_sp_conf.scl_rst_slv_en = 1;
-      gpio_num_t sda_io = i2c_context[i2c_port].pin_sda;
-      gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
-      i2c_periph_reset(i2c_port);
-      set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
-//*/
-#endif
+      for (auto &bup : backup_pins) { bup.restore(); }
     }
 
     static cpp::result<void, error_t> i2c_wait(int i2c_port, bool flg_stop = false)
@@ -1386,9 +1369,11 @@ namespace lgfx
 #else
       i2c_periph_enable(i2c_port);
 #endif
-      set_pin((i2c_port_t)i2c_port, pin_sda, pin_scl);
 
       i2c_context[i2c_port].initialized = true;
+      auto dev = getDev(i2c_port);
+      set_pin((i2c_port_t)i2c_port, pin_sda, pin_scl);
+      i2c_context[i2c_port].save_reg(dev);
       i2c_stop(i2c_port);
 
       return {};
