@@ -1611,7 +1611,10 @@ namespace m5gfx
         bus_spi->release();
       }
 
-      if (board == 0 || board == board_t::board_M5Cardputer || board == board_t::board_M5VAMeter)
+      if (board == 0
+       || board == board_t::board_M5Cardputer
+       || board == board_t::board_M5CardputerADV
+       || board == board_t::board_M5VAMeter)
       {
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_35;
@@ -1626,25 +1629,45 @@ namespace m5gfx
         //  check panel (ST7789)
         if ((id & 0xFB) == 0x81) // 0x81 or 0x85
         {
+/*
+Here, VAMeter/Cardputer/CardputerADV will be automatically recognized.
+The usage of each pin is as follows.
+|    |  VAMeter  | Cardputer  |CardputerADV|
+|:--:+:---------:+:----------:+:----------:|
+| G5 | SYS_SDA   | KEY_MATRIX |  External  |
+| G6 | SYS_SCL   | KEY_MATRIX |  External  |
+| G7 |  NC       | KEY_MATRIX |Internal FPC|
+| G8 | External  |  74HC138   |  SYS_SDA   |
+| G9 | External  |  74HC138   |  SYS_SCL   |
+*/
           board = board_t::board_M5Cardputer;
-          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_5, GPIO_NUM_6 };
+          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_8, GPIO_NUM_9 };
           auto result = lgfx::gpio::command(
             (const uint8_t[]) {
+            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_9,
+            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_8,
             lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_6,
             lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_5,
+            lgfx::gpio::command_read               , GPIO_NUM_9,
+            lgfx::gpio::command_read               , GPIO_NUM_8,
             lgfx::gpio::command_read               , GPIO_NUM_6,
             lgfx::gpio::command_read               , GPIO_NUM_5,
             lgfx::gpio::command_end
             }
           );
           for (auto &bup : backup_pins) { bup.restore(); }
-          if (result == 3) {
+          if ((result & 3) == 3) {
             m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_5, GPIO_NUM_6);
             result = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
                     && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
             backup_i2c_setting.restore();
             if (result) {
               board = board_t::board_M5VAMeter;
+            }
+          }
+          if (board == board_t::board_M5Cardputer) {
+            if ((result & 0x0C) == 0x0C) {
+              board = board_t::board_M5CardputerADV;
             }
           }
           bus_spi->release();
@@ -1666,19 +1689,23 @@ namespace m5gfx
             int rotation = 0;
             int bl_freq = 256;
             int bl_offset = 16;
-            if (board == board_t::board_M5Cardputer) {
-              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
-              cfg.panel_width = 135;
-              cfg.offset_x     = 52;
-              cfg.offset_y     = 40;
-              rotation = 1;
-            } else {
+            if (board == board_t::board_M5VAMeter) {
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5VAMeter");
               cfg.panel_width = 240;
               cfg.offset_x     = 0;
               cfg.offset_y     = 0;
               bl_freq = 512;
               bl_offset = 64;
+            } else {
+              cfg.panel_width = 135;
+              cfg.offset_x     = 52;
+              cfg.offset_y     = 40;
+              rotation = 1;
+              if (board == board_t::board_M5Cardputer) {
+                ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
+              } else {
+                ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5CardputerADV");
+              }
             }
             p->config(cfg);
             p->setRotation(rotation);
@@ -2154,6 +2181,7 @@ init_clear:
     case board_M5AtomS3R:      title = "M5AtomS3R";      break;
     case board_M5Dial:         title = "M5Dial";         break;
     case board_M5Cardputer:    title = "M5Cardputer";    break;
+    case board_M5CardputerADV: title = "M5CardputerADV"; break;
     case board_M5DinMeter:     title = "M5DinMeter";     break;
     case board_M5AirQ:         title = "M5AirQ";         break;
     case board_M5VAMeter:      title = "M5VAMeter";      break;
