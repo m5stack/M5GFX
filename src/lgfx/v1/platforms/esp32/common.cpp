@@ -1677,11 +1677,15 @@ namespace lgfx
         }
 
         len = length < 32 ? length : 32;
-        if (length == len && last_nack && len > 1) { --len; }
-
         length -= len;
-        i2c_set_cmd(dev, 0, i2c_cmd_read, len, last_nack && length == 0);
-        i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
+
+        i2c_set_cmd(dev, 2, i2c_cmd_end, 0, false);
+        i2c_set_cmd(dev, 1, i2c_cmd_end, 0, false);
+        bool flg_nack = (last_nack && length == 0);
+        i2c_set_cmd(dev, 0, i2c_cmd_read, len - (flg_nack ? 1 : 0), false);
+        if (flg_nack) {
+          i2c_set_cmd(dev, (len == 1) ? 0 : 1, i2c_cmd_read, 1, true);
+        }
         updateDev(dev);
         dev->int_clr.val = intmask;
         dev->ctr.trans_start = 1;
