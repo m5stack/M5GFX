@@ -49,6 +49,10 @@ namespace lgfx
     const config_detail_t& config_detail(void) const { return _config_detail; }
     void config_detail(const config_detail_t& config_detail) { _config_detail = config_detail; };
 
+    void setInvert(bool invert) override;
+    void setSleep(bool flg_sleep) override;
+    void setPowerSave(bool flg_idle) override;
+
   protected:
 
     bool init_bus(void);
