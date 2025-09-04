@@ -77,6 +77,10 @@ namespace lgfx
     // キャッシュのライトバックを display メソッドで行うため、auto_displayで自動化する
     _auto_display = true;
 #endif
+    _range_mod.top = INT16_MAX;
+    _range_mod.left = INT16_MAX;
+    _range_mod.right = 0;
+    _range_mod.bottom = 0;
 
     setInvert(_invert);
     setRotation(_rotation);
@@ -504,6 +508,11 @@ namespace lgfx
       if (r & 2)                  { src_x = _width  - (src_x + w); dst_x = _width  - (dst_x + w); }
       if (r & 1) { std::swap(src_x, src_y);  std::swap(dst_x, dst_y);  std::swap(w, h); }
     }
+    _range_mod.left   = std::min<int_fast16_t>(_range_mod.left  , dst_x);
+    _range_mod.right  = std::max<int_fast16_t>(_range_mod.right , dst_x + w - 1);
+    _range_mod.top    = std::min<int_fast16_t>(_range_mod.top   , dst_y);
+    _range_mod.bottom = std::max<int_fast16_t>(_range_mod.bottom, dst_y + h - 1);
+
     size_t bytes = _write_bits >> 3;
     size_t len = w * bytes;
     int32_t add = 1;
@@ -518,7 +527,6 @@ namespace lgfx
       uint8_t* dst = &_lines_buffer[dst_y + pos][dst_x * bytes];
       memcpy(buf, src, len);
       memcpy(dst, buf, len);
-      // cacheWriteBack(dst, len);
       pos += add;
     } while (--h);
   }

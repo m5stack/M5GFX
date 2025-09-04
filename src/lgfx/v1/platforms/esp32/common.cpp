@@ -55,14 +55,15 @@ Contributors:
    #endif
   #endif
  #endif
-#endif
 
-#if __has_include(<soc/syscon_reg.h>)
- #include <soc/syscon_reg.h>
-#elif __has_include (<soc/apb_ctrl_reg.h>)
- #include <soc/apb_ctrl_reg.h>
+ #if __has_include(<soc/syscon_reg.h>)
+  #include <soc/syscon_reg.h>
+ #endif
+#else
+ #if __has_include (<soc/apb_ctrl_reg.h>)
+  #include <soc/apb_ctrl_reg.h>
+ #endif
 #endif
-
 #include <soc/efuse_reg.h>
 
 #include <esp_log.h>
@@ -620,6 +621,91 @@ namespace lgfx
       return {};
     }
 
+
+
+
+#if defined LGFX_USE_QSPI
+
+    cpp::result<void, error_t> initQuad(int spi_host, int spi_sclk, int spi_io0, int spi_io1, int spi_io2, int spi_io3)
+    {
+      return initQuad(spi_host, spi_sclk, spi_io0, spi_io1, spi_io2, spi_io3, 0); // SPI_DMA_CH_AUTO;
+    }
+
+    cpp::result<void, error_t> initQuad(int spi_host, int spi_sclk, int spi_io0, int spi_io1, int spi_io2, int spi_io3, int dma_channel)
+    {
+      //ESP_LOGI("LGFX","spi::init host:%d, sclk:%d, miso:%d, mosi:%d, dma:%d", spi_host, spi_sclk, spi_miso, spi_mosi, dma_channel);
+      uint32_t spi_port = (spi_host + 1);
+      (void)spi_port;
+
+      if (spi_sclk >= 0) {
+        gpio_lo(spi_sclk); // ここでLOWにしておくことで、pinMode変更によるHIGHパルスが出力されるのを防止する (CSなしパネル対策);
+      }
+
+      // バスの設定にはESP-IDFのSPIドライバを使用する。;
+      if (_spi_dev_handle[spi_host] == nullptr)
+      {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
+        spi_bus_config_t buscfg = {
+            .data0_io_num    = spi_io0,
+            .data1_io_num    = spi_io1,
+            .sclk_io_num     = spi_sclk,
+            .data2_io_num    = spi_io2,
+            .data3_io_num    = spi_io3,
+            .max_transfer_sz = 1,
+            .flags           = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_GPIO_PINS,
+            .intr_flags      = 0
+        };
+
+        if (ESP_OK != spi_bus_initialize(static_cast<spi_host_device_t>(spi_host), &buscfg, dma_channel))
+        {
+          ESP_LOGW("LGFX", "Failed to spi_bus_initialize. ");
+        }
+
+        spi_device_interface_config_t devcfg = {
+          .command_bits = 0,
+          .address_bits = 0,
+          .dummy_bits = 0,
+          .mode = 0,
+          .duty_cycle_pos = 0,
+          .cs_ena_pretrans = 0,
+          .cs_ena_posttrans = 0,
+          .clock_speed_hz = (int)getApbFrequency()>>1,
+          .input_delay_ns = 0,
+          .spics_io_num = -1,
+          .flags = SPI_DEVICE_3WIRE | SPI_DEVICE_HALFDUPLEX,
+          .queue_size = 1,
+          .pre_cb = nullptr,
+          .post_cb = nullptr
+        };
+
+        if (ESP_OK != spi_bus_add_device(static_cast<spi_host_device_t>(spi_host), &devcfg, &_spi_dev_handle[spi_host]))
+        {
+          ESP_LOGW("LGFX", "Failed to spi_bus_add_device. ");
+        }
+      }
+
+#pragma GCC diagnostic pop
+
+      *reg(SPI_USER_REG(spi_port)) = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN;  // need SD card access (full duplex setting)
+      *reg(SPI_CTRL_REG(spi_port)) = 0;
+      #if defined ( SPI_CTRL1_REG )
+      *reg(SPI_CTRL1_REG(spi_port)) = 0;
+      #endif
+      #if defined ( SPI_CTRL2_REG )
+      *reg(SPI_CTRL2_REG(spi_port)) = 0;
+      #endif
+
+      return {};
+    }
+
+
+#endif
+
+
+
     void release(int spi_host)
     {
 //ESP_LOGI("LGFX","spi::release");
@@ -809,6 +895,7 @@ namespace lgfx
       }
     }
 
+    __attribute__ ((unused))
     static void i2c_periph_reset(int i2c_num)
     {
       I2C_RCC_ATOMIC() {
@@ -817,18 +904,21 @@ namespace lgfx
       }
     }
 #else
+    __attribute__ ((unused))
     static void i2c_periph_enable(int i2c_num)
     {
       auto mod = getPeriphModule(i2c_num);
       periph_module_enable(mod);
     }
 
+    __attribute__ ((unused))
     static void i2c_periph_disable(int i2c_num)
     {
       auto mod = getPeriphModule(i2c_num);
       periph_module_disable(mod);
     }
 
+    __attribute__ ((unused))
     static void i2c_periph_reset(int i2c_num)
     {
       auto mod = getPeriphModule(i2c_num);
@@ -1040,15 +1130,16 @@ namespace lgfx
 
     static void i2c_stop(int i2c_port)
     {
-#if 1 // !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
       static constexpr int I2C_CLR_BUS_HALF_PERIOD_US = 2;
       static constexpr int I2C_CLR_BUS_SCL_NUM        = 9;
 
       gpio_num_t sda_io = i2c_context[i2c_port].pin_sda;
+      gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
+      gpio::pin_backup_t backup_pins[] = { sda_io, scl_io };
+
       gpio_set_level(sda_io, 1);
       gpio_set_direction(sda_io, GPIO_MODE_INPUT_OUTPUT_OD);
 
-      gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
       gpio_set_level(scl_io, 1);
       gpio_set_direction(scl_io, GPIO_MODE_OUTPUT_OD);
       delayMicroseconds(I2C_CLR_BUS_HALF_PERIOD_US);
@@ -1071,19 +1162,7 @@ namespace lgfx
 /// ESP32C3で periph_module_reset を使用すると以後通信不能になる問題が起きたため分岐;
       i2c_periph_reset(i2c_port);
 #endif
-      set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
-#else
-      i2c_periph_enable(i2c_port);
-      auto dev = getDev(i2c_port);
-      dev->scl_sp_conf.scl_rst_slv_num = 9;
-      dev->scl_sp_conf.scl_rst_slv_en = 0;
-      updateDev(dev);
-      dev->scl_sp_conf.scl_rst_slv_en = 1;
-      gpio_num_t sda_io = i2c_context[i2c_port].pin_sda;
-      gpio_num_t scl_io = i2c_context[i2c_port].pin_scl;
-      i2c_periph_reset(i2c_port);
-      set_pin((i2c_port_t)i2c_port, sda_io, scl_io);
-#endif
+      for (auto &bup : backup_pins) { bup.restore(); }
     }
 
     static cpp::result<void, error_t> i2c_wait(int i2c_port, bool flg_stop = false)
@@ -1120,7 +1199,9 @@ namespace lgfx
         }
         dev->int_clr.val = int_raw.val;
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-        if (!int_raw.end_detect || int_raw.ack_err)
+        auto pin_sda = i2c_context[i2c_port].pin_sda;
+        bool flg_nack = (gpio_in(pin_sda) == 1);
+        if (!int_raw.end_detect || int_raw.ack_err || flg_nack)
 #elif defined ( CONFIG_IDF_TARGET_ESP32S3 ) || defined ( CONFIG_IDF_TARGET_ESP32C6 ) || defined ( CONFIG_IDF_TARGET_ESP32P4 )
         if (!int_raw.end_detect_int_raw || int_raw.nack_int_raw)
 #else
@@ -1136,9 +1217,9 @@ namespace lgfx
       if (flg_stop || res.has_error())
       {
 #if defined ( CONFIG_IDF_TARGET_ESP32S3 ) || defined ( CONFIG_IDF_TARGET_ESP32C6 ) || defined ( CONFIG_IDF_TARGET_ESP32P4 )
-        if (i2c_context[i2c_port].state == i2c_context_t::state_read || !int_raw.end_detect_int_raw)
+        if (res.has_error() || i2c_context[i2c_port].state == i2c_context_t::state_read || !int_raw.end_detect_int_raw)
 #else
-        if (i2c_context[i2c_port].state == i2c_context_t::state_read || !int_raw.end_detect)
+        if (res.has_error() || i2c_context[i2c_port].state == i2c_context_t::state_read || !int_raw.end_detect)
 #endif
         { // force stop
           i2c_stop(i2c_port);
@@ -1262,9 +1343,11 @@ namespace lgfx
 
     cpp::result<void, error_t> init(int i2c_port)
     {
+      gpio_num_t pin_sda = i2c_context[i2c_port].pin_sda;
+      gpio_num_t pin_scl = i2c_context[i2c_port].pin_scl;
       if ((i2c_port >= I2C_NUM_MAX)
-       || ((uint32_t)i2c_context[i2c_port].pin_scl >= GPIO_NUM_MAX)
-       || ((uint32_t)i2c_context[i2c_port].pin_sda >= GPIO_NUM_MAX))
+       || ((uint32_t)pin_scl >= GPIO_NUM_MAX)
+       || ((uint32_t)pin_sda >= GPIO_NUM_MAX))
       {
         return cpp::fail(error_t::invalid_arg);
       }
@@ -1283,7 +1366,7 @@ namespace lgfx
  #if defined ( USE_TWOWIRE_SETPINS )
       twowire->begin();
  #else
-      twowire->begin((int)i2c_context[i2c_port].pin_sda, (int)i2c_context[i2c_port].pin_scl);
+      twowire->begin((int)pin_sda, (int)pin_scl);
  #endif
 #else
       i2c_periph_enable(i2c_port);
@@ -1291,9 +1374,9 @@ namespace lgfx
 
       i2c_context[i2c_port].initialized = true;
       auto dev = getDev(i2c_port);
+      set_pin((i2c_port_t)i2c_port, pin_sda, pin_scl);
       i2c_context[i2c_port].save_reg(dev);
       i2c_stop(i2c_port);
-      i2c_context[i2c_port].load_reg(dev);
 
       return {};
     }
@@ -1596,11 +1679,15 @@ namespace lgfx
         }
 
         len = length < 32 ? length : 32;
-        if (length == len && last_nack && len > 1) { --len; }
-
         length -= len;
-        i2c_set_cmd(dev, 0, i2c_cmd_read, len, last_nack && length == 0);
-        i2c_set_cmd(dev, 1, i2c_cmd_end, 0);
+
+        i2c_set_cmd(dev, 2, i2c_cmd_end, 0, false);
+        i2c_set_cmd(dev, 1, i2c_cmd_end, 0, false);
+        bool flg_nack = (last_nack && length == 0);
+        i2c_set_cmd(dev, 0, i2c_cmd_read, len - (flg_nack ? 1 : 0), false);
+        if (flg_nack) {
+          i2c_set_cmd(dev, (len == 1) ? 0 : 1, i2c_cmd_read, 1, true);
+        }
         updateDev(dev);
         dev->int_clr.val = intmask;
         dev->ctr.trans_start = 1;
