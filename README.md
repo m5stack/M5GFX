@@ -25,8 +25,10 @@ Supported device
 - M5Dial
 - M5DinMeter
 - M5Cardputer
+- M5CardputerADV
 - M5VAMeter
 - M5Tab5
+- ArduinoNessoN1
 - UnitOLED
 - UnitMiniOLED
 - UnitLCD
