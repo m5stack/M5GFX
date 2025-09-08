@@ -1357,6 +1357,8 @@ namespace lgfx
         release(i2c_port);
       }
 
+      i2c_stop(i2c_port);
+
 #if defined ( ARDUINO ) && __has_include (<Wire.h>)
 #if SOC_I2C_NUM == 1 || defined CONFIG_IDF_TARGET_ESP32C6
       auto twowire = &Wire;
@@ -1376,7 +1378,6 @@ namespace lgfx
       auto dev = getDev(i2c_port);
       set_pin((i2c_port_t)i2c_port, pin_sda, pin_scl);
       i2c_context[i2c_port].save_reg(dev);
-      i2c_stop(i2c_port);
 
       return {};
     }
