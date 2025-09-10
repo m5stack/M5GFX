@@ -56,7 +56,7 @@ namespace lgfx
       /// background epd writer task pinned core. (APP_CPU_NUM or PRO_CPU_NUM)
       uint8_t task_pinned_core = -1;
     };
-  
+
     const config_detail_t& config_detail(void) const { return _config_detail; }
     void config_detail(const config_detail_t& config_detail) { _config_detail = config_detail; }
 

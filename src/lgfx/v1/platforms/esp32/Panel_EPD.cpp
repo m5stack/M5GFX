@@ -124,11 +124,11 @@ namespace lgfx
   };
 
   static constexpr const uint32_t lut_fast[] = {
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
+    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
@@ -138,7 +138,7 @@ namespace lgfx
   };
 
   static constexpr const uint32_t lut_fastest[] = {
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
@@ -230,6 +230,7 @@ namespace lgfx
 
     if (!_step_framebuf || !_buf || !_dma_bufs[0] || !_dma_bufs[1] || !_lut_2pixel) {
       if (_buf) { heap_caps_free(_buf); _buf = nullptr; }
+      if (_step_framebuf) { heap_caps_free(_step_framebuf); _step_framebuf = nullptr; }
       if (_dma_bufs[0]) { heap_caps_free(_dma_bufs[0]); _dma_bufs[0] = nullptr; }
       if (_dma_bufs[1]) { heap_caps_free(_dma_bufs[1]); _dma_bufs[1] = nullptr; }
       if (_lut_2pixel) { heap_caps_free(_lut_2pixel); _lut_2pixel = nullptr; }
@@ -864,7 +865,6 @@ LABEL_ODD_END:
     uint32_t remain = 0;
 
     for (;;) {
-      vTaskDelay(1);
       me->_display_busy = (remain != 0);
       TickType_t wait_tick = remain ? 0 : portMAX_DELAY;
       if (xQueueReceive(me->_update_queue_handle, &new_data, wait_tick)) {
@@ -884,7 +884,7 @@ LABEL_ODD_END:
           size_t h = new_data.h;
           uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
 
-          if (refresh && (new_data.mode != epd_mode_t::epd_fastest)) {
+          if (refresh && (new_data.mode == epd_mode_t::epd_quality)) {
             do {
               size_t w = new_data.w >> 1;
               auto s = src;
@@ -958,6 +958,7 @@ LABEL_ODD_END:
         }
       }
 
+      vTaskDelay(1);
       bus->scanlineDone();
       bus->endTransaction();
 
