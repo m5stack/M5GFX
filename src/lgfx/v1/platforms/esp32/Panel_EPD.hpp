@@ -102,10 +102,13 @@ namespace lgfx
       uint16_t w;
       uint16_t h;
       epd_mode_t mode;
+      bool constexpr operator==(const update_data_t& other) const {
+        return x == other.x && y == other.y && w == other.w && h == other.h && mode == other.mode;
+      }
     };
-  
+
     static void task_update(Panel_EPD* me);
-  
+
     TaskHandle_t _task_update_handle = nullptr;
     QueueHandle_t _update_queue_handle = nullptr;
   
