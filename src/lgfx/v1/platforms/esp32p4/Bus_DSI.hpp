@@ -52,11 +52,13 @@ namespace lgfx
     {
       // Panel_DSI* panel = nullptr;
 
-      uint8_t bus_id = 0;
-      uint8_t lane_num = 2;
       uint16_t lane_mbps = 0;
+      uint8_t lane_num = 2;
+      uint8_t bus_id = 0;
       uint32_t ldo_voltage_mv = 2500;
       uint8_t ldo_chan_id = 3;
+      uint8_t lcd_cmd_bits = 8;
+      uint8_t lcd_param_bits = 8;
     };
 
     const config_t& config(void) const { return _cfg; }

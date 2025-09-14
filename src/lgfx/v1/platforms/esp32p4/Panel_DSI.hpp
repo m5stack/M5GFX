@@ -45,12 +45,12 @@ namespace lgfx
       uint32_t buffer_length = 0;
 
       uint16_t dpi_freq_mhz = 60;
-      uint8_t hsync_back_porch = 1;
-      uint8_t hsync_pulse_width = 1;
-      uint8_t hsync_front_porch = 1;
-      uint8_t vsync_back_porch = 1;
-      uint8_t vsync_pulse_width = 1;
-      uint8_t vsync_front_porch = 1;
+      uint16_t hsync_back_porch = 1;
+      uint16_t hsync_pulse_width = 1;
+      uint16_t hsync_front_porch = 1;
+      uint16_t vsync_back_porch = 1;
+      uint16_t vsync_pulse_width = 1;
+      uint16_t vsync_front_porch = 1;
     };
 
     bool init(bool use_reset) override;

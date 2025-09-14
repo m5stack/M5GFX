@@ -1931,23 +1931,29 @@ The usage of each pin is as follows.
             auto bus_cfg = bus_dsi->config();
             bus_cfg.bus_id = 0;
             bus_cfg.lane_num = 2;
-            // bus_cfg.lane_mbps = 730;
-            bus_cfg.lane_mbps = 965;
+            bus_cfg.lane_mbps = 960;
             bus_cfg.ldo_chan_id = 3;
             bus_cfg.ldo_voltage_mv = 2500;
             bus_dsi->config(bus_cfg);
             if (bus_dsi->init()) {
               bool hit_ili9881 = false;
+              bool hit_st7123 = false;
               for (int i = 0; i < 3; ++i) {
                 lgfx::delay(4);
+                uint8_t id[3] = { 0, };
+                bus_dsi->readParams( 0xF4, id, 2 );
+                ESP_LOGV(LIBRARY_NAME, "ST ID %02x %02x %02x", id[0], id[1], id[2]);
+                if (id[0] == 0x71 && id[1] == 0x23) {
+                  hit_st7123 = true;
+                  break;
+                }
                 static constexpr uint8_t params[] = { 0x98, 0x81, 0x01 };
                 bus_dsi->writeParams( 0xFF, params, 3);
-                uint8_t id1 = 0, id2 = 0, id3 = 0;
-                bus_dsi->readParams( 0x00, &id1, 1 );
-                bus_dsi->readParams( 0x01, &id2, 1 );
-                bus_dsi->readParams( 0x02, &id3, 1 );
-                ESP_LOGV(LIBRARY_NAME, "DSI ID %02x %02x %02x", id1, id2, id3);
-                if (id1 == 0x98 && id2 == 0x81) {
+                bus_dsi->readParams( 0x00, &id[0], 1 );
+                bus_dsi->readParams( 0x01, &id[1], 1 );
+                bus_dsi->readParams( 0x02, &id[2], 1 );
+                ESP_LOGV(LIBRARY_NAME, "ILI ID %02x %02x %02x", id[0], id[1], id[2]);
+                if (id[0] == 0x98 && id[1] == 0x81) {
                   hit_ili9881 = true;
                   break;
                 }
@@ -1957,26 +1963,29 @@ The usage of each pin is as follows.
                 auto p = new Panel_ILI9881C();
                 _panel_last.reset(p);
                 auto det = p->config_detail();
-                det.dpi_freq_mhz = 60;
+                det.dpi_freq_mhz = 80;
                 det.hsync_back_porch = 140;
                 det.hsync_pulse_width = 40;
-                det.hsync_front_porch = 40;
+                det.hsync_front_porch = 140;
                 det.vsync_back_porch = 20;
                 det.vsync_pulse_width = 4;
                 det.vsync_front_porch = 20;
                 p->config_detail(det);
-              } else {
+              } else if (hit_st7123) {
                 _touch_last.reset(new Touch_ST7123());
                 auto p = new Panel_ST7123();
                 _panel_last.reset(p);
                 auto det = p->config_detail();
-                det.dpi_freq_mhz = 70;
-                det.hsync_back_porch = 40;
+                det.dpi_freq_mhz = 80;
+                det.hsync_back_porch = 115;
                 det.hsync_pulse_width = 2;
-                det.hsync_front_porch = 40;
-                det.vsync_back_porch = 8;
-                det.vsync_pulse_width = 2;
-                det.vsync_front_porch = 220;
+                det.hsync_front_porch = 115;
+
+                // note: back + pulse == 10. If it is out of sync, the display position will shift vertically.
+                det.vsync_back_porch = 5;
+                det.vsync_pulse_width = 5;
+                // note: reducing the front porch will cause the touch panel to stop working.
+                det.vsync_front_porch = 155;
                 p->config_detail(det);
               }
               {

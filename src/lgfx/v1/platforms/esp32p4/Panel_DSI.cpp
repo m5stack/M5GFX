@@ -22,7 +22,6 @@ Contributors:
 
 #include "../common.hpp"
 
-#include <esp_ldo_regulator.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_io.h>
 

@@ -44,8 +44,8 @@ namespace lgfx
 
     esp_lcd_dbi_io_config_t dbi_config;
     dbi_config.virtual_channel = 0;
-    dbi_config.lcd_cmd_bits = 8;
-    dbi_config.lcd_param_bits = 8;
+    dbi_config.lcd_cmd_bits = _cfg.lcd_cmd_bits;
+    dbi_config.lcd_param_bits = _cfg.lcd_param_bits;
 
     if (ESP_OK == esp_ldo_acquire_channel(&ldo_cfg, &_phy_pwr_chan)
      && ESP_OK == esp_lcd_new_dsi_bus(&bus_config, &_mipi_dsi_bus)
