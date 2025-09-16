@@ -1976,6 +1976,7 @@ The usage of each pin is as follows.
                 auto p = new Panel_ST7123();
                 _panel_last.reset(p);
                 auto det = p->config_detail();
+//*
                 det.dpi_freq_mhz = 80;
                 det.hsync_back_porch = 115;
                 det.hsync_pulse_width = 2;
@@ -1985,7 +1986,17 @@ The usage of each pin is as follows.
                 det.vsync_back_porch = 5;
                 det.vsync_pulse_width = 5;
                 // note: reducing the front porch will cause the touch panel to stop working.
-                det.vsync_front_porch = 155;
+                det.vsync_front_porch = 160;
+/*/
+                // reference parameters
+                det.dpi_freq_mhz = 70;
+                det.hsync_back_porch = 40;
+                det.hsync_pulse_width = 2;
+                det.hsync_front_porch = 40;
+                det.vsync_back_porch = 8;
+                det.vsync_pulse_width = 2;
+                det.vsync_front_porch = 220;
+//*/
                 p->config_detail(det);
               }
               {
