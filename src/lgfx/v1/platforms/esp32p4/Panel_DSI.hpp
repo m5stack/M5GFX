@@ -26,11 +26,14 @@ Contributors:
 
 #include "../../panel/Panel_FrameBufferBase.hpp"
 
+#include "Bus_DSI.hpp"
+
 namespace lgfx
 {
  inline namespace v1
  {
 //----------------------------------------------------------------------------
+  struct Bus_DSI;
 
   struct Panel_DSI : public Panel_FrameBufferBase
   {
@@ -40,6 +43,14 @@ namespace lgfx
     {
       void* buffer = nullptr;
       uint32_t buffer_length = 0;
+
+      uint16_t dpi_freq_mhz = 60;
+      uint16_t hsync_back_porch = 1;
+      uint16_t hsync_pulse_width = 1;
+      uint16_t hsync_front_porch = 1;
+      uint16_t vsync_back_porch = 1;
+      uint16_t vsync_pulse_width = 1;
+      uint16_t vsync_front_porch = 1;
     };
 
     bool init(bool use_reset) override;
@@ -53,17 +64,38 @@ namespace lgfx
     void setSleep(bool flg_sleep) override;
     void setPowerSave(bool flg_idle) override;
 
+    Bus_DSI* getBusDSI(void) const
+    {
+      auto b = getBus();
+      return (b && b->busType() == bus_type_t::bus_dsi)
+           ? static_cast<Bus_DSI*>(b)
+           : nullptr;
+    }
+
   protected:
 
-    bool init_bus(void);
+    static constexpr uint8_t CMD_SLPIN   = 0x10;
+    static constexpr uint8_t CMD_SLPOUT  = 0x11;
+    static constexpr uint8_t CMD_INVOFF  = 0x20;
+    static constexpr uint8_t CMD_INVON   = 0x21;
+    static constexpr uint8_t CMD_DISPOFF = 0x28;
+    static constexpr uint8_t CMD_DISPON  = 0x29;
+    static constexpr uint8_t CMD_MADCTL  = 0x36;
+    static constexpr uint8_t CMD_IDMOFF  = 0x38;
+    static constexpr uint8_t CMD_IDMON   = 0x39;
+    static constexpr uint8_t CMD_COLMOD  = 0x3A;
+
+    virtual const uint8_t* getInitParams(size_t listno) const { return nullptr; }
+    virtual size_t getInitDelay(size_t listno) const { return 0; }
+
+    bool write_params(uint32_t cmd, const uint8_t* data = nullptr, size_t length = 0);
+
+    bool init_dpi(Bus_DSI* bus);
     bool init_panel(void);
 
     config_detail_t _config_detail;
 
-    esp_ldo_channel_handle_t _phy_pwr_chan_handle = NULL;
-    esp_lcd_panel_io_handle_t _io_handle = NULL;
-    esp_lcd_panel_handle_t _disp_panel_handle = NULL;
-    esp_lcd_dsi_bus_handle_t _mipi_dsi_bus_handle = NULL;
+    esp_lcd_panel_handle_t _disp_panel_handle = nullptr;
   };
 
 //----------------------------------------------------------------------------

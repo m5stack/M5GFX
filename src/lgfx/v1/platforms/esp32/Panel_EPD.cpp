@@ -81,16 +81,11 @@ namespace lgfx
 // LUT_MAKE１行あたり 1フレーム分の16階調それぞれの動作が定義される。
   static constexpr const uint32_t lut_quality[] = {
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 3),
     LUT_MAKE(1, 1, 2, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 2, 1, 2, 2, 2),
     LUT_MAKE(1, 1, 3, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2),
@@ -102,33 +97,30 @@ namespace lgfx
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
   };
+
   static constexpr const uint32_t lut_text[] = {
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1),
+    LUT_MAKE(3, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3),
+    LUT_MAKE(1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1, 1, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2),
+    LUT_MAKE(1, 1, 1, 3, 3, 3, 3, 3, 1, 3, 2, 2, 2, 1, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 3, 2, 2, 3, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 2, 2, 2, 3),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 2, 2, 3),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+     //      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
   };
 
   static constexpr const uint32_t lut_fast[] = {
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
+    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
@@ -138,15 +130,27 @@ namespace lgfx
   };
 
   static constexpr const uint32_t lut_fastest[] = {
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
+    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
   };
+
+  // 消去用LUT 。現在の階調から中間階調付近にシフトさせる。
+  // このLUTは単独では使用せず、この後に本来の描画を行う。
+  static constexpr const uint32_t lut_eraser[] = {
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3),
+    LUT_MAKE(3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+  };
 #undef LUT_MAKE
+  static constexpr const size_t lut_eraser_step = sizeof(lut_eraser) / sizeof(uint32_t);
 
   Panel_EPD::Panel_EPD(void)
   {
@@ -208,7 +212,7 @@ namespace lgfx
     auto panel_h = _cfg.panel_height;
     if (memory_w == 0 || memory_h == 0) { return false; }
 
-    size_t lut_total_step = 1;
+    size_t lut_total_step = lut_eraser_step;
     lut_total_step += _config_detail.lut_quality_step;
     lut_total_step += _config_detail.lut_text_step;
     lut_total_step += _config_detail.lut_fast_step;
@@ -218,7 +222,8 @@ namespace lgfx
     _lut_2pixel = (uint8_t *)heap_caps_malloc(lut_total_step * 256 * sizeof(uint16_t), MALLOC_CAP_DMA);
 
     // リフレッシュの進行状況付きフレームバッファ (下位8bitはピクセル2個分の16階調値そのまま)
-    _step_framebuf = (uint16_t *)heap_caps_aligned_alloc(16, (memory_w * memory_h), MALLOC_CAP_SPIRAM); // current pixels
+    // 偶数インデクスは処理中のバッファ、奇数インデクスは予約バッファ。処理中のバッファの完了時に予約バッファの値が参照される。
+    _step_framebuf = (uint16_t *)heap_caps_aligned_alloc(16, (memory_w * memory_h / 2) * 2 * sizeof(uint16_t), MALLOC_CAP_SPIRAM); // current pixels
 
     // 面積分のフレームバッファ (1Byte=2pixel)
     _buf = (uint8_t *)heap_caps_aligned_alloc(16, (panel_w * panel_h) / 2, MALLOC_CAP_SPIRAM); // current pixels
@@ -230,23 +235,28 @@ namespace lgfx
 
     if (!_step_framebuf || !_buf || !_dma_bufs[0] || !_dma_bufs[1] || !_lut_2pixel) {
       if (_buf) { heap_caps_free(_buf); _buf = nullptr; }
+      if (_step_framebuf) { heap_caps_free(_step_framebuf); _step_framebuf = nullptr; }
       if (_dma_bufs[0]) { heap_caps_free(_dma_bufs[0]); _dma_bufs[0] = nullptr; }
       if (_dma_bufs[1]) { heap_caps_free(_dma_bufs[1]); _dma_bufs[1] = nullptr; }
       if (_lut_2pixel) { heap_caps_free(_lut_2pixel); _lut_2pixel = nullptr; }
 
       return false;
     }
+
     memset(_dma_bufs[0], 0, dma_len);
     memset(_dma_bufs[1], 0, dma_len);
 
+    // グレーの初期値をセット
+    memset(_step_framebuf, 0x8888, (memory_w * memory_h / 2) * 2 * sizeof(uint16_t));
+
     auto dst = _lut_2pixel;
     memset(dst, 0x0F, 256);
-    size_t lindex = 256;
-    for (int epd_mode = 1; epd_mode < 5; ++epd_mode) {
+    size_t lindex = 0;
+    for (int epd_mode = 0; epd_mode < 5; ++epd_mode) {
       const uint32_t* lut_src = nullptr;
       size_t lut_step = 0;
       switch (epd_mode) {
-        default: continue;
+        default:                      lut_src = lut_eraser; lut_step = lut_eraser_step; break;
         case epd_mode_t::epd_quality: lut_src = _config_detail.lut_quality; lut_step = _config_detail.lut_quality_step; break;
         case epd_mode_t::epd_text:    lut_src = _config_detail.lut_text;    lut_step = _config_detail.lut_text_step;    break;
         case epd_mode_t::epd_fast:    lut_src = _config_detail.lut_fast;    lut_step = _config_detail.lut_fast_step;    break;
@@ -267,11 +277,6 @@ namespace lgfx
       }
     }
 
-    // 白ピクセルの初期値をセット
-    for (int i = 0; i < memory_w * memory_h >> 1; ++i) {
-      _step_framebuf[i] = 0xFFFFu;
-    }
-
     _update_queue_handle = xQueueCreate(8, sizeof(update_data_t));
     auto task_priority = _config_detail.task_priority;
     auto task_pinned_core = _config_detail.task_pinned_core;
@@ -279,7 +284,7 @@ namespace lgfx
     {
       task_pinned_core = (xPortGetCoreID() + 1) % portNUM_PROCESSORS;
     }
-    xTaskCreatePinnedToCore((TaskFunction_t)task_update, "epd", 2048, this, task_priority, &_task_update_handle, task_pinned_core);
+    xTaskCreatePinnedToCore((TaskFunction_t)task_update, "epd", 4096, this, task_priority, &_task_update_handle, task_pinned_core);
     // タスク側とメイン側の処理CPUコアが異なる場合、PSRAMのキャッシュ同期をしないとフレームバッファが即時反映されない点に注意
 
     return true;
@@ -592,8 +597,9 @@ LABEL_ODD_END:
     upd.h = ye - ys + 1;
     upd.mode = _epd_mode;
 
+    _display_busy = true;
     cacheWriteBack(&_buf[y * _cfg.panel_width >> 1], h * _cfg.panel_width >> 1);
-    delay(1);
+    vTaskDelay(1);
     bool res = xQueueSend(_update_queue_handle, &upd, 128 / portTICK_PERIOD_MS) == pdTRUE;
 // printf("\nres: %d, xs: %d, xe: %d, ys: %d, ye: %d\n", res, xs, xe, ys, ye);
     if (res)
@@ -607,36 +613,39 @@ LABEL_ODD_END:
 
 #if defined( __XTENSA__ )
   __attribute__((noinline,noclone))
-  static void blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
+  static bool blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
   {
 #define DST "a2"  // a2 == dst
 #define SRC "a3"  // a3 == src
 #define LUT "a4"  // a4 == lut
                   // a5 == len
-#define VAL "a5"  // value tmp
-#define S_0 "a6"  // pixel section0 value
-#define S_1 "a7"  // pixel section1 value
-#define S_2 "a8"  // pixel section2 value
-#define S_3 "a9"  // pixel section3 value
-#define S_4 "a10" // pixel section4 value
-#define S_5 "a11" // pixel section5 value
-#define S_6 "a12" // pixel section6 value
-#define S_7 "a13" // pixel section7 value
+#define S_0 "a5"  // pixel section0 value
+#define S_1 "a6"  // pixel section1 value
+#define S_2 "a7"  // pixel section2 value
+#define S_3 "a8"  // pixel section3 value
+#define S_4 "a9"  // pixel section4 value
+#define S_5 "a10" // pixel section5 value
+#define S_6 "a11" // pixel section6 value
+#define S_7 "a12" // pixel section7 value
+#define X80 "a13" // 0x8000
 #define LPX "a14" // lut pixel data
 #define BUF "a15" // pixel result (uint32) value
 
-  __asm__ __volatile(
+__asm__ __volatile(
+    " movi   " LPX ", 0                    \n"  // LPX = 0
+    " addmi  " X80 ", " LPX ", -32768      \n"  // X80 = 0x8000
     " loop     a5, BLT_BUFFER_END          \n"  // lenの回数だけループ命令で処理
 
     " movi   " BUF ", 0                    \n"  // 出力用バッファを0クリア
     " l16si  " S_0 "," SRC ", 0            \n"  // S_0 = src[0]; // 元データを 8セット分 取得
-    " l16si  " S_1 "," SRC ", 2            \n"  // S_1 = src[1];
-    " l16si  " S_2 "," SRC ", 4            \n"  // S_2 = src[2];
-    " l16si  " S_3 "," SRC ", 6            \n"  // S_3 = src[3];
-    " l16si  " S_4 "," SRC ", 8            \n"  // S_4 = src[4];
-    " l16si  " S_5 "," SRC ", 10           \n"  // S_5 = src[5];
-    " l16si  " S_6 "," SRC ", 12           \n"  // S_6 = src[6];
-    " l16si  " S_7 "," SRC ", 14           \n"  // S_7 = src[7];
+    " l16si  " S_1 "," SRC ", 4            \n"  // S_1 = src[2];
+    " l16si  " S_2 "," SRC ", 8            \n"  // S_2 = src[4];
+    " l16si  " S_3 "," SRC ", 12           \n"  // S_3 = src[6];
+    " l16si  " S_4 "," SRC ", 16           \n"  // S_4 = src[8];
+    " l16si  " S_5 "," SRC ", 20           \n"  // S_5 = src[10];
+    " l16si  " S_6 "," SRC ", 24           \n"  // S_6 = src[12];
+    " l16si  " S_7 "," SRC ", 28           \n"  // S_7 = src[14];
+
     " bgei   " S_0 ",  0    , BLT_SECTION0 \n"  // データ値が負でない場合は更新処理を行うためジャンプ
     " bgei   " S_1 ",  0    , BLT_SECTION1 \n"
     "BLT_RETURN1:                          \n"
@@ -653,106 +662,155 @@ LABEL_ODD_END:
     " bgei   " S_7 ",  0    , BLT_SECTION7 \n"
     "BLT_RETURN7:                          \n"
     " s32i   " BUF "," DST ",  0           \n"  // データを出力
-    " addi   " SRC "," SRC ",  16          \n"  // 元データのポインタを進める
+    " addi   " SRC "," SRC ",  32          \n"  // 元データのポインタを進める
     " addi   " DST "," DST ",  4           \n"  // 出力先のポインタを進める
     "BLT_BUFFER_END:                       \n"  // ループ終端
+    " mov      a2   ," LPX "               \n"  // 戻り値にLPXを指定する。データ処理が存在した場合 true, 処理ナシの場合 false となる
     " retw                                 \n"  // 関数終了
 
     "BLT_SECTION0:                         \n"
     " add    " LPX "," S_0 "," LUT "       \n"  // LPX = &lut[S_0]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_0 ", -32768       \n"  // VAL = S_0 - 32768
     " addmi  " S_0 "," S_0 ", 256          \n"  // S_0 += 256
-    " moveqz " S_0 "," VAL "," LPX "       \n"  // if (LPX == 0) S_0 = VAL
-    " s16i   " S_0 "," SRC ", 0            \n"  // src[0] = S_0;
+    " beqz   " LPX ",  BLT_SWITCH0         \n"  // if (LPX == 0) goto BLT_SWITCH0
     " slli   " LPX "," LPX ", 4            \n"  // LPX <<= 4
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_0 "," SRC ", 0            \n"  // src[0] = S_0;
     " blti   " S_1 ",  0    , BLT_RETURN1  \n"
 
     "BLT_SECTION1:                         \n"
     " add    " LPX "," S_1 "," LUT "       \n"  // LPX = &lut[S_1]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_1 ", -32768       \n"  // VAL = S_1 - 32768
     " addmi  " S_1 "," S_1 ", 256          \n"  // S_1 += 256
-    " moveqz " S_1 "," VAL "," LPX "       \n"  // if (LPX == 0) S_1 = VAL
-    " s16i   " S_1 "," SRC ", 2            \n"  // src[1] = S_1;
+    " beqz   " LPX ",  BLT_SWITCH1         \n"  // if (LPX == 0) goto BLT_SWITCH1
   //" slli   " LPX "," LPX ", 0            \n"  // LPX <<= 0
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_1 "," SRC ", 4            \n"  // src[2] = S_1;
     " blti   " S_2 ",  0    , BLT_RETURN2  \n"
 
     "BLT_SECTION2:                         \n"
     " add    " LPX "," S_2 "," LUT "       \n"  // LPX = &lut[S_1]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_2 ", -32768       \n"  // VAL = S_2 - 32768
     " addmi  " S_2 "," S_2 ", 256          \n"  // S_2 += 256
-    " moveqz " S_2 "," VAL "," LPX "       \n"  // if (LPX == 0) S_2 = VAL
-    " s16i   " S_2 "," SRC ", 4            \n"  // src[2] = S_2;
+    " beqz   " LPX ",  BLT_SWITCH2         \n"  // if (LPX == 0) goto BLT_SWITCH2
     " slli   " LPX "," LPX ", 12           \n"  // LPX <<= 12
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_2 "," SRC ", 8            \n"  // src[4] = S_2;
     " blti   " S_3 ",  0    , BLT_RETURN3  \n"
 
     "BLT_SECTION3:                         \n"
     " add    " LPX "," S_3 "," LUT "       \n"  // LPX = &lut[S_3]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_3 ", -32768       \n"  // VAL = S_3 - 32768
     " addmi  " S_3 "," S_3 ", 256          \n"  // S_3 += 256
-    " moveqz " S_3 "," VAL "," LPX "       \n"  // if (LPX == 0) S_3 = VAL
-    " s16i   " S_3 "," SRC ", 6            \n"  // src[3] = S_3;
+    " beqz   " LPX ",  BLT_SWITCH3         \n"  // if (LPX == 0) goto BLT_SWITCH3
     " slli   " LPX "," LPX ", 8            \n"  // LPX <<= 8
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_3 "," SRC ", 12           \n"  // src[6] = S_3;
     " blti   " S_4 ",  0    , BLT_RETURN4  \n"
 
     "BLT_SECTION4:                         \n"
     " add    " LPX "," S_4 "," LUT "       \n"  // LPX = &lut[S_4]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_4 ", -32768       \n"  // VAL = S_4 - 32768
     " addmi  " S_4 "," S_4 ", 256          \n"  // S_4 += 256
-    " moveqz " S_4 "," VAL "," LPX "       \n"  // if (LPX == 0) S_4 = VAL
-    " s16i   " S_4 "," SRC ", 8            \n"  // src[4] = S_4;
+    " beqz   " LPX ",  BLT_SWITCH4         \n"  // if (LPX == 0) goto BLT_SWITCH4
     " slli   " LPX "," LPX ", 20           \n"  // LPX <<= 20
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_4 "," SRC ", 16           \n"  // src[8] = S_4;
     " blti   " S_5 ",  0    , BLT_RETURN5  \n"
-  
+
     "BLT_SECTION5:                         \n"
     " add    " LPX "," S_5 "," LUT "       \n"  // LPX = &lut[S_5]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_5 ", -32768       \n"  // VAL = S_5 - 32768
     " addmi  " S_5 "," S_5 ", 256          \n"  // S_5 += 256
-    " moveqz " S_5 "," VAL "," LPX "       \n"  // if (LPX == 0) S_5 = VAL
-    " s16i   " S_5 "," SRC ", 10           \n"  // src[5] = S_5;
+    " beqz   " LPX ",  BLT_SWITCH5         \n"  // if (LPX == 0) goto BLT_SWITCH5
     " slli   " LPX "," LPX ", 16           \n"  // LPX <<= 16
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_5 "," SRC ", 20           \n"  // src[10] = S_5;
     " blti   " S_6 ",  0    , BLT_RETURN6  \n"
 
     "BLT_SECTION6:                         \n"
     " add    " LPX "," S_6 "," LUT "       \n"  // LPX = &lut[S_6]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_6 ", -32768       \n"  // VAL = S_6 - 32768
     " addmi  " S_6 "," S_6 ", 256          \n"  // S_6 += 256
-    " moveqz " S_6 "," VAL "," LPX "       \n"  // if (LPX == 0) S_6 = VAL
-    " s16i   " S_6 "," SRC ", 12           \n"  // src[6] = S_6;
+    " beqz   " LPX ",  BLT_SWITCH6         \n"  // if (LPX == 0) goto BLT_SWITCH6
     " slli   " LPX "," LPX ", 28           \n"  // LPX <<= 28
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_6 "," SRC ", 24           \n"  // src[12] = S_6;
     " blti   " S_7 ",  0    , BLT_RETURN7  \n"
 
     "BLT_SECTION7:                         \n"
     " add    " LPX "," S_7 "," LUT "       \n"  // LPX = &lut[S_7]
     " l8ui   " LPX "," LPX ", 0            \n"  // LPX = *LPX
-    " addmi  " VAL "," S_7 ", -32768       \n"  // VAL = S_7 - 32768
     " addmi  " S_7 "," S_7 ", 256          \n"  // S_7 += 256
-    " moveqz " S_7 "," VAL "," LPX "       \n"  // if (LPX == 0) S_7 = VAL
-    " s16i   " S_7 "," SRC ", 14           \n"  // src[7] = S_7;
+    " beqz   " LPX ",  BLT_SWITCH7         \n"  // if (LPX == 0) goto BLT_SWITCH7
     " slli   " LPX "," LPX ", 24           \n"  // LPX <<= 24
     " add    " BUF "," BUF "," LPX "       \n"  // buf += LPX
+    " s16i   " S_7 "," SRC ", 28           \n"  // src[14] = S_7;
     " j                       BLT_RETURN7  \n"
 
+    "BLT_SWITCH0:                          \n"
+    " l16si  " LPX "," SRC ", 2            \n"  // LPX = src[1];
+    " s16i   " LPX "," SRC ", 0            \n"  // src[0] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 2            \n"  // src[1] = LPX|0x8000;
+    " blti   " S_1 ",  0    , BLT_RETURN1  \n"
+    " j                       BLT_SECTION1 \n"
+    "BLT_SWITCH1:                          \n"
+    " l16si  " LPX "," SRC ", 6            \n"  // LPX = src[3];
+    " s16i   " LPX "," SRC ", 4            \n"  // src[2] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 6            \n"  // src[3] = LPX|0x8000;
+    " blti   " S_2 ",  0    , BLT_RETURN2  \n"
+    " j                       BLT_SECTION2 \n"
+    "BLT_SWITCH2:                          \n"
+    " l16si  " LPX "," SRC ", 10           \n"  // LPX = src[5];
+    " s16i   " LPX "," SRC ", 8            \n"  // src[4] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 10           \n"  // src[5] = LPX|0x8000;
+    " blti   " S_3 ",  0    , BLT_RETURN3  \n"
+    " j                       BLT_SECTION3 \n"
+    "BLT_SWITCH3:                          \n"
+    " l16si  " LPX "," SRC ", 14           \n"  // LPX = src[7];
+    " s16i   " LPX "," SRC ", 12           \n"  // src[6] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 14           \n"  // src[7] = LPX|0x8000;
+    " blti   " S_4 ",  0    , BLT_RETURN4  \n"
+    " j                       BLT_SECTION4 \n"
+    "BLT_SWITCH4:                          \n"
+    " l16si  " LPX "," SRC ", 18           \n"  // LPX = src[9];
+    " s16i   " LPX "," SRC ", 16           \n"  // src[8] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 18           \n"  // src[9] = LPX|0x8000;
+    " blti   " S_5 ",  0    , BLT_RETURN5  \n"
+    " j                       BLT_SECTION5 \n"
+    "BLT_SWITCH5:                          \n"
+    " l16si  " LPX "," SRC ", 22           \n"  // LPX = src[11];
+    " s16i   " LPX "," SRC ", 20           \n"  // src[10] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 22           \n"  // src[11] = LPX|0x8000;
+    " blti   " S_6 ",  0    , BLT_RETURN6  \n"
+    " j                       BLT_SECTION6 \n"
+    "BLT_SWITCH6:                          \n"
+    " l16si  " LPX "," SRC ", 26           \n"  // LPX = src[13];
+    " s16i   " LPX "," SRC ", 24           \n"  // src[12] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 26           \n"  // src[13] = LPX|0x8000;
+    " blti   " S_7 ",  0    , BLT_RETURN7  \n"
+    " j                       BLT_SECTION7 \n"
+    "BLT_SWITCH7:                          \n"
+    " l16si  " LPX "," SRC ", 30           \n"  // LPX = src[15];
+    " s16i   " LPX "," SRC ", 28           \n"  // src[14] = LPX;
+    " or     " LPX "," LPX ", " X80 "      \n"
+    " s16i   " LPX "," SRC ", 30           \n"  // src[15] = LPX|0x8000;
+    " j                       BLT_RETURN7  \n"
+  
     "BLT_END:                              \n"
   );
+  return false; // dummy result
 
 #undef DST
 #undef SRC
 #undef LUT
-#undef VAL
 #undef S_0
 #undef S_1
 #undef S_2
@@ -761,87 +819,89 @@ LABEL_ODD_END:
 #undef S_5
 #undef S_6
 #undef S_7
+#undef X80
 #undef LPX
 #undef BUF
 
 }
 #else
   __attribute((optimize("-O3")))
-  static void blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
+  static bool blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
   {
+    uint32_t tmp = 0;
     while (len--)
     {
       uint32_t buf = 0;
 
-      int16_t s_0 = src[0];
-      int16_t s_1 = src[1];
-      int16_t s_2 = src[2];
-      int16_t s_3 = src[3];
-      int16_t s_4 = src[4];
-      int16_t s_5 = src[5];
-      int16_t s_6 = src[6];
-      int16_t s_7 = src[7];
+      int_fast16_t s_0 = (int16_t)src[0];
+      int_fast16_t s_1 = (int16_t)src[2];
+      int_fast16_t s_2 = (int16_t)src[4];
+      int_fast16_t s_3 = (int16_t)src[6];
+      int_fast16_t s_4 = (int16_t)src[8];
+      int_fast16_t s_5 = (int16_t)src[10];
+      int_fast16_t s_6 = (int16_t)src[12];
+      int_fast16_t s_7 = (int16_t)src[14];
       if (s_0 >= 0) {
-        auto lpx = lut[s_0];
+        tmp = lut[s_0];
         s_0 += 256;
-        if (lpx == 0) { s_0 -= 32768; }
-        buf += lpx << 4;
+        buf += tmp << 4;
+        if (tmp == 0) { s_0 = src[1]; tmp = s_0 | 0x8000; src[1] = tmp; }
         src[0] = s_0;
       }
       if (s_1 >= 0) {
-        auto lpx = lut[s_1];
+        tmp = lut[s_1];
         s_1 += 256;
-        if (lpx == 0) { s_1 -= 32768; }
-        buf += lpx << 0;
-        src[1] = s_1;
+        buf += tmp << 0;
+        if (tmp == 0) { s_1 = src[3]; tmp = s_1 | 0x8000; src[3] = tmp; }
+        src[2] = s_1;
       }
       if (s_2 >= 0) {
-        auto lpx = lut[s_2];
+        tmp = lut[s_2];
         s_2 += 256;
-        if (lpx == 0) { s_2 -= 32768; }
-        buf += lpx << 12;
-        src[2] = s_2;
+        buf += tmp << 12;
+        if (tmp == 0) { s_2 = src[5]; tmp = s_2 | 0x8000; src[5] = tmp; }
+        src[4] = s_2;
       }
       if (s_3 >= 0) {
-        auto lpx = lut[s_3];
+        tmp = lut[s_3];
         s_3 += 256;
-        if (lpx == 0) { s_3 -= 32768; }
-        buf += lpx << 8;
-        src[3] = s_3;
+        buf += tmp << 8;
+        if (tmp == 0) { s_3 = src[7]; tmp = s_3 | 0x8000; src[7] = tmp; }
+        src[6] = s_3;
       }
-
       if (s_4 >= 0) {
-        auto lpx = lut[s_4];
+        tmp = lut[s_4];
         s_4 += 256;
-        if (lpx == 0) { s_4 -= 32768; }
-        buf += lpx << 20;
-        src[4] = s_4;
+        buf += tmp << 20;
+        if (tmp == 0) { s_4 = src[9]; tmp = s_4 | 0x8000; src[9] = tmp; }
+        src[8] = s_4;
       }
       if (s_5 >= 0) {
-        auto lpx = lut[s_5];
+        tmp = lut[s_5];
         s_5 += 256;
-        if (lpx == 0) { s_5 -= 32768; }
-        buf += lpx << 16;
-        src[5] = s_5;
+        buf += tmp << 16;
+        if (tmp == 0) { s_5 = src[11]; tmp = s_5 | 0x8000; src[11] = tmp; }
+        src[10] = s_5;
       }
       if (s_6 >= 0) {
-        auto lpx = lut[s_6];
+        tmp = lut[s_6];
         s_6 += 256;
-        if (lpx == 0) { s_6 -= 32768; }
-        buf += lpx << 28;
-        src[6] = s_6;
+        buf += tmp << 28;
+        if (tmp == 0) { s_6 = src[13]; tmp = s_6 | 0x8000; src[13] = tmp; }
+        src[12] = s_6;
       }
       if (s_7 >= 0) {
-        auto lpx = lut[s_7];
+        tmp = lut[s_7];
         s_7 += 256;
-        if (lpx == 0) { s_7 -= 32768; }
-        buf += lpx << 24;
-        src[7] = s_7;
+        buf += tmp << 24;
+        if (tmp == 0) { s_7 = src[15]; tmp = s_7 | 0x8000; src[15] = tmp; }
+        src[14] = s_7;
       }
       dst[0] = buf;
-      src += 8;
+      src += 16;
       dst ++;
     }
+    return (tmp != 0);
   }
 
 #endif
@@ -861,93 +921,100 @@ LABEL_ODD_END:
 
     auto bus = me->getBusEPD();
 
-    uint32_t remain = 0;
+    bool remain = false;
 
     for (;;) {
-      vTaskDelay(1);
-      me->_display_busy = (remain != 0);
+      me->_display_busy = remain;
       TickType_t wait_tick = remain ? 0 : portMAX_DELAY;
       if (xQueueReceive(me->_update_queue_handle, &new_data, wait_tick)) {
         me->_display_busy = true;
         uint32_t usec = lgfx::micros();
-        bool refresh = ( remain == 0 );
-        do {
+        for (;;) {
 // printf("\n new_data: x:%d y:%d w:%d h:%d \n", new_data.x, new_data.y, new_data.w, new_data.h);
-          auto lut_remain = me->_lut_remain_table[new_data.mode];
-          if (remain < lut_remain) {
-            remain = lut_remain;
-          }
+          bool flg_fast = ( new_data.mode == epd_mode_t::epd_fastest)
+                       || ( new_data.mode == epd_mode_t::epd_fast   );
+
           size_t panel_idx = ((new_data.x + new_data.y * panel_w) >> 1);
           size_t memory_idx = ((new_data.x + new_data.y * memory_w) >> 1);
           auto src = &me->_buf[panel_idx];
-          auto dst = &me->_step_framebuf[memory_idx];
+          auto dst = &me->_step_framebuf[memory_idx*2];
           size_t h = new_data.h;
           uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
 
-          if (refresh && (new_data.mode != epd_mode_t::epd_fastest)) {
-            do {
-              size_t w = new_data.w >> 1;
-              auto s = src;
-              auto d = dst;
-              src += panel_w >> 1;
-              dst += memory_w >> 1;
-              if (w & 1) {
-                uint_fast16_t s0 = s[0];
-                ++s;
+          do {
+            size_t w = new_data.w >> 1;
+            auto s = src;
+            auto d = dst;
+            src += panel_w >> 1;
+            dst += (memory_w >> 1) * 2;
+            if (flg_fast) {
+              for (int i = 0; i < w; ++i) {
+                int32_t s0 = s[0];
+                uint_fast16_t requested_step = d[1];
                 s0 += lut_offset;
-                d[0] = s0;
-                ++d;
-                --w;
-              }
-              w >>= 1;
-              for (int i = 0; i < w; ++i) {
-                uint_fast16_t s0 = s[0];
-                uint_fast16_t s1 = s[1];
-                d[0] = s0 + lut_offset;
-                d[1] = s1 + lut_offset;
-                d += 2;
-                s += 2;
-              }
-            } while (--h);
-          } else {
-            do {
-              size_t w = new_data.w >> 1;
-              auto s = src;
-              auto d = dst;
-              src += panel_w >> 1;
-              dst += memory_w >> 1;
-              if (w & 1) {
-                auto d0 = *((uint8_t*)&d[0]);
-                uint16_t s0 = s[0];
-                ++s;
-                if (d0 != s0) { d[0] = s0 + lut_offset; }
-                ++d;
-                --w;
-              }
-              w >>= 1;
-              for (int i = 0; i < w; ++i) {
-                auto d0 = *((uint8_t*)&d[0]);
-                auto d1 = *((uint8_t*)&d[1]);
-                uint16_t s0 = s[0];
-                uint16_t s1 = s[1];
-                s += 2;
-                if (d0 != s0) { d[0] = s0 + lut_offset; }
-                if (d1 != s1) { d[1] = s1 + lut_offset; }
+                // 既にリクエスト済みの内容と相違がある場合のみ更新
+                if ((requested_step & 0x7FFF) != s0) {
+                  // 高速描画の場合は消去処理は行わず直接更新指示する。
+                  d[1] = s0 | 0x8000;
+                  d[0] = s0;
+                }
+                s += 1;
                 d += 2;
               }
-            } while (--h);
-          }
+            } else {
+              for (int i = 0; i < w; ++i) {
+                int32_t s0 = s[0];
+                uint_fast16_t d0 = d[0];
+                s0 += lut_offset;
+                d[1] = s0;
+                d[0] = (uint8_t)d0;
+                s += 1;
+                d += 2;
+              }
+/*
+for (int i = 0; i < w; ++i) {
+  int32_t s0 = s[0];
+  uint_fast16_t requested_step = d[1];
+  s0 += lut_offset;
+  // 既にリクエスト済みの内容と相違がある場合のみ更新
+  if ((requested_step & 0x7FFF) != s0) {
+    // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+    uint_fast16_t d0 = d[0];
+    d[1] = s0;
+    if (d0 >= (lut_eraser_step << 8)) {
+      d[0] = (uint8_t)d0;
+    }
+    // lut_eraser処理後の部分に更新指示をセット
+  }
+  s += 1;
+  d += 2;
+}
+*/
+            }
+          } while (--h);
+
           if (lgfx::micros() - usec >= 2048) {
             break;
           }
-        } while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
+
+          const update_data_t prev_data = new_data;
+          bool result;
+          while (true == (result = xQueueReceive(me->_update_queue_handle, &new_data, 0))) {
+            if (prev_data != new_data) { break; }
+          }
+          if (result == false) { break; }
+        }// while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
       }
 
       bus->powerControl(true);
+
       int w = (memory_w + 15) >> 4;
+      remain = false;
       for (uint_fast16_t y = 0; y < mh; y++) {
-        auto dma_buf = (uint32_t*)me->_dma_bufs[y & 1];
-        blit_dmabuf(dma_buf, &me->_step_framebuf[y * memory_w >> 1], me->_lut_2pixel, w);
+        auto dma_buf = (uint32_t*)(me->_dma_bufs[y & 1]);
+        if (blit_dmabuf(dma_buf, &me->_step_framebuf[(y * memory_w >> 1) * 2], me->_lut_2pixel, w)) {
+          remain = true;
+        }
         for (int m = 0; m < magni_h; ++m) {
           if (y == 0 && m == 0) {
             bus->beginTransaction();
@@ -958,13 +1025,12 @@ LABEL_ODD_END:
         }
       }
 
+      vTaskDelay(1);
       bus->scanlineDone();
       bus->endTransaction();
 
-      if (remain == 0) {
+      if (remain == false) {
         bus->powerControl(false);
-      } else {
-        --remain;
       }
     }
   }

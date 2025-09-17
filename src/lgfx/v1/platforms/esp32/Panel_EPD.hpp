@@ -56,7 +56,7 @@ namespace lgfx
       /// background epd writer task pinned core. (APP_CPU_NUM or PRO_CPU_NUM)
       uint8_t task_pinned_core = -1;
     };
-  
+
     const config_detail_t& config_detail(void) const { return _config_detail; }
     void config_detail(const config_detail_t& config_detail) { _config_detail = config_detail; }
 
@@ -102,10 +102,13 @@ namespace lgfx
       uint16_t w;
       uint16_t h;
       epd_mode_t mode;
+      bool constexpr operator==(const update_data_t& other) const {
+        return x == other.x && y == other.y && w == other.w && h == other.h && mode == other.mode;
+      }
     };
-  
+
     static void task_update(Panel_EPD* me);
-  
+
     TaskHandle_t _task_update_handle = nullptr;
     QueueHandle_t _update_queue_handle = nullptr;
   
