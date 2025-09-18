@@ -126,7 +126,7 @@ namespace lgfx
 
     size_t valid_count = 0;
     
-    adv_info_t adv_info = { 0 };
+    adv_info_t adv_info;
     _readParams(0x0010, (uint8_t *)&adv_info, 1);
     if (adv_info.with_coord) {
       uint8_t max_touches = 0;
