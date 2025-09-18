@@ -666,7 +666,7 @@ __asm__ __volatile(
     " addi   " DST "," DST ",  4           \n"  // 出力先のポインタを進める
     "BLT_BUFFER_END:                       \n"  // ループ終端
     " mov      a2   ," LPX "               \n"  // 戻り値にLPXを指定する。データ処理が存在した場合 true, 処理ナシの場合 false となる
-    " retw                                 \n"  // 関数終了
+    " j        BLT_END                     \n"  // 関数終了
 
     "BLT_SECTION0:                         \n"
     " add    " LPX "," S_0 "," LUT "       \n"  // LPX = &lut[S_0]
@@ -805,8 +805,8 @@ __asm__ __volatile(
     " j                       BLT_RETURN7  \n"
   
     "BLT_END:                              \n"
-  );
-  return false; // dummy result
+  :"=r"(dst));
+  return dst;
 
 #undef DST
 #undef SRC
