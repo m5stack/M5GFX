@@ -34,12 +34,12 @@ int Cache_WriteBack_Addr(uint32_t addr, uint32_t size)
   uintptr_t start = addr & ~127u;
   uintptr_t end = (addr + size + 127u) & ~127u;
   if (start >= end) return 0;
-  // return esp_cache_msync((void*)start, end - start, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA);
-  auto res = esp_cache_msync((void*)start, end - start, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA);
-  if (res != ESP_OK){
-    printf("start: %08x, end: %08x\n", start, end);
-  }
-  return res;
+  return esp_cache_msync((void*)start, end - start, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA);
+  // auto res = esp_cache_msync((void*)start, end - start, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA);
+  // if (res != ESP_OK){
+  //   printf("start: %08x, end: %08x\n", start, end);
+  // }
+  // return res;
 }
 #define LGFX_USE_CACHE_WRITEBACK_ADDR
 #else
@@ -71,7 +71,7 @@ namespace lgfx
 
 //----------------------------------------------------------------------------
 
-  static constexpr int8_t Bayer[16] = {-30, 2, -22, 10, 18, -14, 26, -6, -18, 14, -26, 6, 30, -2, 22, -10};
+  static constexpr uint8_t Bayer[16] = { 0, 8, 2,10,12, 4,14, 6, 3,11, 1, 9,15, 7,13, 5 };
 
 #define LUT_MAKE(d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,da,db,dc,dd,de,df) (uint32_t)((d0<< 0)|(d1<< 2)|(d2<< 4)|(d3<< 6)|(d4<< 8)|(d5<<10)|(d6<<12)|(d7<<14)|(d8<<16)|(d9<<18)|(da<<20)|(db<<22)|(dc<<24)|(dd<<26)|(de<<28)|(df<<30))
 
@@ -80,62 +80,59 @@ namespace lgfx
 // 値の意味は 0 == end of data / 1 == to black / 2 == to white / 3 == no operation
 // LUT_MAKE１行あたり 1フレーム分の16階調それぞれの動作が定義される。
   static constexpr const uint32_t lut_quality[] = {
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1),
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 3),
-    LUT_MAKE(1, 1, 2, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1),
+    LUT_MAKE(1, 1, 2, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 3),
     LUT_MAKE(1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 2, 1, 2, 2, 2),
     LUT_MAKE(1, 1, 3, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2),
     LUT_MAKE(3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 2, 2, 2, 3),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 2, 2, 2, 2),
     LUT_MAKE(3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    0u,
   };
 
   static constexpr const uint32_t lut_text[] = {
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1),
-    LUT_MAKE(3, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3),
-    LUT_MAKE(1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 1, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2),
-    LUT_MAKE(1, 1, 1, 3, 3, 3, 3, 3, 1, 3, 2, 2, 2, 1, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 3, 2, 2, 3, 2, 2, 2, 2, 2),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 2, 2, 3),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-     //      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1),
+    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 1),
+    LUT_MAKE(3, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 3),
+    LUT_MAKE(1, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 3, 3, 1, 2),
+    LUT_MAKE(1, 3, 3, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 3, 1, 2),
+    LUT_MAKE(1, 3, 3, 1, 2, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2),
+    LUT_MAKE(3, 1, 3, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 2, 3),
+    LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 2),
+    0u,  //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
   };
 
   static constexpr const uint32_t lut_fast[] = {
     LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
-    LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
-    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    0u,
   };
 
   static constexpr const uint32_t lut_fastest[] = {
     LUT_MAKE(2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1),
-    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    0u,
   };
 
   // 消去用LUT 。現在の階調から中間階調付近にシフトさせる。
@@ -143,12 +140,9 @@ namespace lgfx
   static constexpr const uint32_t lut_eraser[] = {
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3),
     LUT_MAKE(3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
-    LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
-    LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
-    LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    LUT_MAKE(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    0u,
   };
+
 #undef LUT_MAKE
   static constexpr const size_t lut_eraser_step = sizeof(lut_eraser) / sizeof(uint32_t);
 
@@ -247,7 +241,7 @@ namespace lgfx
     memset(_dma_bufs[1], 0, dma_len);
 
     // グレーの初期値をセット
-    memset(_step_framebuf, 0x8888, (memory_w * memory_h / 2) * 2 * sizeof(uint16_t));
+    memset(_step_framebuf, 0x88, (memory_w * memory_h / 2) * 2 * sizeof(uint16_t));
 
     auto dst = _lut_2pixel;
     memset(dst, 0x0F, 256);
@@ -339,33 +333,30 @@ namespace lgfx
     _ye = ye;
     _update_transferred_rect(xs, ys, xe, ye);
 
-    int32_t sum = rawcolor << 2;
-
+    uint8_t tile[16];
     bool fast = _epd_mode == epd_mode_t::epd_fast || _epd_mode == epd_mode_t::epd_fastest;
+    if (fast) {
+      for (int i = 0; i < 16; ++i) {
+        tile[i] = (int)(rawcolor + Bayer[i] * 16) < 248 ? 0 : 0xF;
+      }
+    } else {
+      for (int i = 0; i < 16; ++i) {
+        tile[i] = std::min(15, std::max(0, ((int)(rawcolor + Bayer[i] - 8)) >> 4));
+      }
+    }
     y = ys;
     do
     {
       x = xs;
-      auto btbl = &Bayer[(y & 3) << 2];
+      auto btbl = &tile[(y & 3) << 2];
       auto buf = &_buf[y * ((_cfg.panel_width + 1) >> 1)];
-
-      if (fast) {
-        do
-        {
-          size_t idx = x >> 1;
-          uint_fast8_t shift = (x & 1) ? 0 : 4;
-          uint_fast8_t value = (sum + btbl[x & 3] * 16 < 512 ? 0 : 0xF) << shift;
-          buf[idx] = (buf[idx] & (0xF0 >> shift)) | value;
-        } while (++x <= xe);
-      } else {
-        do
-        {
-          size_t idx = x >> 1;
-          uint_fast8_t shift = (x & 1) ? 0 : 4;
-          uint_fast8_t value = (std::min<int32_t>(15, std::max<int32_t>(0, sum + btbl[x & 3]) >> 6) & 0x0F) << shift;
-          buf[idx] = (buf[idx] & (0xF0 >> shift)) | value;
-        } while (++x <= xe);
-      }
+      do
+      {
+        size_t idx = x >> 1;
+        uint_fast8_t shift = (x & 1) ? 0 : 4;
+        uint_fast8_t value = btbl[x & 3] << shift;
+        buf[idx] = (buf[idx] & (0xF0 >> shift)) | value;
+      } while (++x <= xe);
     } while (++y <= ye);
   }
 
@@ -474,83 +465,57 @@ namespace lgfx
       if (rb & 0b10011100) { y = _cfg.panel_height - 1 - y; ay = -ay; } // case 2:3:4:7:
     }
 
+    const int w = _cfg.panel_width;
     const bool fast = _epd_mode == epd_mode_t::epd_fast || _epd_mode == epd_mode_t::epd_fastest;
 
-    if (ax) {
-      const auto btbl = &Bayer[(y & 3) << 2];
-      size_t idx = x + (y * _cfg.panel_width);
-
-      uint_fast8_t value = _buf[idx >> 1] & 0xF0;
-      if (fast) {
-        if (idx & 1) {
-          values--;
-          goto LABEL_FAST_ODD_START;
-        }
-        do {
-          {
-            int32_t sum = values[0].get();
-            value = ((sum + (btbl[idx & 3] << 2)) < 128 ? 0 : 0xF0);
-            idx += ax;
-          }
-          if (--len == 0) { goto LABEL_ODD_END; }
-
-LABEL_FAST_ODD_START:
-
-          {
-            int32_t sum = values[1].get();
-            values += 2;
-            value += ((sum + (btbl[idx & 3] << 2)) < 128 ? 0 : 0x0F);
-            _buf[idx >> 1] = value;
-            idx += ax;
-          }
-        } while (--len);
-        return;
-      } else {
-        if (idx & 1) {
-          values--;
-          goto LABEL_ODD_START;
-        }
-        do {
-          {
-            int32_t sum = values[0].get();
-            value = (std::min<int32_t>(15, std::max<int32_t>(0, (sum << 2) + btbl[idx & 3]) >> 6) & 0x0F) << 4;
-            idx += ax;
-          }
-          if (--len == 0) { goto LABEL_ODD_END; }
-LABEL_ODD_START:
-          {
-            int32_t sum = values[1].get();
-            values += 2;
-            value += (std::min<int32_t>(15, std::max<int32_t>(0, (sum << 2) + btbl[idx & 3]) >> 6) & 0x0F);
-            _buf[idx >> 1] = value;
-            idx += ax;
-          }
-        } while (--len);
-        return;
-      }
-
-      {
-LABEL_ODD_END:
-        _buf[idx >> 1] = (_buf[idx >> 1] & 0x0F) + value;
-        return;
+    uint8_t* readbuf = (uint8_t*)alloca(len * sizeof(grayscale_t));
+    int16_t btbl[4];
+    int yy = (y&3)<<2; int xx = x&3;
+    for (int i = 0; i < 4; ++i) {
+      btbl[i] = Bayer[yy + xx];
+      xx = (xx + ax) & 0x03;
+      yy = (yy + (ay << 2)) & 0x0C;
+    }
+    if (fast) {
+      for (size_t i = 0; i < len; ++i) {
+        int sum = values[i].get();
+        int b = btbl[i & 3];
+        readbuf[i] = (sum + (b << 4)) < 248 ? 0 : 0xF;
       }
     } else {
-      size_t idx = (x >> 1) + (y * ((_cfg.panel_width + 1) >> 1));
-      const uint_fast8_t shift = (x & 1) ? 0 : 4;
-      do {
-        int32_t sum = values->get() << 2;
-        ++values;
-        auto btbl = &Bayer[(y & 3) << 2];
-        uint_fast8_t value;
-        if (fast) {
-          value = ((int32_t)sum + btbl[x & 3] * 16 < 512 ? 0 : 0xF) << shift;
-        } else {
-          value = (std::min<int32_t>(15, std::max<int32_t>(0, sum + btbl[x & 3]) >> 6) & 0x0F) << shift;
+      for (size_t i = 0; i < len; ++i) {
+        int v = values[i].get();
+        int b = btbl[i & 3];
+        readbuf[i] = std::min(15, std::max(0, (v + b - 8) >> 4));
+      }
+    }
+    auto buf = _buf;
+
+    if (ax) {
+      buf += y * ((w + 1) >> 1);
+      uint_fast8_t shift = (x & 1) ? 0 : 4;
+      for (size_t i = 0; i < len; ++i) {
+        uint_fast8_t value = readbuf[i] << shift;
+        buf[x >> 1] = (buf[x >> 1] & (0xF0 >> shift)) | value;
+        x += ax;
+        shift = 4 - shift;
+      }
+    } else {
+      int add =             (ay * ((w + 1) >> 1));
+      int idx = (x  >> 1) + ( y * ((w + 1) >> 1));
+      if (x & 1) {
+        for (size_t i = 0; i < len; ++i) {
+          uint_fast8_t value = readbuf[i];
+          buf[idx] = (buf[idx] & 0xF0) | value;
+          idx += add;
         }
-        _buf[idx] = (_buf[idx] & (0xF0 >> shift)) | value;
-        idx += ay * ((_cfg.panel_width + 1) >> 1);
-        y += ay;
-      } while (--len);
+      } else {
+        for (size_t i = 0; i < len; ++i) {
+          uint_fast8_t value = readbuf[i];
+          buf[idx] = (buf[idx] & 0x0F) | (value << 4);
+          idx += add;
+        }
+      }
     }
   }
 
@@ -612,7 +577,7 @@ LABEL_ODD_END:
   }
 
 #if defined( __XTENSA__ )
-  __attribute__((noinline,noclone))
+  __attribute__((noinline,noclone,optimize("-O3")))
   static bool blit_dmabuf(uint32_t* dst, uint16_t* src, const uint8_t* lut, size_t len)
   {
 #define DST "a2"  // a2 == dst
@@ -666,7 +631,7 @@ __asm__ __volatile(
     " addi   " DST "," DST ",  4           \n"  // 出力先のポインタを進める
     "BLT_BUFFER_END:                       \n"  // ループ終端
     " mov      a2   ," LPX "               \n"  // 戻り値にLPXを指定する。データ処理が存在した場合 true, 処理ナシの場合 false となる
-    " retw                                 \n"  // 関数終了
+    " j        BLT_END                     \n"  // 関数終了
 
     "BLT_SECTION0:                         \n"
     " add    " LPX "," S_0 "," LUT "       \n"  // LPX = &lut[S_0]
@@ -805,8 +770,8 @@ __asm__ __volatile(
     " j                       BLT_RETURN7  \n"
   
     "BLT_END:                              \n"
-  );
-  return false; // dummy result
+  :"=r"(dst));
+  return dst;
 
 #undef DST
 #undef SRC
@@ -948,48 +913,62 @@ __asm__ __volatile(
             src += panel_w >> 1;
             dst += (memory_w >> 1) * 2;
             if (flg_fast) {
-              for (int i = 0; i < w; ++i) {
-                int32_t s0 = s[0];
-                uint_fast16_t requested_step = d[1];
+              for (int i = 0; i < w; i += 2) {
+                uint_fast16_t s0 = s[0];
+                uint_fast16_t d1 = d[1];
+                uint_fast16_t s1 = s[1];
+                uint_fast16_t d3 = d[3];
                 s0 += lut_offset;
+                s1 += lut_offset;
+                d1 &= 0x7FFF;
+                d3 &= 0x7FFF;
                 // 既にリクエスト済みの内容と相違がある場合のみ更新
-                if ((requested_step & 0x7FFF) != s0) {
+                if (d1 != s0) {
                   // 高速描画の場合は消去処理は行わず直接更新指示する。
-                  d[1] = s0 | 0x8000;
                   d[0] = s0;
+                  d[1] = s0 | 0x8000;
                 }
-                s += 1;
-                d += 2;
+                if (d3 != s1) {
+                  d[2] = s1;
+                  d[3] = s1 | 0x8000;
+                }
+                s += 2;
+                d += 4;
               }
             } else {
-              for (int i = 0; i < w; ++i) {
-                int32_t s0 = s[0];
-                uint_fast16_t d0 = d[0];
+              for (int i = 0; i < w; i += 2) {
+                uint_fast16_t s0 = s[0];
+                uint_fast16_t s1 = s[1];
+                uint_fast16_t d1 = d[1];
+                uint_fast16_t d3 = d[3];
                 s0 += lut_offset;
-                d[1] = s0;
-                d[0] = (uint8_t)d0;
-                s += 1;
-                d += 2;
+                s1 += lut_offset;
+                d1 &= 0x7FFF;
+                d3 &= 0x7FFF;
+
+                // 既にリクエスト済みの内容と相違がある場合のみ更新
+                if (d1 != s0) {
+                  uint_fast16_t d0 = d[0];
+                  d[1] = s0;
+                  // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+                  // 既に消去処理動作中の場合は変更しない
+                  if (d0 >= (lut_eraser_step << 8)) {
+                    d[0] = (uint8_t)d0;
+                  }
+                }
+
+                // 既にリクエスト済みの内容と相違がある場合のみ更新
+                if (d3 != s1) {
+                  uint_fast16_t d2 = d[2];
+                  d[3] = s1;
+                  if (d2 >= (lut_eraser_step << 8)) {
+                    // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+                    d[2] = (uint8_t)d2;
+                  }
+                }
+                s += 2;
+                d += 4;
               }
-/*
-for (int i = 0; i < w; ++i) {
-  int32_t s0 = s[0];
-  uint_fast16_t requested_step = d[1];
-  s0 += lut_offset;
-  // 既にリクエスト済みの内容と相違がある場合のみ更新
-  if ((requested_step & 0x7FFF) != s0) {
-    // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
-    uint_fast16_t d0 = d[0];
-    d[1] = s0;
-    if (d0 >= (lut_eraser_step << 8)) {
-      d[0] = (uint8_t)d0;
-    }
-    // lut_eraser処理後の部分に更新指示をセット
-  }
-  s += 1;
-  d += 2;
-}
-*/
             }
           } while (--h);
 
@@ -1003,7 +982,7 @@ for (int i = 0; i < w; ++i) {
             if (prev_data != new_data) { break; }
           }
           if (result == false) { break; }
-        }// while (xQueueReceive(me->_update_queue_handle, &new_data, 0));
+        }
       }
 
       bus->powerControl(true);

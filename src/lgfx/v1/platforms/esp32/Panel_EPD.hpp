@@ -105,6 +105,9 @@ namespace lgfx
       bool constexpr operator==(const update_data_t& other) const {
         return x == other.x && y == other.y && w == other.w && h == other.h && mode == other.mode;
       }
+      bool constexpr operator!=(const update_data_t& other) const {
+        return !(*this == other);
+      }
     };
 
     static void task_update(Panel_EPD* me);

@@ -1460,7 +1460,7 @@ namespace m5gfx
 
               {
                 auto bus_cfg = bus_epd->config();
-                bus_cfg.bus_speed = 10000000;
+                bus_cfg.bus_speed = 16000000;
                 bus_cfg.pin_data[0] = GPIO_NUM_6;
                 bus_cfg.pin_data[1] = GPIO_NUM_14;
                 bus_cfg.pin_data[2] = GPIO_NUM_7;
