@@ -51,18 +51,16 @@ void Bus_EPD::beginTransaction(void)
   auto spv = _config.pin_spv;
   while (_bus_busy) { taskYIELD(); }
 
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(2);
   lgfx::gpio_lo(spv);  lgfx::delayMicroseconds(1); //100ns
   lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(3); //0.5us
   lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1); //100ns
-  lgfx::gpio_hi(spv);  lgfx::delayMicroseconds(2); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(3); //0.5us
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(3); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(3); //0.5us
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(3); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(3); //0.5us
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(3); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(3); //0.5us
+  lgfx::gpio_hi(spv);
+  for (int i = 0; i < 3; ++i) {
+    lgfx::delayMicroseconds(3); //0.5us
+    lgfx::gpio_lo(ckv);
+    lgfx::delayMicroseconds(3); //0.5us
+    lgfx::gpio_hi(ckv);
+  }
 }
 
 void Bus_EPD::endTransaction(void)
