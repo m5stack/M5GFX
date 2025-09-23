@@ -37,8 +37,8 @@ namespace lgfx
 bool IRAM_ATTR Bus_EPD::notify_line_done(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
   auto me = (Bus_EPD*)user_ctx;
+  lgfx::gpio_lo(me->_config.pin_ckv);
   lgfx::gpio_hi(me->_config.pin_le);
-  lgfx::gpio_hi(me->_config.pin_ckv);
   me->_bus_busy = false;
   return false;
 }
@@ -51,25 +51,23 @@ void Bus_EPD::beginTransaction(void)
   auto spv = _config.pin_spv;
   while (_bus_busy) { taskYIELD(); }
 
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1);
   lgfx::gpio_lo(spv);  lgfx::delayMicroseconds(1); //100ns
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(4); //0.5us
+  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(3); //0.5us
   lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(1); //100ns
-  lgfx::gpio_hi(spv);  lgfx::delayMicroseconds(1); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(4); //0.5us
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(2); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(4); //0.5us
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(2); //0.5us
-  lgfx::gpio_lo(ckv);  lgfx::delayMicroseconds(4); //0.5us
-  lgfx::gpio_hi(ckv);  lgfx::delayMicroseconds(2); //0.5us
-  lgfx::gpio_lo(ckv);
+  lgfx::gpio_hi(spv);
+  for (int i = 0; i < 3; ++i) {
+    lgfx::delayMicroseconds(3); //0.5us
+    lgfx::gpio_lo(ckv);
+    lgfx::delayMicroseconds(3); //0.5us
+    lgfx::gpio_hi(ckv);
+  }
 }
 
 void Bus_EPD::endTransaction(void)
 {
   while (_bus_busy) { taskYIELD(); }
   lgfx::gpio_lo(_config.pin_le);
-  lgfx::gpio_lo(_config.pin_ckv);
+  lgfx::gpio_hi(_config.pin_ckv);
 }
 
 void Bus_EPD::scanlineDone(void)
@@ -107,8 +105,8 @@ void Bus_EPD::writeScanLine(const uint8_t *data, uint32_t length)
   lgfx::gpio_lo(_config.pin_le);
 
   // background transfer start
+  lgfx::gpio_hi(_config.pin_ckv);
   esp_lcd_panel_io_tx_color(_io_handle, -1, data, length);
-  lgfx::gpio_lo(_config.pin_ckv);
 }
 
 bool Bus_EPD::init(void)
