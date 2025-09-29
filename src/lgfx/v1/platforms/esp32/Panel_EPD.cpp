@@ -936,7 +936,9 @@ __asm__ __volatile(
                 s += 2;
                 d += 4;
               }
-            } else {
+            } else
+            if (new_data.mode == epd_mode_t::epd_text) {
+              uint_fast16_t white = lut_offset | 0x00FF;
               for (int i = 0; i < w; i += 2) {
                 uint_fast16_t s0 = s[0];
                 uint_fast16_t s1 = s[1];
@@ -946,6 +948,38 @@ __asm__ __volatile(
                 s1 += lut_offset;
                 d1 &= 0x7FFF;
                 d3 &= 0x7FFF;
+
+                // 白以外またはリクエスト済みの内容と相違がある場合に更新
+                if (white != d1 || d1 != s0) {
+                  uint_fast16_t d0 = d[0];
+                  d[1] = s0;
+                  // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+                  // 既に消去処理動作中の場合は変更しない
+                  if (d0 >= (lut_eraser_step << 8)) {
+                    d[0] = (uint8_t)d0;
+                  }
+                }
+
+                // 白以外またはリクエスト済みの内容と相違がある場合に更新
+                if (white != d3 || d3 != s1) {
+                  uint_fast16_t d2 = d[2];
+                  d[3] = s1;
+                  if (d2 >= (lut_eraser_step << 8)) {
+                    // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+                    d[2] = (uint8_t)d2;
+                  }
+                }
+                s += 2;
+                d += 4;
+              }
+            } else {
+              for (int i = 0; i < w; i += 2) {
+                uint_fast16_t s0 = s[0];
+                uint_fast16_t s1 = s[1];
+                uint_fast16_t d1 = d[1];
+                uint_fast16_t d3 = d[3];
+                s0 += lut_offset;
+                s1 += lut_offset;
 
                 // 既にリクエスト済みの内容と相違がある場合のみ更新
                 if (d1 != s0) {
