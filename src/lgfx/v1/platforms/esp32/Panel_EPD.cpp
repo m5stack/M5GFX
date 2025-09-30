@@ -95,6 +95,10 @@ namespace lgfx
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 2, 2, 2, 2),
     LUT_MAKE(3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3),
     LUT_MAKE(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 3),
+    ~0u, ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
     0u,
   };
 
@@ -111,6 +115,11 @@ namespace lgfx
     LUT_MAKE(1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
     LUT_MAKE(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 2),
+    ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
+    ~0u, ~0u, ~0u, ~0u,
     0u,  //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
   };
 
@@ -123,6 +132,7 @@ namespace lgfx
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    ~0u,
     0u,
   };
 
@@ -132,6 +142,7 @@ namespace lgfx
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
     LUT_MAKE(1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2),
+    ~0u,
     0u,
   };
 
@@ -140,6 +151,7 @@ namespace lgfx
   static constexpr const uint32_t lut_eraser[] = {
     LUT_MAKE(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 1, 1),
     LUT_MAKE(2, 2, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    ~0u,
     0u,
   };
 
@@ -630,7 +642,6 @@ __asm__ __volatile(
     " addi   " SRC "," SRC ",  32          \n"  // 元データのポインタを進める
     " addi   " DST "," DST ",  4           \n"  // 出力先のポインタを進める
     "BLT_BUFFER_END:                       \n"  // ループ終端
-    " mov      a2   ," LPX "               \n"  // 戻り値にLPXを指定する。データ処理が存在した場合 true, 処理ナシの場合 false となる
     " j        BLT_END                     \n"  // 関数終了
 
     "BLT_SECTION0:                         \n"
@@ -770,7 +781,9 @@ __asm__ __volatile(
     " j                       BLT_RETURN7  \n"
   
     "BLT_END:                              \n"
-  :"=r"(dst));
+    " mov      a2   ," LPX "               \n"  // 戻り値にLPXを指定する。データ処理が存在した場合 true, 処理ナシの場合 false となる
+    " retw                                 \n"
+  );
   return dst;
 
 #undef DST
@@ -935,7 +948,9 @@ __asm__ __volatile(
                 s += 2;
                 d += 4;
               }
-            } else {
+            } else
+            if (new_data.mode == epd_mode_t::epd_text) {
+              uint_fast16_t white = lut_offset | 0x00FF;
               for (int i = 0; i < w; i += 2) {
                 uint_fast16_t s0 = s[0];
                 uint_fast16_t s1 = s[1];
@@ -945,6 +960,38 @@ __asm__ __volatile(
                 s1 += lut_offset;
                 d1 &= 0x7FFF;
                 d3 &= 0x7FFF;
+
+                // 白以外またはリクエスト済みの内容と相違がある場合に更新
+                if (white != d1 || d1 != s0) {
+                  uint_fast16_t d0 = d[0];
+                  d[1] = s0;
+                  // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+                  // 既に消去処理動作中の場合は変更しない
+                  if (d0 >= (lut_eraser_step << 8)) {
+                    d[0] = (uint8_t)d0;
+                  }
+                }
+
+                // 白以外またはリクエスト済みの内容と相違がある場合に更新
+                if (white != d3 || d3 != s1) {
+                  uint_fast16_t d2 = d[2];
+                  d[3] = s1;
+                  if (d2 >= (lut_eraser_step << 8)) {
+                    // 消去処理を挟んで更新指示する。(元の値の下位8bitのみを使用するとlut_eraser扱いになる)
+                    d[2] = (uint8_t)d2;
+                  }
+                }
+                s += 2;
+                d += 4;
+              }
+            } else {
+              for (int i = 0; i < w; i += 2) {
+                uint_fast16_t s0 = s[0];
+                uint_fast16_t s1 = s[1];
+                uint_fast16_t d1 = d[1];
+                uint_fast16_t d3 = d[3];
+                s0 += lut_offset;
+                s1 += lut_offset;
 
                 // 既にリクエスト済みの内容と相違がある場合のみ更新
                 if (d1 != s0) {
