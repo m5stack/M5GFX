@@ -607,7 +607,7 @@ namespace lgfx
 #define X80 "a13" // 0x8000
 #define LPX "a14" // lut pixel data
 #define BUF "a15" // pixel result (uint32) value
-
+    uint32_t result;
 __asm__ __volatile(
     " movi   " LPX ", 0                    \n"  // LPX = 0
     " addmi  " X80 ", " LPX ", -32768      \n"  // X80 = 0x8000
@@ -729,50 +729,50 @@ __asm__ __volatile(
     " s16i   " LPX "," SRC ", 0            \n"  // src[0] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 2            \n"  // src[1] = LPX|0x8000;
-    " blti   " S_1 ",  0    , BLT_RETURN1  \n"
-    " j                       BLT_SECTION1 \n"
+    " bgei   " S_1 ",  0    , BLT_SECTION1 \n"
+    " j                       BLT_RETURN1  \n"
     "BLT_SWITCH1:                          \n"
     " l16si  " LPX "," SRC ", 6            \n"  // LPX = src[3];
     " s16i   " LPX "," SRC ", 4            \n"  // src[2] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 6            \n"  // src[3] = LPX|0x8000;
-    " blti   " S_2 ",  0    , BLT_RETURN2  \n"
-    " j                       BLT_SECTION2 \n"
+    " bgei   " S_2 ",  0    , BLT_SECTION2 \n"
+    " j                       BLT_RETURN2  \n"
     "BLT_SWITCH2:                          \n"
     " l16si  " LPX "," SRC ", 10           \n"  // LPX = src[5];
     " s16i   " LPX "," SRC ", 8            \n"  // src[4] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 10           \n"  // src[5] = LPX|0x8000;
-    " blti   " S_3 ",  0    , BLT_RETURN3  \n"
-    " j                       BLT_SECTION3 \n"
+    " bgei   " S_3 ",  0    , BLT_SECTION3 \n"
+    " j                       BLT_RETURN3  \n"
     "BLT_SWITCH3:                          \n"
     " l16si  " LPX "," SRC ", 14           \n"  // LPX = src[7];
     " s16i   " LPX "," SRC ", 12           \n"  // src[6] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 14           \n"  // src[7] = LPX|0x8000;
-    " blti   " S_4 ",  0    , BLT_RETURN4  \n"
-    " j                       BLT_SECTION4 \n"
+    " bgei   " S_4 ",  0    , BLT_SECTION4 \n"
+    " j                       BLT_RETURN4  \n"
     "BLT_SWITCH4:                          \n"
     " l16si  " LPX "," SRC ", 18           \n"  // LPX = src[9];
     " s16i   " LPX "," SRC ", 16           \n"  // src[8] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 18           \n"  // src[9] = LPX|0x8000;
-    " blti   " S_5 ",  0    , BLT_RETURN5  \n"
-    " j                       BLT_SECTION5 \n"
+    " bgei   " S_5 ",  0    , BLT_SECTION5 \n"
+    " j                       BLT_RETURN5  \n"
     "BLT_SWITCH5:                          \n"
     " l16si  " LPX "," SRC ", 22           \n"  // LPX = src[11];
     " s16i   " LPX "," SRC ", 20           \n"  // src[10] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 22           \n"  // src[11] = LPX|0x8000;
-    " blti   " S_6 ",  0    , BLT_RETURN6  \n"
-    " j                       BLT_SECTION6 \n"
+    " bgei   " S_6 ",  0    , BLT_SECTION6 \n"
+    " j                       BLT_RETURN6  \n"
     "BLT_SWITCH6:                          \n"
     " l16si  " LPX "," SRC ", 26           \n"  // LPX = src[13];
     " s16i   " LPX "," SRC ", 24           \n"  // src[12] = LPX;
     " or     " LPX "," LPX ", " X80 "      \n"
     " s16i   " LPX "," SRC ", 26           \n"  // src[13] = LPX|0x8000;
-    " blti   " S_7 ",  0    , BLT_RETURN7  \n"
-    " j                       BLT_SECTION7 \n"
+    " bgei   " S_7 ",  0    , BLT_SECTION7 \n"
+    " j                       BLT_RETURN7  \n"
     "BLT_SWITCH7:                          \n"
     " l16si  " LPX "," SRC ", 30           \n"  // LPX = src[15];
     " s16i   " LPX "," SRC ", 28           \n"  // src[14] = LPX;
@@ -781,10 +781,10 @@ __asm__ __volatile(
     " j                       BLT_RETURN7  \n"
   
     "BLT_END:                              \n"
-    " mov      a2   ," LPX "               \n"  // 戻り値にLPXを指定する。データ処理が存在した場合 true, 処理ナシの場合 false となる
-    " retw                                 \n"
-  );
-  return dst;
+    " mov      %0   ," LPX "               \n"  // 戻り値にLPXを指定する。処理ナシの場合 0 / データ処理が存在した場合 0以外となる
+  :"=r"(result)::"a3","a4","a5","a6","a7","a8","a9","a10","a11","a12","a13","a14","a15");
+  // ASM側でDSTの値が操作され、EPDに対する更新がある場合は nullptr以外の値になるので、bool化して戻り値とする
+  return result;
 
 #undef DST
 #undef SRC
@@ -919,6 +919,8 @@ __asm__ __volatile(
           size_t h = new_data.h;
           uint_fast16_t lut_offset = me->_lut_offset_table[new_data.mode] << 8;
 
+          if (flg_fast) { lut_offset += 0x8000; }
+
           do {
             size_t w = new_data.w >> 1;
             auto s = src;
@@ -933,17 +935,15 @@ __asm__ __volatile(
                 uint_fast16_t d3 = d[3];
                 s0 += lut_offset;
                 s1 += lut_offset;
-                d1 &= 0x7FFF;
-                d3 &= 0x7FFF;
                 // 既にリクエスト済みの内容と相違がある場合のみ更新
                 if (d1 != s0) {
                   // 高速描画の場合は消去処理は行わず直接更新指示する。
-                  d[0] = s0;
-                  d[1] = s0 | 0x8000;
+                  d[1] = s0;
+                  d[0] = s0 - 0x8000;
                 }
                 if (d3 != s1) {
-                  d[2] = s1;
-                  d[3] = s1 | 0x8000;
+                  d[3] = s1;
+                  d[2] = s1 - 0x8000;
                 }
                 s += 2;
                 d += 4;
