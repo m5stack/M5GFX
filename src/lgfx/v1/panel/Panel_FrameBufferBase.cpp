@@ -116,6 +116,13 @@ namespace lgfx
   {
     if (0 < w && 0 < h)
     {
+      uint_fast8_t r = _internal_rotation;
+      if (r)
+      {
+        if ((1u << r) & 0b10010110) { y = _height - (y + h); }
+        if (r & 2)                  { x = _width  - (x + w); }
+        if (r & 1) { std::swap(x, y);  std::swap(w, h); }
+      }
       _range_mod.left   = std::min<int_fast16_t>(_range_mod.left  , x        );
       _range_mod.right  = std::max<int_fast16_t>(_range_mod.right , x + w - 1);
       _range_mod.top    = std::min<int_fast16_t>(_range_mod.top   , y        );
