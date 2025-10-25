@@ -737,6 +737,7 @@ namespace m5gfx
     {
       if (board == 0 || board == board_t::board_M5StickC || board == board_t::board_M5StickCPlus)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_5, GPIO_NUM_13, GPIO_NUM_14, GPIO_NUM_15, GPIO_NUM_18, GPIO_NUM_23 };
         _pin_reset(GPIO_NUM_18, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_15;
         bus_cfg.pin_miso = GPIO_NUM_14;
@@ -776,13 +777,13 @@ namespace m5gfx
           _set_backlight(new Light_M5StickC());
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_18, lgfx::pin_mode_t::input); // LCD RST
-        lgfx::pinMode(GPIO_NUM_5 , lgfx::pin_mode_t::input); // LCD CS
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5StackCoreInk)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_0, GPIO_NUM_9, GPIO_NUM_15, GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_34 };
         _pin_reset( GPIO_NUM_0, true); // EPDがDeepSleepしている場合は自動認識に失敗する。そのためRST制御を必ず行う。;
         bus_cfg.pin_mosi = GPIO_NUM_23;
         bus_cfg.pin_miso = GPIO_NUM_34;
@@ -824,9 +825,8 @@ namespace m5gfx
           p->config(cfg);
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_0, lgfx::pin_mode_t::input); // RST
-        lgfx::pinMode(GPIO_NUM_9, lgfx::pin_mode_t::input); // CS
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
 /// LCD / EPD 検出失敗の場合はATOM 判定;
@@ -836,6 +836,7 @@ namespace m5gfx
     {
       if (board == 0 || board == board_t::board_M5StickCPlus2)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_5, GPIO_NUM_12, GPIO_NUM_13, GPIO_NUM_14, GPIO_NUM_15 };
         _pin_reset(GPIO_NUM_12, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_15;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -866,9 +867,8 @@ namespace m5gfx
           _set_pwm_backlight(GPIO_NUM_27, 7, 256, false, 40);
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_12, lgfx::pin_mode_t::input); // LCD RST
-        lgfx::pinMode(GPIO_NUM_5 , lgfx::pin_mode_t::input); // LCD CS
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0)
@@ -886,6 +886,7 @@ namespace m5gfx
       || board == board_t::board_M5StackCore2
       || board == board_t::board_M5Tough)
       {
+        gpio::pin_backup_t backup_pins[] = { axp_i2c_sda, axp_i2c_scl };
         // I2C addr 0x34 = AXP192
         lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
 
@@ -904,6 +905,7 @@ namespace m5gfx
   
           if (axp_exists == 192 && (board == 0 || board == board_t::board_M5Station))
           {
+            gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_5, GPIO_NUM_15, GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_23 };
             _pin_reset(GPIO_NUM_15, use_reset); // LCD RST;
             bus_cfg.pin_mosi = GPIO_NUM_23;
             bus_cfg.pin_miso = -1;
@@ -914,8 +916,8 @@ namespace m5gfx
             bus_spi->init();
 
             id = _read_panel_id(bus_spi, GPIO_NUM_5);
-          if ((id & 0xFB) == 0x81) // 0x81 or 0x85
-          {  //  check panel (ST7789)
+            if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+            {  //  check panel (ST7789)
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5Station");
               board = board_t::board_M5Station;
 
@@ -939,8 +941,7 @@ namespace m5gfx
               goto init_clear;
             }
             bus_spi->release();
-            lgfx::pinMode(GPIO_NUM_5 , lgfx::pin_mode_t::input); // LCD CS
-            lgfx::pinMode(GPIO_NUM_15, lgfx::pin_mode_t::input); // LCD RST
+            for (auto pin: backup_pins2) { pin.restore(); }
           }
 
           if (axp_exists && (board == 0 || board == board_t::board_M5StackCore2 || board == board_t::board_M5Tough))
@@ -1005,6 +1006,7 @@ namespace m5gfx
             lgfx::delay(1);
 
             {
+              gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_15, GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38 };
               bus_cfg.pin_mosi = GPIO_NUM_23;
               bus_cfg.pin_miso = GPIO_NUM_38;
               bus_cfg.pin_sclk = GPIO_NUM_18;
@@ -1090,16 +1092,17 @@ namespace m5gfx
 
                 goto init_clear;
               }
-              lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // TF card CS
-              lgfx::pinMode(GPIO_NUM_5, lgfx::pin_mode_t::input); // LCD CS
               bus_spi->release();
+              for (auto pin: backup_pins2) { pin.restore(); }
             }
           }
         }
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5Stack)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_4, GPIO_NUM_14, GPIO_NUM_18, GPIO_NUM_19, GPIO_NUM_23, GPIO_NUM_27, GPIO_NUM_33 };
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST;
         bus_cfg.pin_mosi = GPIO_NUM_23;
         bus_cfg.pin_miso = GPIO_NUM_19;
@@ -1129,18 +1132,18 @@ namespace m5gfx
           goto init_clear;
         }
         bus_spi->release();
-        lgfx::pinMode(GPIO_NUM_4 , lgfx::pin_mode_t::input); // TF card CS
-        lgfx::pinMode(GPIO_NUM_14, lgfx::pin_mode_t::input); // LCD CS
-        lgfx::pinMode(GPIO_NUM_33, lgfx::pin_mode_t::input); // LCD RST
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
 
       if (board == 0 || board == board_t::board_M5Paper)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_23, GPIO_NUM_27 };
         _pin_reset(GPIO_NUM_23, true);
         lgfx::pinMode(GPIO_NUM_27, lgfx::pin_mode_t::input_pullup); // M5Paper EPD busy pin
         if (!lgfx::gpio_in(GPIO_NUM_27))
         {
+          gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_2, GPIO_NUM_4, GPIO_NUM_12, GPIO_NUM_13, GPIO_NUM_14, GPIO_NUM_15, GPIO_NUM_27 };
           _pin_level(GPIO_NUM_2, true);  // M5EPD_MAIN_PWR_PIN 2
           lgfx::pinMode(GPIO_NUM_27, lgfx::pin_mode_t::input);
           bus_cfg.pin_mosi = GPIO_NUM_12;
@@ -1230,12 +1233,9 @@ namespace m5gfx
             }
           }
           bus_spi->release();
-          lgfx::pinMode(GPIO_NUM_15, lgfx::pin_mode_t::input); // EPD CS
-          lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // M5Paper TF card CS
-          lgfx::pinMode(GPIO_NUM_2, lgfx::pin_mode_t::input); // M5EPD_MAIN_PWR_PIN 2
+          for (auto pin: backup_pins2) { pin.restore(); }
         }
-        lgfx::pinMode(GPIO_NUM_27, lgfx::pin_mode_t::input); // BUSY
-        lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::input); // RST
+        for (auto pin: backup_pins) { pin.restore(); }
       }
     }
 
@@ -1340,6 +1340,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5Dial)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8 };
         _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_5;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -1403,8 +1404,8 @@ namespace m5gfx
 
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_8, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5PaperS3)
@@ -1529,6 +1530,7 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5AtomS3)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_15, GPIO_NUM_17, GPIO_NUM_21, GPIO_NUM_33, GPIO_NUM_34 };
         _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_21;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -1566,12 +1568,13 @@ namespace m5gfx
 
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_48, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5DinMeter)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8 };
         _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_5;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -1611,8 +1614,8 @@ namespace m5gfx
 
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_8, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0
@@ -1620,6 +1623,7 @@ namespace m5gfx
        || board == board_t::board_M5CardputerADV
        || board == board_t::board_M5VAMeter)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_33, GPIO_NUM_34, GPIO_NUM_35, GPIO_NUM_36, GPIO_NUM_37 };
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_35;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -1645,7 +1649,7 @@ The usage of each pin is as follows.
 | G9 | External  |  74HC138   |  SYS_SCL   |
 */
           board = board_t::board_M5Cardputer;
-          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_8, GPIO_NUM_9 };
+          gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_8, GPIO_NUM_9 };
           auto result = lgfx::gpio::command(
             (const uint8_t[]) {
             lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_9,
@@ -1659,7 +1663,7 @@ The usage of each pin is as follows.
             lgfx::gpio::command_end
             }
           );
-          for (auto &bup : backup_pins) { bup.restore(); }
+          for (auto &bup : backup_pins2) { bup.restore(); }
           if ((result & 3) == 3) {
             m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_5, GPIO_NUM_6);
             result = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
@@ -1719,12 +1723,13 @@ The usage of each pin is as follows.
 
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_33, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5AirQ)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_2, GPIO_NUM_3, GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6 };
         _pin_reset( GPIO_NUM_2, true); // EPDがDeepSleepしている場合は自動認識に失敗する。そのためRST制御を必ず行う。;
         bus_cfg.pin_mosi = GPIO_NUM_6;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -1766,13 +1771,13 @@ The usage of each pin is as follows.
           p->config(cfg);
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_2, lgfx::pin_mode_t::input); // RST
-        lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // CS
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5StampPLC)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_3, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8, GPIO_NUM_9, GPIO_NUM_10, GPIO_NUM_12 };
         _pin_reset(GPIO_NUM_3, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_8;
         bus_cfg.pin_miso = GPIO_NUM_9;
@@ -1817,16 +1822,16 @@ The usage of each pin is as follows.
           _set_backlight(new Light_M5StackStampPLC());
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_3, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
-
  
       break;
     case 1: // EFUSE_PKG_VERSION_ESP32S3PICO: // LGA56
 
       if (board == 0 || board == board_t::board_M5AtomS3R)
       {
+        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_14, GPIO_NUM_15, GPIO_NUM_21, GPIO_NUM_42, GPIO_NUM_48 };
         _pin_reset(GPIO_NUM_48, use_reset); // LCD RST
         bus_cfg.pin_mosi = GPIO_NUM_21;
         bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
@@ -1865,8 +1870,8 @@ The usage of each pin is as follows.
 
           goto init_clear;
         }
-        lgfx::pinMode(GPIO_NUM_48, lgfx::pin_mode_t::input); // LCD RST
         bus_spi->release();
+        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       break;
