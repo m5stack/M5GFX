@@ -165,7 +165,7 @@ void setup(void)
   needle_y = (meter_height*2 + display.width()) / 3;
   osx = needle_x;
   osy = needle_y;
-  liner_count = std::min(6, display.width() / 40);
+  liner_count = std::min<int>(6, display.width() / 40);
 
   analogMeter(); // Draw analogue meter
   int w = display.width() / liner_count;
