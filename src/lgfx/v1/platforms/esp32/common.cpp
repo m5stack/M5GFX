@@ -1391,7 +1391,6 @@ namespace lgfx
       bus_config.glitch_ignore_cnt = 7;
       bus_config.flags.enable_internal_pullup = true;
       bus_config.intr_priority = 1;
-      bus_config.trans_queue_depth = 4;
 
       i2c_new_master_bus(&bus_config, &bus_handle);
       i2c_context[i2c_port].i2c_bus_handle = bus_handle;
