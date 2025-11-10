@@ -101,17 +101,32 @@ namespace lgfx
                    0x10, 0xF2, 0x06, 0x60, 0x03,  0x11, 0xAD, 0x00, 0xEF, 0x01,
                    0x22, 0x2E, 0x0E, 0x74, 0x08,  0x32, 0xDC, 0x09, 0x33, 0x0F,
                    0xF3, 0x77, 0x0D, 0xB0, 0xDC,  0x03, 0xFF,
+         0, // end
+      };
 
+      static constexpr uint8_t list1[] =
+      {//len(cmd+params), cmd, params
         //  2, 0x36,  0x00,
          1,  CMD_DISPON,
          2, 0x35,  0x00,
          1,  CMD_SLPOUT, // SLPOUT
          0, // end
-       };
+      };
+
       switch (listno)
       {
       case 0: return list0;
+      case 1: return list1;
       default: return nullptr;
+      }
+    }
+
+    size_t getInitDelay(size_t listno) const override
+    {
+      switch (listno)
+      {
+      case 1: return 120; // after SLPOUT
+      default: return 0;
       }
     }
   };
