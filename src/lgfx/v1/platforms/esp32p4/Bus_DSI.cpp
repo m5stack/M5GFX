@@ -34,7 +34,7 @@ namespace lgfx
     esp_lcd_dsi_bus_config_t bus_config;
     bus_config.bus_id = _cfg.bus_id;
     bus_config.num_data_lanes = _cfg.lane_num;
-    bus_config.phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT;
+    bus_config.phy_clk_src = (mipi_dsi_phy_pllref_clock_source_t)MIPI_DSI_PHY_CLK_SRC_DEFAULT;
     bus_config.lane_bit_rate_mbps = _cfg.lane_mbps;
 
     esp_ldo_channel_config_t ldo_cfg;
