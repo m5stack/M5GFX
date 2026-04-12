@@ -42,6 +42,7 @@ namespace lgfx
     struct config_detail_t
     {
       void* buffer = nullptr;
+      void* buffer_back = nullptr;  // second framebuffer for double-buffering
       uint32_t buffer_length = 0;
 
       uint16_t dpi_freq_mhz = 60;
@@ -56,6 +57,14 @@ namespace lgfx
     bool init(bool use_reset) override;
 
     color_depth_t setColorDepth(color_depth_t depth) override;
+
+    /// Swap draw/display framebuffers (double-buffering).
+    /// Call after endWrite() to present the completed frame.
+    /// Returns the pointer to the NEW draw buffer.
+    void* swapFrameBuffer(void);
+
+    /// True when num_fbs >= 2 and both buffers were allocated.
+    bool hasDoubleBuffer(void) const { return _config_detail.buffer_back != nullptr; }
 
     const config_detail_t& config_detail(void) const { return _config_detail; }
     void config_detail(const config_detail_t& config_detail) { _config_detail = config_detail; };

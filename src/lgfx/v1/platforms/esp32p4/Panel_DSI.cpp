@@ -24,6 +24,8 @@ Contributors:
 
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_io.h>
+#include <cstring>
+#include <algorithm>
 
 namespace lgfx
 {
@@ -74,7 +76,7 @@ namespace lgfx
     dpi_config.dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT;
     dpi_config.dpi_clock_freq_mhz = _config_detail.dpi_freq_mhz;
     dpi_config.pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB565;
-    dpi_config.num_fbs = 1;
+    dpi_config.num_fbs = 2;
     dpi_config.video_timing.h_size = _cfg.panel_width;
     dpi_config.video_timing.v_size = _cfg.panel_height;
     dpi_config.video_timing.hsync_back_porch  = _config_detail.hsync_back_porch;
@@ -108,7 +110,11 @@ namespace lgfx
     if (bus == nullptr) { return false; }
     if (init_dpi(bus) && init_panel())
     {
-        esp_lcd_dpi_panel_get_frame_buffer(_disp_panel_handle, 1, &(_config_detail.buffer));
+        void* fb0 = nullptr;
+        void* fb1 = nullptr;
+        esp_lcd_dpi_panel_get_frame_buffer(_disp_panel_handle, 2, &fb0, &fb1);
+        _config_detail.buffer = fb0;
+        _config_detail.buffer_back = fb1;
     }
 
     auto ptr = (uint8_t*)_config_detail.buffer;
@@ -169,6 +175,39 @@ namespace lgfx
   void Panel_DSI::setPowerSave(bool flg_idle)
   {
     write_params(flg_idle ? CMD_IDMON : CMD_IDMOFF);
+  }
+
+  void* Panel_DSI::swapFrameBuffer(void)
+  {
+    if (_config_detail.buffer_back == nullptr) {
+      return _config_detail.buffer;
+    }
+
+    // The draw buffer (currently pointed to by _lines_buffer) is complete.
+    // Ask the DPI controller to start scanning from it.
+    esp_lcd_panel_draw_bitmap(_disp_panel_handle, 0, 0,
+                              _cfg.panel_width, _cfg.panel_height,
+                              _config_detail.buffer);
+
+    // Swap: the old display buffer becomes the new draw buffer.
+    std::swap(_config_detail.buffer, _config_detail.buffer_back);
+
+    // Rebuild _lines_buffer to point into the new draw buffer.
+    auto ptr = (uint8_t*)_config_detail.buffer;
+    const size_t line_length = ((_cfg.panel_width * _write_bits >> 3) + 3) & ~3;
+    const auto height = _cfg.panel_height;
+    for (int y = 0; y < height; y++) {
+      _lines_buffer[y] = ptr;
+      ptr += line_length;
+    }
+
+    // Copy the just-displayed frame into the new draw buffer so that
+    // partial redraws (dirty-rect) work correctly — unchanged pixels
+    // already have the right content.
+    memcpy(_config_detail.buffer, _config_detail.buffer_back,
+           line_length * height);
+
+    return _config_detail.buffer;
   }
 
 //----------------------------------------------------------------------------
