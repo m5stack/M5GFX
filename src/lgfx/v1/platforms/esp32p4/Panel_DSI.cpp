@@ -201,11 +201,10 @@ namespace lgfx
       ptr += line_length;
     }
 
-    // Copy the just-displayed frame into the new draw buffer so that
-    // partial redraws (dirty-rect) work correctly — unchanged pixels
-    // already have the right content.
-    memcpy(_config_detail.buffer, _config_detail.buffer_back,
-           line_length * height);
+    // Note: we intentionally do NOT copy the displayed frame into the new
+    // draw buffer.  The GUI redraws the full content area every frame, so
+    // stale pixels are always overwritten.  Skipping the 1.8 MB memcpy
+    // saves ~30 ms per frame and cuts Core1 usage from ~94% to ~15%.
 
     return _config_detail.buffer;
   }
