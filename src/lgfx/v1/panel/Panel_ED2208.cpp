@@ -45,10 +45,10 @@ namespace lgfx
   static constexpr palette_t epd_palette[] = {
     {   0,   0,   0, EPD_BLACK  },
     { 255, 255, 255, EPD_WHITE  },
-    { 255, 255,   0, EPD_YELLOW },
-    { 255,   0,   0, EPD_RED    },
-    {   0,   0, 255, EPD_BLUE   },
-    {   0, 255,   0, EPD_GREEN  },
+    { 255, 243,  56, EPD_YELLOW },
+    { 191,   0,   0, EPD_RED    },
+    { 100,  64, 255, EPD_BLUE   },
+    {  67, 138,  28, EPD_GREEN  },
   };
 
   static constexpr uint8_t bayer256[256] = {
@@ -141,31 +141,20 @@ namespace lgfx
     return best;
   }
 
-  // --- Dither: Bayer RGB (uniform bias on all channels) ---
-
-  static void _dither_row_bayer_simple(const lgfx::bgr888_t* src, uint8_t* dst, uint_fast16_t w, uint_fast16_t y, uint8_t dither)
+  static void _dither_row_none(const lgfx::bgr888_t* src, uint8_t* dst, uint_fast16_t w, uint_fast16_t /*y*/, uint8_t /*dither*/ )
   {
     auto palette = epd_palette;
-    auto row = &bayer256[( y    & 15) << 4];
     for (uint_fast16_t x = 0; x < w; x += 2) {
-      int32_t bias = row[x & 15];
-      bias = bias * 2 - 255;
-      bias = bias * dither >> 9;
-      uint8_t c0 = _rgb_to_epd_color((int32_t)src[x].r + bias,
-                                     (int32_t)src[x].g + bias,
-                                     (int32_t)src[x].b + bias, palette);
+      uint8_t c0 = _rgb_to_epd_color(src[x].r, src[x].g, src[x].b, palette);
       uint8_t c1 = EPD_WHITE;
       if (x + 1 < w) {
-        bias = row[(x + 1) & 15];
-        bias = bias * 2 - 255;
-        bias = bias * dither >> 9;
-        c1 = _rgb_to_epd_color((int32_t)src[x + 1].r + bias,
-                               (int32_t)src[x + 1].g + bias,
-                               (int32_t)src[x + 1].b + bias, palette);
+        c1 = _rgb_to_epd_color(src[x + 1].r, src[x + 1].g, src[x + 1].b, palette);
       }
       dst[x >> 1] = (c0 << 4) | c1;
     }
   }
+
+  // --- Dither: Bayer RGB (uniform bias on all channels) ---
 
   static void _dither_row_bayer_simple_pair(const lgfx::bgr888_t* src, uint8_t* dst, uint_fast16_t w, uint_fast16_t y, uint8_t dither)
   {
@@ -440,13 +429,13 @@ namespace lgfx
     uint32_t row_bytes = (w + 1) >> 1;
 
     // Select dither algorithm for the current _epd_mode.
-    auto dither_fn = _dither_row_bayer_simple;
-    uint8_t dither = 128;
+    auto dither_fn = _dither_row_none;
+    uint8_t dither = 70;
     switch (_epd_mode) {
-      case epd_mode_t::epd_fastest: dither_fn = _dither_row_bayer_simple;      dither = 248; break;
-      case epd_mode_t::epd_fast:    dither_fn = _dither_row_bayer_simple_pair; dither = 160; break;
-      case epd_mode_t::epd_text:    dither_fn = _dither_row_rgb_pair;    dither = 128; break;
-      case epd_mode_t::epd_quality: dither_fn = _dither_row_rgb_pair;    dither = 248; break;
+      case epd_mode_t::epd_fastest: dither_fn = _dither_row_none;       break;
+      case epd_mode_t::epd_fast:    dither_fn = _dither_row_bayer_simple_pair; break;
+      case epd_mode_t::epd_text:    dither_fn = _dither_row_rgb_pair;    break;
+      case epd_mode_t::epd_quality: dither_fn = _dither_row_rgb_pair;    dither = 140; break;
       default: break;
     }
 

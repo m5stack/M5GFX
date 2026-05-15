@@ -36,7 +36,8 @@ namespace m5gfx
     switch (b) {
     case board_M5Stack:         return &picture_frame_M5Stack;
     case board_M5StackCore2:    return &picture_frame_M5StackCore2;
-    case board_M5StackCoreS3:   return &picture_frame_M5StackCoreS3;
+    case board_M5StackCoreS3:
+    case board_M5StackChan:     return &picture_frame_M5StackCoreS3;
     case board_M5StackCoreInk:  return &picture_frame_M5StackCoreInk;
     case board_M5StickCPlus:    return &picture_frame_M5StickCPlus;
     case board_M5StickCPlus2:   return &picture_frame_M5StickCPlus2;

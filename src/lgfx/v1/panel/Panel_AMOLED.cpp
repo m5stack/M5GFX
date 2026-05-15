@@ -391,13 +391,6 @@ namespace lgfx
 
         void Panel_AMOLED::setWindow(uint_fast16_t xs, uint_fast16_t ys, uint_fast16_t xe, uint_fast16_t ye)
         {
-            // ESP_LOGD("Panel_AMOLED","setWindow %d %d %d %d", xs, ys, xe, ye);
-            uint16_t w = (xe-xs)+1;
-            if(xs%2!=0 || w%2!=0) { // Panel_AMOLED restriction: x and w must be divisible by 2
-                // ESP_LOGD("LGFX", "clip coords aren't aligned");
-                return;
-            }
-
             if (xs > xe || xe > _width-1) { return; }
             if (ys > ye || ye > _height-1) { return; }
 
@@ -406,6 +399,14 @@ namespace lgfx
             xe += _colstart;
             // Set limit
             if ((xe - xs) >= _width) { xs = 0; xe = _width - 1; }
+
+            // ESP_LOGD("Panel_AMOLED","setWindow %d %d %d %d", xs, ys, xe, ye);
+            uint16_t w = (xe-xs)+1;
+            if(xs%2!=0 || w%2!=0) { // Panel_AMOLED restriction: x and w must be divisible by 2
+                // ESP_LOGD("LGFX", "clip coords aren't aligned");
+                return;
+            }
+
 
             {
                 // Set Column Start Address (CASET)
@@ -617,7 +618,12 @@ namespace lgfx
 
         //----------------------------------------------------------------------------
 
-
+        Panel_AMOLED_Framebuffer::Panel_AMOLED_Framebuffer(Panel_AMOLED* panel)
+         : _panel(panel)
+        {
+            assert(_panel);
+            setTouch(_panel->getTouch());
+        }
 
         bool Panel_AMOLED_Framebuffer::init(bool use_reset)
         {
@@ -631,6 +637,20 @@ namespace lgfx
             return Panel_FrameBufferBase::init(false);
         }
 
+        void Panel_AMOLED_Framebuffer::setInvert(bool invert)
+        {
+            _panel->setInvert(invert);
+        }
+
+        void Panel_AMOLED_Framebuffer::setBrightness(uint8_t brightness)
+        {
+            _panel->setBrightness(brightness);
+        }
+
+        uint_fast8_t Panel_AMOLED_Framebuffer::getTouchRaw(touch_point_t* tp, uint_fast8_t count)
+        {
+            return _panel->getTouchRaw(tp, count);
+        }
 
         void Panel_AMOLED_Framebuffer::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
         {
