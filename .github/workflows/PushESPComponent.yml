@@ -1,0 +1,22 @@
+name: Push component to ESP Component Registry
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  upload_components:
+    if: github.repository == 'm5stack/M5GFX'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Upload component to the component registry
+        uses: espressif/upload-components-ci-action@v1
+        with:
+          name: 'm5gfx'
+          namespace: 'm5stack'
+          version: ${{ github.ref_name }}
+          api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
