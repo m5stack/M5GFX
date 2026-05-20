@@ -11,19 +11,15 @@
 
 #endif
 
-#ifndef LV_LVGL_H_INCLUDE_SIMPLE
-#define LV_LVGL_H_INCLUDE_SIMPLE
-#endif
-
 #include <M5Unified.h>
+
+// Pre-built LVGL fonts (fonts::lvFontMontserrat*) are provided by the
+// external LGFX_Fonts component: https://github.com/tobozo/LGFX_Fonts
+// Install it alongside M5GFX/M5Unified to use them.
+#include <LGFX_Fonts.hpp>
 
 
 extern const uint8_t montserrat_bff_12[];
-
-extern "C" {
-    extern const lv_font_t montserrat_16;
-}
-lgfx::LVGLfont user_lv_font_montserrat_16(&montserrat_16);
 
 void setup(void)
 {
@@ -33,16 +29,20 @@ void setup(void)
 
     M5.Lcd.setTextColor(TFT_BLACK, TFT_WHITE);
 
-    // BFFfont
+    // (1) BFF font loaded at runtime. This path is built into M5GFX core
+    //     (ft_lvgl -> BFFfont) and depends on neither LVGL nor LGFX_Fonts.
     M5.Lcd.loadFont(montserrat_bff_12, lgfx::IFont::font_type_t::ft_lvgl);
     M5.Lcd.println("ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghjklmnopqrstuvwxyz0123456789");
 
-    // lvgl built-in font
+    // (2) Pre-built LVGL font.
+    //     Newer M5GFX delegates LVGL fonts to the external LGFX_Fonts
+    //     component (fonts::lvFontMontserrat*); older M5GFX bundled them
+    //     internally (fonts::lv_font_montserrat_*). The guard keeps both.
+#if defined M5GFX_LVGL_INTERNAL_H
     M5.Lcd.setFont(&fonts::lv_font_montserrat_14);
-    M5.Lcd.println("ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghjklmnopqrstuvwxyz0123456789");
-
-    // LVGL user font
-    M5.Lcd.setFont(&user_lv_font_montserrat_16);
+#else
+    M5.Lcd.setFont(&fonts::lvFontMontserrat14);
+#endif
     M5.Lcd.println("ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghjklmnopqrstuvwxyz0123456789");
 }
 
