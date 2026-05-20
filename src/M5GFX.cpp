@@ -1448,14 +1448,15 @@ namespace m5gfx
       if (board == 0 || board == board_t::board_M5StackCoreS3 || board == board_t::board_M5StackCoreS3SE
           || board == board_t::board_M5StackChan)
       {
-        lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
+        static constexpr uint8_t i2c_addr_list[] = {
+          (uint8_t)axp_i2c_addr,
+          (uint8_t)aw9523_i2c_addr,
+          0u
+        };
+        uint32_t i2c_result = _detect_i2c_device(i2c_sda, i2c_scl, i2c_addr_list);
 
-// ESP_LOGI("DEBUG","AW 0x10 :%02x", (int)lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, 400000).value());
-// ESP_LOGI("DEBUG","AXP0x03 :%02x", (int)lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, 400000).value());
-
-        auto chk_axp = lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, i2c_freq);
-        if (chk_axp.has_value())
-        {
+        if (i2c_result == ~0u) {
+          lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
           auto chk_aw  = lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, i2c_freq);
           if (chk_aw .has_value() && chk_aw .value() == 0x23)
           {
