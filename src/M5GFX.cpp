@@ -1763,12 +1763,13 @@ namespace m5gfx
               // bit4==IO5: EPD RST
               // bit5==IO6: TP RST
               // bit12==IO13: TP EN
+              // bit13==IO14: TF EN
               lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x03, 0b00110100, m5ioe1_i2c_freq);  // Set pin io5,6 mode: output
-              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, 0b00010000, m5ioe1_i2c_freq);  // Set pin io13 mode: output
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, 0b00110000, m5ioe1_i2c_freq);  // Set pin io13,14 mode: output
               lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 0b00000100, m5ioe1_i2c_freq);  // Set HIGH io3
-              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x06, 0b00010000, m5ioe1_i2c_freq);  // Set HIGH io13
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x06, 0b00110000, m5ioe1_i2c_freq);  // Set HIGH io13,14
               lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x13, 0b00110100, m5ioe1_i2c_freq);  // Set pin io3,5,6 drv: push-pull
-              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, 0b00010000, m5ioe1_i2c_freq);  // Set pin io12 drv: push-pull
+              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, 0b00110000, m5ioe1_i2c_freq);  // Set pin io13,14 drv: push-pull
 
               // reset EINK + TP
               lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x05, 0b00110000, m5ioe1_i2c_freq);  // Set LOW gpio5,6
@@ -1814,7 +1815,7 @@ namespace m5gfx
                 auto t = new lgfx::Touch_FT5x06();
                 _touch_last.reset(t);
                 auto cfg = t->config();
-                cfg.pin_int  = GPIO_NUM_13;
+                cfg.pin_int  = GPIO_NUM_4;
                 cfg.pin_sda  = GPIO_NUM_47;
                 cfg.pin_scl  = GPIO_NUM_48;
                 cfg.i2c_port = I2C_NUM_1;
