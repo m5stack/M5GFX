@@ -130,9 +130,6 @@ namespace lgfx
 
   void Panel_SSD1677::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
-          /////////////////////
-return;   ///////////////////////////////////////////////////////
-          ///////////////////
     if (0 < w && 0 < h)
     {
       _range_mod.left   = std::min<int16_t>(_range_mod.left  , x        );
@@ -147,7 +144,7 @@ return;   ///////////////////////////////////////////////////////
 
     bool flg_mode_changed = (_last_epd_mode != epd_mode);
 
-    // if (_initialize_seq || flg_mode_changed)
+    if (_initialize_seq || flg_mode_changed)
     {
     // CMD_DISPLAY_UPDATE_CONTROL_2 parameter
     // 0b10000000 = Enable Clock signal
@@ -164,19 +161,18 @@ return;   ///////////////////////////////////////////////////////
       _range_mod.right = _width - 1;
       _range_mod.top = 0;
       _range_mod.bottom = _height - 1;
-/*
+
       if (_initialize_seq) {
         _initialize_seq = false;
         // リセット直後は起動シーケンス設定およびフレームバッファの転送を行う。ここではリフレッシュは行わない。
         _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8);
         _bus->writeData(0xF8, 8);
-        _exec_transfer(CMD_WRITE_RAM_RED, _buf, _range_mod, true);
-        _exec_transfer(CMD_WRITE_RAM_BW, &_buf[_buf_x1_len], _range_mod, true);
+        _exec_transfer(CMD_WRITE_RAM_BW, _buf, _range_mod, true);
+        _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], _range_mod, true);
         _bus->writeCommand(CMD_MASTER_ACTIVATION, 8);
         _send_msec = millis();
       }
-//*/
-/*
+
       // epd_qualityの場合は反転描画は不要になる。
       // 他のモードに変更した直後は反転描画を行う。
       need_flip_draw = (epd_mode != epd_mode_t::epd_quality);
@@ -192,36 +188,25 @@ return;   ///////////////////////////////////////////////////////
           _send_msec = millis();
         }
       }
-//*/
       _wait_busy();
       _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
       uint8_t refresh_param = (epd_mode == epd_mode_t::epd_quality)
-                          ? 0x0C   // DISPLAY Mode1 (flicking)
-                          : 0x04;  // DISPLAY Mode2 (no flick)
+                          ? 0x14   // DISPLAY Mode1 (flicking)
+                          : 0x1C;  // DISPLAY Mode2 (no flick)
       _bus->writeData(refresh_param, 8);
       _last_epd_mode = epd_mode;
     }
-
-
-_range_mod.left = 0;
-_range_mod.right = _width - 1;
-_range_mod.top = 0;
-_range_mod.bottom = _height - 1;
-
-      range_rect_t tr = _range_mod;
+    range_rect_t tr = _range_mod;
     if (tr.top > _range_old.top) { tr.top = _range_old.top; }
     if (tr.left > _range_old.left) { tr.left = _range_old.left; }
     if (tr.right < _range_old.right) { tr.right = _range_old.right; }
     if (tr.bottom < _range_old.bottom) { tr.bottom = _range_old.bottom; }
     _range_old = _range_mod;
 
-    // _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, need_flip_draw);
-    // _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, need_flip_draw);
-    _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, false);
-    _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, false);
+    _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, need_flip_draw);
+    _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, need_flip_draw);
     _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
     _send_msec = millis();
-/*
     if (need_flip_draw)
     { // 反転リフレッシュを自前でやる場合
       _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr);
@@ -232,7 +217,7 @@ _range_mod.bottom = _height - 1;
       if (_epd_frame_switching) { _epd_frame_back = !_epd_frame_back; }
       else { _epd_frame_back = false; }
     }
-//*/
+
     _range_mod.top    = INT16_MAX;
     _range_mod.left   = INT16_MAX;
     _range_mod.right  = 0;
@@ -246,7 +231,7 @@ _range_mod.bottom = _height - 1;
     startWrite();
     _wait_busy();
     _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_1, 8);
-    _bus->writeData((invert ^ _cfg.invert) ? 0x00 : 0x88, 8);
+    _bus->writeData((invert ^ _cfg.invert) ? 0x88 : 0x00, 8);
     _need_flip_draw = true;
     _range_mod.top = 0;
     _range_mod.left = 0;
@@ -316,7 +301,7 @@ _range_mod.bottom = _height - 1;
         // Buffer index: x * row_bytes + y / 8, bit position: y % 8
         uint32_t byte_idx = x * row_bytes + (y >> 3);
         uint8_t bit_mask = 0x80 >> (y & 7);
-        uint_fast8_t v = (value + btbl[x & 3]) >> 6;
+        int_fast8_t v = (value + btbl[x & 3]) >> 6;
         v = (v < 0) ? 0 : (v > 3 ? 3 : v);
         {
           if (v & 1) _buf[byte_idx] |=  bit_mask;
@@ -617,7 +602,7 @@ _range_mod.bottom = _height - 1;
 
         0x8F, 0x8F, 0x8F, 0x8F, 0x8F,
       },
-      { 0x17 }, // VGH=17V
+      { 0x17 },
       { 0x41, 0xA8, 0x32 },
       { 0x30 },
     };
@@ -643,19 +628,71 @@ _range_mod.bottom = _height - 1;
 
         0x8F, 0x8F, 0x8F, 0x8F, 0x8F,
       },
-      { 0x17 }, // VGH=17V
+      { 0x17 },
       { 0x41, 0xA8, 0x32 },
       { 0x30 },
     };
 
+    uint_fast16_t xs = x, xe = x + w - 1;
+    uint_fast16_t ys = y, ye = y + h - 1;
+    _rotate_pos(xs, ys, xe, ye);
+
     if (0 < w && 0 < h)
     {
-      _range_mod.left   = std::min<int16_t>(_range_mod.left  , x        );
-      _range_mod.right  = std::max<int16_t>(_range_mod.right , x + w - 1);
-      _range_mod.top    = std::min<int16_t>(_range_mod.top   , y        );
-      _range_mod.bottom = std::max<int16_t>(_range_mod.bottom, y + h - 1);
+      _range_mod.left   = std::min<int16_t>(_range_mod.left  , xs);
+      _range_mod.right  = std::max<int16_t>(_range_mod.right , xe);
+      _range_mod.top    = std::min<int16_t>(_range_mod.top   , ys);
+      _range_mod.bottom = std::max<int16_t>(_range_mod.bottom, ye);
     }
     if (_range_mod.empty()) { return; }
+    auto epd_mode = getEpdMode();
+    bool need_flip_draw = _need_flip_draw || (epd_mode_t::epd_quality < epd_mode && epd_mode < epd_mode_t::epd_fast);
+    _need_flip_draw = false;
+
+    bool flg_mode_changed = (_last_epd_mode != epd_mode);
+
+    if (_initialize_seq || flg_mode_changed)
+    {
+      _range_mod.left = 0;
+      _range_mod.right = _cfg.panel_width - 1;
+      _range_mod.top = 0;
+      _range_mod.bottom = _cfg.panel_height - 1;
+
+      if (_initialize_seq) {
+        _initialize_seq = false;
+        // リセット直後は起動シーケンス設定およびフレームバッファの転送を行う。ここではリフレッシュは行わない。
+        _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8);
+        _bus->writeData(0xF8, 8);
+        _exec_transfer(CMD_WRITE_RAM_BW, _buf, _range_mod, true);
+        _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], _range_mod, true);
+
+        _bus->writeCommand(CMD_MASTER_ACTIVATION, 8);
+        _send_msec = millis();
+      }
+
+      // epd_qualityの場合は反転描画は不要になる。
+      // 他のモードに変更した直後は反転描画を行う。
+      need_flip_draw = (epd_mode != epd_mode_t::epd_quality);
+      _epd_frame_switching = need_flip_draw;
+      if (!need_flip_draw)
+      {
+        if (_epd_frame_back)
+        {  // フレームバッファ2番に送信される場合はモード変更前に一度描画更新を行う
+          _epd_frame_back = false;
+          _exec_transfer(CMD_WRITE_RAM_BW, _buf, _range_mod);
+          _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], _range_mod);
+          _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
+          _send_msec = millis();
+        }
+      }
+      _wait_busy();
+      _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
+      uint8_t refresh_param = (epd_mode == epd_mode_t::epd_quality)
+                          ? 0x14   // DISPLAY Mode1 (flicking)
+                          : 0x1C;  // DISPLAY Mode2 (no flick)
+      _bus->writeData(refresh_param, 8);
+      _last_epd_mode = epd_mode;
+    }
 
     range_rect_t tr = _range_mod;
     if (tr.top > _range_old.top) { tr.top = _range_old.top; }
@@ -664,61 +701,33 @@ _range_mod.bottom = _height - 1;
     if (tr.bottom < _range_old.bottom) { tr.bottom = _range_old.bottom; }
     _range_old = _range_mod;
 
-    // _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, need_flip_draw);
-    // _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, need_flip_draw);
-    _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, false);
-    _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, false);
-
     if (_epd_mode == epd_mode_t::epd_quality)
     {
       _set_lut(&lut_gray4);
       _wait_busy();
+      _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, true);
+      _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, true);
 
       _bus->writeCommand(0x1A, 8);
       _bus->writeData(0x5A, 8);
-
-      _wait_busy();
-      _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
-      // uint8_t refresh_param = 0xC7;
-      // uint8_t refresh_param = 0xC3;
-      // uint8_t refresh_param = 0xD7;
-      uint8_t refresh_param = 0x14;
-      _bus->writeData(refresh_param, 8);
     }
     else
     {
-      _set_lut(&lut_gray4_rev);
+      _set_lut(&lut_gray4);
       _wait_busy();
-
-      _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
-      uint8_t refresh_param = 0
-        // | 0xC0 // ScreenOn
-        | 0x10 // LUT Load
-        | 0x08 // Mode 2
-        | 0x04 // Display Start
-        // | 0x03 // ScreenOff
-        ;
-      _bus->writeData(refresh_param, 8);
-      _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
-      _wait_busy();
-      // _set_lut(&lut_gray4);
-      // _wait_busy();
+      _exec_transfer(CMD_WRITE_RAM_BW, &_buf[_buf_x1_len], tr, false);
+      _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, true);
     }
 
     _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
     _send_msec = millis();
-/*
     if (need_flip_draw)
     { // 反転リフレッシュを自前でやる場合
-      _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr);
-      _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr);
-      _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
-      _send_msec = millis();
     } else {
       if (_epd_frame_switching) { _epd_frame_back = !_epd_frame_back; }
       else { _epd_frame_back = false; }
     }
-//*/
+
     _range_mod.top    = INT16_MAX;
     _range_mod.left   = INT16_MAX;
     _range_mod.right  = 0;

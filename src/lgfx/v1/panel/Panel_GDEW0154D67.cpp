@@ -117,12 +117,16 @@ namespace lgfx
 
   void Panel_GDEW0154D67::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
+    uint_fast16_t xs = x, xe = x + w - 1;
+    uint_fast16_t ys = y, ye = y + h - 1;
+    _rotate_pos(xs, ys, xe, ye);
+
     if (0 < w && 0 < h)
     {
-      _range_mod.left   = std::min<int16_t>(_range_mod.left  , x        );
-      _range_mod.right  = std::max<int16_t>(_range_mod.right , x + w - 1);
-      _range_mod.top    = std::min<int16_t>(_range_mod.top   , y        );
-      _range_mod.bottom = std::max<int16_t>(_range_mod.bottom, y + h - 1);
+      _range_mod.left   = std::min<int16_t>(_range_mod.left  , xs);
+      _range_mod.right  = std::max<int16_t>(_range_mod.right , xe);
+      _range_mod.top    = std::min<int16_t>(_range_mod.top   , ys);
+      _range_mod.bottom = std::max<int16_t>(_range_mod.bottom, ye);
     }
     if (_range_mod.empty()) { return; }
     auto epd_mode = getEpdMode();
@@ -169,9 +173,9 @@ epd_mode が epd_qualityか否かの変化をした場合も同様にCMD_DISPLAY
     // 0b00000001 = Disable clock signal
     // epd_quality高品質モードではフリッキング更新を行う
       _range_mod.left = 0;
-      _range_mod.right = _width - 1;
+      _range_mod.right = _cfg.panel_width - 1;
       _range_mod.top = 0;
-      _range_mod.bottom = _height - 1;
+      _range_mod.bottom = _cfg.panel_height - 1;
 
       if (_initialize_seq) {
         _initialize_seq = false;
