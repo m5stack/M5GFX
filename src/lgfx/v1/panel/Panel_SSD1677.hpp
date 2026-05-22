@@ -51,9 +51,17 @@ namespace lgfx
 
     void readRect(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h, void* dst, pixelcopy_t* param) override;
 
-  private:
+  protected:
 
     static constexpr unsigned long _refresh_msec = 500;  // Longer for 480x800 display
+    
+    struct lut_data_t
+    {
+      uint8_t lut[105];
+      uint8_t gate[1];
+      uint8_t source[3];
+      uint8_t vcom[1];
+    };
 
     range_rect_t _range_old;
     unsigned long _send_msec = 0;
@@ -73,6 +81,8 @@ namespace lgfx
     void _exec_transfer(uint32_t cmd, const uint8_t* data, const range_rect_t& range, bool invert = false);
     void _after_wake(void);
 
+    void _set_lut(const lut_data_t* lut_data);
+
     const uint8_t* getInitCommands(uint8_t listno) const override
     {
       // SSD1677 initialization sequence
@@ -83,22 +93,35 @@ namespace lgfx
       // 0x45 RAM Y: 0 to 479 (maps to LovyanGFX X)
       static constexpr uint8_t list0[] = {
           0x12, 0 + CMD_INIT_DELAY, 10,   // SW Reset + 10 msec delay
-          0x18, 1, 0x80,                  // Read built-in temperature sensor
           0x0C, 5, 0xAE, 0xC7, 0xC3, 0xC0, 0x80,  // Booster soft start
           0x01, 3, (480-1) & 0xFF, ((480-1) >> 8) & 0xFF, 0x02,  // Driver output control: 480 gates
-          0x3C, 1, 0x01,                  // BorderWaveform
           0x11, 1, 0x03,                  // Data entry mode: X+, Y+
-          0x44, 4, 0x00, 0x00, (800-1) & 0xFF, ((800-1) >> 8) & 0xFF,  // RAM X: 0 to 799
-          0x45, 4, 0x00, 0x00, (480-1) & 0xFF, ((480-1) >> 8) & 0xFF,  // RAM Y: 0 to 479
-          0x4E, 2, 0x00, 0x00,            // RAM X address count = 0
-          0x4F, 2, 0x00, 0x00,            // RAM Y address count = 0
+          // 0x44, 4, 0x00, 0x00, (800-1) & 0xFF, ((800-1) >> 8) & 0xFF,  // RAM X: 0 to 799
+          // 0x45, 4, 0x00, 0x00, (480-1) & 0xFF, ((480-1) >> 8) & 0xFF,  // RAM Y: 0 to 479
+          // 0x4E, 2, 0x00, 0x00,            // RAM X address count = 0
+          // 0x4F, 2, 0x00, 0x00,            // RAM Y address count = 0
+          0x3C, 1, 0x01,                  // BorderWaveform
+          0x18, 1, 0x80,                  // Read built-in temperature sensor
+          0x1A, 1, 0x5A,                  // 4 Gray
+
+          0x21, 1, 0x00,                 // 0x21: Display update control 1: normal update
+          0x22, 1, 0xC0,
+          0x20, 0,
+
           0xFF, 0xFF, // end
       };
+
       switch (listno) {
       case 0: return list0;
+      // case 1: return list1;
       default: return nullptr;
       }
     }
+  };
+
+  struct Panel_SSD1677_4Gray : public Panel_SSD1677
+  {
+    void display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h) override;
   };
 
 //----------------------------------------------------------------------------

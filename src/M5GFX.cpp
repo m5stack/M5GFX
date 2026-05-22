@@ -1790,7 +1790,7 @@ namespace m5gfx
               bus_spi->config(bus_cfg);
               bus_spi->init();
 
-              auto p = new Panel_SSD1677();
+              auto p = new Panel_SSD1677_4Gray();
               p->bus(bus_spi);
               {
                 auto cfg = p->config();
