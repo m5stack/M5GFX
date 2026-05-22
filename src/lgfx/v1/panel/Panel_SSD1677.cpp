@@ -581,6 +581,7 @@ namespace lgfx
 
   void Panel_SSD1677_4Gray::display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h)
   {
+#if 1
     static constexpr lut_data_t lut_gray4 = {
       {
         0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00,
@@ -651,7 +652,7 @@ namespace lgfx
 
     bool flg_mode_changed = (_last_epd_mode != epd_mode);
 
-    if (_initialize_seq || flg_mode_changed)
+    if (true) //_initialize_seq || flg_mode_changed)
     {
       _range_mod.left = 0;
       _range_mod.right = _cfg.panel_width - 1;
@@ -717,6 +718,7 @@ namespace lgfx
       _wait_busy();
       _exec_transfer(CMD_WRITE_RAM_BW, &_buf[_buf_x1_len], tr, false);
       _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, true);
+
     }
 
     _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
@@ -732,6 +734,140 @@ namespace lgfx
     _range_mod.left   = INT16_MAX;
     _range_mod.right  = 0;
     _range_mod.bottom = 0;
+
+#else
+    static constexpr lut_data_t lut_gray4 = {
+      {
+        0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00,
+        0x54, 0x54, 0x40, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00,
+        0xAA, 0xA0, 0xA8, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00,
+        0xA2, 0x22, 0x20, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00,
+
+        0x01, 0x01, 0x01, 0x01, 0x00,
+        0x01, 0x01, 0x01, 0x01, 0x00,
+        0x01, 0x01, 0x01, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+
+        0x8F, 0x8F, 0x8F, 0x8F, 0x8F,
+      },
+      { 0x17 },
+      { 0x41, 0xA8, 0x32 },
+      { 0x30 },
+    };
+
+    static constexpr lut_data_t lut_gray4_rev = {
+      {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x54, 0x54, 0x54, 0x54, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xA8, 0xA8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xFC, 0xFC, 0xFC, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+        0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x00,
+        0x01, 0x01, 0x01, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+
+        0x8F, 0x8F, 0x8F, 0x8F, 0x8F,
+      },
+      { 0x17 },
+      { 0x41, 0xA8, 0x32 },
+      { 0x30 },
+    };
+
+    if (0 < w && 0 < h)
+    {
+      _range_mod.left   = std::min<int16_t>(_range_mod.left  , x        );
+      _range_mod.right  = std::max<int16_t>(_range_mod.right , x + w - 1);
+      _range_mod.top    = std::min<int16_t>(_range_mod.top   , y        );
+      _range_mod.bottom = std::max<int16_t>(_range_mod.bottom, y + h - 1);
+    }
+    if (_range_mod.empty()) { return; }
+
+    range_rect_t tr = _range_mod;
+    if (tr.top > _range_old.top) { tr.top = _range_old.top; }
+    if (tr.left > _range_old.left) { tr.left = _range_old.left; }
+    if (tr.right < _range_old.right) { tr.right = _range_old.right; }
+    if (tr.bottom < _range_old.bottom) { tr.bottom = _range_old.bottom; }
+    _range_old = _range_mod;
+
+    // _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, need_flip_draw);
+    // _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, need_flip_draw);
+
+    if (_epd_mode == epd_mode_t::epd_quality)
+    {
+      _set_lut(&lut_gray4);
+      _wait_busy();
+      _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr, true);
+      _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, true);
+
+      _bus->writeCommand(0x1A, 8);
+      _bus->writeData(0x5A, 8);
+
+      _wait_busy();
+      _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
+      // uint8_t refresh_param = 0xC7;
+      // uint8_t refresh_param = 0xC3;
+      // uint8_t refresh_param = 0xD7;
+      uint8_t refresh_param = 0x14; // Mode 1 (flicking)
+      _bus->writeData(refresh_param, 8);
+    }
+    else
+    {
+
+      _exec_transfer(CMD_WRITE_RAM_BW, &_buf[_buf_x1_len], tr, true);
+      _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr, false);
+
+      _set_lut(&lut_gray4_rev);
+      _wait_busy();
+
+      _bus->writeCommand(CMD_DISPLAY_UPDATE_CONTROL_2, 8); // Display update seq opt
+      uint8_t refresh_param = 0
+        // | 0xC0 // ScreenOn
+        // | 0x20 // Load Temperature
+        | 0x10 // LUT Load
+        | 0x08 // Mode 2
+        | 0x04 // Display Start
+        // | 0x03 // ScreenOff
+        ;
+      _bus->writeData(refresh_param, 8);
+      // _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
+      // _wait_busy();
+//*/
+    }
+
+    _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
+    _send_msec = millis();
+/*
+    if (need_flip_draw)
+    { // 反転リフレッシュを自前でやる場合
+      _exec_transfer(CMD_WRITE_RAM_BW, _buf, tr);
+      _exec_transfer(CMD_WRITE_RAM_RED, &_buf[_buf_x1_len], tr);
+      _bus->writeCommand(CMD_MASTER_ACTIVATION, 8); // Active Display update
+      _send_msec = millis();
+    } else {
+      if (_epd_frame_switching) { _epd_frame_back = !_epd_frame_back; }
+      else { _epd_frame_back = false; }
+    }
+//*/
+    _range_mod.top    = INT16_MAX;
+    _range_mod.left   = INT16_MAX;
+    _range_mod.right  = 0;
+    _range_mod.bottom = 0;
+#endif
   }
 
 //----------------------------------------------------------------------------
