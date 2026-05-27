@@ -165,7 +165,7 @@ namespace m5gfx
   static constexpr std::uint32_t m5pm1_i2c_freq = 100000;
   static constexpr std::uint32_t m5ioe1_i2c_freq = 100000;
   static constexpr std::uint8_t m5pm1_i2c_addr = 0x6E; // M5PM1 device i2c address
-  static constexpr std::uint8_t m5ioe1_i2c_addr = 0x6F; // M5IOE1 device i2c address
+  static constexpr std::uint8_t m5ioe1_i2c_addr = 0x4F; // M5IOE1 device i2c address
   static constexpr std::uint8_t pi4io1_i2c_addr = 0x43;
   static constexpr std::uint8_t pi4io2_i2c_addr = 0x44;
 
@@ -1448,14 +1448,15 @@ namespace m5gfx
       if (board == 0 || board == board_t::board_M5StackCoreS3 || board == board_t::board_M5StackCoreS3SE
           || board == board_t::board_M5StackChan)
       {
-        lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
+        static constexpr uint8_t i2c_addr_list[] = {
+          (uint8_t)axp_i2c_addr,
+          (uint8_t)aw9523_i2c_addr,
+          0u
+        };
+        uint32_t i2c_result = _detect_i2c_device(i2c_sda, i2c_scl, i2c_addr_list);
 
-// ESP_LOGI("DEBUG","AW 0x10 :%02x", (int)lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, 400000).value());
-// ESP_LOGI("DEBUG","AXP0x03 :%02x", (int)lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, 400000).value());
-
-        auto chk_axp = lgfx::i2c::readRegister8(i2c_port, axp_i2c_addr, 0x03, i2c_freq);
-        if (chk_axp.has_value())
-        {
+        if (i2c_result == ~0u) {
+          lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
           auto chk_aw  = lgfx::i2c::readRegister8(i2c_port, aw9523_i2c_addr, 0x10, i2c_freq);
           if (chk_aw .has_value() && chk_aw .value() == 0x23)
           {
@@ -1503,7 +1504,7 @@ namespace m5gfx
               // Camera GC0308 check (not found == M5StackCoreS3SE)
               auto chk_gc  = lgfx::i2c::readRegister8(i2c_port, gc0308_i2c_addr, 0x00, i2c_freq);
               if (chk_gc.has_value() && chk_gc.value() == 0x9b) {
-                auto chk_m5ioe1 = lgfx::i2c::readRegister8(i2c_port, 0x6F, 0x02, 100000); // Read firmware version
+                auto chk_m5ioe1 = lgfx::i2c::readRegister8(i2c_port, 0x6F, 0x02, 100000); // Read firmware version (NOTE: stackchan m5ioe1 i2c address is 0x6F)
                 if (chk_m5ioe1.has_value() && (((uint8_t)chk_m5ioe1.value()) >= 0x04)) {
                   board = board_M5StackChan;
                   ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StackChan");
@@ -1656,14 +1657,17 @@ namespace m5gfx
               lgfx::pinMode(GPIO_NUM_39, lgfx::pin_mode_t::output);
               lgfx::gpio_hi(GPIO_NUM_39);
 
+              // M5IOE1_REG_I2C_CFG(0x23): disable I2C sleep
+              lgfx::i2c::writeRegister8(i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq);
               // IO1: MUX_CTR
               // IO3: AUDIO_EN
               // IO4: TP RST
               // IO5: OLED RST
               // IO8: L3B_EN
-              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x13, 0b10011101, m5ioe1_i2c_freq);  // Set pin gpio1,3,4,5,8 drv: push-pull
-              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x03, 0b10011101, m5ioe1_i2c_freq);  // Set pin gpio1,3,4,5,8 mode: output
-              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 0b10011001, m5ioe1_i2c_freq);  // Set HIGH gpio1,4,5,8
+              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x13, 0b10011101, m5ioe1_i2c_freq);  // Set pin gpio 1,3,4,5,8 drv: push-pull
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x03, 0b10011101, m5ioe1_i2c_freq);  // Set pin gpio 1,3,4,5,8 mode: output
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 0b10011001, m5ioe1_i2c_freq);  // Set HIGH gpio 1,4,5,8
+              lgfx::delay(10);
 
               // reset OLED + TP
               lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x05, 0b00011000, m5ioe1_i2c_freq);  // Set LOW gpio4,5
@@ -1671,6 +1675,13 @@ namespace m5gfx
               lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 0b00011000, m5ioe1_i2c_freq);  // Set HIGH gpio4,5,8
               lgfx::delay(2);
 
+              // Audio PA: off
+              static constexpr uint8_t IOE1_PIN_10 = 9;
+              static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
+              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, IOE1_BIT_10_H, m5ioe1_i2c_freq);
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, IOE1_BIT_10_H, m5ioe1_i2c_freq);
+              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x06, IOE1_BIT_10_H, m5ioe1_i2c_freq); // PA off
+            
               bus_cfg.pin_mosi = GPIO_NUM_NC;
               bus_cfg.pin_miso = GPIO_NUM_NC;
               bus_cfg.pin_io0 = GPIO_NUM_41;
@@ -1752,12 +1763,13 @@ namespace m5gfx
               // bit4==IO5: EPD RST
               // bit5==IO6: TP RST
               // bit12==IO13: TP EN
+              // bit13==IO14: TF EN
               lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x03, 0b00110100, m5ioe1_i2c_freq);  // Set pin io5,6 mode: output
-              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, 0b00010000, m5ioe1_i2c_freq);  // Set pin io13 mode: output
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, 0b00110000, m5ioe1_i2c_freq);  // Set pin io13,14 mode: output
               lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 0b00000100, m5ioe1_i2c_freq);  // Set HIGH io3
-              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x06, 0b00010000, m5ioe1_i2c_freq);  // Set HIGH io13
+              lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x06, 0b00110000, m5ioe1_i2c_freq);  // Set HIGH io13,14
               lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x13, 0b00110100, m5ioe1_i2c_freq);  // Set pin io3,5,6 drv: push-pull
-              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, 0b00010000, m5ioe1_i2c_freq);  // Set pin io12 drv: push-pull
+              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, 0b00110000, m5ioe1_i2c_freq);  // Set pin io13,14 drv: push-pull
 
               // reset EINK + TP
               lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x05, 0b00110000, m5ioe1_i2c_freq);  // Set LOW gpio5,6
@@ -1778,7 +1790,7 @@ namespace m5gfx
               bus_spi->config(bus_cfg);
               bus_spi->init();
 
-              auto p = new Panel_SSD1677();
+              auto p = new Panel_SSD1677_4Gray();
               p->bus(bus_spi);
               {
                 auto cfg = p->config();
@@ -1803,7 +1815,7 @@ namespace m5gfx
                 auto t = new lgfx::Touch_FT5x06();
                 _touch_last.reset(t);
                 auto cfg = t->config();
-                cfg.pin_int  = GPIO_NUM_13;
+                cfg.pin_int  = GPIO_NUM_4;
                 cfg.pin_sda  = GPIO_NUM_47;
                 cfg.pin_scl  = GPIO_NUM_48;
                 cfg.i2c_port = I2C_NUM_1;
