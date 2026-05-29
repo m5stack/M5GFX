@@ -31,6 +31,7 @@
 
 #include "lgfx/v1/platforms/esp32p4/Bus_DSI.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ILI9881C.hpp"
+#include "lgfx/v1/platforms/esp32p4/Panel_ST7121.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7123.hpp"
 #include "lgfx/v1/platforms/esp32p4/Touch_ST7123.hpp"
 
@@ -2571,6 +2572,8 @@ The usage of each pin is as follows.
           i2c_write_register8_array(in_i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
           lgfx::delay(10);
           i2c_write_register8_array(in_i2c_port, pi4io1_i2c_addr, reg_data_io1_2, 100000);
+          lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::input); // TP INT
+          lgfx::delay(100);
 
 #if !CONFIG_SPIRAM
           ESP_LOGE(LIBRARY_NAME, "M5Tab5 need PSRAM enabled");
@@ -2585,26 +2588,49 @@ The usage of each pin is as follows.
 #endif
 
           {
+            bool hit_st7121 = false;
+            bool hit_st7123 = false;
+            bool read_st_touch_fw = false;
+            for (int i = 0; i < 3; ++i) {
+              uint8_t fw_version = 0;
+              uint8_t fw_reg[2] = { 0, 0 };
+              if (lgfx::i2c::transactionWriteRead(in_i2c_port, Touch_ST7123::default_addr, fw_reg, sizeof(fw_reg), &fw_version, 1, 100000).has_value()) {
+                read_st_touch_fw = true;
+                ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST touch FW version %02x", fw_version);
+                if (fw_version == 1) {
+                  hit_st7121 = true;
+                  break;
+                }
+                if (fw_version == 3) {
+                  hit_st7123 = true;
+                  break;
+                }
+                ESP_LOGW(LIBRARY_NAME, "M5Tab5 unknown ST touch FW version %02x", fw_version);
+              }
+              lgfx::delay(10);
+            }
+            if (!read_st_touch_fw) {
+              ESP_LOGW(LIBRARY_NAME, "M5Tab5 ST touch FW version read failed");
+            }
+
             auto bus_dsi = new Bus_DSI();
             _bus_last.reset(bus_dsi);
             auto bus_cfg = bus_dsi->config();
             bus_cfg.bus_id = 0;
             bus_cfg.lane_num = 2;
-            bus_cfg.lane_mbps = 1040;
+            bus_cfg.lane_mbps = hit_st7121 ? 900 : 1040;
             bus_cfg.ldo_chan_id = 3;
             bus_cfg.ldo_voltage_mv = 2500;
             bus_dsi->config(bus_cfg);
             if (bus_dsi->init()) {
               bool hit_ili9881 = false;
-              bool hit_st7123 = false;
               lgfx::delay(80);
-              for (int i = 0; i < 3; ++i) {
+              for (int i = 0; !hit_st7121 && !hit_st7123 && !hit_ili9881 && i < 3; ++i) {
                 uint8_t id[3] = { 0, };
                 bus_dsi->readParams( 0xF4, id, 2 );
                 ESP_LOGD(LIBRARY_NAME, "ST ID %02x %02x", id[0], id[1]);
                 if (id[0] == 0x71 && id[1] == 0x23) {
-                  hit_st7123 = true;
-                  break;
+                  ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST DSI ID matched 71 23");
                 }
                 static constexpr uint8_t params_page1[] = { 0x98, 0x81, 0x01 };
                 bus_dsi->writeParams( 0xFF, params_page1, 3);
@@ -2632,7 +2658,23 @@ The usage of each pin is as follows.
                 det.vsync_pulse_width = 4;
                 det.vsync_front_porch = 20;
                 p->config_detail(det);
+              } else if (hit_st7121) {
+                ESP_LOGI(LIBRARY_NAME, "M5Tab5 detected ST7121 display");
+                _touch_last.reset(new Touch_ST7123());
+                auto p = new Panel_ST7121();
+                _panel_last.reset(p);
+                auto det = p->config_detail();
+
+                det.dpi_freq_mhz = 70;
+                det.hsync_back_porch = 40;
+                det.hsync_pulse_width = 2;
+                det.hsync_front_porch = 40;
+                det.vsync_back_porch = 24;
+                det.vsync_pulse_width = 20;
+                det.vsync_front_porch = 200;
+                p->config_detail(det);
               } else if (hit_st7123) {
+                ESP_LOGI(LIBRARY_NAME, "M5Tab5 detected ST7123 display");
                 _touch_last.reset(new Touch_ST7123());
                 auto p = new Panel_ST7123();
                 _panel_last.reset(p);
@@ -2648,6 +2690,10 @@ The usage of each pin is as follows.
                 // note: reducing the front porch will cause the touch panel to stop working.
                 det.vsync_front_porch = 220;
                 p->config_detail(det);
+              }
+              if (_panel_last == nullptr) {
+                ESP_LOGE(LIBRARY_NAME, "M5Tab5 display panel was not detected");
+                goto init_clear;
               }
               {
                 auto p = _panel_last.get();
