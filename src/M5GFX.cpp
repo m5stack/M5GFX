@@ -1786,7 +1786,7 @@ namespace m5gfx
               bus_cfg.spi_3wire = true;
 
               bus_cfg.spi_host = SPI2_HOST;
-              bus_cfg.freq_write = 20000000;
+              bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 10000000;
               bus_spi->config(bus_cfg);
               bus_spi->init();
@@ -1798,11 +1798,11 @@ namespace m5gfx
                 cfg.pin_cs = GPIO_NUM_16;
                 cfg.pin_rst = GPIO_NUM_NC;
                 cfg.pin_busy = GPIO_NUM_18;
-                cfg.panel_width = 480;
-                cfg.panel_height = 800;
+                cfg.panel_width = 800;
+                cfg.panel_height = 480;
                 cfg.offset_x = 0;
                 cfg.offset_y = 0;
-                cfg.offset_rotation = 0;
+                cfg.offset_rotation = 3;
                 cfg.readable = false;
                 cfg.invert = false;
                 cfg.bus_shared = false;
@@ -3010,8 +3010,11 @@ init_clear:
     case board_M5StackCoreInk: title = "M5StackCoreInk"; break;
     case board_M5Paper:        title = "M5Paper";        break;
     case board_M5PaperS3:      title = "M5PaperS3";      break;
+    case board_M5PaperColor:   title = "M5PaperColor";   break;
+    case board_M5PaperMono:    title = "M5PaperMono";    break;
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5Station:      title = "M5Station";      break;
+    case board_M5StopWatch:    title = "M5StopWatch";    break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
     case board_M5AtomS3R:      title = "M5AtomS3R";      break;
     case board_M5Dial:         title = "M5Dial";         break;
@@ -3038,6 +3041,21 @@ init_clear:
     case board_M5PaperS3:
       w = 960;
       h = 540;
+      pnl_cfg.offset_rotation = 3;
+      p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
+      r = 1;
+      break;
+
+    case board_M5PaperColor:
+      w = 400;
+      h = 600;
+      pnl_cfg.offset_rotation = 0;
+      r = 1;
+      break;
+
+    case board_M5PaperMono:
+      w = 800;
+      h = 480;
       pnl_cfg.offset_rotation = 3;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
       r = 1;
