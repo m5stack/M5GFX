@@ -31,6 +31,7 @@
 
 #include "lgfx/v1/platforms/esp32p4/Bus_DSI.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ILI9881C.hpp"
+#include "lgfx/v1/platforms/esp32p4/Panel_ST7121.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7123.hpp"
 #include "lgfx/v1/platforms/esp32p4/Touch_ST7123.hpp"
 
@@ -168,8 +169,18 @@ namespace m5gfx
   static constexpr std::uint8_t m5ioe1_i2c_addr = 0x4F; // M5IOE1 device i2c address
   static constexpr std::uint8_t pi4io1_i2c_addr = 0x43;
   static constexpr std::uint8_t pi4io2_i2c_addr = 0x44;
+  static constexpr std::uint8_t st712x_touch_i2c_addr = 0x55;
 
   static constexpr std::uint16_t m5pm1_device_id = 0x2050; // M5PM1 device id (register 0x00~0x01)
+
+  __attribute__ ((unused))
+  static int _read_st712x_touch_fw_version(int_fast16_t i2c_port, uint32_t freq = 100000)
+  {
+    uint8_t reg[2] = { 0x00, 0x00 };
+    uint8_t version = 0;
+    auto res = lgfx::i2c::transactionWriteRead(i2c_port, st712x_touch_i2c_addr, reg, 2, &version, 1, freq);
+    return res.has_value() ? version : -1;
+  }
 
   __attribute__ ((unused))
   static bool _check_m5pm1(int i2c_port, uint32_t timeout_ms = 200)
@@ -2533,8 +2544,7 @@ The usage of each pin is as follows.
         // SDA = GPIO_NUM_31
         // SCL = GPIO_NUM_32
         // TP INT = GPIO_NUM_23
-        lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::output); // TP INT
-        lgfx::gpio_hi(GPIO_NUM_23); // select I2C Addr (high=0x14 / low=0x5D)
+        lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::input_pullup); // TP INT
         lgfx::i2c::init(in_i2c_port, GPIO_NUM_31, GPIO_NUM_32);
 
         id = lgfx::i2c::readRegister8(in_i2c_port, pi4io1_i2c_addr, 0x01).has_value()
@@ -2563,7 +2573,7 @@ The usage of each pin is as follows.
             0x0B, 0b11111001, 0,   // PI4IO_REG_PULL_EN
             0x09, 0b01000000, 0,   // PI4IO_REG_IN_DEF_STA
             0x11, 0b10111111, 0,   // PI4IO_REG_INT_MASK
-            0x05, 0b10001001, 0,   // PI4IO_REG_OUT_SET
+            0x05, 0b00001001, 0,   // PI4IO_REG_OUT_SET
             0xFF,0xFF,0xFF,
           };
 
@@ -2571,6 +2581,9 @@ The usage of each pin is as follows.
           i2c_write_register8_array(in_i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
           lgfx::delay(10);
           i2c_write_register8_array(in_i2c_port, pi4io1_i2c_addr, reg_data_io1_2, 100000);
+          lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::input_pullup);
+          lgfx::delay(100);
+          int st712x_touch_fw_version = _read_st712x_touch_fw_version(in_i2c_port);
 
 #if !CONFIG_SPIRAM
           ESP_LOGE(LIBRARY_NAME, "M5Tab5 need PSRAM enabled");
@@ -2634,19 +2647,27 @@ The usage of each pin is as follows.
                 p->config_detail(det);
               } else if (hit_st7123) {
                 _touch_last.reset(new Touch_ST7123());
-                auto p = new Panel_ST7123();
+                auto use_st7121 = st712x_touch_fw_version == 1;
+                Panel_DSI* p = use_st7121 ? static_cast<Panel_DSI*>(new Panel_ST7121())
+                                          : static_cast<Panel_DSI*>(new Panel_ST7123());
                 _panel_last.reset(p);
                 auto det = p->config_detail();
 
-                det.dpi_freq_mhz = 80;
+                det.dpi_freq_mhz = use_st7121 ? 70 : 80;
                 det.hsync_back_porch = 40;
                 det.hsync_pulse_width = 2;
                 det.hsync_front_porch = 40;
-                // note: back + pulse == 10. If it is out of sync, the display position will shift vertically.
-                det.vsync_back_porch = 8;
-                det.vsync_pulse_width = 2;
-                // note: reducing the front porch will cause the touch panel to stop working.
-                det.vsync_front_porch = 220;
+                if (use_st7121) {
+                  det.vsync_back_porch = 24;
+                  det.vsync_pulse_width = 20;
+                  det.vsync_front_porch = 200;
+                } else {
+                  // note: back + pulse == 10. If it is out of sync, the display position will shift vertically.
+                  det.vsync_back_porch = 8;
+                  det.vsync_pulse_width = 2;
+                  // note: reducing the front porch will cause the touch panel to stop working.
+                  det.vsync_front_porch = 220;
+                }
                 p->config_detail(det);
               }
               {
