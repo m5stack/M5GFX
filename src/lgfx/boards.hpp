@@ -79,6 +79,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5UnitRCA
     , board_M5ModuleDisplay
     , board_M5ModuleRCA
+    , board_M5UnitPoEP4HDMI
 
     , board_FrameBuffer = 512
     };
