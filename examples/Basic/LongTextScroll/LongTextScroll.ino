@@ -17,6 +17,9 @@ M5GFX display;
 //#include <M5AtomDisplay.h>
 //M5AtomDisplay display;
 
+//#include <M5UnitPoEP4HDMI.h>
+//M5UnitPoEP4HDMI display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+
 M5Canvas canvas(&display);
 
 static constexpr char text[] = "Hello world ! こんにちは世界！ this is long long string sample. 寿限無、寿限無、五劫の擦り切れ、海砂利水魚の、水行末・雲来末・風来末、喰う寝る処に住む処、藪ら柑子の藪柑子、パイポ・パイポ・パイポのシューリンガン、シューリンガンのグーリンダイ、グーリンダイのポンポコピーのポンポコナの、長久命の長助";

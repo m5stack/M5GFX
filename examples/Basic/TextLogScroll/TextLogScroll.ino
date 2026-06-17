@@ -18,6 +18,9 @@ M5GFX display;
 //M5AtomDisplay display;  // default setting
 //M5AtomDisplay display ( 320, 180 ); // width, height
 
+//#include <M5UnitPoEP4HDMI.h>
+//M5UnitPoEP4HDMI display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+
 static constexpr char text0[] = "hello world";
 static constexpr char text1[] = "this";
 static constexpr char text2[] = "is";

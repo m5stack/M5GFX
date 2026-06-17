@@ -20,9 +20,12 @@ M5GFX display;
 //M5AtomDisplay display;  // default setting
 //M5AtomDisplay display ( 320, 180 ); // width, height
 
+// #include <M5UnitPoEP4HDMI.h>
+// M5UnitPoEP4HDMI display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+
 
 static constexpr float deg_to_rad = 0.017453292519943295769236907684886;
-static constexpr int TFT_GREY = 0x5AEB;
+static constexpr int TFT_METER_GREY = 0x5AEB;
 static constexpr int LOOP_PERIOD = 35; // Display updates every 35 ms
 
 int value[6] = {0, 0, 0, 0, 0, 0};
@@ -111,7 +114,7 @@ void analogMeter()
 
 void plotLinear(const char *label, int x, int y, int w, int h)
 {
-  display.drawRect(x, y, w, h, TFT_GREY);
+  display.drawRect(x, y, w, h, TFT_METER_GREY);
   display.fillRect(x + 2, y + 18, w - 3, h - 36, TFT_WHITE);
   display.setTextColor(TFT_CYAN, TFT_BLACK);
   display.setTextDatum(textdatum_t::middle_center);
