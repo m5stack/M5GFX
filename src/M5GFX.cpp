@@ -3025,6 +3025,7 @@ init_clear:
     case board_M5VAMeter:      title = "M5VAMeter";      break;
     case board_M5StampPLC:     title = "M5StampPLC";     break;
     case board_M5Tab5:         title = "M5Tab5";         break;
+    case board_M5UnitPoEP4:    title = "M5UnitPoEP4";    break;
     case board_ArduinoNessoN1: title = "ArduinoNessoN1"; break;
     default:                   title = "M5GFX";          break;
     }
