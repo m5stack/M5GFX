@@ -28,6 +28,7 @@ Contributors:
 
 #include <esp_attr.h>
 #include <esp_err.h>
+#include <esp_idf_version.h>
 #include <esp_log.h>
 #include <esp_lcd_mipi_dsi.h>
 #include <esp_lcd_panel_io.h>
@@ -40,6 +41,21 @@ Contributors:
 #include <esp_lcd_panel_vendor.h>
 #include <freertos/task.h>
 #include <esp_lcd_panel_ops.h>
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 3)
+#include <inttypes.h>
+#include <esp_pm.h>
+#include <hal/mipi_dsi_hal.h>
+#include <hal/mipi_dsi_host_ll.h>
+
+// ESP-IDF 5.5.1 keeps the DSI bus internals private, but the handle is this
+// struct in esp_lcd/dsi/mipi_dsi_priv.h. Keep this shim version-gated.
+struct esp_lcd_dsi_bus_t {
+    int bus_id;
+    mipi_dsi_hal_context_t hal;
+    esp_pm_lock_handle_t pm_lock;
+};
+#endif
 
 #if __has_include(<utility/I2C_Class.hpp>)
 #include <utility/I2C_Class.hpp>
@@ -54,6 +70,56 @@ static constexpr uint8_t LT8912B_IO_I2C_MAIN_ADDRESS = 0x48;
 static constexpr uint8_t LT8912B_IO_I2C_CEC_ADDRESS  = 0x49;
 static constexpr uint8_t LT8912B_IO_I2C_AVI_ADDRESS  = 0x4A;
 static constexpr uint8_t LT8912B_ASPECT_RATIO_16_9   = 0x02;
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 3)
+static void apply_idf551_dsi_compat(esp_lcd_dsi_bus_handle_t dsi_bus,
+                                    const esp_lcd_dpi_panel_config_t* dpi_config,
+                                    uint32_t lane_bit_rate_mbps)
+{
+    if (!dsi_bus) {
+        return;
+    }
+
+    auto round_u32 = [](float value) -> uint32_t { return static_cast<uint32_t>(value + 0.5f); };
+    auto hal = &dsi_bus->hal;
+
+    if (!dpi_config) {
+        const uint32_t timeout_div = round_u32(lane_bit_rate_mbps / 8.0f / 10.0f);
+        const uint32_t esc_div = round_u32(lane_bit_rate_mbps / 8.0f / 18.0f);
+        mipi_dsi_host_ll_set_timeout_clock_division(hal->host, timeout_div);
+        mipi_dsi_host_ll_set_escape_clock_division(hal->host, esc_div);
+        ESP_LOGI(TAG, "Applied IDF 5.5.1 DSI divider compat: TimeoutDiv=%" PRIu32 ", EscDiv=%" PRIu32,
+                 timeout_div, esc_div);
+        return;
+    }
+
+    if (dpi_config->dpi_clock_freq_mhz == 0) {
+        return;
+    }
+
+    const auto& t = dpi_config->video_timing;
+    const float ratio = static_cast<float>(lane_bit_rate_mbps) / dpi_config->dpi_clock_freq_mhz / 8.0f;
+    const uint32_t host_hsw = round_u32(t.hsync_pulse_width * ratio);
+    const uint32_t host_hbp = round_u32(t.hsync_back_porch * ratio);
+    const uint32_t host_hfp = round_u32(t.hsync_front_porch * ratio);
+    int32_t host_act = static_cast<int32_t>(round_u32(t.h_size * ratio));
+
+    const uint32_t htotal = t.hsync_pulse_width + t.hsync_back_porch + t.h_size + t.hsync_front_porch;
+    const uint32_t host_htotal = round_u32(htotal * ratio);
+    const int32_t compensation = static_cast<int32_t>(host_htotal)
+                               - static_cast<int32_t>(host_hsw + host_hbp + host_act + host_hfp);
+    host_act += compensation;
+    if (host_act < 0) {
+        host_act = 0;
+    }
+
+    mipi_dsi_host_ll_dpi_set_horizontal_timing(hal->host, host_hsw, host_hbp,
+                                               static_cast<uint32_t>(host_act), host_hfp);
+    ESP_LOGI(TAG, "Applied IDF 5.5.1 DSI horizontal compat: hsw=%" PRIu32
+                  ", hbp=%" PRIu32 ", act=%" PRId32 ", hfp=%" PRIu32,
+             host_hsw, host_hbp, host_act, host_hfp);
+}
+#endif
 
 struct lt8912b_io_t {
     esp_lcd_panel_io_handle_t main;
@@ -924,6 +990,11 @@ namespace lgfx
     panel_io.cec_dsi = _io_cec;
     panel_io.avi = _io_avi;
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 3)
+    auto dsi_bus = bus->getMipiDsiBus();
+    apply_idf551_dsi_compat(dsi_bus, nullptr, bus->config().lane_mbps);
+#endif
+
     ESP_LOGI(TAG, "init LT8912B HDMI: %ux%u@%u, fb=%u", _config_detail.h_res, _config_detail.v_res,
              _config_detail.refresh_rate, _config_detail.fb_num);
 
@@ -938,6 +1009,9 @@ namespace lgfx
       ESP_LOGE(TAG, "init LT8912B panel failed: %s", esp_err_to_name(ret));
       return false;
     }
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 3)
+    apply_idf551_dsi_compat(dsi_bus, &dpi_config, bus->config().lane_mbps);
+#endif
 
     switch (_config_detail.fb_num) {
     case 1:
