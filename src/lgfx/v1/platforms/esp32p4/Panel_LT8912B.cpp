@@ -186,7 +186,9 @@ static void fill_dpi_config(esp_lcd_dpi_panel_config_t* dpi_config,
     dpi_config->video_timing.vsync_back_porch = timing.vbp;
     dpi_config->video_timing.vsync_front_porch = timing.vfp;
     dpi_config->flags.use_dma2d = true;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
     dpi_config->flags.disable_lp = true;
+#endif
 }
 
 static bool make_lt8912b_timing(uint16_t h_res,
@@ -877,31 +879,34 @@ namespace lgfx
     }
 
     const auto port = static_cast<i2c_port_num_t>(_config_detail.i2c_port);
-    esp_err_t ret = i2c_master_get_bus_handle(port, &_i2c_bus);
-    if (ret != ESP_OK) {
-      ESP_LOGW(TAG, "get existing I2C bus %d failed: %s; create fallback bus SDA=%d SCL=%d",
-               _config_detail.i2c_port, esp_err_to_name(ret),
-               _config_detail.i2c_sda, _config_detail.i2c_scl);
-
-      i2c_master_bus_config_t bus_config = {};
-      bus_config.i2c_port = port;
-      bus_config.sda_io_num = static_cast<gpio_num_t>(_config_detail.i2c_sda);
-      bus_config.scl_io_num = static_cast<gpio_num_t>(_config_detail.i2c_scl);
-      bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
-      bus_config.glitch_ignore_cnt = 7;
-      bus_config.flags.enable_internal_pullup = true;
-      bus_config.intr_priority = 1;
-
-      ret = i2c_new_master_bus(&bus_config, &_i2c_bus);
-      if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "create fallback I2C bus %d failed: %s", _config_detail.i2c_port, esp_err_to_name(ret));
-        _i2c_bus = nullptr;
-        return false;
-      }
-      _i2c_bus_owned = true;
-    } else {
+    esp_err_t ret = ESP_FAIL;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+    ret = i2c_master_get_bus_handle(port, &_i2c_bus);
+    if (ret == ESP_OK) {
       _i2c_bus_owned = false;
+      return true;
     }
+    ESP_LOGW(TAG, "get existing I2C bus %d failed: %s; create fallback bus SDA=%d SCL=%d",
+             _config_detail.i2c_port, esp_err_to_name(ret),
+             _config_detail.i2c_sda, _config_detail.i2c_scl);
+#endif
+
+    i2c_master_bus_config_t bus_config = {};
+    bus_config.i2c_port = port;
+    bus_config.sda_io_num = static_cast<gpio_num_t>(_config_detail.i2c_sda);
+    bus_config.scl_io_num = static_cast<gpio_num_t>(_config_detail.i2c_scl);
+    bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
+    bus_config.glitch_ignore_cnt = 7;
+    bus_config.flags.enable_internal_pullup = true;
+    bus_config.intr_priority = 1;
+
+    ret = i2c_new_master_bus(&bus_config, &_i2c_bus);
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "create fallback I2C bus %d failed: %s", _config_detail.i2c_port, esp_err_to_name(ret));
+      _i2c_bus = nullptr;
+      return false;
+    }
+    _i2c_bus_owned = true;
     return true;
   }
 
@@ -956,12 +961,12 @@ namespace lgfx
       esp_lcd_panel_io_i2c_config_t cec_cfg = make_lt8912b_io_config(_config_detail.i2c_freq, LT8912B_IO_I2C_CEC_ADDRESS);
       esp_lcd_panel_io_i2c_config_t avi_cfg = make_lt8912b_io_config(_config_detail.i2c_freq, LT8912B_IO_I2C_AVI_ADDRESS);
 
-      ret = esp_lcd_new_panel_io_i2c(_i2c_bus, &main_cfg, &_io_main);
+      ret = esp_lcd_new_panel_io_i2c_v2(_i2c_bus, &main_cfg, &_io_main);
       if (ret == ESP_OK) {
-        ret = esp_lcd_new_panel_io_i2c(_i2c_bus, &cec_cfg, &_io_cec);
+        ret = esp_lcd_new_panel_io_i2c_v2(_i2c_bus, &cec_cfg, &_io_cec);
       }
       if (ret == ESP_OK) {
-        ret = esp_lcd_new_panel_io_i2c(_i2c_bus, &avi_cfg, &_io_avi);
+        ret = esp_lcd_new_panel_io_i2c_v2(_i2c_bus, &avi_cfg, &_io_avi);
       }
       if (ret != ESP_OK) {
         ESP_LOGE(TAG, "create LT8912B I2C IO failed: %s", esp_err_to_name(ret));
