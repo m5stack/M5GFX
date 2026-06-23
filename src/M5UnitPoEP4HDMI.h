@@ -36,7 +36,7 @@ public:
     uint16_t dsi_ldo_voltage_mv = 2500;
 
     uint32_t i2c_freq = 100000;
-    lgfx::color_depth_t output_depth = lgfx::rgb888_3Byte;
+    lgfx::color_depth_t output_depth = lgfx::rgb888_nonswapped;
   };
 
   M5UnitPoEP4HDMI(void) : M5UnitPoEP4HDMI(config_t{}) {}

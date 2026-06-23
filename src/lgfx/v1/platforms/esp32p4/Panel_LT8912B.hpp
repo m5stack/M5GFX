@@ -85,7 +85,7 @@ namespace lgfx
       uint8_t lane_num = 2;
       bool use_draw_bitmap = false;
 
-      color_depth_t output_depth = rgb888_3Byte;
+      color_depth_t output_depth = rgb888_nonswapped;
     };
 
     Panel_LT8912B(void) { _cfg.bus_shared = false; }
@@ -97,7 +97,6 @@ namespace lgfx
     void display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h) override;
 
     color_depth_t setColorDepth(color_depth_t depth) override;
-
     void setSleep(bool flg_sleep) override;
     void setPowerSave(bool flg_idle) override { setSleep(flg_idle); }
 

@@ -713,6 +713,7 @@ namespace lgfx
       switch (dst_depth) {
       case argb8888_4Byte: return color_convert<bgra8888_t, rgb332_t>;
       case rgb888_3Byte  : return color_convert<bgr888_t  , rgb332_t>;
+      case rgb888_nonswapped: return color_convert<rgb888_t, rgb332_t>;
       case rgb666_3Byte  : return color_convert<bgr666_t  , rgb332_t>;
       case rgb565_2Byte  : return color_convert<swap565_t , rgb332_t>;
       case rgb332_1Byte  : return no_convert;
@@ -724,6 +725,7 @@ namespace lgfx
       switch (dst_depth) {
       case argb8888_4Byte: return color_convert<bgra8888_t, rgb888_t>;
       case rgb888_3Byte  : return getSwap24;
+      case rgb888_nonswapped: return no_convert;
       case rgb666_3Byte  : return color_convert<bgr666_t  , rgb888_t>;
       case rgb565_2Byte  : return color_convert<swap565_t , rgb888_t>;
       case rgb332_1Byte  : return color_convert<rgb332_t  , rgb888_t>;
@@ -735,6 +737,7 @@ namespace lgfx
       switch (dst_depth) {
       case argb8888_4Byte: return getSwap32;
       case rgb888_3Byte  : return color_convert<bgr888_t , rgb888_t>;
+      case rgb888_nonswapped: return no_convert;
       case rgb666_3Byte  : return color_convert<bgr666_t , rgb888_t>;
       case rgb565_2Byte  : return color_convert<swap565_t, rgb888_t>;
       case rgb332_1Byte  : return color_convert<rgb332_t , rgb888_t>;
@@ -746,6 +749,7 @@ namespace lgfx
       switch (dst_depth) {
       case argb8888_4Byte: return color_convert<bgra8888_t, bgr888_t>;
       case rgb888_3Byte  : return no_convert;
+      case rgb888_nonswapped: return color_convert<rgb888_t, bgr888_t>;
       case rgb666_3Byte  : return color_convert<bgr666_t  , bgr888_t>;
       case rgb565_2Byte  : return color_convert<swap565_t , bgr888_t>;
       case rgb332_1Byte  : return color_convert<rgb332_t  , bgr888_t>;
@@ -757,6 +761,7 @@ namespace lgfx
       switch (dst_depth) {
       case argb8888_4Byte: return color_convert<bgra8888_t, rgb565_t>;
       case rgb888_3Byte  : return color_convert<bgr888_t  , rgb565_t>;
+      case rgb888_nonswapped: return color_convert<rgb888_t, rgb565_t>;
       case rgb666_3Byte  : return color_convert<bgr666_t  , rgb565_t>;
       case rgb565_2Byte  : return getSwap16;
       case rgb332_1Byte  : return color_convert<rgb332_t  , rgb565_t>;
@@ -842,6 +847,7 @@ namespace lgfx
       switch (depth_) {
       case argb8888_4Byte:    revert_rgb888 = color_convert<rgb888_t, bgra8888_t >; break;
       case rgb888_3Byte:      revert_rgb888 = color_convert<rgb888_t, bgr888_t   >; break;
+      case rgb888_nonswapped: revert_rgb888 = no_convert; break;
       case rgb666_3Byte:      revert_rgb888 = color_convert<rgb888_t, bgr666_t   >; break;
       case rgb565_2Byte:      revert_rgb888 = color_convert<rgb888_t, swap565_t  >; break;
       case rgb332_1Byte:      revert_rgb888 = color_convert<rgb888_t, rgb332_t   >; break;
