@@ -11,6 +11,7 @@ file(GLOB SRCS
      src/lgfx/v1/panel/*.cpp
      src/lgfx/v1/platforms/esp32/*.cpp
      src/lgfx/v1/platforms/esp32c3/*.cpp
+     src/lgfx/v1/platforms/esp32s2/*.cpp
      src/lgfx/v1/platforms/esp32s3/*.cpp
      src/lgfx/v1/platforms/esp32p4/*.cpp
      src/lgfx/v1/touch/*.cpp

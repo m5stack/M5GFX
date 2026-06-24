@@ -37,6 +37,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5PaperColor
     , board_M5PaperMono
     , board_M5StopWatch
+    , board_M5CoreP4
+    , board_M5ToughC5
 
 /// non display boards
     , board_M5AtomLite = 128
@@ -67,6 +69,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5StampS3Bat
     , board_M5StampP4
     , board_M5NanoH2
+    , board_M5CoreMatrix
 
 /// external displays
     , board_M5AtomDisplay = 192
@@ -79,6 +82,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5UnitRCA
     , board_M5ModuleDisplay
     , board_M5ModuleRCA
+    , board_M5UnitPoEP4HDMI
 
     , board_FrameBuffer = 512
     };
