@@ -2080,8 +2080,9 @@ namespace m5gfx
               cfg.pin_rst = GPIO_NUM_34;
               cfg.panel_width = 128;
               cfg.panel_height = 128;
+              cfg.memory_height = 132;
               cfg.offset_x = 2;
-              cfg.offset_y = 31;
+              cfg.offset_y = 1;
               cfg.offset_rotation = 2;
               cfg.readable = true;
               cfg.bus_shared = false;
@@ -2407,8 +2408,9 @@ The usage of each pin is as follows.
               cfg.pin_rst = GPIO_NUM_48;
               cfg.panel_width = 128;
               cfg.panel_height = 128;
+              cfg.memory_height = 132;
               cfg.offset_x = 2;
-              cfg.offset_y = 31;
+              cfg.offset_y = 1;
               cfg.offset_rotation = 2;
               cfg.readable = true;
               cfg.bus_shared = false;
