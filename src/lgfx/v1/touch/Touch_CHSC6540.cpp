@@ -53,25 +53,25 @@ namespace lgfx
       if (gpio_in(_cfg.pin_int)) return 0;
     }
 
-    std::size_t len = 3 + count * 6;
-    std::uint8_t buf[2][15];
-    std::int32_t retry = 5;
+    size_t len = 3 + count * 6;
+    uint8_t buf[2][15];
+    int32_t retry = 5;
     bool flip = false;
-    std::uint8_t* tmp;
+    uint8_t* tmp;
     for (;;)
     {
       tmp = buf[flip];
       memset(tmp, 0, len);
       if (lgfx::i2c::beginTransaction(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq, false))
       {
-        static constexpr std::uint8_t reg_number = 2;
+        static constexpr uint8_t reg_number = 2;
         if (lgfx::i2c::writeBytes(_cfg.i2c_port, &reg_number, 1)
         && lgfx::i2c::restart(_cfg.i2c_port, _cfg.i2c_addr, _cfg.freq, true)
         && lgfx::i2c::readBytes(_cfg.i2c_port, tmp, 1)
         && (tmp[0] != 0))
         {
           flip = !flip;
-          std::size_t points = std::min<std::uint_fast8_t>(count, tmp[0]);
+          size_t points = std::min<uint_fast8_t>(count, tmp[0]);
           if (points && lgfx::i2c::readBytes(_cfg.i2c_port, &tmp[1], points * 6 - 2))
           {}
         }
@@ -82,7 +82,7 @@ namespace lgfx
     }
     if (count > tmp[0]) count = tmp[0];
 
-    for (std::size_t idx = 0; idx < count; ++idx)
+    for (size_t idx = 0; idx < count; ++idx)
     {
       auto data = &tmp[1 + idx * 6];
       tp[idx].size = 1;
