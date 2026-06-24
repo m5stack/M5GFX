@@ -153,40 +153,6 @@ namespace lgfx
 
 
         //----------------------------------------------------------------------------
-
-        class Panel_CO5300 : public lgfx::Panel_AMOLED
-        {
-        public:
-
-            Panel_CO5300(void)
-            {
-              _cfg.memory_width  = _cfg.panel_width  = 480;
-              _cfg.memory_height = _cfg.panel_height = 480;
-              _write_depth = lgfx::color_depth_t::rgb565_2Byte;
-              _read_depth = lgfx::color_depth_t::rgb565_2Byte;
-            }
-
-            const uint8_t* getInitCommands(uint8_t listno) const override
-            {
-              static constexpr uint8_t list0[] = {
-                0x11, 0+CMD_INIT_DELAY, 150, // Sleep out
-                0xC4, 1, 0x80,
-                0x35, 1, 0x80,
-                0x44, 2, 0x01, 0xD2, // Tear Effect Line = 0x1D2 == 466
-                0x53, 1, 0x20,
-                0x20, 0,
-                0x36, 1, 0,
-                0x51, 1, 0xA0,
-                0x29, 0,
-                0xff, 0xff // end
-              };
-              switch (listno) {
-                case 0: return list0;
-                default: return nullptr;
-              }
-            }
-        };
-
     }
 
 }

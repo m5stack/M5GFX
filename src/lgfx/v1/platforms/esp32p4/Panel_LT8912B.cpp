@@ -57,6 +57,10 @@ struct esp_lcd_dsi_bus_t {
 };
 #endif
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+#define esp_lcd_new_panel_io_i2c esp_lcd_new_panel_io_i2c_v2
+#endif
+
 #if __has_include(<utility/I2C_Class.hpp>)
 #include <utility/I2C_Class.hpp>
 #define LGFX_PANEL_LT8912B_HAS_M5_I2C 1
@@ -175,7 +179,12 @@ static void fill_dpi_config(esp_lcd_dpi_panel_config_t* dpi_config,
     dpi_config->virtual_channel = 0;
     dpi_config->dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT;
     dpi_config->dpi_clock_freq_mhz = timing.pclk_mhz;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    dpi_config->in_color_format = LCD_COLOR_FMT_RGB888;
+    dpi_config->out_color_format = LCD_COLOR_FMT_RGB888;
+#else
     dpi_config->pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB888;
+#endif
     dpi_config->num_fbs = fb_num;
     dpi_config->video_timing.h_size = timing.hact;
     dpi_config->video_timing.v_size = timing.vact;
@@ -185,7 +194,9 @@ static void fill_dpi_config(esp_lcd_dpi_panel_config_t* dpi_config,
     dpi_config->video_timing.vsync_pulse_width = timing.vs;
     dpi_config->video_timing.vsync_back_porch = timing.vbp;
     dpi_config->video_timing.vsync_front_porch = timing.vfp;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     dpi_config->flags.use_dma2d = true;
+#endif
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
     dpi_config->flags.disable_lp = true;
 #endif
@@ -300,6 +311,9 @@ static esp_err_t new_panel_lt8912b(const lt8912b_io_t *io, const lt8912b_vendor_
 
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_dpi(vendor_config->mipi_config.dsi_bus, vendor_config->mipi_config.dpi_config, ret_panel), err, TAG,
                       "create MIPI DPI panel failed");
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    (void)esp_lcd_dpi_panel_enable_dma2d(*ret_panel);
+#endif
     ESP_LOGD(TAG, "new MIPI DPI panel @%p", *ret_panel);
 
     lt8912b->del = (*ret_panel)->del;
@@ -961,12 +975,12 @@ namespace lgfx
       esp_lcd_panel_io_i2c_config_t cec_cfg = make_lt8912b_io_config(_config_detail.i2c_freq, LT8912B_IO_I2C_CEC_ADDRESS);
       esp_lcd_panel_io_i2c_config_t avi_cfg = make_lt8912b_io_config(_config_detail.i2c_freq, LT8912B_IO_I2C_AVI_ADDRESS);
 
-      ret = esp_lcd_new_panel_io_i2c_v2(_i2c_bus, &main_cfg, &_io_main);
+      ret = esp_lcd_new_panel_io_i2c(_i2c_bus, &main_cfg, &_io_main);
       if (ret == ESP_OK) {
-        ret = esp_lcd_new_panel_io_i2c_v2(_i2c_bus, &cec_cfg, &_io_cec);
+        ret = esp_lcd_new_panel_io_i2c(_i2c_bus, &cec_cfg, &_io_cec);
       }
       if (ret == ESP_OK) {
-        ret = esp_lcd_new_panel_io_i2c_v2(_i2c_bus, &avi_cfg, &_io_avi);
+        ret = esp_lcd_new_panel_io_i2c(_i2c_bus, &avi_cfg, &_io_avi);
       }
       if (ret != ESP_OK) {
         ESP_LOGE(TAG, "create LT8912B I2C IO failed: %s", esp_err_to_name(ret));
@@ -987,7 +1001,7 @@ namespace lgfx
     vendor_config.mipi_config.lane_num = _config_detail.lane_num;
 
     esp_lcd_panel_dev_config_t panel_config = {};
-    panel_config.reset_gpio_num = -1;
+    panel_config.reset_gpio_num = (gpio_num_t)-1;
     panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
     panel_config.bits_per_pixel = 24;
     lt8912b_io_t panel_io = {};

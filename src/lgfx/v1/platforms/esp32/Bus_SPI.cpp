@@ -94,17 +94,19 @@ Contributors:
   #define DMA_OUTFIFO_EMPTY_CH0      AXI_DMA_OUTFIFO_L3_EMPTY_CH0
   #define SIZE_OF_DMA_OUT_CH (sizeof(axi_dma_out_reg_t))
  #else
-  #if !defined DMA_OUT_LINK_CH0_REG
-   #define DMA_OUT_LINK_CH0_REG       GDMA_OUT_LINK_CH0_REG
-   #define DMA_OUTFIFO_STATUS_CH0_REG GDMA_OUTFIFO_STATUS_CH0_REG
-   #define DMA_OUTLINK_START_CH0      GDMA_OUTLINK_START_CH0
-   #if defined (GDMA_OUTFIFO_EMPTY_L3_CH0)
-    #define DMA_OUTFIFO_EMPTY_CH0      GDMA_OUTFIFO_EMPTY_L3_CH0
-   #else
-    #define DMA_OUTFIFO_EMPTY_CH0      GDMA_OUTFIFO_EMPTY_CH0
+  #if __has_include(<soc/gdma_struct.h>)
+   #if !defined DMA_OUT_LINK_CH0_REG
+    #define DMA_OUT_LINK_CH0_REG       GDMA_OUT_LINK_CH0_REG
+    #define DMA_OUTFIFO_STATUS_CH0_REG GDMA_OUTFIFO_STATUS_CH0_REG
+    #define DMA_OUTLINK_START_CH0      GDMA_OUTLINK_START_CH0
+    #if defined (GDMA_OUTFIFO_EMPTY_L3_CH0)
+     #define DMA_OUTFIFO_EMPTY_CH0      GDMA_OUTFIFO_EMPTY_L3_CH0
+    #else
+     #define DMA_OUTFIFO_EMPTY_CH0      GDMA_OUTFIFO_EMPTY_CH0
+    #endif
    #endif
+   #define SIZE_OF_DMA_OUT_CH (sizeof(GDMA.channel[0]))
   #endif
-  #define SIZE_OF_DMA_OUT_CH (sizeof(GDMA.channel[0]))
  #endif
 #endif
 
@@ -195,7 +197,7 @@ namespace lgfx
 #endif
       _inited = spi::init(_cfg.spi_host, _cfg.pin_sclk, _cfg.pin_miso, _cfg.pin_mosi, dma_ch).has_value();
 
-#if defined ( SOC_GDMA_SUPPORTED )
+#if defined ( SOC_GDMA_SUPPORTED ) && defined ( DMA_OUT_LINK_CH0_REG )
     // 割当られたDMAチャネル番号を取得する
 
 #if defined ( SOC_GDMA_TRIG_PERIPH_SPI3 )
@@ -712,7 +714,7 @@ namespace lgfx
         esp_cache_msync((void*)data, sizeof(uint8_t) * length, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
         esp_cache_msync(_dmadesc, sizeof(lldesc_t) * _dmadesc_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
         #endif
-#if defined ( SOC_GDMA_SUPPORTED )
+#if defined ( SOC_GDMA_SUPPORTED ) && defined ( DMA_OUTLINK_START_CH0 )
         auto dma = reg(SPI_DMA_CONF_REG(_spi_port));
         *dma = 0; /// Clear previous transfer
         uint32_t len = ((length - 1) & ((SPI_MS_DATA_BITLEN)>>3)) + 1;
@@ -724,7 +726,29 @@ namespace lgfx
         #endif
         *dma = SPI_DMA_TX_ENA;
         _clear_dma_reg = dma;
-#else
+        set_write_len(len << 3);
+        *_gpio_reg_dc[dc] = _mask_reg_dc;
+
+        // DMA準備完了待ち;
+ #if defined ( DMA_OUTFIFO_EMPTY_CH0 )
+        while (*_spi_dma_outstatus_reg & DMA_OUTFIFO_EMPTY_CH0 ) {}
+ #endif
+        exec_spi();
+
+        if (length -= len)
+        {
+          while (*cmd & SPI_USR) {}
+          set_write_len(SPI_MS_DATA_BITLEN + 1);
+          goto label_start;
+          do
+          {
+            vTaskDelay(1 / portTICK_PERIOD_MS);
+            while (*cmd & SPI_USR) {}
+label_start:
+            exec_spi();
+          } while (length -= ((SPI_MS_DATA_BITLEN + 1) >> 3));
+        }
+#elif defined ( CONFIG_IDF_TARGET_ESP32 ) || !defined ( CONFIG_IDF_TARGET )
         auto dma_conf_reg = reg(SPI_DMA_CONF_REG(_spi_port));
         auto dma_conf = *dma_conf_reg & ~(SPI_OUT_DATA_BURST_EN | SPI_AHBM_RST | SPI_AHBM_FIFO_RST | SPI_OUT_RST);
         *dma_conf_reg = dma_conf | SPI_AHBM_RST | SPI_AHBM_FIFO_RST | SPI_OUT_RST;
@@ -740,36 +764,18 @@ namespace lgfx
         uint32_t len = length;
         *spi_dma_out_link_reg = SPI_OUTLINK_START | ((int)(&_dmadesc[0]) & 0xFFFFF);
         _clear_dma_reg = spi_dma_out_link_reg;
-#endif
         set_write_len(len << 3);
         *_gpio_reg_dc[dc] = _mask_reg_dc;
 
         // DMA準備完了待ち;
-#if defined ( SOC_GDMA_SUPPORTED )
-        while (*_spi_dma_outstatus_reg & DMA_OUTFIFO_EMPTY_CH0 ) {}
-#elif defined (SPI_DMA_OUTFIFO_EMPTY)
+ #if defined (SPI_DMA_OUTFIFO_EMPTY)
         while (*_spi_dma_outstatus_reg & SPI_DMA_OUTFIFO_EMPTY ) {}
-#else
- #if defined ( LGFX_SPIDMA_WORKAROUND )
+ #else
+  #if defined ( LGFX_SPIDMA_WORKAROUND )
         if (_dma_ch) { spicommon_dmaworkaround_transfer_active(_dma_ch); }
+  #endif
  #endif
-#endif
         exec_spi();
-
-#if defined ( SOC_GDMA_SUPPORTED )
-        if (length -= len)
-        {
-          while (*cmd & SPI_USR) {}
-          set_write_len(SPI_MS_DATA_BITLEN + 1);
-          goto label_start;
-          do
-          {
-            vTaskDelay(1 / portTICK_PERIOD_MS);
-            while (*cmd & SPI_USR) {}
-label_start:
-            exec_spi();
-          } while (length -= ((SPI_MS_DATA_BITLEN + 1) >> 3));
-        }
 #endif
         return;
       }
@@ -929,7 +935,7 @@ label_start:
     dc_control(true);
     *_spi_dma_out_link_reg = 0;
 
-#if defined ( SOC_GDMA_SUPPORTED )
+#if defined ( SOC_GDMA_SUPPORTED ) && defined ( DMA_OUTLINK_START_CH0 )
     #if defined ( CONFIG_IDF_TARGET_ESP32P4 )
     *_spi_dma_out_link2_reg = ((uint32_t)(_dmadesc));
     *_spi_dma_out_link_reg = DMA_OUTLINK_START_CH0;
@@ -940,33 +946,13 @@ label_start:
     *dma = SPI_DMA_TX_ENA;
     _clear_dma_reg = dma;
     uint32_t len = ((_dma_queue_bytes - 1) & ((SPI_MS_DATA_BITLEN)>>3)) + 1;
-#else
-    auto dma_conf_reg = reg(SPI_DMA_CONF_REG(_spi_port));
-    auto dma_conf = *dma_conf_reg & ~(SPI_OUT_DATA_BURST_EN | SPI_AHBM_RST | SPI_AHBM_FIFO_RST | SPI_OUT_RST);
-    dma_conf |= SPI_OUTDSCR_BURST_EN;
-    *dma_conf_reg = dma_conf | SPI_AHBM_RST | SPI_AHBM_FIFO_RST | SPI_OUT_RST;
-    *dma_conf_reg = dma_conf;
-
-    *_spi_dma_out_link_reg = SPI_OUTLINK_START | ((int)(&_dmadesc[0]) & 0xFFFFF);
-    _clear_dma_reg = _spi_dma_out_link_reg;
-    uint32_t len = _dma_queue_bytes;
-    _dma_queue_bytes = 0;
-#endif
-
     set_write_len(len << 3);
     // DMA準備完了待ち;
-#if defined ( SOC_GDMA_SUPPORTED )
+ #if defined ( DMA_OUTFIFO_EMPTY_CH0 )
     while (*_spi_dma_outstatus_reg & DMA_OUTFIFO_EMPTY_CH0 ) {}
-#elif defined (SPI_DMA_OUTFIFO_EMPTY)
-    while (*_spi_dma_outstatus_reg & SPI_DMA_OUTFIFO_EMPTY ) {}
-#else
- #if defined ( LGFX_SPIDMA_WORKAROUND )
-    if (_dma_ch) { spicommon_dmaworkaround_transfer_active(_dma_ch); }
  #endif
-#endif
     exec_spi();
 
-#if defined ( SOC_GDMA_SUPPORTED )
     uint32_t length = _dma_queue_bytes - len;
     _dma_queue_bytes = 0;
     if (length)
@@ -981,6 +967,27 @@ label_start:
         exec_spi();
       } while (length -= ((SPI_MS_DATA_BITLEN + 1) >> 3));
     }
+#elif defined ( CONFIG_IDF_TARGET_ESP32 ) || !defined ( CONFIG_IDF_TARGET )
+    auto dma_conf_reg = reg(SPI_DMA_CONF_REG(_spi_port));
+    auto dma_conf = *dma_conf_reg & ~(SPI_OUT_DATA_BURST_EN | SPI_AHBM_RST | SPI_AHBM_FIFO_RST | SPI_OUT_RST);
+    dma_conf |= SPI_OUTDSCR_BURST_EN;
+    *dma_conf_reg = dma_conf | SPI_AHBM_RST | SPI_AHBM_FIFO_RST | SPI_OUT_RST;
+    *dma_conf_reg = dma_conf;
+
+    *_spi_dma_out_link_reg = SPI_OUTLINK_START | ((int)(&_dmadesc[0]) & 0xFFFFF);
+    _clear_dma_reg = _spi_dma_out_link_reg;
+    uint32_t len = _dma_queue_bytes;
+    _dma_queue_bytes = 0;
+    set_write_len(len << 3);
+    // DMA準備完了待ち;
+ #if defined (SPI_DMA_OUTFIFO_EMPTY)
+    while (*_spi_dma_outstatus_reg & SPI_DMA_OUTFIFO_EMPTY ) {}
+ #else
+  #if defined ( LGFX_SPIDMA_WORKAROUND )
+    if (_dma_ch) { spicommon_dmaworkaround_transfer_active(_dma_ch); }
+  #endif
+ #endif
+    exec_spi();
 #endif
   }
 
