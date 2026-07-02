@@ -136,16 +136,26 @@ Contributors:
   #include <soc/gdma_reg.h>
  #elif __has_include(<soc/axi_dma_reg.h>) // ESP32P4
   #include <soc/axi_dma_reg.h>
+ #elif __has_include(<soc/ahb_dma_reg.h>) // ESP32C61
+  #include <soc/ahb_dma_reg.h>
  #endif
  #if __has_include(<soc/gdma_struct.h>)
   #include <soc/gdma_struct.h>
  #elif __has_include(<soc/axi_dma_struct.h>) // ESP32P4
   #include <soc/axi_dma_struct.h>
+ #elif __has_include(<soc/ahb_dma_struct.h>) // ESP32C61
+  #include <soc/ahb_dma_struct.h>
  #endif
  // レジスタに異なる定義名がついているため、ここで統一;
  #if defined AXI_DMA_OUT_PERI_SEL_CH0_REG
   #define DMA_OUT_PERI_SEL_CH0_REG  AXI_DMA_OUT_PERI_SEL_CH0_REG
   #define DMA_IN_PERI_SEL_CH0_REG  AXI_DMA_IN_PERI_SEL_CH0_REG
+ #elif defined AHB_DMA_OUT_PERI_SEL_CH0_REG
+  #define DMA_OUT_PERI_SEL_CH0_REG  AHB_DMA_OUT_PERI_SEL_CH0_REG
+  #define DMA_IN_PERI_SEL_CH0_REG  AHB_DMA_IN_PERI_SEL_CH0_REG
+  #define DMA_PERI_OUT_SEL_CH0_M  AHB_DMA_PERI_OUT_SEL_CH0_M
+  #define DMA_PERI_IN_SEL_CH0_M  AHB_DMA_PERI_IN_SEL_CH0_M
+  #define SIZE_OF_DMA_CH (sizeof(AHB_DMA.channel[0]))
  #else
   #if __has_include(<soc/gdma_struct.h>)
    #if !defined (DMA_OUT_PERI_SEL_CH0_REG)
@@ -155,6 +165,7 @@ Contributors:
     #define DMA_PERI_IN_SEL_CH0_M  GDMA_PERI_IN_SEL_CH0_M
    #endif
   #endif
+  #define SIZE_OF_DMA_CH (sizeof(GDMA.channel[0]))
  #endif
 
  #if !defined (SOC_GDMA_PAIRS_PER_GROUP_MAX)
@@ -190,31 +201,56 @@ namespace lgfx
   static __attribute__ ((always_inline)) inline volatile uint32_t* reg(uint32_t addr) { return (volatile uint32_t *)ETS_UNCACHED_ADDR(addr); }
 #pragma GCC diagnostic pop
 
-  // in_sel メンバーの存在を検出する型特性
+  // ------- func_in_sel detect -------
+  // func_sel/func_in_sel/in_sel: A type characteristic that detects the presence of members
   template <typename T, typename = void>
   struct has_func_sel : std::false_type {};
 
   template <typename T>
   struct has_func_sel<T, decltype(void(std::declval<T&>().func_sel))> : std::true_type {};
 
-  // func_sel が存在する場合
+  template <typename T, typename = void>
+  struct has_func_in_sel : std::false_type {};
+
+  template <typename T>
+  struct has_func_in_sel<T, decltype(void(std::declval<T&>().func_in_sel))> : std::true_type {};
+
+  // func_sel exist
   template <typename T>
   static inline typename std::enable_if<has_func_sel<T>::value, uint32_t>::type
   get_gpio_func_in_sel(T& cfg) { return cfg.func_sel; }
 
-  // func_sel が存在しない場合 (in_sel を使用)
+  // func_sel does not exist, func_in_sel exist 
   template <typename T>
-  static inline typename std::enable_if<!has_func_sel<T>::value, uint32_t>::type
+  static inline typename std::enable_if<!has_func_sel<T>::value && has_func_in_sel<T>::value, uint32_t>::type
+  get_gpio_func_in_sel(T& cfg) { return cfg.func_in_sel; }
+  
+  // func_sel && func_in_sel does not exist  (use in_sel)
+  template <typename T>
+  static inline typename std::enable_if<!has_func_sel<T>::value && !has_func_in_sel<T>::value, uint32_t>::type
   get_gpio_func_in_sel(T& cfg) { return cfg.in_sel; }
 
-  // func_sel が存在する場合
+  // ------- func_out_sel detect -------
+  // func_sel/funcn_out_sel/out_sel: A type characteristic that detects the presence of members
+  template <typename T, typename = void>
+  struct has_funcn_out_sel : std::false_type {};
+
+  template <typename T>
+  struct has_funcn_out_sel<T, decltype(void(std::declval<T&>().funcn_out_sel))> : std::true_type {};
+
+  // func_sel exist
   template <typename T>
   static inline typename std::enable_if<has_func_sel<T>::value>::type
   set_gpio_func_out_sel(T& cfg, uint32_t val) { cfg.func_sel = val; }
 
-  // func_sel が存在しない場合 (out_sel を使用)
+  // func_sel does not exist, funcn_out_sel exist 
   template <typename T>
-  static inline typename std::enable_if<!has_func_sel<T>::value>::type
+  static inline typename std::enable_if<!has_func_sel<T>::value && has_funcn_out_sel<T>::value>::type
+  set_gpio_func_out_sel(T& cfg, uint32_t val) { cfg.funcn_out_sel = val; }
+  
+  // func_sel && funcn_out_sel does not exist  (use out_sel)
+  template <typename T>
+  static inline typename std::enable_if<!has_func_sel<T>::value && !has_funcn_out_sel<T>::value>::type
   set_gpio_func_out_sel(T& cfg, uint32_t val) { cfg.out_sel = val; }
 
   static int search_pin_number(int peripheral_sig)
@@ -319,7 +355,7 @@ namespace lgfx
       bool hit = (*reg(DMA_OUT_PERI_SEL_CH0_REG + i * sizeof(AXI_DMA.out[0])) & AXI_DMA_PERI_OUT_SEL_CH0_M) == peripheral_select;
 #else
    // ESP_LOGD("DBG","GDMA.channel:%d peri_sel:%d", i, GDMA.channel[i].out.peri_sel.sel);
-      bool hit = (*reg(DMA_OUT_PERI_SEL_CH0_REG + i * sizeof(GDMA.channel[0])) & DMA_PERI_OUT_SEL_CH0_M) == peripheral_select;
+      bool hit = (*reg(DMA_OUT_PERI_SEL_CH0_REG + i * SIZE_OF_DMA_CH) & DMA_PERI_OUT_SEL_CH0_M) == peripheral_select;
 #endif
       if (hit)
       {
@@ -345,7 +381,7 @@ namespace lgfx
       bool hit = (*reg(DMA_IN_PERI_SEL_CH0_REG + i * sizeof(AXI_DMA.in[0])) & AXI_DMA_PERI_IN_SEL_CH0_M) == peripheral_select;
 #else
    // ESP_LOGD("DBG","GDMA.channel:%d peri_sel:%d", i, GDMA.channel[i].out.peri_sel.sel);
-      bool hit = (*reg(DMA_IN_PERI_SEL_CH0_REG + i * sizeof(GDMA.channel[0])) & DMA_PERI_IN_SEL_CH0_M) == peripheral_select;
+      bool hit = (*reg(DMA_IN_PERI_SEL_CH0_REG + i * SIZE_OF_DMA_CH) & DMA_PERI_IN_SEL_CH0_M) == peripheral_select;
 #endif
       if (hit)
       {
@@ -420,14 +456,21 @@ namespace lgfx
 
     *io_mux_reg = io_mux_val;
 
+#if defined(CONFIG_IDF_TARGET_ESP32C61)
+    GPIO.pinn[pin].pinn_pad_driver = (mode == pin_mode_t::output) ? 0 : 1; // 1 = OpenDrain / 0 = normal output
+#else
     GPIO.pin[pin].pad_driver = (mode == pin_mode_t::output) ? 0 : 1; // 1 = OpenDrain / 0 = normal output
+#endif
     if (mode != pin_mode_t::output) {
       gpio_hi(pin);
     }
     auto gpio_en_reg = gpio_en_regs[((pin >> 5) << 1) + 1];
     *gpio_en_reg = 1u << (pin & 31);
-
+#if defined(CONFIG_IDF_TARGET_ESP32C61)
+    set_gpio_func_out_sel(GPIO.funcn_out_sel_cfg[pin], SIG_GPIO_OUT_IDX);
+#else
     set_gpio_func_out_sel(GPIO.func_out_sel_cfg[pin], SIG_GPIO_OUT_IDX);
+#endif
   }
 
 //----------------------------------------------------------------------------
@@ -1551,9 +1594,9 @@ namespace lgfx
         uint32_t val = (cycle > 64) ? (I2C_SCL_FILTER_EN | I2C_SDA_FILTER_EN) : 0;
         dev->filter_cfg.val = val;
         uint32_t scl_high_offset = ( val ? 8 : 7 );
- #if !defined ( CONFIG_IDF_TARGET_ESP32P4 )
+#if !(defined ( CONFIG_IDF_TARGET_ESP32P4 ) || defined ( CONFIG_IDF_TARGET_ESP32C61 ))
         dev->clk_conf.sclk_sel = 0;
- #endif
+#endif
 #else
         dev->scl_filter_cfg.en = cycle > 64;
         dev->scl_filter_cfg.thres = 0;
