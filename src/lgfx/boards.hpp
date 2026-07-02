@@ -37,7 +37,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5PaperColor
     , board_M5PaperMono
     , board_M5StopWatch
-    , board_M5CoreP4
+    , board_M5CoreP4X
+    , board_M5ChainCaptain
     , board_M5ToughC5
 
 /// non display boards
@@ -70,6 +71,10 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5StampP4
     , board_M5NanoH2
     , board_M5CoreMatrix
+    , baord_M5StampC5
+    , board_M5StampC6
+    , board_M5StampS3Mini
+    , board_M5StampP4X
 
 /// external displays
     , board_M5AtomDisplay = 192
