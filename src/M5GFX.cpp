@@ -11,6 +11,7 @@
 #include <nvs.h>
 #include <esp_log.h>
 #include <driver/i2c.h>
+#include <soc/soc.h>
 #include <soc/efuse_reg.h>
 #include <soc/gpio_reg.h>
 
@@ -2743,9 +2744,17 @@ The usage of each pin is as follows.
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
 
     if (pkg_ver == 1)
-    { // ESP32C6FH4(QFN32) : NanoC6
-      if (board == 0 || board == board_t::board_M5NanoC6)
+    { // ESP32C6FH4(QFN32) : NanoC6 / ESP32-C6FH8 : StampC6
+      if (board == 0 || board == board_t::board_M5NanoC6 || board == board_t::board_M5StampC6)
       {
+        // StampC6 uses ESP32-C6FH8 with 8MB flash; NanoC6 uses ESP32-C6FH4.
+        std::uint32_t flash_cap = REG_GET_FIELD(EFUSE_RD_MAC_SPI_SYS_4_REG, EFUSE_FLASH_CAP);
+        ESP_LOGD(LIBRARY_NAME, "flash_cap : %02x", (int)flash_cap);
+        if (board == board_t::board_M5StampC6 || (board == 0 && flash_cap == 1)) {
+          board = board_t::board_M5StampC6;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StampC6");
+          goto init_clear;
+        }
       }
     } else
     if (pkg_ver == 0)
