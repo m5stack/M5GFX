@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <sdkconfig.h>
+#include <soc/soc.h>
 #include <nvs.h>
 #include <esp_log.h>
 #include <driver/i2c.h>
@@ -2947,10 +2948,19 @@ The usage of each pin is as follows.
     bus_cfg.spi_host = SPI2_HOST;
     bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
 
-    std::uint32_t id;
-
-    if (board == 0 || board == board_t::board_M5ToughC5)
+    if (board == 0 || board == board_t::board_M5ToughC5 || board == board_t::board_M5StampC5)
     {
+      // StampC5 uses ESP32-C5HF4 with 4MB flash and no PSRAM; ToughC5 uses ESP32-C5HR8 with PSRAM.
+      std::uint32_t mac_sys2 = REG_READ(EFUSE_RD_MAC_SYS2_REG);
+      std::uint32_t flash_cap = (mac_sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V;
+      std::uint32_t psram_cap = (mac_sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V;
+      ESP_LOGD(LIBRARY_NAME, "mac_sys2:%08x flash_cap:%02x psram_cap:%02x", (int)mac_sys2, (int)flash_cap, (int)psram_cap);
+      if (board == board_t::board_M5StampC5 || (board == 0 && flash_cap == 1 && psram_cap == 0)) {
+        board = board_t::board_M5StampC5;
+        ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StampC5");
+        goto init_clear;
+      }
+
       // ToughC5: I2C0 SDA=2 SCL=3
       static constexpr int_fast16_t toughc5_i2c_sda = GPIO_NUM_2;
       static constexpr int_fast16_t toughc5_i2c_scl = GPIO_NUM_3;
@@ -3019,7 +3029,7 @@ The usage of each pin is as follows.
         bus_spi->config(bus_cfg);
         bus_spi->init();
 
-        id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        std::uint32_t id = _read_panel_id(bus_spi, GPIO_NUM_25);
         if ((id & 0xFF) == 0xE3)
         {   // ILI9342c
           board = board_t::board_M5ToughC5;
@@ -3138,6 +3148,7 @@ init_clear:
     case board_M5PaperMono:    title = "M5PaperMono";    break;
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5ToughC5:      title = "M5ToughC5";      break;
+    case board_M5StampC5:      title = "M5StampC5";      break;
     case board_M5Station:      title = "M5Station";      break;
     case board_M5StopWatch:    title = "M5StopWatch";    break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
