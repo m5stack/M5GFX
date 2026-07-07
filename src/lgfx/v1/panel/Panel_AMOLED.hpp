@@ -55,7 +55,6 @@ namespace lgfx
         protected:
             uint8_t* _frame_buffer = nullptr;
             Panel_AMOLED* _panel = nullptr;
-            bool _dma_oom = false;  // edge state: DMA line-buffer alloc failing
         };
 
 
