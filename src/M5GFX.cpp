@@ -2743,10 +2743,10 @@ The usage of each pin is as follows.
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
 
     if (pkg_ver == 1)
-    { // ESP32C6FH4(QFN32) : NanoC6
-      if (board == 0 || board == board_t::board_M5NanoC6)
-      {
-      }
+    { // QFN32 (ESP32-C6FH4 : NanoC6 / ESP32-C6FH8 : StampC6) : no display on these boards.
+      // Board identity of display-less boards is resolved by M5Unified (eFuse-based),
+      // not here — M5GFX persists autodetect results to NVS, which is only
+      // appropriate for probed display boards. Do not add board detection here.
     } else
     if (pkg_ver == 0)
     { // ESP32C6(QFN40) : NessoN1, UnitC6L
@@ -2948,16 +2948,19 @@ The usage of each pin is as follows.
     bus_cfg.spi_host = SPI2_HOST;
     bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
 
-    if (board == 0 || board == board_t::board_M5ToughC5 || board == board_t::board_M5StampC5)
+    if (board == 0 || board == board_t::board_M5ToughC5)
     {
-      // StampC5 uses ESP32-C5HF4 with 4MB flash and no PSRAM; ToughC5 uses ESP32-C5HR8 with PSRAM.
+      // ESP32-C5HF4 (in-package 4MB flash, no PSRAM) boards such as the
+      // StampC5 carry no display: skip the ToughC5 (C5HR8) display probe so
+      // their GPIOs are left untouched, but keep the board unknown here.
+      // Board identity of display-less boards is resolved by M5Unified —
+      // M5GFX persists autodetect results to NVS, which is only appropriate
+      // for probed display boards. Do not add board detection here.
       std::uint32_t mac_sys2 = REG_READ(EFUSE_RD_MAC_SYS2_REG);
       std::uint32_t flash_cap = (mac_sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V;
       std::uint32_t psram_cap = (mac_sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V;
       ESP_LOGD(LIBRARY_NAME, "mac_sys2:%08x flash_cap:%02x psram_cap:%02x", (int)mac_sys2, (int)flash_cap, (int)psram_cap);
-      if (board == board_t::board_M5StampC5 || (board == 0 && flash_cap == 1 && psram_cap == 0)) {
-        board = board_t::board_M5StampC5;
-        ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StampC5");
+      if (board == 0 && flash_cap == 1 && psram_cap == 0) {
         goto init_clear;
       }
 
