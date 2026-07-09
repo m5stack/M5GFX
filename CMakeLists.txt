@@ -18,7 +18,9 @@ file(GLOB SRCS
      )
 set(COMPONENT_SRCS ${SRCS})
 
-if (IDF_VERSION_MAJOR GREATER_EQUAL 5)
+if (IDF_VERSION_MAJOR GREATER_EQUAL 6)
+    set(COMPONENT_REQUIRES nvs_flash efuse esp_lcd driver esp_timer esp_mm esp_driver_ledc esp_driver_i2s hal)
+elseif (IDF_VERSION_MAJOR GREATER_EQUAL 5)
     set(COMPONENT_REQUIRES nvs_flash efuse driver esp_timer esp_lcd)
     if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.1")
         list(APPEND COMPONENT_REQUIRES esp_mm)
