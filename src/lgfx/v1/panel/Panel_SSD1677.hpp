@@ -82,11 +82,6 @@ namespace lgfx
     bool _initialize_seq;
     bool _screen_on = false;
 
-    // Software "previous frame" planes (prevL, prevM). Allocated lazily and used
-    // only by the 4-gray differential (fastest) path; B/W and factory modes don't
-    // need it (B/W relies on the controller's RED RAM as the previous frame).
-    uint8_t* _prev_buf = nullptr;
-
     size_t _get_buffer_length(void) const override;
     uint32_t _get_plane_length(void) const;
 
@@ -125,14 +120,48 @@ namespace lgfx
 
   struct Panel_SSD1677_4Gray : public Panel_SSD1677
   {
+    ~Panel_SSD1677_4Gray(void) override;
+    bool init(bool use_reset) override;
     void display(uint_fast16_t x, uint_fast16_t y, uint_fast16_t w, uint_fast16_t h) override;
 
   protected:
-    bool _prev_valid = false;       // _prev_buf holds a meaningful previous frame
-    epd_mode_t _last_gray_mode = (epd_mode_t)~0u;
+    enum class optical_state_t : uint8_t
+    {
+      unknown,
+      gray4,
+      mono_synchronized,
+    };
 
-    bool _ensure_prev_buf(void);
-    void _store_prev(void);         // copy current _buf planes into _prev_buf
+    optical_state_t _optical_state = optical_state_t::unknown;
+    bool _mode2_active = false;
+    bool _mode2_face_odd = false;
+    bool _mode2_face_known = false;
+    bool _mode2_previous_dirty_valid = false;
+    range_rect_t _mode2_previous_dirty;
+    uint8_t* _displayed_buf = nullptr;
+    bool _displayed_valid = false;
+
+    void _invalidate_gray_state(void);
+    void _clear_modified_range(void);
+    range_rect_t _full_range(void) const;
+    range_rect_t _union_range(const range_rect_t& lhs, const range_rect_t& rhs) const;
+    void _write_zero_plane(uint8_t command);
+    void _send_gray_lut(const uint8_t* lut);
+    void _remember_displayed(const uint8_t* lsb, const uint8_t* msb, bool monochrome);
+    void _send_transition_plane(uint8_t command,
+                                const uint8_t* new_lsb, const uint8_t* new_msb,
+                                const range_rect_t& dirty, uint8_t step,
+                                bool monochrome);
+    bool _activate_transition_step(const uint8_t* new_lsb, const uint8_t* new_msb,
+                                   const range_rect_t& dirty, uint8_t step,
+                                   bool monochrome);
+    bool _activate(uint8_t ctrl1, uint8_t ctrl2, bool powers_down, bool mode2_activation);
+    bool _reset_controller_for_mode2(void);
+    bool _enter_mono_mode2(const uint8_t* image);
+    bool _refresh_quality(const uint8_t* lsb, const uint8_t* msb);
+    bool _refresh_text(const uint8_t* lsb, const uint8_t* msb);
+    bool _refresh_fast(const uint8_t* lsb, const uint8_t* msb, const range_rect_t& dirty);
+    bool _refresh_fastest(const uint8_t* lsb, const uint8_t* msb, const range_rect_t& dirty);
   };
 
 //----------------------------------------------------------------------------
