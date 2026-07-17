@@ -416,6 +416,8 @@ namespace m5gfx
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
   static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
+  static constexpr int_fast16_t chain_captain_i2c_sda = GPIO_NUM_3;
+  static constexpr int_fast16_t chain_captain_i2c_scl = GPIO_NUM_2;
 
   struct Panel_M5StackCoreS3 : public lgfx::Panel_ILI9342
   {
@@ -603,6 +605,38 @@ namespace m5gfx
         write_buf[2] = (br >> 12) | 0x10;
         lgfx::i2c::transactionWrite(i2c_port, m5pm1_i2c_addr, write_buf, sizeof(write_buf), m5pm1_i2c_freq);
       }
+    }
+  };
+
+  struct Light_M5ChainCaptain : public lgfx::ILight
+  {
+    bool init(uint8_t brightness) override
+    {
+      lgfx::i2c::init(i2c_port, chain_captain_i2c_sda, chain_captain_i2c_scl);
+
+      // Disable M5IOE1 I2C idle sleep and configure IO11/PWM_CH3 for the backlight.
+      lgfx::i2c::writeRegister8(i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq);
+      lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, 1u << 2, m5ioe1_i2c_freq);
+      lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, 1u << 2, m5ioe1_i2c_freq);
+
+      const uint16_t pwm_freq = 1000;
+      uint8_t freq_buf[] = { 0x25, (uint8_t)pwm_freq, (uint8_t)(pwm_freq >> 8) };
+      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, freq_buf, sizeof(freq_buf), m5ioe1_i2c_freq);
+
+      setBrightness(brightness);
+      return true;
+    }
+
+    void setBrightness(uint8_t brightness) override
+    {
+      const uint32_t squared = (uint32_t)brightness * brightness;
+      const uint16_t duty = (squared * 4095u + 32512u) / 65025u;
+      uint8_t duty_buf[] = {
+        0x1F, // PWM_CH3 duty low register
+        (uint8_t)duty,
+        (uint8_t)((duty >> 8) | 0x80), // normal polarity, PWM enabled
+      };
+      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, duty_buf, sizeof(duty_buf), m5ioe1_i2c_freq);
     }
   };
 
@@ -1825,6 +1859,89 @@ namespace m5gfx
               goto init_clear;
 #endif
             }
+          }
+          lgfx::i2c::release(i2c_port);
+          bus_spi->release();
+          for (auto pin: backup_pins) { pin.restore(); }
+        }
+      }
+
+      if (board == 0 || board == board_t::board_M5ChainCaptain)
+      {
+        static constexpr uint8_t chain_captain_i2c_addr_list[] = {
+          0x32u, // RX8130
+          0x4Fu, // M5IOE1
+          0x68u, // BMI270
+          0x6Eu, // M5PM1
+          0u
+        };
+        uint32_t i2c_result = _detect_i2c_device(chain_captain_i2c_sda, chain_captain_i2c_scl, chain_captain_i2c_addr_list);
+
+        if (i2c_result == ~0u) {
+          gpio::pin_backup_t backup_pins[] = { GPIO_NUM_2, GPIO_NUM_3, GPIO_NUM_15, GPIO_NUM_16, GPIO_NUM_45, GPIO_NUM_46 };
+          lgfx::i2c::init(i2c_port, chain_captain_i2c_sda, chain_captain_i2c_scl);
+          if (_check_m5pm1(i2c_port) && _check_m5ioe1(i2c_port)) {
+            board = board_t::board_M5ChainCaptain;
+            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5ChainCaptain");
+
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
+            ESP_LOGE(LIBRARY_NAME, "M5ChainCaptain needs OPI-PSRAM enabled");
+#elif !defined (CONFIG_SPIRAM_MODE_OCT)
+            ESP_LOGE(LIBRARY_NAME, "M5ChainCaptain needs OPI-PSRAM enabled");
+#else
+            // M5PM1 and M5IOE1 may retain their idle-sleep settings across battery-powered shutdown.
+            lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq);
+            lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq);
+            lgfx::i2c::writeRegister8(i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq);
+
+            // IO12: LCD power, IO1: LCD reset.
+            lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, 1u << 3, m5ioe1_i2c_freq);
+            lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, 1u << 3, m5ioe1_i2c_freq);
+            lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x06, 1u << 3, m5ioe1_i2c_freq);
+            lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x13, 1u << 0, m5ioe1_i2c_freq);
+            lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x03, 1u << 0, m5ioe1_i2c_freq);
+            if (use_reset) {
+              lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x05, 1u << 0, m5ioe1_i2c_freq);
+              lgfx::delay(10);
+            }
+            lgfx::i2c::bitOn(i2c_port, m5ioe1_i2c_addr, 0x05, 1u << 0, m5ioe1_i2c_freq);
+            lgfx::delay(20);
+
+            bus_cfg.pin_mosi = GPIO_NUM_16;
+            bus_cfg.pin_miso = GPIO_NUM_NC;
+            bus_cfg.pin_sclk = GPIO_NUM_15;
+            bus_cfg.pin_dc   = GPIO_NUM_46;
+            bus_cfg.spi_mode = 0;
+            bus_cfg.spi_3wire = true;
+            bus_cfg.spi_host = SPI2_HOST;
+            bus_cfg.freq_write = 40000000;
+            bus_cfg.freq_read  = 16000000;
+            bus_spi->config(bus_cfg);
+            bus_spi->init();
+
+            auto p = new Panel_ST7789();
+            p->bus(bus_spi);
+            {
+              auto cfg = p->config();
+              cfg.pin_cs = GPIO_NUM_45;
+              cfg.pin_rst = GPIO_NUM_NC;
+              cfg.memory_width = 240;
+              cfg.memory_height = 320;
+              cfg.panel_width = 240;
+              cfg.panel_height = 240;
+              cfg.offset_x = 0;
+              cfg.offset_y = 0;
+              cfg.offset_rotation = 2;
+              cfg.readable = false;
+              cfg.invert = true;
+              cfg.bus_shared = false;
+              p->config(cfg);
+              p->setRotation(0);
+            }
+            _panel_last.reset(p);
+            _set_backlight(new Light_M5ChainCaptain());
+            goto init_clear;
+#endif
           }
           lgfx::i2c::release(i2c_port);
           bus_spi->release();
@@ -3154,6 +3271,7 @@ init_clear:
     case board_M5StampC5:      title = "M5StampC5";      break;
     case board_M5Station:      title = "M5Station";      break;
     case board_M5StopWatch:    title = "M5StopWatch";    break;
+    case board_M5ChainCaptain: title = "M5ChainCaptain"; break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
     case board_M5AtomS3R:      title = "M5AtomS3R";      break;
     case board_M5Dial:         title = "M5Dial";         break;
@@ -3244,6 +3362,7 @@ init_clear:
       break;
 
     case board_M5Dial:
+    case board_M5ChainCaptain:
       w = 240;
       h = 240;
       break;
