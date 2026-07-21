@@ -2032,33 +2032,37 @@ namespace m5gfx
         }
       }
 
-      if (board == 0 || board == board_t::board_M5PaperS3)
+      if (board == 0 || board == board_t::board_M5PaperS3 || board == board_t::board_M5PaperDIY)
       {
-        static constexpr int_fast16_t papers3_i2c_sda = GPIO_NUM_41;
-        static constexpr int_fast16_t papers3_i2c_scl = GPIO_NUM_42;
+        static constexpr int_fast16_t paper_i2c_sda = GPIO_NUM_41;
+        static constexpr int_fast16_t paper_i2c_scl = GPIO_NUM_42;
         static constexpr const uint8_t gt911_i2c_addr[] = { 0x14, 0x5D };
-        gpio::pin_backup_t backup_pins[] = { papers3_i2c_sda, papers3_i2c_scl };
+        gpio::pin_backup_t backup_pins[] = { paper_i2c_sda, paper_i2c_scl };
         auto result = lgfx::gpio::command(
           (const uint8_t[]) {
-          lgfx::gpio::command_mode_output        , papers3_i2c_scl,
-          lgfx::gpio::command_write_low          , papers3_i2c_scl,
-          lgfx::gpio::command_mode_output        , papers3_i2c_sda,
-          lgfx::gpio::command_write_low          , papers3_i2c_sda,
-          lgfx::gpio::command_write_high         , papers3_i2c_scl,
-          lgfx::gpio::command_write_high         , papers3_i2c_sda,
-          lgfx::gpio::command_mode_input_pulldown, papers3_i2c_scl,
-          lgfx::gpio::command_mode_input_pulldown, papers3_i2c_sda,
+          lgfx::gpio::command_mode_output        , paper_i2c_scl,
+          lgfx::gpio::command_write_low          , paper_i2c_scl,
+          lgfx::gpio::command_mode_output        , paper_i2c_sda,
+          lgfx::gpio::command_write_low          , paper_i2c_sda,
+          lgfx::gpio::command_write_high         , paper_i2c_scl,
+          lgfx::gpio::command_write_high         , paper_i2c_sda,
+          lgfx::gpio::command_mode_input_pulldown, paper_i2c_scl,
+          lgfx::gpio::command_mode_input_pulldown, paper_i2c_sda,
           lgfx::gpio::command_delay              , 1,
-          lgfx::gpio::command_read               , papers3_i2c_scl,
-          lgfx::gpio::command_read               , papers3_i2c_sda,
+          lgfx::gpio::command_read               , paper_i2c_scl,
+          lgfx::gpio::command_read               , paper_i2c_sda,
           lgfx::gpio::command_end
           }
         );
         // Check G41,G42 HIGH
         if (result == 0x03) {
-          lgfx::i2c::init(i2c_port, papers3_i2c_sda, papers3_i2c_scl);
-          {
-            bool gt911_found = false;
+          lgfx::i2c::init(i2c_port, paper_i2c_sda, paper_i2c_scl);
+          bool paperdiy_found = false;
+          bool gt911_found = false;
+          if (board != board_t::board_M5PaperS3) {
+            paperdiy_found = _check_m5pm1(i2c_port);
+          }
+          if (!paperdiy_found && board != board_t::board_M5PaperDIY) {
             for (auto addr: gt911_i2c_addr) {
               if (lgfx::i2c::beginTransaction(i2c_port, addr, 400000).has_value()) {
                 gt911_found = lgfx::i2c::endTransaction(i2c_port).has_value();
@@ -2067,85 +2071,102 @@ namespace m5gfx
                 }
               }
             }
-            if (gt911_found) {
+          }
+          if (paperdiy_found || gt911_found) {
+            if (paperdiy_found) {
+              board = board_t::board_M5PaperDIY;
+              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5PaperDIY");
+
+              // M5PM1 GPIO2 drives EPD_PWR on PaperDIY.
+              lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq);
+              lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq);
+              lgfx::i2c::bitOff(i2c_port, m5pm1_i2c_addr, 0x16, 0b11 << (2 * 2), m5pm1_i2c_freq);
+              lgfx::i2c::bitOn (i2c_port, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);
+              lgfx::i2c::bitOff(i2c_port, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq);
+              lgfx::i2c::bitOn (i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);
+              lgfx::delay(10);
+            } else {
               board = board_t::board_M5PaperS3;
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5PaperS3");
               // PWROFF_PULSE_PIN
               lgfx::pinMode(GPIO_NUM_44, lgfx::pin_mode_t::output);
               lgfx::gpio_lo(GPIO_NUM_44);
+            }
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
-              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need OPI-PSRAM enabled");
+            ESP_LOGE(LIBRARY_NAME, "%s need OPI-PSRAM enabled", board == board_t::board_M5PaperDIY ? "M5PaperDIY" : "M5PaperS3");
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
-              ESP_LOGE(LIBRARY_NAME, "M5PaperS3 need OPI-PSRAM enabled");
+            ESP_LOGE(LIBRARY_NAME, "%s need OPI-PSRAM enabled", board == board_t::board_M5PaperDIY ? "M5PaperDIY" : "M5PaperS3");
 #else
-              auto bus_epd = new Bus_EPD();
-              _bus_last.reset(bus_epd);
-              auto p = new lgfx::Panel_EPD();
-              _panel_last.reset(p);
+            auto bus_epd = new Bus_EPD();
+            _bus_last.reset(bus_epd);
+            auto p = new lgfx::Panel_EPD();
+            _panel_last.reset(p);
 
-              {
-                auto bus_cfg = bus_epd->config();
-                bus_cfg.bus_speed = 16000000;
-                bus_cfg.pin_data[0] = GPIO_NUM_6;
-                bus_cfg.pin_data[1] = GPIO_NUM_14;
-                bus_cfg.pin_data[2] = GPIO_NUM_7;
-                bus_cfg.pin_data[3] = GPIO_NUM_12;
-                bus_cfg.pin_data[4] = GPIO_NUM_9;
-                bus_cfg.pin_data[5] = GPIO_NUM_11;
-                bus_cfg.pin_data[6] = GPIO_NUM_8;
-                bus_cfg.pin_data[7] = GPIO_NUM_10;
-                bus_cfg.pin_pwr = GPIO_NUM_46;
-                bus_cfg.pin_spv = GPIO_NUM_17;
-                bus_cfg.pin_ckv = GPIO_NUM_18;
-                bus_cfg.pin_sph = GPIO_NUM_13;
-                bus_cfg.pin_oe = GPIO_NUM_45;
-                bus_cfg.pin_le = GPIO_NUM_15;
-                bus_cfg.pin_cl = GPIO_NUM_16;
-                bus_cfg.bus_width = 8;
-                bus_epd->config(bus_cfg);
-                p->setBus(bus_epd);
-              }
-              {
-                auto cfg_detail = p->config_detail();
-                cfg_detail.line_padding = 8;
-                p->config_detail(cfg_detail);
-              }
-              {
-                auto cfg = p->config();
-                cfg.memory_width = 960;
-                cfg.panel_width = 960;
-                cfg.memory_height = 540;
-                cfg.panel_height = 540;
-                cfg.offset_rotation = 3;
-                cfg.offset_x = 0;
-                cfg.offset_y = 0;
-                cfg.bus_shared = false;
-                p->config(cfg);
-              }
-
-              {
-                auto t = new lgfx::Touch_GT911();
-                _touch_last.reset(t);
-                auto cfg = t->config();
-                cfg.pin_int = GPIO_NUM_48;
-                cfg.pin_sda = GPIO_NUM_41;
-                cfg.pin_scl = GPIO_NUM_42;
-                cfg.freq = 400000;
-                cfg.i2c_port = I2C_NUM_1;
-                cfg.x_min = 0;
-                cfg.x_max = 539;
-                cfg.y_min = 0;
-                cfg.y_max = 959;
-                cfg.offset_rotation = 1;
-                cfg.bus_shared = false;
-                t->config(cfg);
-                _panel_last->touch(t);
-                p->touch(t);
-              }
-              goto init_clear;
-#endif
+            {
+              auto bus_cfg = bus_epd->config();
+              bus_cfg.bus_speed = 16000000;
+              bus_cfg.pin_data[0] = GPIO_NUM_6;
+              bus_cfg.pin_data[1] = GPIO_NUM_14;
+              bus_cfg.pin_data[2] = GPIO_NUM_7;
+              bus_cfg.pin_data[3] = GPIO_NUM_12;
+              bus_cfg.pin_data[4] = GPIO_NUM_9;
+              bus_cfg.pin_data[5] = GPIO_NUM_11;
+              bus_cfg.pin_data[6] = GPIO_NUM_8;
+              bus_cfg.pin_data[7] = GPIO_NUM_10;
+              bus_cfg.pin_pwr = GPIO_NUM_46;
+              bus_cfg.pin_spv = GPIO_NUM_17;
+              bus_cfg.pin_ckv = GPIO_NUM_18;
+              bus_cfg.pin_sph = GPIO_NUM_13;
+              bus_cfg.pin_oe = GPIO_NUM_45;
+              bus_cfg.pin_le = GPIO_NUM_15;
+              bus_cfg.pin_cl = GPIO_NUM_16;
+              bus_cfg.bus_width = 8;
+              bus_epd->config(bus_cfg);
+              p->setBus(bus_epd);
             }
+            {
+              auto cfg_detail = p->config_detail();
+              cfg_detail.line_padding = 8;
+              p->config_detail(cfg_detail);
+            }
+            {
+              auto cfg = p->config();
+              cfg.memory_width = 960;
+              cfg.panel_width = 960;
+              cfg.memory_height = 540;
+              cfg.panel_height = 540;
+              cfg.offset_rotation = 3;
+              cfg.offset_x = 0;
+              cfg.offset_y = 0;
+              cfg.bus_shared = false;
+              p->config(cfg);
+            }
+
+            if (board == board_t::board_M5PaperS3) {
+              auto t = new lgfx::Touch_GT911();
+              _touch_last.reset(t);
+              auto cfg = t->config();
+              cfg.pin_int = GPIO_NUM_48;
+              cfg.pin_sda = GPIO_NUM_41;
+              cfg.pin_scl = GPIO_NUM_42;
+              cfg.freq = 400000;
+              cfg.i2c_port = I2C_NUM_1;
+              cfg.x_min = 0;
+              cfg.x_max = 539;
+              cfg.y_min = 0;
+              cfg.y_max = 959;
+              cfg.offset_rotation = 1;
+              cfg.bus_shared = false;
+              t->config(cfg);
+              _panel_last->touch(t);
+              p->touch(t);
+            }
+            if (board == board_t::board_M5PaperDIY) {
+              lgfx::i2c::release(i2c_port);
+            }
+            goto init_clear;
+#endif
           }
           lgfx::i2c::release(i2c_port);
         }
@@ -3264,6 +3285,7 @@ init_clear:
     case board_M5StackCoreInk: title = "M5StackCoreInk"; break;
     case board_M5Paper:        title = "M5Paper";        break;
     case board_M5PaperS3:      title = "M5PaperS3";      break;
+    case board_M5PaperDIY:     title = "M5PaperDIY";     break;
     case board_M5PaperColor:   title = "M5PaperColor";   break;
     case board_M5PaperMono:    title = "M5PaperMono";    break;
     case board_M5Tough:        title = "M5Tough";        break;
@@ -3297,6 +3319,7 @@ init_clear:
 
     case board_M5Paper:
     case board_M5PaperS3:
+    case board_M5PaperDIY:
       w = 960;
       h = 540;
       pnl_cfg.offset_rotation = 3;
