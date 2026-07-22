@@ -41,8 +41,8 @@ namespace lgfx
       - _draw_pixel stores an abstract gray level v(0=black..3=white) split into
         two bit planes: planeL = v&1 (-> BW RAM 0x24), planeM = v&2 (-> RED RAM 0x26).
       - The hardware RAM encoding is generated at send time per epd_mode:
-          quality/text/fast : factory absolute LUT (planes sent as-is)
-          fastest           : differential vs prev (lut_grayscale codes)
+          quality/text : absolute four-gray LUT (planes sent as-is)
+          fast/fastest : monochrome differential LUT vs displayed history
   */
   struct Panel_SSD1677 : public Panel_HasBuffer
   {
@@ -85,7 +85,7 @@ namespace lgfx
     size_t _get_buffer_length(void) const override;
     uint32_t _get_plane_length(void) const;
 
-    bool _wait_busy(uint32_t timeout = 4096);
+    bool _wait_busy(uint32_t timeout = 4096, bool enforce_refresh_minimum = true);
     void _draw_pixel(uint_fast16_t x, uint_fast16_t y, uint32_t value);
     uint8_t _read_pixel(uint_fast16_t x, uint_fast16_t y);
     void _update_transferred_rect(uint_fast16_t &xs, uint_fast16_t &ys, uint_fast16_t &xe, uint_fast16_t &ye);
@@ -133,31 +133,28 @@ namespace lgfx
     };
 
     optical_state_t _optical_state = optical_state_t::unknown;
-    bool _mode2_active = false;
     bool _mode2_face_odd = false;
     bool _mode2_face_known = false;
-    bool _mode2_previous_dirty_valid = false;
-    range_rect_t _mode2_previous_dirty;
     uint8_t* _displayed_buf = nullptr;
     bool _displayed_valid = false;
 
     void _invalidate_gray_state(void);
     void _clear_modified_range(void);
     range_rect_t _full_range(void) const;
-    range_rect_t _union_range(const range_rect_t& lhs, const range_rect_t& rhs) const;
-    void _write_zero_plane(uint8_t command);
     void _send_gray_lut(const uint8_t* lut);
-    void _remember_displayed(const uint8_t* lsb, const uint8_t* msb, bool monochrome);
+    void _remember_displayed(const uint8_t* lsb, const uint8_t* msb);
     void _send_transition_plane(uint8_t command,
                                 const uint8_t* new_lsb, const uint8_t* new_msb,
                                 const range_rect_t& dirty, uint8_t step,
                                 bool monochrome);
     bool _activate_transition_step(const uint8_t* new_lsb, const uint8_t* new_msb,
                                    const range_rect_t& dirty, uint8_t step,
-                                   bool monochrome);
-    bool _activate(uint8_t ctrl1, uint8_t ctrl2, bool powers_down, bool mode2_activation);
+                                   bool monochrome, bool shortened = false,
+                                   bool stronger_mono = false);
+    void _remember_mono_dirty(const uint8_t* msb, const range_rect_t& dirty);
+    bool _activate(uint8_t ctrl1, uint8_t ctrl2, bool powers_down,
+                   bool mode2_activation, bool enforce_refresh_minimum = true);
     bool _reset_controller_for_mode2(void);
-    bool _enter_mono_mode2(const uint8_t* image);
     bool _refresh_quality(const uint8_t* lsb, const uint8_t* msb);
     bool _refresh_text(const uint8_t* lsb, const uint8_t* msb);
     bool _refresh_fast(const uint8_t* lsb, const uint8_t* msb, const range_rect_t& dirty);
