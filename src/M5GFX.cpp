@@ -413,6 +413,14 @@ namespace m5gfx
   static constexpr int_fast16_t aw9523_i2c_addr = 0x58; // AW9523B
   static constexpr int_fast16_t axp_i2c_addr = 0x34;    // AXP2101
   static constexpr int_fast16_t gc0308_i2c_addr = 0x21; // GC0308
+  static constexpr int_fast16_t ft5x06_i2c_addr = 0x38;
+  static constexpr uint8_t ft5x06_cipher_reg = 0xA3;
+  static constexpr uint8_t ft5x06_firmid_reg = 0xA6;
+  static constexpr uint8_t ft5x06_vendid_reg = 0xA8;
+  static constexpr uint8_t ft5x06_ili9342c_firmid = 0x10;
+  static constexpr uint8_t ft5x06_ili9342e_firmid = 0x12;
+  static constexpr uint8_t ft5x06_m5stack_vendor = 0x11;
+  static constexpr int32_t ft5x06_version_i2c_freq = 100000;
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
   static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
@@ -428,6 +436,61 @@ namespace m5gfx
       _cfg.offset_rotation = 3;
 
       _rotation = 1; // default rotation
+    }
+
+    void initPanelByTouchVersion()
+    {
+      uint8_t touch_cipher = 0;
+      uint8_t touch_firmid = 0;
+      uint8_t touch_vendid = 0;
+      bool touch_info_valid = false;
+      for (int retry = 0; retry < 5 && !touch_info_valid; ++retry)
+      {
+        auto set_work_mode = lgfx::i2c::writeRegister8(
+          i2c_port, ft5x06_i2c_addr, 0x00, 0x00, 0, ft5x06_version_i2c_freq);
+        auto read_cipher = lgfx::i2c::readRegister8(
+          i2c_port, ft5x06_i2c_addr, ft5x06_cipher_reg, ft5x06_version_i2c_freq);
+        auto read_firmid = lgfx::i2c::readRegister8(
+          i2c_port, ft5x06_i2c_addr, ft5x06_firmid_reg, ft5x06_version_i2c_freq);
+        auto read_vendid = lgfx::i2c::readRegister8(
+          i2c_port, ft5x06_i2c_addr, ft5x06_vendid_reg, ft5x06_version_i2c_freq);
+        touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
+        touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
+        touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
+        touch_info_valid = set_work_mode.has_value()
+                        && read_firmid.has_value()
+                        && read_vendid.has_value()
+                        && touch_vendid == ft5x06_m5stack_vendor
+                        && (touch_firmid == ft5x06_ili9342c_firmid
+                         || touch_firmid == ft5x06_ili9342e_firmid);
+        if (!touch_info_valid)
+        {
+          lgfx::delay(20);
+        }
+      }
+
+      bool use_ili9342e = touch_info_valid
+                       && touch_firmid == ft5x06_ili9342e_firmid;
+      if (touch_info_valid)
+      {
+        ESP_LOGI(LIBRARY_NAME,
+                 "CoreS3 touch CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x, panel:%s",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid,
+                 use_ili9342e ? "ILI9342E" : "ILI9342C");
+      }
+      else
+      {
+        ESP_LOGW(LIBRARY_NAME,
+                 "CoreS3 touch version read failed (CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x), panel:ILI9342C",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid);
+      }
+
+      if (use_ili9342e)
+      {
+        startWrite(true);
+        command_list(getIli9342EInitCommands());
+        endWrite();
+      }
     }
 
     void rst_control(bool level) override
@@ -453,6 +516,31 @@ namespace m5gfx
                              ? GPIO_ENABLE1_W1TC_REG
                              : GPIO_ENABLE1_W1TS_REG
                            ) = 1u << (GPIO_NUM_35 & 31);
+    }
+
+  protected:
+    static const uint8_t* getIli9342EInitCommands()
+    {
+      static constexpr uint8_t list0[] =
+      {
+        0xDD, 1, 0x01,
+        0x3A, 1, 0x55,
+        0x21, 0,
+        0x36, 1, 0x08,
+        0xD5, 1, 0x00,
+        0xB1, 1, 0x22,
+        0xC2, 9, 0x00,0x64,0x00,0x43,0x3C,0x03,0x03,0x03,0x03,
+        0xC8, 1, 0x38,
+        0xC9, 1, 0x1D,
+        0xCA, 1, 0x1D,
+        0xB7, 4, 0x5A,0x41,0x11,0x19,
+        0xE4,15, 0x04,0x09,0x12,0x06,0x14,0x08,0x3C,0x77,0x4A,0x06,0x0D,0x09,0x18,0x24,0x07,
+        0xE5,15, 0x02,0x03,0x08,0x06,0x14,0x08,0x38,0x56,0x4B,0x05,0x0F,0x0C,0x1F,0x1C,0x0D,
+        0x11, 0 + CMD_INIT_DELAY, 120,
+        0x29, 0 + CMD_INIT_DELAY, 120,
+        0xFF,0xFF,
+      };
+      return list0;
     }
   };
 
@@ -909,6 +997,13 @@ namespace m5gfx
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     switch (board) {
     default:
+      break;
+
+    case board_t::board_M5StackCoreS3:
+    case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
+      static_cast<Panel_M5StackCoreS3*>(_panel_last.get())
+        ->initPanelByTouchVersion();
       break;
 
     case board_t::board_M5StopWatch:
