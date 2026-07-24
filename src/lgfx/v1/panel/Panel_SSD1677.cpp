@@ -64,109 +64,112 @@ namespace lgfx
   // Then voltages [VGH, VSH1, VSH2, VSL, VCOM] (bytes 105..109) -> 0x03/0x04/0x2C.
   //--------------------------------------------------------------------------
 
+  // VS codes: 0 = VSS (no drive), 1 = VSH1 (darken), 2 = VSL (lighten),
+  // 3 = VSH2 (weak darken).
+  // For the absolute waveforms (quality/text/fast) the RAM group selects the
+  // target level: group 0 = white, 1 = light gray, 2 = dark gray, 3 = black.
+
+  // Quality: an oscillation prefix (12 strokes, 5 frames each) erases the
+  // previous image, then the factory 4-gray tail forms the target.
+  // Keep |VSH1| == |VSL|: the net drive stays identical for all groups,
+  // which prevents image-correlated ghosting over repeated refreshes.
+  // The tail runs twice (repeat on its timing groups); a single pass forms
+  // endpoints shallow enough that whites visibly mottle within a minute.
+  static constexpr uint8_t lut_quality[110] = {
+    0x66, 0x66, 0x00, 0x4A, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, // white
+    0x66, 0x66, 0x80, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // light
+    0x66, 0x66, 0x88, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // dark
+    0x66, 0x66, 0xA8, 0x44, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, // black
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
+    0x05, 0x05, 0x05, 0x05, 0x00,
+    0x05, 0x05, 0x05, 0x05, 0x01,
+    0x08, 0x0B, 0x02, 0x03, 0x01,
+    0x0C, 0x02, 0x07, 0x02, 0x01,
+    0x01, 0x00, 0x02, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x22, 0x22, 0x22, 0x22, 0x22,       // frame rate
+    0x17, 0x46, 0xA8, 0x36, 0x30,       // VGH, VSH1(+16V), VSH2, VSL(-16V), VCOM(-1.2V)
+  };
+
+  // Text: drive every pixel to white first (24 lightening frames, no black
+  // flash), then per-group darkening tails form the four levels. The net
+  // drive differs by group, so repeated text refreshes can leave
+  // image-correlated ghosting after power-off.
+  static constexpr uint8_t lut_text[110] = {
+    0xA8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // white
+    0xA9, 0x7F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // light
+    0xA9, 0x55, 0x5C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // dark
+    0xA9, 0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // black
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
+    0x08, 0x08, 0x08, 0x01, 0x00,
+    0x01, 0x01, 0x01, 0x01, 0x00,
+    0x01, 0x01, 0x05, 0x06, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x22, 0x22, 0x22, 0x22, 0x22,       // frame rate
+    0x17, 0x46, 0xA8, 0x36, 0x30,       // VGH, VSH1(+16V), VSH2, VSL(-16V), VCOM(-1.2V)
+  };
+
+  // Fast: absolute 4-gray waveform from community-sdk (oscillating 2-frame
+  // strokes). The net drive differs by group, so heavy repetition can leave
+  // image-correlated ghosting.
+  // The black darken return is 28 frames, not the original 32: the last
+  // 4 frames overdrive black and the excess rebounds toward gray during
+  // later undriven holds.
+  static constexpr uint8_t lut_fast[110] = {
+    0x55, 0x55, 0x55, 0x55, 0x55, 0x5A, 0xAA, 0xAA, 0x00, 0x00, // white
+    0xAA, 0x95, 0x55, 0x55, 0x55, 0x5A, 0x82, 0xA0, 0x00, 0x00, // light
+    0xAA, 0xA5, 0x55, 0x55, 0x55, 0x5A, 0xA0, 0x00, 0x00, 0x00, // dark
+    0xAA, 0xAA, 0xAA, 0xAA, 0x55, 0x55, 0x55, 0x50, 0x00, 0x00, // black
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x02, 0x02, 0x02, 0x02, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x8F, 0x8F, 0x8F, 0x8F, 0x8F,       // frame rate
+    0x17, 0x41, 0xA8, 0x32, 0x30,       // VGH, VSH1(+15V), VSH2, VSL(-15V), VCOM(-1.2V)
+  };
+
+  // Fastest: differential monochrome update (Mode 2). Here the RAM group is
+  // the transition class computed in _send_transition_plane: group 0 holds
+  // dark pixels, 3 holds light pixels, 1 drives black-to-white and 2 drives
+  // white-to-black. A 2-frame reverse-polarity prepulse precedes the
+  // 8-frame dose to curb ghosting from repeated partial updates.
   static constexpr uint8_t lut_fastest[110] = {
-    0x55, 0x55, 0x55, 0x55, 0x55, 0x5A, 0xAA, 0xAA, 0x00, 0x00, // LUT0: 00 white
-    0xAA, 0x95, 0x55, 0x55, 0x55, 0x5A, 0x82, 0xA0, 0x00, 0x00, // LUT1: 01 light
-    0xAA, 0xA5, 0x55, 0x55, 0x55, 0x5A, 0xA0, 0x00, 0x00, 0x00, // LUT2: 10 dark
-    0xAA, 0xAA, 0xAA, 0xAA, 0x55, 0x55, 0x55, 0x55, 0x00, 0x00, // LUT3: 11 black
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G0: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G1: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G2: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G3: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G4: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G5: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G6: A, B, C, D, RP
-    0x02, 0x02, 0x02, 0x02, 0x00, // TP G7: A, B, C, D, RP
-    0x00, 0x00, 0x00, 0x00, 0x00, // TP G8: A, B, C, D, RP
-    0x00, 0x00, 0x00, 0x00, 0x00, // TP G9: A, B, C, D, RP
-    0x8F, 0x8F, 0x8F, 0x8F, 0x8F, // frame rate
-    0x17, 0x41, 0xA8, 0x32, 0x30, // VGH, VSH1, VSH2, VSL, VCOM(-1.2V)
-  };
-
-  // Factory absolute LUTs. 2-bit pixel encoding: BW=bit0(LSB), RED=bit1(MSB).
-  //   00=black, 01=dark, 10=light, 11=white. (i.e. value v(0..3) = (MSB<<1)|LSB.)
-  static constexpr uint8_t lut_factory_fast[110] = {
-    0x00, 0x4A, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT0: 00 black
-    0x80, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT1: 01 dark
-    0x88, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT2: 10 light
-    0xA8, 0x44, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT3: 11 white
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
-    0x09, 0x0C, 0x03, 0x03, 0x00,
-    0x0F, 0x03, 0x07, 0x03, 0x00,
-    0x03, 0x00, 0x02, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x44, 0x44, 0x44, 0x44, 0x44,       // frame rate (faster clock)
-    0x17, 0x41, 0xA8, 0x32, 0x50,       // VGH, VSH1, VSH2, VSL, VCOM(-2.0V)
-  };
-
-  static constexpr uint8_t lut_factory_quality[110] = {
-    0x00, 0x4A, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT0: 00 black
-    0x80, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT1: 01 dark
-    0x88, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT2: 10 light
-    0xA8, 0x44, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT3: 11 white
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
-    0x08, 0x0B, 0x02, 0x03, 0x00,
-    0x0C, 0x02, 0x07, 0x02, 0x00,
-    0x01, 0x00, 0x02, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x01,
-    0x22, 0x22, 0x22, 0x22, 0x22,       // frame rate (slower clock)
-    0x17, 0x41, 0xA8, 0x32, 0x30,       // VGH, VSH1, VSH2, VSL, VCOM(-1.2V)
-  };
-
-  // Single-activation Quality waveform. The first eight phases apply the same
-  // VSL/VSH1 sequence to all four LUT groups (four rapid white/black round
-  // trips, two frames per phase). The remaining phases are the calibrated
-  // four-gray target waveform. No intermediate image transfer or separate
-  // activation is required.
-  static constexpr uint8_t lut_quality_oscillating[110] = {
-    0x99, 0x99, 0x00, 0x4A, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT0
-    0x99, 0x99, 0x80, 0x60, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT1
-    0x99, 0x99, 0x88, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT2
-    0x99, 0x99, 0xA8, 0x44, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT3
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // hold dark
+    0x6A, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // black -> white
+    0x95, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // white -> black
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // hold light
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // VCOM
     0x02, 0x02, 0x02, 0x02, 0x00,
-    0x02, 0x02, 0x02, 0x02, 0x00,
-    0x08, 0x0B, 0x02, 0x03, 0x00,
-    0x0C, 0x02, 0x07, 0x02, 0x00,
-    0x01, 0x00, 0x02, 0x00, 0x00,
+    0x01, 0x01, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
-    0x22, 0x22, 0x22, 0x22, 0x22,
-    0x17, 0x41, 0xA8, 0x36, 0x30,
-  };
-
-  // Differential Mode 2 base. Groups 00 and 11 are state-aware holds,
-  // group 01 lightens, and group 10 darkens. The actual pulse positions and
-  // durations are installed for each transition step below.
-  static constexpr uint8_t lut_gray_differential[110] = {
-    0,0,0,0,0,0,0,0,0,0,
-    0x54,0x54,0x40,0,0,0,0,0,0,0,
-    0xAA,0xA0,0xA8,0,0,0,0,0,0,0,
-    0xA2,0x22,0x20,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    1,1,1,1,0, 1,1,1,1,0,
-    1,1,1,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,
-    0x8F,0x8F,0x8F,0x8F,0x8F,
-    0x17,0x41,0xA8,0x32,0x30,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x8F, 0x8F, 0x8F, 0x8F, 0x8F,       // frame rate
+    // VCOM -1.2V matches the panel offset so held pixels sit field-free;
+    // more negative values slowly darken and mottle non-updated areas.
+    0x17, 0x46, 0xA8, 0x32, 0x30,       // VGH, VSH1(+16V), VSH2, VSL(-15V), VCOM(-1.2V)
   };
 
   // Write a 110-byte LUT: 105 waveform bytes -> 0x32, voltages -> 0x03/0x04/0x2C.
@@ -724,29 +727,18 @@ namespace lgfx
     _displayed_valid = true;
   }
 
-  static uint8_t transition_group(uint8_t old_level, uint8_t new_level,
-                                  uint8_t step, bool monochrome)
+  // Transition class for lut_fastest: the new level is thresholded to
+  // monochrome, unchanged pixels fall into the hold group of their side.
+  static uint8_t transition_group(uint8_t old_level, uint8_t new_level)
   {
-    if (monochrome)
-    {
-      new_level = new_level < 2 ? 0 : 3;
-      if (old_level == new_level) { return old_level < 2 ? 0 : 3; }
-      return old_level < new_level ? 1 : 2;
-    }
-    const uint8_t light_boundary = step;
-    const uint8_t dark_boundary = 2 - step;
-    const bool light = old_level < new_level
-                    && old_level <= light_boundary
-                    && new_level > light_boundary;
-    const bool dark = old_level > new_level
-                   && old_level > dark_boundary
-                   && new_level <= dark_boundary;
-    return light ? 1 : dark ? 2 : old_level < 2 ? 0 : 3;
+    new_level = new_level < 2 ? 0 : 3;
+    if (old_level == new_level) { return old_level < 2 ? 0 : 3; }
+    return old_level < new_level ? 1 : 2;
   }
 
   void Panel_SSD1677_4Gray::_send_transition_plane(
       uint8_t command, const uint8_t* new_lsb, const uint8_t* new_msb,
-      const range_rect_t& dirty, uint8_t step, bool monochrome)
+      const range_rect_t& dirty)
   {
     const auto full = _full_range();
     const uint32_t row_bytes = ((_cfg.panel_width + 7) & ~7) >> 3;
@@ -773,8 +765,7 @@ namespace lgfx
                                   | ((old_msb[index] & mask) ? 2 : 0);
           const uint8_t new_level = ((new_lsb[index] & mask) ? 1 : 0)
                                   | ((new_msb[index] & mask) ? 2 : 0);
-          const uint8_t group = transition_group(old_level, new_level,
-                                                 step, monochrome);
+          const uint8_t group = transition_group(old_level, new_level);
           const uint8_t group_bit = command == CMD_WRITE_RAM_BW ? 1 : 2;
           if (group & group_bit) { row[x >> 3] |= mask; }
           else                   { row[x >> 3] &= uint8_t(~mask); }
@@ -782,132 +773,6 @@ namespace lgfx
       }
       _bus->writeBytes(row, row_bytes, true, false);
     }
-  }
-
-  bool Panel_SSD1677_4Gray::_activate_transition_step(
-      const uint8_t* new_lsb, const uint8_t* new_msb,
-      const range_rect_t& dirty, uint8_t step, bool monochrome,
-      bool shortened, bool stronger_mono)
-  {
-    static constexpr uint8_t light_phases[] = {7, 4, 9};
-    static constexpr uint8_t vsl[] = {0x36, 0x32, 0x32};
-    static constexpr uint8_t dark_phases[] = {7, 6, 4};
-    static constexpr uint8_t vsh1[] = {0x46, 0x3F, 0x46};
-    static constexpr uint8_t light_position[] = {
-      0, 1, 3, 5, 7, 9, 11, 13, 15,
-    };
-    static constexpr uint8_t dark_position[] = {
-      0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14,
-    };
-
-    _send_transition_plane(CMD_WRITE_RAM_BW, new_lsb, new_msb,
-                           dirty, step, monochrome);
-    _send_transition_plane(CMD_WRITE_RAM_RED, new_lsb, new_msb,
-                           dirty, step, monochrome);
-
-    uint8_t lut[sizeof(lut_gray_differential)];
-    memcpy(lut, lut_gray_differential, sizeof(lut));
-    memset(lut, 0, 40); // groups 00 and 11 start as no-drive
-
-    if (monochrome || step == 2)
-    {
-      // Drive lightening and darkening concurrently. Fast uses the validated
-      // 12-frame 3+3+3+2+1 dose; Fastest uses the accepted eight-frame
-      // 2+2+2+1+1 dose.
-      // The fifth Fastest phase is already present for the darkening group.
-      // Use that same final frame for lightening as well: this raises the
-      // black-to-white dose from seven to eight frames without extending the
-      // eight-frame activation or changing outside-area hold groups. A
-      // 30-step navigation UI test retained the same 105 ms average and made
-      // the erased black cursor residue visually negligible.
-      const uint8_t light_end = shortened ? 5 : 8;
-      const uint8_t dark_end = shortened ? 5 : 8;
-      for (uint8_t position = 0; position < light_end; ++position)
-      {
-        lut[10 + (position >> 2)] |=
-            uint8_t{2} << (6 - ((position & 3) << 1));
-      }
-      for (uint8_t position = 0; position < dark_end; ++position)
-      {
-        lut[20 + (position >> 2)] |=
-            uint8_t{1} << (6 - ((position & 3) << 1));
-      }
-      for (uint8_t timing_group = 0; timing_group < 4; ++timing_group)
-      {
-        for (uint8_t phase = 0; phase < 4; ++phase)
-        {
-          const uint8_t position = timing_group * 4 + phase;
-          uint8_t tp = 0;
-          if (shortened)
-          {
-            if (stronger_mono)
-            {
-              // Fast retains the validated 12-frame dose.
-              if (position < 3) { tp = 3; }
-              else if (position == 3) { tp = 2; }
-              else if (position == 4) { tp = 1; }
-            }
-            else
-            {
-              // Fastest: keep the same five pulse positions and
-              // calibrated voltages, but shorten 3+3+3+2+1 to 2+2+2+1+1.
-              // This isolates the optical effect of an eight-frame dose from
-              // the already-validated state-aware outside-area holds.
-              if (position < 3) { tp = 2; }
-              else if (position < 5) { tp = 1; }
-            }
-          }
-          else
-          {
-            if (position < 7) { tp = 3; }
-            else if (position == 7) { tp = 1; }
-          }
-          lut[50 + timing_group * 5 + phase] = tp;
-        }
-      }
-    }
-    else
-    {
-      const uint8_t light_boundary = step;
-      const uint8_t dark_boundary = 2 - step;
-      for (uint8_t i = 0; i < light_phases[light_boundary]; ++i)
-      {
-        const uint8_t position = light_position[i];
-        lut[10 + (position >> 2)] |=
-            uint8_t{2} << (6 - ((position & 3) << 1));
-      }
-      for (uint8_t i = 0; i < dark_phases[dark_boundary]; ++i)
-      {
-        const uint8_t position = dark_position[i];
-        lut[20 + (position >> 2)] |=
-            uint8_t{1} << (6 - ((position & 3) << 1));
-      }
-      for (uint8_t timing_group = 0; timing_group < 4; ++timing_group)
-      {
-        for (uint8_t phase = 0; phase < 4; ++phase)
-        {
-          lut[50 + timing_group * 5 + phase] = 1;
-        }
-      }
-    }
-
-    // Groups 00 and 11 remain source-no-drive holds.  Repeated 12-frame tests
-    // showed that reducing VCOM from -1.2 V to -0.4 V greatly accelerated
-    // whiteward drift in untouched black/dark pixels.  Move in the opposite
-    // direction.  Hardware validation over 60 consecutive dirty updates found
-    // the SSD1677 factory-fast value (-2.0 V) neutral for all four untouched
-    // gray levels, so both monochrome differential modes use it while the
-    // four-gray transition passes retain -1.2 V.
-    if (monochrome) { lut[109] = 0x50; }
-    const uint8_t dark_boundary = monochrome ? 0 : uint8_t(2 - step);
-    const uint8_t light_boundary = monochrome ? 2 : step;
-    lut[106] = vsh1[dark_boundary];
-    // Fast gives black-to-white transitions the full twelfth frame and the
-    // calibrated -16 V VSL.  Fastest retains the lower-dose -15 V setting.
-    lut[108] = stronger_mono ? 0x36 : vsl[light_boundary];
-    _send_gray_lut(lut);
-    return _activate(CTRL1_NORMAL, 0x0C, false, true,
-                     !shortened);
   }
 
   bool Panel_SSD1677_4Gray::_activate(uint8_t ctrl1, uint8_t ctrl2,
@@ -962,73 +827,31 @@ namespace lgfx
     return true;
   }
 
-  bool Panel_SSD1677_4Gray::_refresh_quality(const uint8_t* lsb, const uint8_t* msb)
+  bool Panel_SSD1677_4Gray::_refresh_absolute(const uint8_t* lsb, const uint8_t* msb,
+                                              const uint8_t* lut)
   {
     // A sleep/power transition can invalidate the controller's Mode 2 face
-    // parity before the first visible refresh.  Quality is an absolute,
-    // full-screen operation, so recover a deterministic RAM face here rather
-    // than silently dropping the user's first frame.
+    // parity before the first visible refresh.  Absolute modes are
+    // full-screen operations, so recover a deterministic RAM face here
+    // rather than silently dropping the user's first frame.
     if (!_mode2_face_known && !_reset_controller_for_mode2())
     {
       _invalidate_gray_state();
       return false;
     }
 
-    const auto full = _full_range();
-    const uint8_t* bw = _mode2_face_odd ? msb : lsb;
-    const uint8_t* red = _mode2_face_odd ? lsb : msb;
-    _send_plane(CMD_WRITE_RAM_BW, bw, full, true);
-    _send_plane(CMD_WRITE_RAM_RED, red, full, true);
-    _send_gray_lut(lut_quality_oscillating);
-    if (!_activate(CTRL1_NORMAL, 0x07, true, false)) { return false; }
-    _optical_state = optical_state_t::gray4;
-    return true;
-  }
-
-  bool Panel_SSD1677_4Gray::_refresh_text(const uint8_t* lsb, const uint8_t* msb)
-  {
-    const auto full = _full_range();
     // The Mode 2 ping-pong face exchanges the physical interpretation of the
-    // two middle codes. Match Quality's parity-aware plane order before the
-    // self-contained white-first waveform; 00 black and 11 white are
-    // symmetric, so a parity error otherwise appears only as dark/light swap.
+    // two middle codes: swap the plane destinations on the odd face. 00 black
+    // and 11 white are symmetric, so a parity error would otherwise appear
+    // only as a dark/light swap.
+    const auto full = _full_range();
     const uint8_t* bw = _mode2_face_odd ? msb : lsb;
     const uint8_t* red = _mode2_face_odd ? lsb : msb;
     _send_plane(CMD_WRITE_RAM_BW, bw, full, true);
     _send_plane(CMD_WRITE_RAM_RED, red, full, true);
-    uint8_t lut[sizeof(lut_factory_quality)] = {};
-    auto set_vs = [&](uint8_t group, uint8_t phase, uint8_t code)
-    {
-      const size_t index = size_t(group) * 10 + (phase >> 2);
-      const uint8_t shift = 6 - 2 * (phase & 3);
-      lut[index] |= uint8_t(code << shift);
-    };
-    auto set_tp = [&](uint8_t phase, uint8_t frames)
-    {
-      lut[50 + size_t(phase >> 2) * 5 + (phase & 3)] = frames;
-    };
-    for (uint8_t phase = 0; phase < 3; ++phase)
-    {
-      for (uint8_t group = 0; group < 4; ++group) { set_vs(group, phase, 2); }
-      set_tp(phase, 8);
-    }
-    for (uint8_t phase = 3; phase < 12; ++phase)
-    {
-      set_vs(3, phase, 1);
-      if (phase <= 9) { set_vs(2, phase, 1); }
-      if (phase <= 4) { set_vs(1, phase, 1); }
-      set_tp(phase, phase == 10 ? 5 : phase == 11 ? 6 : 1);
-    }
-    set_vs(2, 10, 3);
-    for (uint8_t phase = 5; phase <= 9; ++phase) { set_vs(1, phase, 3); }
-    for (size_t i = 100; i < 105; ++i) { lut[i] = 0x22; }
-    lut[105] = 0x17;
-    lut[106] = 0x46;
-    lut[107] = 0xA8;
-    lut[108] = 0x36;
-    lut[109] = 0x30;
     _send_gray_lut(lut);
-    if (!_activate(CTRL1_NORMAL, 0x07, true, false)) { return false; }
+    // Wait on the BUSY line itself, without the 400 ms refresh-minimum floor.
+    if (!_activate(CTRL1_NORMAL, 0x07, true, false, false)) { return false; }
     _optical_state = optical_state_t::gray4;
     return true;
   }
@@ -1059,39 +882,18 @@ namespace lgfx
     }
   }
 
-  bool Panel_SSD1677_4Gray::_refresh_fast(const uint8_t* lsb, const uint8_t* msb,
-                                         const range_rect_t& current_dirty)
-  {
-    if (!_displayed_valid)
-    {
-      return _refresh_quality(lsb, msb);
-    }
-
-    // Fast retains the 12-frame activation and stable outside-area holds, and
-    // uses a stronger lightening dose than the eight-frame Fastest path to
-    // reduce black-to-white ghosting in the rewritten rectangle.
-    if (!_activate_transition_step(lsb, msb, current_dirty, 2, true, true, true))
-    {
-      return false;
-    }
-
-    _optical_state = optical_state_t::mono_synchronized;
-    _remember_mono_dirty(msb, current_dirty);
-    return true;
-  }
-
   bool Panel_SSD1677_4Gray::_refresh_fastest(const uint8_t* lsb, const uint8_t* msb,
                                             const range_rect_t& current_dirty)
   {
     if (!_displayed_valid)
     {
-      return _refresh_quality(lsb, msb);
+      return _refresh_absolute(lsb, msb, lut_quality);
     }
 
-    if (!_activate_transition_step(lsb, msb, current_dirty, 2, true, true))
-    {
-      return false;
-    }
+    _send_transition_plane(CMD_WRITE_RAM_BW, lsb, msb, current_dirty);
+    _send_transition_plane(CMD_WRITE_RAM_RED, lsb, msb, current_dirty);
+    _send_gray_lut(lut_fastest);
+    if (!_activate(CTRL1_NORMAL, 0x0C, false, true, false)) { return false; }
 
     _optical_state = optical_state_t::mono_synchronized;
     _remember_mono_dirty(msb, current_dirty);
@@ -1123,13 +925,13 @@ namespace lgfx
     switch (mode)
     {
     case epd_mode_t::epd_quality:
-      success = _refresh_quality(planeL, planeM);
+      success = _refresh_absolute(planeL, planeM, lut_quality);
       break;
     case epd_mode_t::epd_text:
-      success = _refresh_text(planeL, planeM);
+      success = _refresh_absolute(planeL, planeM, lut_text);
       break;
     case epd_mode_t::epd_fast:
-      success = _refresh_fast(planeL, planeM, current_dirty);
+      success = _refresh_absolute(planeL, planeM, lut_fast);
       break;
     case epd_mode_t::epd_fastest:
       success = _refresh_fastest(planeL, planeM, current_dirty);
@@ -1141,7 +943,9 @@ namespace lgfx
 
     if (success)
     {
-      if (mode == epd_mode_t::epd_quality || mode == epd_mode_t::epd_text)
+      // Every absolute refresh (including Fastest's fallback) leaves the full
+      // 2-bit planes on glass, so record them as the differential baseline.
+      if (_optical_state == optical_state_t::gray4)
       {
         _remember_displayed(planeL, planeM);
       }
