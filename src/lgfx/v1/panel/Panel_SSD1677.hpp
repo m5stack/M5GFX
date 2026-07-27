@@ -145,19 +145,12 @@ namespace lgfx
     void _remember_displayed(const uint8_t* lsb, const uint8_t* msb);
     void _send_transition_plane(uint8_t command,
                                 const uint8_t* new_lsb, const uint8_t* new_msb,
-                                const range_rect_t& dirty, uint8_t step,
-                                bool monochrome);
-    bool _activate_transition_step(const uint8_t* new_lsb, const uint8_t* new_msb,
-                                   const range_rect_t& dirty, uint8_t step,
-                                   bool monochrome, bool shortened = false,
-                                   bool stronger_mono = false);
+                                const range_rect_t& dirty);
     void _remember_mono_dirty(const uint8_t* msb, const range_rect_t& dirty);
     bool _activate(uint8_t ctrl1, uint8_t ctrl2, bool powers_down,
                    bool mode2_activation, bool enforce_refresh_minimum = true);
     bool _reset_controller_for_mode2(void);
-    bool _refresh_quality(const uint8_t* lsb, const uint8_t* msb);
-    bool _refresh_text(const uint8_t* lsb, const uint8_t* msb);
-    bool _refresh_fast(const uint8_t* lsb, const uint8_t* msb, const range_rect_t& dirty);
+    bool _refresh_absolute(const uint8_t* lsb, const uint8_t* msb, const uint8_t* lut);
     bool _refresh_fastest(const uint8_t* lsb, const uint8_t* msb, const range_rect_t& dirty);
   };
 
