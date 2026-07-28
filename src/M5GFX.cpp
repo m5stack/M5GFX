@@ -2432,10 +2432,12 @@ The usage of each pin is as follows.
           for (auto &bup : backup_pins2) { bup.restore(); }
           if ((result & 3) == 3) {
             m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_5, GPIO_NUM_6);
-            result = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
-                    && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
+            // Keep the probe result out of `result`; the CardputerADV check below
+            // still needs the G8/G9 bits of the GPIO read.
+            bool is_vameter = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
+                            && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
             backup_i2c_setting.restore();
-            if (result) {
+            if (is_vameter) {
               board = board_t::board_M5VAMeter;
             }
           }
