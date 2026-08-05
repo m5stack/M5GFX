@@ -3301,7 +3301,7 @@ The usage of each pin is as follows.
           lgfx::i2c::init(i2c_port, toughc5_i2c_sda, toughc5_i2c_scl);
 
           bus_spi->release();
-          bus_cfg.freq_write = 20000000;
+          bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
           bus_spi->config(bus_cfg);
 
