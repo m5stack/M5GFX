@@ -753,7 +753,18 @@ namespace m5gfx
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 
   static constexpr int32_t i2c_freq = 400000;
+  // 内部 I2C (G2/G3) は LP_I2C の固定パッドと一致するため LP ポートへ割り当てる。
+  // PortA も同じバスの物理分配のため、これで HP の I2C0 が丸ごと空く。
+  // (ポート番号は HP ポート数の次 = C5 では 1。Arduino ビルドでも LP は
+  //  TwoWire を介さず ESP-IDF ドライバで直接駆動される)
+  // 条件は common.cpp が LP 対応をコンパイルする条件と同一に保つこと
+  // (条件を満たさない SDK では LP ポートを開けないため HP へフォールバックする)
+#if defined ( SOC_LP_I2C_NUM ) && ( SOC_LP_I2C_NUM > 0 ) && __has_include ( <driver/i2c_master.h> ) \
+ && defined ( ESP_IDF_VERSION_VAL ) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+  static constexpr int_fast16_t i2c_port = LP_I2C_NUM_0;
+#else
   static constexpr int_fast16_t i2c_port = I2C_NUM_0;
+#endif
 
   struct Light_M5ToughC5 : public lgfx::ILight
   {
@@ -3290,7 +3301,7 @@ The usage of each pin is as follows.
           lgfx::i2c::init(i2c_port, toughc5_i2c_sda, toughc5_i2c_scl);
 
           bus_spi->release();
-          bus_cfg.freq_write = 20000000;
+          bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
           bus_spi->config(bus_cfg);
 
@@ -3320,7 +3331,7 @@ The usage of each pin is as follows.
             cfg.pin_sda  = toughc5_i2c_sda;
             cfg.pin_scl  = toughc5_i2c_scl;
             cfg.i2c_addr = 0x2E;
-            cfg.i2c_port = I2C_NUM_0;
+            cfg.i2c_port = i2c_port;
             cfg.freq = 400000;
             cfg.x_min = 0;
             cfg.x_max = 319;
