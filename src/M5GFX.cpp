@@ -3348,46 +3348,26 @@ The usage of each pin is as follows.
       lgfx::i2c::init(probe_i2c_port, toughc5_i2c_sda, toughc5_i2c_scl);
 
       if (_check_m5pm1(probe_i2c_port) && _check_m5ioe1(probe_i2c_port)) {
-        // M5PM1 初期化
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
-        lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x17, m5pm1_i2c_freq); // PWR_CFG: LED_CTRL, LDO, DCDC, CHG enable
+        // ボード確定 (パネル ID 確認) 前の書き込みは、ID 読みに必要な最小限
+        // (LCD 電源とリセット解除) に留め、不成立時に復元できるよう元値を控える
+        auto pm1_06  = lgfx::i2c::readRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x06, m5pm1_i2c_freq);
+        auto ioe1_03 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x03, m5ioe1_i2c_freq);
+        auto ioe1_05 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x05, m5ioe1_i2c_freq);
+        auto ioe1_13 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x13, m5ioe1_i2c_freq);
+        if (pm1_06.has_value() && ioe1_03.has_value() && ioe1_05.has_value() && ioe1_13.has_value()) {
 
-        // M5IOE1 初期化
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
-
-        // M5IOE1 PIN4(LCD_RST), PIN5(LCD_EN), PIN10(LCD_BL) を出力に設定
+        // M5IOE1 PIN4(LCD_RST), PIN5(LCD_EN) を High で出力に設定
         // PIN4=bit3, PIN5=bit4 → low register (0x03/0x05/0x13)
-        // PIN10=bit1(high) → high register (0x04/0x06/0x14)
-        static constexpr uint8_t IOE1_PIN_10 = 9;
-        static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
-
+        // リセット線 (PIN4, 基板プルアップ無し) を Low のまま駆動しないよう、
+        // 出力ラッチへ High を先に書いてから push-pull / 出力化する
+        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 latch HIGH
         lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x13, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 push-pull
-        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x14, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 push-pull
         lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x03, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 output
-        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x04, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 output
 
-        // LCD enable
-        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 4, m5ioe1_i2c_freq);  // PIN5(LCD_EN) HIGH
-
-        // LCD reset
-        if (use_reset) {
-          lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) LOW
-          lgfx::delay(2);
-          lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) HIGH
-          lgfx::delay(10);
-        }
-
-        // M5PM1 GPIO2(TP_RST) を出力に設定してリセット
-        lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x16, 0b11 << (2*2), m5pm1_i2c_freq); // GPIO2 → GPIO function
-        lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);  // GPIO2 output
-        lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq);  // GPIO2 push-pull
-        if (use_reset) {
-          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) LOW
-          lgfx::delay(2);
-          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) HIGH
-          lgfx::delay(10);
-        }
+        // LCD のロジック電源 (PM1 LDO → PYB_LCD_EN 経由)。PM1 リセット後は
+        // PWR_CFG がクリアされているため、コールドブートではここで入れる
+        lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x04, m5pm1_i2c_freq); // PWR_CFG: LDO enable
+        lgfx::delay(10);
 
         // SPI バスを設定して LCD パネル ID を確認
         bus_cfg.pin_mosi = GPIO_NUM_7;
@@ -3400,10 +3380,52 @@ The usage of each pin is as follows.
         bus_spi->init();
 
         std::uint32_t id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        if ((id & 0xFF) != 0xE3)
+        { // 一時的な読み損ないでボード不成立に落ちないよう一度だけ再試行する
+          lgfx::delay(2);
+          id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        }
         if ((id & 0xFF) == 0xE3)
         {   // ILI9342c
           board = board_t::board_M5ToughC5;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5ToughC5");
+
+          // --- ボードが確定したので、確認前に行えなかった初期化をまとめて行う
+          // M5PM1 初期化
+          lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
+          lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
+          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x17, m5pm1_i2c_freq); // PWR_CFG: LED_CTRL, LDO, DCDC, CHG enable
+
+          // M5IOE1 初期化
+          lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
+
+          // M5IOE1 PIN10(LCD_BL) を出力に設定
+          // PIN10=bit1(high) → high register (0x04/0x06/0x14)
+          static constexpr uint8_t IOE1_PIN_10 = 9;
+          static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
+          lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x14, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 push-pull
+          lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x04, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 output
+
+          // LCD reset
+          if (use_reset) {
+            lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) LOW
+            lgfx::delay(2);
+            lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) HIGH
+            lgfx::delay(10);
+          }
+
+          // M5PM1 GPIO2(TP_RST) を出力に設定してリセット
+          // ラッチへ High (リセット解除) を先に書いてから出力化する
+          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2 latch HIGH
+          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x16, 0b11 << (2*2), m5pm1_i2c_freq); // GPIO2 → GPIO function
+          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);  // GPIO2 output
+          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq);  // GPIO2 push-pull
+          if (use_reset) {
+            lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) LOW
+            lgfx::delay(2);
+            lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) HIGH
+            lgfx::delay(10);
+          }
 
           // ボードが確定したので、常用するハードウェアポートへバスを引き継ぐ
           // (バックライトとタッチがこのポートを使う)
@@ -3455,8 +3477,16 @@ The usage of each pin is as follows.
           goto init_clear;
         }
         bus_spi->release();
+
+        // 不成立: 確定前に書いた最小限のレジスタを元値へ復元する
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x03, ioe1_03.value(), 0, m5ioe1_i2c_freq);
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x13, ioe1_13.value(), 0, m5ioe1_i2c_freq);
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x05, ioe1_05.value(), 0, m5ioe1_i2c_freq);
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr,  0x06, pm1_06.value(),  0, m5pm1_i2c_freq);
+        }
       }
-      // ここへ来るのはボード不成立の場合のみ。ソフトウェアポートしか触れていない
+      // ここへ来るのはボード不成立の場合のみ。デバイスへ書いた分は復元済みで、
+      // ソフトウェア I2C と ESP 側のピン状態を返す
       lgfx::i2c::release(probe_i2c_port);
       for (auto &bup : backup_pins) { bup.restore(); }
     }
