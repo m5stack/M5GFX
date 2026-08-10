@@ -19,6 +19,7 @@
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
 #include "lgfx/v1/panel/Panel_SSD1677.hpp"
+#include "lgfx/v1/panel/Panel_TM1680.hpp"
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
 #include "lgfx/v1/panel/Panel_GC9A01.hpp"
@@ -50,6 +51,11 @@ static constexpr int_fast16_t in_i2c_port = I2C_NUM_1;
 #include <lgfx/v1/platforms/esp32/Panel_EPD.hpp>
 
 #endif
+
+#elif defined ( CONFIG_IDF_TARGET_ESP32C61 )
+
+#include "lgfx/v1/platforms/esp32/Bus_I2C.hpp"
+
 #endif
 
 #else
@@ -878,6 +884,12 @@ namespace m5gfx
   };
 
   // Touch_M5ToughC5 は lgfx::Touch_CHSC6540 に統合済み
+
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+
+  static constexpr int32_t i2c_freq = 400000;
+  static constexpr int_fast16_t i2c_port = I2C_NUM_0;
+  static constexpr std::uint8_t tm1680_i2c_addr = 0x72; // CoreMatrix LED matrix driver
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 
@@ -3449,6 +3461,81 @@ The usage of each pin is as follows.
       for (auto &bup : backup_pins) { bup.restore(); }
     }
 
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+
+    if (board == 0 || board == board_t::board_M5CoreMatrix)
+    {
+      // CoreMatrix: system I2C SDA=G0 / SCL=G1 (physically shared with Grove and M-Bus)
+      static constexpr int_fast16_t corematrix_i2c_sda = GPIO_NUM_0;
+      static constexpr int_fast16_t corematrix_i2c_scl = GPIO_NUM_1;
+
+      gpio::pin_backup_t backup_pins[] =
+      { GPIO_NUM_0
+      , GPIO_NUM_1
+      };
+
+      // Probe over software I2C; the hardware port is left untouched until the board is confirmed
+      lgfx::i2c::init(probe_i2c_port, corematrix_i2c_sda, corematrix_i2c_scl);
+
+      if (_check_m5pm1(probe_i2c_port) && _check_m5ioe1(probe_i2c_port)) {
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
+
+        // Drive M5IOE1 PIN4 (LEDS_EN) high to power the LED matrix rail.
+        // The TM1680 sits on that rail and does not respond on I2C until powered.
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
+        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x13, 1 << 3, m5ioe1_i2c_freq); // PIN4 push-pull
+        lgfx::i2c::bitOn (probe_i2c_port, m5ioe1_i2c_addr, 0x03, 1 << 3, m5ioe1_i2c_freq); // PIN4 output
+        lgfx::i2c::bitOn (probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq); // PIN4 HIGH
+        lgfx::delay(20); // wait for the rail to rise and the TM1680 to complete POR
+
+        // The TM1680 has no ID register; check for an address ACK only
+        bool hit = lgfx::i2c::beginTransaction(probe_i2c_port, tm1680_i2c_addr, 100000, false).has_value()
+                && lgfx::i2c::endTransaction(probe_i2c_port).has_value();
+        if (hit)
+        {
+          board = board_t::board_M5CoreMatrix;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5CoreMatrix");
+
+          // Board confirmed: hand the bus over to the hardware I2C port
+          lgfx::i2c::release(probe_i2c_port);
+
+          auto bus_i2c = new Bus_I2C();
+          {
+            auto cfg = bus_i2c->config();
+            cfg.i2c_port = i2c_port;
+            cfg.freq_write = i2c_freq;
+            cfg.freq_read  = i2c_freq;
+            cfg.pin_sda = corematrix_i2c_sda;
+            cfg.pin_scl = corematrix_i2c_scl;
+            cfg.i2c_addr = tm1680_i2c_addr;
+            cfg.prefix_len = 0; // the TM1680 protocol has no command/data prefix byte
+            bus_i2c->config(cfg);
+          }
+          _bus_last.reset(bus_i2c);
+
+          auto p = new lgfx::Panel_TM1680();
+          {
+            auto cfg = p->config();
+            cfg.bus_shared = false;
+            // rotation 1 (the default) shows upright with the buttons at the top
+            cfg.offset_rotation = 3;
+            p->config(cfg);
+            p->setRotation(1);
+          }
+          p->bus(bus_i2c);
+          _panel_last.reset(p);
+
+          goto init_clear;
+        }
+        // Not this board: restore the LED matrix power rail
+        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);
+      }
+      // Reached only when no board was detected; only the software port was touched
+      lgfx::i2c::release(probe_i2c_port);
+      for (auto &bup : backup_pins) { bup.restore(); }
+    }
+
 #elif defined (CONFIG_IDF_TARGET_ESP32H2)
 #endif
 
@@ -3514,6 +3601,7 @@ init_clear:
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5ToughC5:      title = "M5ToughC5";      break;
     case board_M5StampC5:      title = "M5StampC5";      break;
+    case board_M5CoreMatrix:   title = "M5CoreMatrix";   break;
     case board_M5Station:      title = "M5Station";      break;
     case board_M5StopWatch:    title = "M5StopWatch";    break;
     case board_M5ChainCaptain: title = "M5ChainCaptain"; break;
