@@ -3380,6 +3380,11 @@ The usage of each pin is as follows.
         bus_spi->init();
 
         std::uint32_t id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        if ((id & 0xFF) != 0xE3)
+        { // 一時的な読み損ないでボード不成立に落ちないよう一度だけ再試行する
+          lgfx::delay(2);
+          id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        }
         if ((id & 0xFF) == 0xE3)
         {   // ILI9342c
           board = board_t::board_M5ToughC5;
