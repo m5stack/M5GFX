@@ -248,12 +248,102 @@ namespace m5gfx
       _rotation = 1; // default rotation
     }
 
+    void initPanelByTouchVersion()
+    {
+      static constexpr uint8_t touch_addr = 0x38;
+      static constexpr uint8_t cipher_reg = 0xA3;
+      static constexpr uint8_t firmid_reg = 0xA6;
+      static constexpr uint8_t vendid_reg = 0xA8;
+      static constexpr uint8_t ili9342c_firmid = 0x10;
+      static constexpr uint8_t ili9342e_firmid = 0x12;
+      static constexpr uint8_t m5stack_vendor = 0x11;
+      static constexpr int32_t version_i2c_freq = 100000;
+
+      uint8_t touch_cipher = 0;
+      uint8_t touch_firmid = 0;
+      uint8_t touch_vendid = 0;
+      bool touch_info_valid = false;
+      for (int retry = 0; retry < 5 && !touch_info_valid; ++retry)
+      {
+        auto set_work_mode = lgfx::i2c::writeRegister8(
+            axp_i2c_port, touch_addr, 0x00, 0x00, 0, version_i2c_freq);
+        auto read_cipher = lgfx::i2c::readRegister8(
+            axp_i2c_port, touch_addr, cipher_reg, version_i2c_freq);
+        auto read_firmid = lgfx::i2c::readRegister8(
+            axp_i2c_port, touch_addr, firmid_reg, version_i2c_freq);
+        auto read_vendid = lgfx::i2c::readRegister8(
+            axp_i2c_port, touch_addr, vendid_reg, version_i2c_freq);
+
+        touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
+        touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
+        touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
+        touch_info_valid = set_work_mode.has_value()
+                        && read_firmid.has_value()
+                        && read_vendid.has_value()
+                        && touch_vendid == m5stack_vendor
+                        && (touch_firmid == ili9342c_firmid
+                         || touch_firmid == ili9342e_firmid);
+        if (!touch_info_valid)
+        {
+          lgfx::delay(20);
+        }
+      }
+
+      bool use_ili9342e = touch_info_valid
+                       && touch_firmid == ili9342e_firmid;
+      if (touch_info_valid)
+      {
+        ESP_LOGI(LIBRARY_NAME,
+                 "Core2 touch CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x, panel:%s",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid,
+                 use_ili9342e ? "ILI9342E" : "ILI9342C");
+      }
+      else
+      {
+        ESP_LOGW(LIBRARY_NAME,
+                 "Core2 touch version read failed (CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x), panel:ILI9342C",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid);
+      }
+
+      if (use_ili9342e)
+      {
+        startWrite(true);
+        command_list(getIli9342EInitCommands());
+        endWrite();
+      }
+    }
+
     void rst_control(bool level) override
     {
       uint8_t bits = level ? 2 : 0;
       uint8_t mask = level ? ~0 : ~2;
       // AXP192 reg 0x96 = GPIO3&4 control
       lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, bits, mask, axp_i2c_freq);
+    }
+
+  protected:
+    static const uint8_t* getIli9342EInitCommands()
+    {
+      static constexpr uint8_t list0[] =
+      {
+        0xDD, 1, 0x01,
+        0x3A, 1, 0x55,
+        0x21, 0,
+        0x36, 1, 0x08,
+        0xD5, 1, 0x00,
+        0xB1, 1, 0x22,
+        0xC8, 1, 0x38,
+        0xCB, 1, 0x1C,
+        0xC9, 1, 0x1A,
+        0xCA, 1, 0x1A,
+        0xB7, 4, 0x5A,0x41,0x11,0x19,
+        0xE4,15, 0x04,0x08,0x11,0x06,0x12,0x07,0x3A,0x76,0x47,0x07,0x0F,0x0A,0x11,0x19,0x05,
+        0xE5,15, 0x02,0x03,0x07,0x06,0x12,0x07,0x36,0x5F,0x48,0x06,0x10,0x0C,0x16,0x14,0x09,
+        0x11, 0 + CMD_INIT_DELAY, 120,
+        0x29, 0 + CMD_INIT_DELAY, 120,
+        0xFF,0xFF,
+      };
+      return list0;
     }
   };
 
@@ -997,6 +1087,14 @@ namespace m5gfx
     if (false == LGFX_Device::init_impl(false, use_clear)) {
       return false;
     }
+
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+    if (board == board_t::board_M5StackCore2)
+    {
+      static_cast<Panel_M5StackCore2*>(_panel_last.get())
+        ->initPanelByTouchVersion();
+    }
+#endif
 
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     switch (board) {
