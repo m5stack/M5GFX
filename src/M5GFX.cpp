@@ -1153,7 +1153,7 @@ namespace m5gfx
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
-    bus_cfg.spi_host = VSPI_HOST;
+    bus_cfg.spi_host = SPI3_HOST;
     bus_cfg.dma_channel = 1;
 
     std::uint32_t id;
@@ -1180,7 +1180,7 @@ namespace m5gfx
           board = board_t::board_M5StickCPlus;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus");
           bus_spi->release();
-          bus_cfg.spi_host = HSPI_HOST;
+          bus_cfg.spi_host = SPI2_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
           bus_spi->config(bus_cfg);
@@ -1195,7 +1195,7 @@ namespace m5gfx
           board = board_t::board_M5StickC;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickC");
           bus_spi->release();
-          bus_cfg.spi_host = HSPI_HOST;
+          bus_cfg.spi_host = SPI2_HOST;
           bus_cfg.freq_write = 27000000;
           bus_cfg.freq_read  = 14000000;
           bus_spi->config(bus_cfg);
@@ -1280,7 +1280,7 @@ namespace m5gfx
           board = board_t::board_M5StickCPlus2;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus2");
           bus_spi->release();
-          bus_cfg.spi_host = HSPI_HOST;
+          bus_cfg.spi_host = SPI2_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
           bus_spi->config(bus_cfg);
@@ -1350,7 +1350,7 @@ namespace m5gfx
               board = board_t::board_M5Station;
 
               bus_spi->release();
-              bus_cfg.spi_host = HSPI_HOST;
+              bus_cfg.spi_host = SPI2_HOST;
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 15000000;
               bus_spi->config(bus_cfg);
