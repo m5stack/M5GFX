@@ -149,7 +149,7 @@ public:
     int spi_sclk = GPIO_NUM_36;
 
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
- #define M5GFX_SPI_HOST VSPI_HOST
+ #define M5GFX_SPI_HOST SPI3_HOST
 
     int i2c_port = 1;
     int i2c_sda  = GPIO_NUM_21;
