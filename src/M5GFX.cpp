@@ -864,22 +864,29 @@ namespace m5gfx
 
   struct Light_M5ToughC5 : public lgfx::ILight
   {
+    // LCD backlight = M5IOE1 PIN10, driven by the expander's PWM channel 4.
+    // Registers: 0x21/0x22 = PWM4 duty (12bit, H[7]=enable), 0x25/0x26 = shared PWM frequency (Hz).
     bool init(uint8_t brightness) override
     {
+      static constexpr uint8_t freq_1khz[] = { 0x25, 0xE8, 0x03 };
+      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, freq_1khz, sizeof(freq_1khz), m5ioe1_i2c_freq);
+      lgfx::i2c::bitOn(i2c_port, m5ioe1_i2c_addr, 0x04, 0x02, m5ioe1_i2c_freq); // PIN10 output mode
       setBrightness(brightness);
       return true;
     }
 
+    void writeDuty(uint_fast16_t duty12)
+    {
+      uint8_t buf[] = { 0x21, (uint8_t)duty12, (uint8_t)(0x80 | (duty12 >> 8)) };
+      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, buf, sizeof(buf), m5ioe1_i2c_freq);
+    }
+
     void setBrightness(uint8_t brightness) override
     {
-      // M5IOE1 PIN10 (bit1 in high register 0x06) controls LCD backlight
-      static constexpr uint8_t IOE1_PIN_10 = 9;
-      static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
-      if (brightness) {
-        lgfx::i2c::bitOn(i2c_port, m5ioe1_i2c_addr, 0x06, IOE1_BIT_10_H, m5ioe1_i2c_freq);
-      } else {
-        lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x06, IOE1_BIT_10_H, m5ioe1_i2c_freq);
-      }
+      // gamma 2.0: perceived brightness tracks the setting instead of the raw duty
+      uint_fast16_t duty12 = ((uint32_t)brightness * brightness * 4095u + 32512u) / 65025u;
+      if (brightness && duty12 == 0) { duty12 = 1; }
+      writeDuty(duty12);
     }
   };
 
