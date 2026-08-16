@@ -2966,12 +2966,26 @@ The usage of each pin is as follows.
             bool hit_st7121 = false;
             bool hit_st7123 = false;
             bool read_st_touch_fw = false;
-            for (int i = 0; i < 3; ++i) {
+            bool found_gt911 = false;
+            // ST71xx のタッチコントローラは、スキャン動作中にリセットされた場合、
+            // 応答可能になるまで数十 ms を要する (実測: 稼働中からのソフトリセット後
+            // およそ 50ms)。待ちを打ち切ると ST パネルの判別に失敗して表示が出ない
+            // (ST7121/ST7123 は lane 速度が異なり DSI ID では安全に区別できない) ため、
+            // ST touch の既知 FW 版数 (1/3) を認識するか GT911 (ILI9881C 個体) が
+            // ACK するまで待つ。
+            int last_logged_fw = -1;
+            for (int i = 0; i < 60; ++i) {
               uint8_t fw_version = 0;
               uint8_t fw_reg[2] = { 0, 0 };
               if (lgfx::i2c::transactionWriteRead(probe_i2c_port, Touch_ST7123::default_addr, fw_reg, sizeof(fw_reg), &fw_version, 1, 100000).has_value()) {
                 read_st_touch_fw = true;
-                ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST touch FW version %02x", fw_version);
+                if (fw_version != last_logged_fw) {  // 未知値のリトライ継続で同じログを繰り返さない
+                  last_logged_fw = fw_version;
+                  ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST touch FW version %02x", fw_version);
+                  if (fw_version != 1 && fw_version != 3) {
+                    ESP_LOGW(LIBRARY_NAME, "M5Tab5 unknown ST touch FW version %02x", fw_version);
+                  }
+                }
                 if (fw_version == 1) {
                   hit_st7121 = true;
                   break;
@@ -2980,11 +2994,18 @@ The usage of each pin is as follows.
                   hit_st7123 = true;
                   break;
                 }
-                ESP_LOGW(LIBRARY_NAME, "M5Tab5 unknown ST touch FW version %02x", fw_version);
+              } else {
+                // GT911 はアドレス ACK の確認のみ (実読すると内部ポインタを進めてしまう)
+                if (lgfx::i2c::beginTransaction(probe_i2c_port, Touch_GT911::default_addr_1, 100000, false).has_value()
+                 && lgfx::i2c::endTransaction(probe_i2c_port).has_value()) {
+                  found_gt911 = true;
+                  ESP_LOGI(LIBRARY_NAME, "M5Tab5 GT911 touch detected");
+                  break;
+                }
               }
               lgfx::delay(10);
             }
-            if (!read_st_touch_fw) {
+            if (!read_st_touch_fw && !found_gt911) {
               ESP_LOGW(LIBRARY_NAME, "M5Tab5 ST touch FW version read failed");
             }
 
