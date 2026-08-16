@@ -2760,6 +2760,24 @@ The usage of each pin is as follows.
         bool is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
         bool is_gc9107 = (id & 0xFFFFFF) == 0x079100;
 //      ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel_id: 0x%08x", id);
+        if (!is_st7735 && !is_gc9107)
+        { // Some GC9107 batches return a valid ID only at low clock rates;
+          // re-probe slowly before giving up.
+          // (ST7735 does not answer at this rate, but a healthy one has
+          //  already been caught by the first probe above.)
+          bus_spi->release();
+          bus_cfg.freq_write = 100000;
+          bus_cfg.freq_read  = 100000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          id = _read_panel_id(bus_spi, GPIO_NUM_14);
+          // restore the probe speed in bus_cfg: later board probes reuse it
+          // without setting the frequency themselves.
+          bus_cfg.freq_write = 8000000;
+          bus_cfg.freq_read  = 8000000;
+          is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
+          is_gc9107 = (id & 0xFFFFFF) == 0x079100;
+        }
         if (is_st7735 || is_gc9107)
         {
           board = board_t::board_M5AtomS3R;
