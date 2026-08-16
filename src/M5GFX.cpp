@@ -1888,11 +1888,14 @@ namespace m5gfx
               board = board_t::board_M5StopWatch;
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StopWatch");
 
-#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
-              ESP_LOGE(LIBRARY_NAME, "M5StopWatch need OPI-PSRAM enabled");
-#elif !defined (CONFIG_SPIRAM_MODE_OCT)
-              ESP_LOGE(LIBRARY_NAME, "M5StopWatch need OPI-PSRAM enabled");
-#else
+              // Panel_CO5300 supports direct drawing; the optional PSRAM frame
+              // buffer (initPanelFb) may fail to allocate and is not required,
+              // so no PSRAM requirement applies here (unlike the EPD boards).
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined (CONFIG_SPIRAM_MODE_OCT)
+              // Without the frame buffer, drawing whose origin is at an odd
+              // coordinate may render incorrectly (this affects e.g. text glyphs).
+              ESP_LOGW(LIBRARY_NAME, "M5StopWatch: OPI-PSRAM is disabled; the display falls back to direct drawing, which may render incorrectly when the drawing origin is at an odd coordinate. Enable OPI-PSRAM for correct rendering.");
+#endif
 
               // GPIO39:OLED CS Pin
               lgfx::pinMode(GPIO_NUM_39, lgfx::pin_mode_t::output);
@@ -1983,7 +1986,6 @@ namespace m5gfx
               }
 
               goto init_clear;
-#endif
             }
 
             if (is_papermono) {
@@ -1992,8 +1994,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
               ESP_LOGE(LIBRARY_NAME, "M5PaperMono need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
               ESP_LOGE(LIBRARY_NAME, "M5PaperMono need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #else
 
               // GPIO16:EINK CS Pin
@@ -2102,8 +2110,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
             ESP_LOGE(LIBRARY_NAME, "M5ChainCaptain needs OPI-PSRAM enabled");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
             ESP_LOGE(LIBRARY_NAME, "M5ChainCaptain needs OPI-PSRAM enabled");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #else
             // M5PM1 and M5IOE1 may retain their idle-sleep settings across battery-powered shutdown.
             lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq);
@@ -2185,8 +2199,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
               ESP_LOGE(LIBRARY_NAME, "M5PaperColor need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
               ESP_LOGE(LIBRARY_NAME, "M5PaperColor need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #else
             // Disable watchdog (WDT_CNT=0 disables)
             lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0x00, m5pm1_i2c_freq);
@@ -2311,8 +2331,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
             ESP_LOGE(LIBRARY_NAME, "%s need OPI-PSRAM enabled", board == board_t::board_M5PaperDIY ? "M5PaperDIY" : "M5PaperS3");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
             ESP_LOGE(LIBRARY_NAME, "%s need OPI-PSRAM enabled", board == board_t::board_M5PaperDIY ? "M5PaperDIY" : "M5PaperS3");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #else
             auto bus_epd = new Bus_EPD();
             _bus_last.reset(bus_epd);
