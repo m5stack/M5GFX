@@ -1888,11 +1888,14 @@ namespace m5gfx
               board = board_t::board_M5StopWatch;
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StopWatch");
 
-#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
-              ESP_LOGE(LIBRARY_NAME, "M5StopWatch need OPI-PSRAM enabled");
-#elif !defined (CONFIG_SPIRAM_MODE_OCT)
-              ESP_LOGE(LIBRARY_NAME, "M5StopWatch need OPI-PSRAM enabled");
-#else
+              // Panel_CO5300 supports direct drawing; the optional PSRAM frame
+              // buffer (initPanelFb) may fail to allocate and is not required,
+              // so no PSRAM requirement applies here (unlike the EPD boards).
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined (CONFIG_SPIRAM_MODE_OCT)
+              // Without the frame buffer, drawing whose origin is at an odd
+              // coordinate may render incorrectly (this affects e.g. text glyphs).
+              ESP_LOGW(LIBRARY_NAME, "M5StopWatch: OPI-PSRAM is disabled; the display falls back to direct drawing, which may render incorrectly when the drawing origin is at an odd coordinate. Enable OPI-PSRAM for correct rendering.");
+#endif
 
               // GPIO39:OLED CS Pin
               lgfx::pinMode(GPIO_NUM_39, lgfx::pin_mode_t::output);
@@ -1983,7 +1986,6 @@ namespace m5gfx
               }
 
               goto init_clear;
-#endif
             }
 
             if (is_papermono) {
