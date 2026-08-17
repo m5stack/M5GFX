@@ -19,6 +19,7 @@
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
 #include "lgfx/v1/panel/Panel_SSD1677.hpp"
+#include "lgfx/v1/panel/Panel_TM1680.hpp"
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
 #include "lgfx/v1/panel/Panel_GC9A01.hpp"
@@ -50,6 +51,11 @@ static constexpr int_fast16_t in_i2c_port = I2C_NUM_1;
 #include <lgfx/v1/platforms/esp32/Panel_EPD.hpp>
 
 #endif
+
+#elif defined ( CONFIG_IDF_TARGET_ESP32C61 )
+
+#include "lgfx/v1/platforms/esp32/Bus_I2C.hpp"
+
 #endif
 
 #else
@@ -81,6 +87,13 @@ namespace m5gfx
       reg_data_mask += 3;
     }
   }
+
+  // ボード未確定段階の I2C プローブに使うソフトウェア I2C ポート (GPIO ビットバン)。
+  // ハードウェアのペリフェラルを一切確保・設定しないため、候補ボードの試行が
+  // ペリフェラルやピンの状態を汚さない。ボード確定後の常用バスは従来どおり
+  // ハードウェアポートを使う。
+  __attribute__ ((unused))
+  static constexpr int_fast16_t probe_i2c_port = -1;
 
   // I2Cデバイスの存在をチェックする。
   // SDA,SCLのプルアップが確認できない場合は0を返す。
@@ -134,31 +147,17 @@ namespace m5gfx
       // 全ビットを立てる
       result = ~0u;
 
-      // for (int addr7bit = 0x08; addr7bit < 0x78; ++addr7bit) {
+      // アドレスの存在確認はソフトウェア I2C ポートで行う (オープンドレイン駆動で
+      // ACK 競合が起きず、ハードウェアのペリフェラルにも触れない)
+      lgfx::i2c::init(probe_i2c_port, pin_sda, pin_scl);
       for (; addr_list[0] != 0; ++addr_list) {
-        // 7bit addr + write flag + ack check;
         uint_fast8_t addr7bit = addr_list[0];
-        // ACKチェック用ビットも含め左2bitシフトし、9bit相当にする
-        uint_fast16_t sda_bits = (addr7bit << 2u) + 1u;
-        lgfx::delayMicroseconds(5);
-        lgfx::gpio_lo(pin_sda);
-        lgfx::delayMicroseconds(5);
-        for (int i = 0; i < 9; ++i) {
-          lgfx::gpio_lo(pin_scl);
-          if (sda_bits & 0x100u) { lgfx::gpio_hi(pin_sda); }
-          else { lgfx::gpio_lo(pin_sda); }
-          sda_bits <<= 1;
-          lgfx::delayMicroseconds(3);
-          lgfx::gpio_hi(pin_scl);
-          lgfx::delayMicroseconds(6);
-        }
-        bool hit = !lgfx::gpio_in(pin_sda);
+        bool hit = lgfx::i2c::beginTransaction(probe_i2c_port, addr7bit, 100000, false).has_value()
+                && lgfx::i2c::endTransaction(probe_i2c_port).has_value();
         result = (result << 1) + hit;
         ESP_LOGV(LIBRARY_NAME, "[Autodetect] i2c addr:%02x = %s", (int)addr7bit, hit ? "hit" : "--");
-
-        // i2c stop
-        lgfx::gpio::command(cmd_i2c_stop_list);
       }
+      lgfx::i2c::release(probe_i2c_port);
     } else {
       result = 0;
     }
@@ -255,12 +254,102 @@ namespace m5gfx
       _rotation = 1; // default rotation
     }
 
+    void initPanelByTouchVersion()
+    {
+      static constexpr uint8_t touch_addr = 0x38;
+      static constexpr uint8_t cipher_reg = 0xA3;
+      static constexpr uint8_t firmid_reg = 0xA6;
+      static constexpr uint8_t vendid_reg = 0xA8;
+      static constexpr uint8_t ili9342c_firmid = 0x10;
+      static constexpr uint8_t ili9342e_firmid = 0x12;
+      static constexpr uint8_t m5stack_vendor = 0x11;
+      static constexpr int32_t version_i2c_freq = 100000;
+
+      uint8_t touch_cipher = 0;
+      uint8_t touch_firmid = 0;
+      uint8_t touch_vendid = 0;
+      bool touch_info_valid = false;
+      for (int retry = 0; retry < 5 && !touch_info_valid; ++retry)
+      {
+        auto set_work_mode = lgfx::i2c::writeRegister8(
+            axp_i2c_port, touch_addr, 0x00, 0x00, 0, version_i2c_freq);
+        auto read_cipher = lgfx::i2c::readRegister8(
+            axp_i2c_port, touch_addr, cipher_reg, version_i2c_freq);
+        auto read_firmid = lgfx::i2c::readRegister8(
+            axp_i2c_port, touch_addr, firmid_reg, version_i2c_freq);
+        auto read_vendid = lgfx::i2c::readRegister8(
+            axp_i2c_port, touch_addr, vendid_reg, version_i2c_freq);
+
+        touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
+        touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
+        touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
+        touch_info_valid = set_work_mode.has_value()
+                        && read_firmid.has_value()
+                        && read_vendid.has_value()
+                        && touch_vendid == m5stack_vendor
+                        && (touch_firmid == ili9342c_firmid
+                         || touch_firmid == ili9342e_firmid);
+        if (!touch_info_valid)
+        {
+          lgfx::delay(20);
+        }
+      }
+
+      bool use_ili9342e = touch_info_valid
+                       && touch_firmid == ili9342e_firmid;
+      if (touch_info_valid)
+      {
+        ESP_LOGI(LIBRARY_NAME,
+                 "Core2 touch CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x, panel:%s",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid,
+                 use_ili9342e ? "ILI9342E" : "ILI9342C");
+      }
+      else
+      {
+        ESP_LOGW(LIBRARY_NAME,
+                 "Core2 touch version read failed (CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x), panel:ILI9342C",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid);
+      }
+
+      if (use_ili9342e)
+      {
+        startWrite(true);
+        command_list(getIli9342EInitCommands());
+        endWrite();
+      }
+    }
+
     void rst_control(bool level) override
     {
       uint8_t bits = level ? 2 : 0;
       uint8_t mask = level ? ~0 : ~2;
       // AXP192 reg 0x96 = GPIO3&4 control
       lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, bits, mask, axp_i2c_freq);
+    }
+
+  protected:
+    static const uint8_t* getIli9342EInitCommands()
+    {
+      static constexpr uint8_t list0[] =
+      {
+        0xDD, 1, 0x01,
+        0x3A, 1, 0x55,
+        0x21, 0,
+        0x36, 1, 0x08,
+        0xD5, 1, 0x00,
+        0xB1, 1, 0x22,
+        0xC8, 1, 0x38,
+        0xCB, 1, 0x1C,
+        0xC9, 1, 0x1A,
+        0xCA, 1, 0x1A,
+        0xB7, 4, 0x5A,0x41,0x11,0x19,
+        0xE4,15, 0x04,0x08,0x11,0x06,0x12,0x07,0x3A,0x76,0x47,0x07,0x0F,0x0A,0x11,0x19,0x05,
+        0xE5,15, 0x02,0x03,0x07,0x06,0x12,0x07,0x36,0x5F,0x48,0x06,0x10,0x0C,0x16,0x14,0x09,
+        0x11, 0 + CMD_INIT_DELAY, 120,
+        0x29, 0 + CMD_INIT_DELAY, 120,
+        0xFF,0xFF,
+      };
+      return list0;
     }
   };
 
@@ -413,6 +502,14 @@ namespace m5gfx
   static constexpr int_fast16_t aw9523_i2c_addr = 0x58; // AW9523B
   static constexpr int_fast16_t axp_i2c_addr = 0x34;    // AXP2101
   static constexpr int_fast16_t gc0308_i2c_addr = 0x21; // GC0308
+  static constexpr int_fast16_t ft5x06_i2c_addr = 0x38;
+  static constexpr uint8_t ft5x06_cipher_reg = 0xA3;
+  static constexpr uint8_t ft5x06_firmid_reg = 0xA6;
+  static constexpr uint8_t ft5x06_vendid_reg = 0xA8;
+  static constexpr uint8_t ft5x06_ili9342c_firmid = 0x10;
+  static constexpr uint8_t ft5x06_ili9342e_firmid = 0x12;
+  static constexpr uint8_t ft5x06_m5stack_vendor = 0x11;
+  static constexpr int32_t ft5x06_version_i2c_freq = 100000;
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
   static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
@@ -428,6 +525,61 @@ namespace m5gfx
       _cfg.offset_rotation = 3;
 
       _rotation = 1; // default rotation
+    }
+
+    void initPanelByTouchVersion()
+    {
+      uint8_t touch_cipher = 0;
+      uint8_t touch_firmid = 0;
+      uint8_t touch_vendid = 0;
+      bool touch_info_valid = false;
+      for (int retry = 0; retry < 5 && !touch_info_valid; ++retry)
+      {
+        auto set_work_mode = lgfx::i2c::writeRegister8(
+          i2c_port, ft5x06_i2c_addr, 0x00, 0x00, 0, ft5x06_version_i2c_freq);
+        auto read_cipher = lgfx::i2c::readRegister8(
+          i2c_port, ft5x06_i2c_addr, ft5x06_cipher_reg, ft5x06_version_i2c_freq);
+        auto read_firmid = lgfx::i2c::readRegister8(
+          i2c_port, ft5x06_i2c_addr, ft5x06_firmid_reg, ft5x06_version_i2c_freq);
+        auto read_vendid = lgfx::i2c::readRegister8(
+          i2c_port, ft5x06_i2c_addr, ft5x06_vendid_reg, ft5x06_version_i2c_freq);
+        touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
+        touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
+        touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
+        touch_info_valid = set_work_mode.has_value()
+                        && read_firmid.has_value()
+                        && read_vendid.has_value()
+                        && touch_vendid == ft5x06_m5stack_vendor
+                        && (touch_firmid == ft5x06_ili9342c_firmid
+                         || touch_firmid == ft5x06_ili9342e_firmid);
+        if (!touch_info_valid)
+        {
+          lgfx::delay(20);
+        }
+      }
+
+      bool use_ili9342e = touch_info_valid
+                       && touch_firmid == ft5x06_ili9342e_firmid;
+      if (touch_info_valid)
+      {
+        ESP_LOGI(LIBRARY_NAME,
+                 "CoreS3 touch CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x, panel:%s",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid,
+                 use_ili9342e ? "ILI9342E" : "ILI9342C");
+      }
+      else
+      {
+        ESP_LOGW(LIBRARY_NAME,
+                 "CoreS3 touch version read failed (CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x), panel:ILI9342C",
+                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid);
+      }
+
+      if (use_ili9342e)
+      {
+        startWrite(true);
+        command_list(getIli9342EInitCommands());
+        endWrite();
+      }
     }
 
     void rst_control(bool level) override
@@ -453,6 +605,31 @@ namespace m5gfx
                              ? GPIO_ENABLE1_W1TC_REG
                              : GPIO_ENABLE1_W1TS_REG
                            ) = 1u << (GPIO_NUM_35 & 31);
+    }
+
+  protected:
+    static const uint8_t* getIli9342EInitCommands()
+    {
+      static constexpr uint8_t list0[] =
+      {
+        0xDD, 1, 0x01,
+        0x3A, 1, 0x55,
+        0x21, 0,
+        0x36, 1, 0x08,
+        0xD5, 1, 0x00,
+        0xB1, 1, 0x22,
+        0xC8, 1, 0x38,
+        0xCB, 1, 0x1C,
+        0xC9, 1, 0x1A,
+        0xCA, 1, 0x1A,
+        0xB7, 4, 0x5A,0x41,0x11,0x19,
+        0xE4,15, 0x04,0x08,0x11,0x06,0x12,0x07,0x3A,0x76,0x47,0x07,0x0F,0x0A,0x11,0x19,0x05,
+        0xE5,15, 0x02,0x03,0x07,0x06,0x12,0x07,0x36,0x5F,0x48,0x06,0x10,0x0C,0x16,0x14,0x09,
+        0x11, 0 + CMD_INIT_DELAY, 120,
+        0x29, 0 + CMD_INIT_DELAY, 120,
+        0xFF,0xFF,
+      };
+      return list0;
     }
   };
 
@@ -672,30 +849,54 @@ namespace m5gfx
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 
   static constexpr int32_t i2c_freq = 400000;
+  // 内部 I2C (G2/G3) は LP_I2C の固定パッドと一致するため LP ポートへ割り当てる。
+  // PortA も同じバスの物理分配のため、これで HP の I2C0 が丸ごと空く。
+  // (ポート番号は HP ポート数の次 = C5 では 1。Arduino ビルドでも LP は
+  //  TwoWire を介さず ESP-IDF ドライバで直接駆動される)
+  // 条件は common.cpp が LP 対応をコンパイルする条件と同一に保つこと
+  // (条件を満たさない SDK では LP ポートを開けないため HP へフォールバックする)
+#if defined ( SOC_LP_I2C_NUM ) && ( SOC_LP_I2C_NUM > 0 ) && __has_include ( <driver/i2c_master.h> ) \
+ && defined ( ESP_IDF_VERSION_VAL ) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+  static constexpr int_fast16_t i2c_port = LP_I2C_NUM_0;
+#else
   static constexpr int_fast16_t i2c_port = I2C_NUM_0;
+#endif
 
   struct Light_M5ToughC5 : public lgfx::ILight
   {
+    // LCD backlight = M5IOE1 PIN10, driven by the expander's PWM channel 4.
+    // Registers: 0x21/0x22 = PWM4 duty (12bit, H[7]=enable), 0x25/0x26 = shared PWM frequency (Hz).
     bool init(uint8_t brightness) override
     {
+      static constexpr uint8_t freq_1khz[] = { 0x25, 0xE8, 0x03 };
+      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, freq_1khz, sizeof(freq_1khz), m5ioe1_i2c_freq);
+      lgfx::i2c::bitOn(i2c_port, m5ioe1_i2c_addr, 0x04, 0x02, m5ioe1_i2c_freq); // PIN10 output mode
       setBrightness(brightness);
       return true;
     }
 
+    void writeDuty(uint_fast16_t duty12)
+    {
+      uint8_t buf[] = { 0x21, (uint8_t)duty12, (uint8_t)(0x80 | (duty12 >> 8)) };
+      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, buf, sizeof(buf), m5ioe1_i2c_freq);
+    }
+
     void setBrightness(uint8_t brightness) override
     {
-      // M5IOE1 PIN10 (bit1 in high register 0x06) controls LCD backlight
-      static constexpr uint8_t IOE1_PIN_10 = 9;
-      static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
-      if (brightness) {
-        lgfx::i2c::bitOn(i2c_port, m5ioe1_i2c_addr, 0x06, IOE1_BIT_10_H, m5ioe1_i2c_freq);
-      } else {
-        lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x06, IOE1_BIT_10_H, m5ioe1_i2c_freq);
-      }
+      // gamma 2.0: perceived brightness tracks the setting instead of the raw duty
+      uint_fast16_t duty12 = ((uint32_t)brightness * brightness * 4095u + 32512u) / 65025u;
+      if (brightness && duty12 == 0) { duty12 = 1; }
+      writeDuty(duty12);
     }
   };
 
   // Touch_M5ToughC5 は lgfx::Touch_CHSC6540 に統合済み
+
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+
+  static constexpr int32_t i2c_freq = 400000;
+  static constexpr int_fast16_t i2c_port = I2C_NUM_0;
+  static constexpr std::uint8_t tm1680_i2c_addr = 0x72; // CoreMatrix LED matrix driver
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 
@@ -906,9 +1107,24 @@ namespace m5gfx
       return false;
     }
 
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+    if (board == board_t::board_M5StackCore2)
+    {
+      static_cast<Panel_M5StackCore2*>(_panel_last.get())
+        ->initPanelByTouchVersion();
+    }
+#endif
+
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     switch (board) {
     default:
+      break;
+
+    case board_t::board_M5StackCoreS3:
+    case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
+      static_cast<Panel_M5StackCoreS3*>(_panel_last.get())
+        ->initPanelByTouchVersion();
       break;
 
     case board_t::board_M5StopWatch:
@@ -944,7 +1160,7 @@ namespace m5gfx
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 
-    bus_cfg.spi_host = VSPI_HOST;
+    bus_cfg.spi_host = SPI3_HOST;
     bus_cfg.dma_channel = 1;
 
     std::uint32_t id;
@@ -971,7 +1187,7 @@ namespace m5gfx
           board = board_t::board_M5StickCPlus;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus");
           bus_spi->release();
-          bus_cfg.spi_host = HSPI_HOST;
+          bus_cfg.spi_host = SPI2_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
           bus_spi->config(bus_cfg);
@@ -986,7 +1202,7 @@ namespace m5gfx
           board = board_t::board_M5StickC;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickC");
           bus_spi->release();
-          bus_cfg.spi_host = HSPI_HOST;
+          bus_cfg.spi_host = SPI2_HOST;
           bus_cfg.freq_write = 27000000;
           bus_cfg.freq_read  = 14000000;
           bus_spi->config(bus_cfg);
@@ -1071,7 +1287,7 @@ namespace m5gfx
           board = board_t::board_M5StickCPlus2;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5StickCPlus2");
           bus_spi->release();
-          bus_cfg.spi_host = HSPI_HOST;
+          bus_cfg.spi_host = SPI2_HOST;
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 15000000;
           bus_spi->config(bus_cfg);
@@ -1141,7 +1357,7 @@ namespace m5gfx
               board = board_t::board_M5Station;
 
               bus_spi->release();
-              bus_cfg.spi_host = HSPI_HOST;
+              bus_cfg.spi_host = SPI2_HOST;
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 15000000;
               bus_spi->config(bus_cfg);
@@ -1672,11 +1888,14 @@ namespace m5gfx
               board = board_t::board_M5StopWatch;
               ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StopWatch");
 
-#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
-              ESP_LOGE(LIBRARY_NAME, "M5StopWatch need OPI-PSRAM enabled");
-#elif !defined (CONFIG_SPIRAM_MODE_OCT)
-              ESP_LOGE(LIBRARY_NAME, "M5StopWatch need OPI-PSRAM enabled");
-#else
+              // Panel_CO5300 supports direct drawing; the optional PSRAM frame
+              // buffer (initPanelFb) may fail to allocate and is not required,
+              // so no PSRAM requirement applies here (unlike the EPD boards).
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined (CONFIG_SPIRAM_MODE_OCT)
+              // Without the frame buffer, drawing whose origin is at an odd
+              // coordinate may render incorrectly (this affects e.g. text glyphs).
+              ESP_LOGW(LIBRARY_NAME, "M5StopWatch: OPI-PSRAM is disabled; the display falls back to direct drawing, which may render incorrectly when the drawing origin is at an odd coordinate. Enable OPI-PSRAM for correct rendering.");
+#endif
 
               // GPIO39:OLED CS Pin
               lgfx::pinMode(GPIO_NUM_39, lgfx::pin_mode_t::output);
@@ -1767,7 +1986,6 @@ namespace m5gfx
               }
 
               goto init_clear;
-#endif
             }
 
             if (is_papermono) {
@@ -1776,8 +1994,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
               ESP_LOGE(LIBRARY_NAME, "M5PaperMono need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
               ESP_LOGE(LIBRARY_NAME, "M5PaperMono need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #else
 
               // GPIO16:EINK CS Pin
@@ -1886,8 +2110,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
             ESP_LOGE(LIBRARY_NAME, "M5ChainCaptain needs OPI-PSRAM enabled");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
             ESP_LOGE(LIBRARY_NAME, "M5ChainCaptain needs OPI-PSRAM enabled");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #else
             // M5PM1 and M5IOE1 may retain their idle-sleep settings across battery-powered shutdown.
             lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq);
@@ -1969,8 +2199,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
               ESP_LOGE(LIBRARY_NAME, "M5PaperColor need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
               ESP_LOGE(LIBRARY_NAME, "M5PaperColor need OPI-PSRAM enabled");
+              _panel_last.reset();
+              _touch_last.reset();
+              goto init_clear; // keep the board identification; the display stays unavailable
 #else
             // Disable watchdog (WDT_CNT=0 disables)
             lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0x00, m5pm1_i2c_freq);
@@ -2095,8 +2331,14 @@ namespace m5gfx
 
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT))
             ESP_LOGE(LIBRARY_NAME, "%s need OPI-PSRAM enabled", board == board_t::board_M5PaperDIY ? "M5PaperDIY" : "M5PaperS3");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #elif !defined (CONFIG_SPIRAM_MODE_OCT)
             ESP_LOGE(LIBRARY_NAME, "%s need OPI-PSRAM enabled", board == board_t::board_M5PaperDIY ? "M5PaperDIY" : "M5PaperS3");
+            _panel_last.reset();
+            _touch_last.reset();
+            goto init_clear; // keep the board identification; the display stays unavailable
 #else
             auto bus_epd = new Bus_EPD();
             _bus_last.reset(bus_epd);
@@ -2337,10 +2579,12 @@ The usage of each pin is as follows.
           for (auto &bup : backup_pins2) { bup.restore(); }
           if ((result & 3) == 3) {
             m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_5, GPIO_NUM_6);
-            result = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
-                    && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
+            // Keep the probe result out of `result`; the CardputerADV check below
+            // still needs the G8/G9 bits of the GPIO read.
+            bool is_vameter = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
+                            && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
             backup_i2c_setting.restore();
-            if (result) {
+            if (is_vameter) {
               board = board_t::board_M5VAMeter;
             }
           }
@@ -2516,6 +2760,24 @@ The usage of each pin is as follows.
         bool is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
         bool is_gc9107 = (id & 0xFFFFFF) == 0x079100;
 //      ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel_id: 0x%08x", id);
+        if (!is_st7735 && !is_gc9107)
+        { // Some GC9107 batches return a valid ID only at low clock rates;
+          // re-probe slowly before giving up.
+          // (ST7735 does not answer at this rate, but a healthy one has
+          //  already been caught by the first probe above.)
+          bus_spi->release();
+          bus_cfg.freq_write = 100000;
+          bus_cfg.freq_read  = 100000;
+          bus_spi->config(bus_cfg);
+          bus_spi->init();
+          id = _read_panel_id(bus_spi, GPIO_NUM_14);
+          // restore the probe speed in bus_cfg: later board probes reuse it
+          // without setting the frequency themselves.
+          bus_cfg.freq_write = 8000000;
+          bus_cfg.freq_read  = 8000000;
+          is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
+          is_gc9107 = (id & 0xFFFFFF) == 0x079100;
+        }
         if (is_st7735 || is_gc9107)
         {
           board = board_t::board_M5AtomS3R;
@@ -2666,10 +2928,11 @@ The usage of each pin is as follows.
         // TP INT = GPIO_NUM_23
         lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::output); // TP INT
         lgfx::gpio_hi(GPIO_NUM_23); // select I2C Addr (high=0x14 / low=0x5D)
-        lgfx::i2c::init(in_i2c_port, GPIO_NUM_31, GPIO_NUM_32);
+        // ボード確定まではソフトウェア I2C で通信し、ハードウェアポートを温存する
+        lgfx::i2c::init(probe_i2c_port, GPIO_NUM_31, GPIO_NUM_32);
 
-        id = lgfx::i2c::readRegister8(in_i2c_port, pi4io1_i2c_addr, 0x01).has_value()
-          && lgfx::i2c::readRegister8(in_i2c_port, pi4io2_i2c_addr, 0x01).has_value();
+        id = lgfx::i2c::readRegister8(probe_i2c_port, pi4io1_i2c_addr, 0x01).has_value()
+          && lgfx::i2c::readRegister8(probe_i2c_port, pi4io2_i2c_addr, 0x01).has_value();
         if (id != 0) {
           board = board_t::board_M5Tab5;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Tab5");
@@ -2698,10 +2961,10 @@ The usage of each pin is as follows.
             0xFF,0xFF,0xFF,
           };
 
-          i2c_write_register8_array(in_i2c_port, pi4io1_i2c_addr, reg_data_io1_1, 100000);
-          i2c_write_register8_array(in_i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
+          i2c_write_register8_array(probe_i2c_port, pi4io1_i2c_addr, reg_data_io1_1, 100000);
+          i2c_write_register8_array(probe_i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
           lgfx::delay(10);
-          i2c_write_register8_array(in_i2c_port, pi4io1_i2c_addr, reg_data_io1_2, 100000);
+          i2c_write_register8_array(probe_i2c_port, pi4io1_i2c_addr, reg_data_io1_2, 100000);
           lgfx::pinMode(GPIO_NUM_23, lgfx::pin_mode_t::input); // TP INT
           lgfx::delay(100);
 
@@ -2721,12 +2984,26 @@ The usage of each pin is as follows.
             bool hit_st7121 = false;
             bool hit_st7123 = false;
             bool read_st_touch_fw = false;
-            for (int i = 0; i < 3; ++i) {
+            bool found_gt911 = false;
+            // ST71xx のタッチコントローラは、スキャン動作中にリセットされた場合、
+            // 応答可能になるまで数十 ms を要する (実測: 稼働中からのソフトリセット後
+            // およそ 50ms)。待ちを打ち切ると ST パネルの判別に失敗して表示が出ない
+            // (ST7121/ST7123 は lane 速度が異なり DSI ID では安全に区別できない) ため、
+            // ST touch の既知 FW 版数 (1/3) を認識するか GT911 (ILI9881C 個体) が
+            // ACK するまで待つ。
+            int last_logged_fw = -1;
+            for (int i = 0; i < 60; ++i) {
               uint8_t fw_version = 0;
               uint8_t fw_reg[2] = { 0, 0 };
-              if (lgfx::i2c::transactionWriteRead(in_i2c_port, Touch_ST7123::default_addr, fw_reg, sizeof(fw_reg), &fw_version, 1, 100000).has_value()) {
+              if (lgfx::i2c::transactionWriteRead(probe_i2c_port, Touch_ST7123::default_addr, fw_reg, sizeof(fw_reg), &fw_version, 1, 100000).has_value()) {
                 read_st_touch_fw = true;
-                ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST touch FW version %02x", fw_version);
+                if (fw_version != last_logged_fw) {  // 未知値のリトライ継続で同じログを繰り返さない
+                  last_logged_fw = fw_version;
+                  ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST touch FW version %02x", fw_version);
+                  if (fw_version != 1 && fw_version != 3) {
+                    ESP_LOGW(LIBRARY_NAME, "M5Tab5 unknown ST touch FW version %02x", fw_version);
+                  }
+                }
                 if (fw_version == 1) {
                   hit_st7121 = true;
                   break;
@@ -2735,13 +3012,25 @@ The usage of each pin is as follows.
                   hit_st7123 = true;
                   break;
                 }
-                ESP_LOGW(LIBRARY_NAME, "M5Tab5 unknown ST touch FW version %02x", fw_version);
+              } else {
+                // GT911 はアドレス ACK の確認のみ (実読すると内部ポインタを進めてしまう)
+                if (lgfx::i2c::beginTransaction(probe_i2c_port, Touch_GT911::default_addr_1, 100000, false).has_value()
+                 && lgfx::i2c::endTransaction(probe_i2c_port).has_value()) {
+                  found_gt911 = true;
+                  ESP_LOGI(LIBRARY_NAME, "M5Tab5 GT911 touch detected");
+                  break;
+                }
               }
               lgfx::delay(10);
             }
-            if (!read_st_touch_fw) {
+            if (!read_st_touch_fw && !found_gt911) {
               ESP_LOGW(LIBRARY_NAME, "M5Tab5 ST touch FW version read failed");
             }
+
+            // ボードが確定し I2C の用は済んだので、常用するハードウェアポートへ
+            // バスを引き継ぐ (タッチがこのポートを使う)
+            lgfx::i2c::release(probe_i2c_port);
+            lgfx::i2c::init(in_i2c_port, GPIO_NUM_31, GPIO_NUM_32);
 
             auto bus_dsi = new Bus_DSI();
             _bus_last.reset(bus_dsi);
@@ -2867,6 +3156,8 @@ The usage of each pin is as follows.
           }
           goto init_clear;
         }
+        // ボード不成立時のみここへ来る。プローブに使ったソフトウェアポートを返す
+        lgfx::i2c::release(probe_i2c_port);
       }
     }
 
@@ -2968,7 +3259,8 @@ The usage of each pin is as follows.
         } else
         if (result == 0x03)
         { // NessoN1 ?
-          lgfx::i2c::init(i2c_port, GPIO_NUM_10, GPIO_NUM_8);
+          // パネル ID で確定するまではソフトウェア I2C で通信する
+          lgfx::i2c::init(probe_i2c_port, GPIO_NUM_10, GPIO_NUM_8);
         // PI4IO E0
         //  P0 BTN1
         //  P1 BTN2
@@ -3004,8 +3296,8 @@ The usage of each pin is as follows.
             0x05, 0b10000010, 0,   // PI4IO_REG_OUT_SET
             0xFF,0xFF,0xFF,
           };
-          i2c_write_register8_array(i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
-          i2c_write_register8_array(i2c_port, pi4io1_i2c_addr, reg_data_io1, 100000);
+          i2c_write_register8_array(probe_i2c_port, pi4io2_i2c_addr, reg_data_io2, 100000);
+          i2c_write_register8_array(probe_i2c_port, pi4io1_i2c_addr, reg_data_io1, 100000);
 
           bus_cfg.pin_mosi = GPIO_NUM_21;
           bus_cfg.pin_miso = GPIO_NUM_22;
@@ -3022,6 +3314,11 @@ The usage of each pin is as follows.
           {
             board = board_t::board_ArduinoNessoN1;
             ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_ArduinoNessoN1");
+
+            // ボードが確定したので、常用するハードウェアポートへバスを引き継ぐ
+            // (バックライトとタッチがこのポートを使う)
+            lgfx::i2c::release(probe_i2c_port);
+            lgfx::i2c::init(i2c_port, GPIO_NUM_10, GPIO_NUM_8);
 
             bus_spi->release();
             bus_cfg.freq_write = 40000000;
@@ -3077,6 +3374,9 @@ The usage of each pin is as follows.
           }
           bus_spi->release();
         }
+        // ボード不成立時のみここへ来る (成立時は goto で抜けている)。
+        // プローブに使ったソフトウェアポートを返し、ピンを元へ戻す
+        lgfx::i2c::release(probe_i2c_port);
         for (auto &bup : backup_pins) { bup.restore(); }
       }
     }
@@ -3116,49 +3416,30 @@ The usage of each pin is as follows.
       , GPIO_NUM_26
       };
 
-      lgfx::i2c::init(i2c_port, toughc5_i2c_sda, toughc5_i2c_scl);
+      // ボード確定まではソフトウェア I2C で通信し、ハードウェアポートを温存する
+      lgfx::i2c::init(probe_i2c_port, toughc5_i2c_sda, toughc5_i2c_scl);
 
-      if (_check_m5pm1(i2c_port) && _check_m5ioe1(i2c_port)) {
-        // M5PM1 初期化
-        lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
-        lgfx::i2c::writeRegister8(i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
-        lgfx::i2c::bitOn( i2c_port, m5pm1_i2c_addr, 0x06, 0x17, m5pm1_i2c_freq); // PWR_CFG: LED_CTRL, LDO, DCDC, CHG enable
+      if (_check_m5pm1(probe_i2c_port) && _check_m5ioe1(probe_i2c_port)) {
+        // ボード確定 (パネル ID 確認) 前の書き込みは、ID 読みに必要な最小限
+        // (LCD 電源とリセット解除) に留め、不成立時に復元できるよう元値を控える
+        auto pm1_06  = lgfx::i2c::readRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x06, m5pm1_i2c_freq);
+        auto ioe1_03 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x03, m5ioe1_i2c_freq);
+        auto ioe1_05 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x05, m5ioe1_i2c_freq);
+        auto ioe1_13 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x13, m5ioe1_i2c_freq);
+        if (pm1_06.has_value() && ioe1_03.has_value() && ioe1_05.has_value() && ioe1_13.has_value()) {
 
-        // M5IOE1 初期化
-        lgfx::i2c::writeRegister8(i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
-
-        // M5IOE1 PIN4(LCD_RST), PIN5(LCD_EN), PIN10(LCD_BL) を出力に設定
+        // M5IOE1 PIN4(LCD_RST), PIN5(LCD_EN) を High で出力に設定
         // PIN4=bit3, PIN5=bit4 → low register (0x03/0x05/0x13)
-        // PIN10=bit1(high) → high register (0x04/0x06/0x14)
-        static constexpr uint8_t IOE1_PIN_10 = 9;
-        static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
+        // リセット線 (PIN4, 基板プルアップ無し) を Low のまま駆動しないよう、
+        // 出力ラッチへ High を先に書いてから push-pull / 出力化する
+        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 latch HIGH
+        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x13, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 push-pull
+        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x03, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 output
 
-        lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x13, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 push-pull
-        lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x14, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 push-pull
-        lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x03, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 output
-        lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x04, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 output
-
-        // LCD enable
-        lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 4, m5ioe1_i2c_freq);  // PIN5(LCD_EN) HIGH
-
-        // LCD reset
-        if (use_reset) {
-          lgfx::i2c::bitOff(i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) LOW
-          lgfx::delay(2);
-          lgfx::i2c::bitOn( i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) HIGH
-          lgfx::delay(10);
-        }
-
-        // M5PM1 GPIO2(TP_RST) を出力に設定してリセット
-        lgfx::i2c::bitOff(i2c_port, m5pm1_i2c_addr, 0x16, 0b11 << (2*2), m5pm1_i2c_freq); // GPIO2 → GPIO function
-        lgfx::i2c::bitOn( i2c_port, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);  // GPIO2 output
-        lgfx::i2c::bitOff(i2c_port, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq);  // GPIO2 push-pull
-        if (use_reset) {
-          lgfx::i2c::bitOff(i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) LOW
-          lgfx::delay(2);
-          lgfx::i2c::bitOn( i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) HIGH
-          lgfx::delay(10);
-        }
+        // LCD のロジック電源 (PM1 LDO → PYB_LCD_EN 経由)。PM1 リセット後は
+        // PWR_CFG がクリアされているため、コールドブートではここで入れる
+        lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x04, m5pm1_i2c_freq); // PWR_CFG: LDO enable
+        lgfx::delay(10);
 
         // SPI バスを設定して LCD パネル ID を確認
         bus_cfg.pin_mosi = GPIO_NUM_7;
@@ -3171,13 +3452,60 @@ The usage of each pin is as follows.
         bus_spi->init();
 
         std::uint32_t id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        if ((id & 0xFF) != 0xE3)
+        { // 一時的な読み損ないでボード不成立に落ちないよう一度だけ再試行する
+          lgfx::delay(2);
+          id = _read_panel_id(bus_spi, GPIO_NUM_25);
+        }
         if ((id & 0xFF) == 0xE3)
         {   // ILI9342c
           board = board_t::board_M5ToughC5;
           ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5ToughC5");
 
+          // --- ボードが確定したので、確認前に行えなかった初期化をまとめて行う
+          // M5PM1 初期化
+          lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
+          lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
+          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x17, m5pm1_i2c_freq); // PWR_CFG: LED_CTRL, LDO, DCDC, CHG enable
+
+          // M5IOE1 初期化
+          lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
+
+          // M5IOE1 PIN10(LCD_BL) を出力に設定
+          // PIN10=bit1(high) → high register (0x04/0x06/0x14)
+          static constexpr uint8_t IOE1_PIN_10 = 9;
+          static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
+          lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x14, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 push-pull
+          lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x04, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 output
+
+          // LCD reset
+          if (use_reset) {
+            lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) LOW
+            lgfx::delay(2);
+            lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) HIGH
+            lgfx::delay(10);
+          }
+
+          // M5PM1 GPIO2(TP_RST) を出力に設定してリセット
+          // ラッチへ High (リセット解除) を先に書いてから出力化する
+          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2 latch HIGH
+          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x16, 0b11 << (2*2), m5pm1_i2c_freq); // GPIO2 → GPIO function
+          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);  // GPIO2 output
+          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq);  // GPIO2 push-pull
+          if (use_reset) {
+            lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) LOW
+            lgfx::delay(2);
+            lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) HIGH
+            lgfx::delay(10);
+          }
+
+          // ボードが確定したので、常用するハードウェアポートへバスを引き継ぐ
+          // (バックライトとタッチがこのポートを使う)
+          lgfx::i2c::release(probe_i2c_port);
+          lgfx::i2c::init(i2c_port, toughc5_i2c_sda, toughc5_i2c_scl);
+
           bus_spi->release();
-          bus_cfg.freq_write = 20000000;
+          bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
           bus_spi->config(bus_cfg);
 
@@ -3207,7 +3535,7 @@ The usage of each pin is as follows.
             cfg.pin_sda  = toughc5_i2c_sda;
             cfg.pin_scl  = toughc5_i2c_scl;
             cfg.i2c_addr = 0x2E;
-            cfg.i2c_port = I2C_NUM_0;
+            cfg.i2c_port = i2c_port;
             cfg.freq = 400000;
             cfg.x_min = 0;
             cfg.x_max = 319;
@@ -3221,8 +3549,92 @@ The usage of each pin is as follows.
           goto init_clear;
         }
         bus_spi->release();
+
+        // 不成立: 確定前に書いた最小限のレジスタを元値へ復元する
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x03, ioe1_03.value(), 0, m5ioe1_i2c_freq);
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x13, ioe1_13.value(), 0, m5ioe1_i2c_freq);
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x05, ioe1_05.value(), 0, m5ioe1_i2c_freq);
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr,  0x06, pm1_06.value(),  0, m5pm1_i2c_freq);
+        }
       }
-      lgfx::i2c::release(i2c_port);
+      // ここへ来るのはボード不成立の場合のみ。デバイスへ書いた分は復元済みで、
+      // ソフトウェア I2C と ESP 側のピン状態を返す
+      lgfx::i2c::release(probe_i2c_port);
+      for (auto &bup : backup_pins) { bup.restore(); }
+    }
+
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+
+    if (board == 0 || board == board_t::board_M5CoreMatrix)
+    {
+      // CoreMatrix: system I2C SDA=G0 / SCL=G1 (physically shared with Grove and M-Bus)
+      static constexpr int_fast16_t corematrix_i2c_sda = GPIO_NUM_0;
+      static constexpr int_fast16_t corematrix_i2c_scl = GPIO_NUM_1;
+
+      gpio::pin_backup_t backup_pins[] =
+      { GPIO_NUM_0
+      , GPIO_NUM_1
+      };
+
+      // Probe over software I2C; the hardware port is left untouched until the board is confirmed
+      lgfx::i2c::init(probe_i2c_port, corematrix_i2c_sda, corematrix_i2c_scl);
+
+      if (_check_m5pm1(probe_i2c_port) && _check_m5ioe1(probe_i2c_port)) {
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
+
+        // Drive M5IOE1 PIN4 (LEDS_EN) high to power the LED matrix rail.
+        // The TM1680 sits on that rail and does not respond on I2C until powered.
+        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
+        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x13, 1 << 3, m5ioe1_i2c_freq); // PIN4 push-pull
+        lgfx::i2c::bitOn (probe_i2c_port, m5ioe1_i2c_addr, 0x03, 1 << 3, m5ioe1_i2c_freq); // PIN4 output
+        lgfx::i2c::bitOn (probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq); // PIN4 HIGH
+        lgfx::delay(20); // wait for the rail to rise and the TM1680 to complete POR
+
+        // The TM1680 has no ID register; check for an address ACK only
+        bool hit = lgfx::i2c::beginTransaction(probe_i2c_port, tm1680_i2c_addr, 100000, false).has_value()
+                && lgfx::i2c::endTransaction(probe_i2c_port).has_value();
+        if (hit)
+        {
+          board = board_t::board_M5CoreMatrix;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5CoreMatrix");
+
+          // Board confirmed: hand the bus over to the hardware I2C port
+          lgfx::i2c::release(probe_i2c_port);
+
+          auto bus_i2c = new Bus_I2C();
+          {
+            auto cfg = bus_i2c->config();
+            cfg.i2c_port = i2c_port;
+            cfg.freq_write = i2c_freq;
+            cfg.freq_read  = i2c_freq;
+            cfg.pin_sda = corematrix_i2c_sda;
+            cfg.pin_scl = corematrix_i2c_scl;
+            cfg.i2c_addr = tm1680_i2c_addr;
+            cfg.prefix_len = 0; // the TM1680 protocol has no command/data prefix byte
+            bus_i2c->config(cfg);
+          }
+          _bus_last.reset(bus_i2c);
+
+          auto p = new lgfx::Panel_TM1680();
+          {
+            auto cfg = p->config();
+            cfg.bus_shared = false;
+            // rotation 1 (the default) shows upright with the buttons at the top
+            cfg.offset_rotation = 3;
+            p->config(cfg);
+            p->setRotation(1);
+          }
+          p->bus(bus_i2c);
+          _panel_last.reset(p);
+
+          goto init_clear;
+        }
+        // Not this board: restore the LED matrix power rail
+        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);
+      }
+      // Reached only when no board was detected; only the software port was touched
+      lgfx::i2c::release(probe_i2c_port);
       for (auto &bup : backup_pins) { bup.restore(); }
     }
 
@@ -3291,6 +3703,7 @@ init_clear:
     case board_M5Tough:        title = "M5Tough";        break;
     case board_M5ToughC5:      title = "M5ToughC5";      break;
     case board_M5StampC5:      title = "M5StampC5";      break;
+    case board_M5CoreMatrix:   title = "M5CoreMatrix";   break;
     case board_M5Station:      title = "M5Station";      break;
     case board_M5StopWatch:    title = "M5StopWatch";    break;
     case board_M5ChainCaptain: title = "M5ChainCaptain"; break;
