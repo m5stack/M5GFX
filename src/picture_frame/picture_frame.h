@@ -42,7 +42,8 @@ namespace m5gfx
     case board_M5StickCPlus:    return &picture_frame_M5StickCPlus;
     case board_M5StickCPlus2:   return &picture_frame_M5StickCPlus2;
     case board_M5Dial:          return &picture_frame_M5Dial;
-    case board_M5Tab5:          return &picture_frame_M5Tab5;
+    case board_M5Tab5:
+    case board_M5Tab5X:         return &picture_frame_M5Tab5;
     default: return nullptr;
     }
   }
