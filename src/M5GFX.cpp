@@ -2921,7 +2921,7 @@ The usage of each pin is as follows.
 
     if (pkg_ver == 0) // pkg_ver == EFUSE_RD_CHIP_VER_PKG_
     {
-      if (board == 0 || board == board_t::board_M5Tab5)
+      if (board == 0 || board == board_t::board_M5Tab5 || board == board_t::board_M5Tab5X)
       {
         // SDA = GPIO_NUM_31
         // SCL = GPIO_NUM_32
@@ -2934,8 +2934,10 @@ The usage of each pin is as follows.
         id = lgfx::i2c::readRegister8(probe_i2c_port, pi4io1_i2c_addr, 0x01).has_value()
           && lgfx::i2c::readRegister8(probe_i2c_port, pi4io2_i2c_addr, 0x01).has_value();
         if (id != 0) {
-          board = board_t::board_M5Tab5;
-          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Tab5");
+          if (board == 0)
+            board = board_t::board_M5Tab5;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s",
+                   board == board_t::board_M5Tab5X ? "board_M5Tab5X" : "board_M5Tab5");
 
           static constexpr const uint8_t reg_data_io1_1[] = {
             0x03, 0b01111111, 0,   // PI4IO_REG_IO_DIR
@@ -3717,6 +3719,7 @@ init_clear:
     case board_M5VAMeter:      title = "M5VAMeter";      break;
     case board_M5StampPLC:     title = "M5StampPLC";     break;
     case board_M5Tab5:         title = "M5Tab5";         break;
+    case board_M5Tab5X:        title = "M5Tab5X";        break;
     case board_M5UnitPoEP4:    title = "M5UnitPoEP4";    break;
     case board_ArduinoNessoN1: title = "ArduinoNessoN1"; break;
     default:                   title = "M5GFX";          break;
@@ -3809,6 +3812,7 @@ init_clear:
       break;
 
     case board_M5Tab5:
+    case board_M5Tab5X:
       w = 720;
       h = 1280;
       break;

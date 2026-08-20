@@ -43,6 +43,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5ChainCaptain = 32
     , board_M5ToughC5 = 33
     , board_M5PaperDIY = 34
+    , board_M5Tab5X = 35
 
 /// non display boards
     , board_M5AtomLite = 128
