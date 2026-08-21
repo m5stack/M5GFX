@@ -41,7 +41,7 @@ namespace lgfx
     ldo_cfg.chan_id = _cfg.ldo_chan_id;
     ldo_cfg.voltage_mv = _cfg.ldo_voltage_mv;
 
-    esp_lcd_dbi_io_config_t dbi_config;
+    esp_lcd_dbi_io_config_t dbi_config = {};
     dbi_config.virtual_channel = 0;
     dbi_config.lcd_cmd_bits = _cfg.lcd_cmd_bits;
     dbi_config.lcd_param_bits = _cfg.lcd_param_bits;

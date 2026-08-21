@@ -35,6 +35,7 @@
 
 #include "lgfx/v1/platforms/esp32p4/Bus_DSI.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ILI9881C.hpp"
+#include "lgfx/v1/platforms/esp32p4/Panel_ST7102.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7121.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7123.hpp"
 #include "lgfx/v1/platforms/esp32p4/Touch_ST7123.hpp"
@@ -208,6 +209,34 @@ namespace m5gfx
     ESP_LOGV(LIBRARY_NAME, "M5IOE1 not found");
     return false;
   }
+
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+  struct Light_M5CoreP4X : public lgfx::ILight
+  {
+    bool init(uint8_t brightness) override
+    {
+      static constexpr uint16_t pwm_freq = 1000;
+      const uint8_t freq_data[] = {
+        0x25, static_cast<uint8_t>(pwm_freq), static_cast<uint8_t>(pwm_freq >> 8)
+      };
+      lgfx::i2c::transactionWrite(in_i2c_port, m5ioe1_i2c_addr,
+                                  freq_data, sizeof(freq_data), m5ioe1_i2c_freq);
+      lgfx::i2c::bitOn(in_i2c_port, m5ioe1_i2c_addr, 0x06, 1u << 0, m5ioe1_i2c_freq);
+      setBrightness(brightness);
+      return true;
+    }
+
+    void setBrightness(uint8_t brightness) override
+    {
+      uint16_t duty = (brightness << 4) | (brightness >> 4);
+      const uint8_t duty_data[] = {
+        0x1B, static_cast<uint8_t>(duty), static_cast<uint8_t>(0x80 | (duty >> 8))
+      };
+      lgfx::i2c::transactionWrite(in_i2c_port, m5ioe1_i2c_addr,
+                                  duty_data, sizeof(duty_data), m5ioe1_i2c_freq);
+    }
+  };
+#endif
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
   static constexpr std::int32_t axp_i2c_freq = 400000;
@@ -2921,6 +2950,117 @@ The usage of each pin is as follows.
 
     if (pkg_ver == 0) // pkg_ver == EFUSE_RD_CHIP_VER_PKG_
     {
+      if (board == 0 || board == board_t::board_M5CoreP4X)
+      {
+        static constexpr uint8_t corep4x_i2c_addr_list[] = {
+          0x4Fu, // M5IOE1
+          0x6Eu, // M5PM1
+          0u
+        };
+        uint32_t i2c_result = _detect_i2c_device(GPIO_NUM_11, GPIO_NUM_9, corep4x_i2c_addr_list);
+        if (i2c_result == ~0u) {
+          lgfx::i2c::init(in_i2c_port, GPIO_NUM_11, GPIO_NUM_9);
+          board = board_t::board_M5CoreP4X;
+          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5CoreP4X");
+
+          lgfx::i2c::writeRegister8(in_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq);
+          lgfx::i2c::writeRegister8(in_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq);
+          lgfx::i2c::bitOn(in_i2c_port, m5pm1_i2c_addr, 0x06, 1u << 3, m5pm1_i2c_freq);
+
+          // M5IOE1 G8/G9/G10/G11 control touch reset, backlight, LCD power,
+          // and LCD reset. G12 supplies the shared 3V3 rail for MBUS, TF card, IMU,
+          // infrared and Ethernet.
+          static constexpr uint8_t touch_reset_bit = 1u << 7;
+          static constexpr uint8_t display_bits_h = 0b00000111;
+          static constexpr uint8_t shared_power_bit = 1u << 3;
+          lgfx::i2c::writeRegister8(in_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOff(in_i2c_port, m5ioe1_i2c_addr, 0x13, touch_reset_bit, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOff(in_i2c_port, m5ioe1_i2c_addr, 0x14, display_bits_h, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOff(in_i2c_port, m5ioe1_i2c_addr, 0x14, shared_power_bit, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOn( in_i2c_port, m5ioe1_i2c_addr, 0x03, touch_reset_bit, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOn( in_i2c_port, m5ioe1_i2c_addr, 0x04, display_bits_h, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOn( in_i2c_port, m5ioe1_i2c_addr, 0x04, shared_power_bit, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOn(in_i2c_port, m5ioe1_i2c_addr, 0x05, touch_reset_bit, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOn(in_i2c_port, m5ioe1_i2c_addr, 0x06, display_bits_h, m5ioe1_i2c_freq);
+          lgfx::i2c::bitOn(in_i2c_port, m5ioe1_i2c_addr, 0x06, shared_power_bit, m5ioe1_i2c_freq);
+
+          static constexpr uint16_t pwm_freq = 1000;
+          const uint8_t freq_data[] = {
+            0x25, static_cast<uint8_t>(pwm_freq), static_cast<uint8_t>(pwm_freq >> 8)
+          };
+          const uint8_t duty_data[] = { 0x1B, 0x00, 0x80 };
+          lgfx::i2c::transactionWrite(in_i2c_port, m5ioe1_i2c_addr,
+                                      freq_data, sizeof(freq_data), m5ioe1_i2c_freq);
+          lgfx::i2c::transactionWrite(in_i2c_port, m5ioe1_i2c_addr,
+                                      duty_data, sizeof(duty_data), m5ioe1_i2c_freq);
+          lgfx::delay(150);
+
+#if !CONFIG_SPIRAM
+          ESP_LOGE(LIBRARY_NAME, "M5CoreP4X needs PSRAM enabled");
+#else
+          auto bus_dsi = new Bus_DSI();
+          _bus_last.reset(bus_dsi);
+          auto bus_cfg = bus_dsi->config();
+          bus_cfg.bus_id = 0;
+          bus_cfg.lane_num = 2;
+          bus_cfg.lane_mbps = 600;
+          bus_cfg.ldo_chan_id = 3;
+          bus_cfg.ldo_voltage_mv = 2500;
+          bus_dsi->config(bus_cfg);
+          if (bus_dsi->init()) {
+            lgfx::delay(50);
+            auto p = new Panel_ST7102();
+            _panel_last.reset(p);
+            auto det = p->config_detail();
+            det.dpi_freq_mhz = 24;
+            det.hsync_back_porch = 40;
+            det.hsync_pulse_width = 2;
+            det.hsync_front_porch = 40;
+            det.vsync_back_porch = 8;
+            det.vsync_pulse_width = 4;
+            det.vsync_front_porch = 200;
+            p->config_detail(det);
+
+            auto cfg = p->config();
+            cfg.memory_width = 480;
+            cfg.memory_height = 480;
+            cfg.panel_width = 480;
+            cfg.panel_height = 480;
+            cfg.readable = false;
+            cfg.rgb_order = true;
+            cfg.bus_shared = false;
+            cfg.offset_x = 0;
+            cfg.offset_y = 0;
+            cfg.offset_rotation = 2;
+            cfg.pin_cs = GPIO_NUM_NC;
+            cfg.pin_rst = GPIO_NUM_NC;
+            p->config(cfg);
+            p->setBus(bus_dsi);
+
+            auto t = new lgfx::Touch_CST3530();
+            _touch_last.reset(t);
+            auto tcfg = t->config();
+            tcfg.pin_rst = -1;
+            tcfg.pin_sda = GPIO_NUM_11;
+            tcfg.pin_scl = GPIO_NUM_9;
+            tcfg.pin_int = GPIO_NUM_1;
+            tcfg.freq = 400000;
+            tcfg.x_min = 0;
+            tcfg.x_max = 479;
+            tcfg.y_min = 0;
+            tcfg.y_max = 479;
+            tcfg.i2c_port = I2C_NUM_1;
+            tcfg.bus_shared = false;
+            tcfg.offset_rotation = 2;
+            t->config(tcfg);
+            _panel_last->setTouch(t);
+          }
+          _set_backlight(new Light_M5CoreP4X());
+#endif
+          goto init_clear;
+        }
+      }
+
       if (board == 0 || board == board_t::board_M5Tab5 || board == board_t::board_M5Tab5X)
       {
         // SDA = GPIO_NUM_31
@@ -3709,6 +3849,7 @@ init_clear:
     case board_M5Station:      title = "M5Station";      break;
     case board_M5StopWatch:    title = "M5StopWatch";    break;
     case board_M5ChainCaptain: title = "M5ChainCaptain"; break;
+    case board_M5CoreP4X:      title = "M5CoreP4X";      break;
     case board_M5AtomS3:       title = "M5AtomS3";       break;
     case board_M5AtomS3R:      title = "M5AtomS3R";      break;
     case board_M5Dial:         title = "M5Dial";         break;
