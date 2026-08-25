@@ -10,12 +10,22 @@ file(GLOB SRCS
      src/lgfx/v1/misc/*.cpp
      src/lgfx/v1/panel/*.cpp
      src/lgfx/v1/platforms/esp32/*.cpp
-     src/lgfx/v1/platforms/esp32c3/*.cpp
-     src/lgfx/v1/platforms/esp32s2/*.cpp
-     src/lgfx/v1/platforms/esp32s3/*.cpp
-     src/lgfx/v1/platforms/esp32p4/*.cpp
      src/lgfx/v1/touch/*.cpp
      )
+
+# Keep common ESP32 sources, then add only the active chip's implementation.
+# This also prevents PlatformIO's flat object layout from colliding on same-named
+# sources that live in different platform directories.
+if(IDF_TARGET STREQUAL "esp32c3")
+    file(GLOB PLATFORM_SRCS src/lgfx/v1/platforms/esp32c3/*.cpp)
+elseif(IDF_TARGET STREQUAL "esp32s2")
+    file(GLOB PLATFORM_SRCS src/lgfx/v1/platforms/esp32s2/*.cpp)
+elseif(IDF_TARGET STREQUAL "esp32s3")
+    file(GLOB PLATFORM_SRCS src/lgfx/v1/platforms/esp32s3/*.cpp)
+elseif(IDF_TARGET STREQUAL "esp32p4")
+    file(GLOB PLATFORM_SRCS src/lgfx/v1/platforms/esp32p4/*.cpp)
+endif()
+list(APPEND SRCS ${PLATFORM_SRCS})
 set(COMPONENT_SRCS ${SRCS})
 
 if (IDF_VERSION_MAJOR GREATER_EQUAL 6)
