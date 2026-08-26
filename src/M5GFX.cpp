@@ -113,11 +113,16 @@ namespace m5gfx
     {
       lgfx::i2c::init(probe_i2c_port, _sda, _scl);
     }
-    // ボードが確定した: probe を閉じ、パッドを戻してから常用ポートを開く
+    // ボードが確定した: probe を閉じ、パッドを戻してから常用ポートを開く。
+    // 開けなくてもボードの判定は取り消さない (表示まで失うため)。バックライトやタッチなど
+    // このポートの利用者が通信できなくなるので、原因が追えるよう警告だけ残す
     void handover(int hw_port)
     {
       release();
-      lgfx::i2c::init(hw_port, _sda, _scl);
+      if (!lgfx::i2c::init(hw_port, _sda, _scl).has_value())
+      {
+        ESP_LOGW(LIBRARY_NAME, "[Autodetect] I2C port %d could not be opened for SDA=%d SCL=%d", hw_port, _sda, _scl);
+      }
     }
     // ボードが一致しなかった: probe を閉じ、パッドを探索前の状態に戻す
     void release(void)
@@ -132,6 +137,8 @@ namespace m5gfx
 
   // I2Cデバイスの存在をチェックする。
   // SDA,SCLのプルアップが確認できない場合は0を返す。
+  // 内部でパッドを backup/restore するので、呼び出し側はこの後に probe_i2c_t を作れば
+  // 探索前の状態を復元先にできる (プルアップ試験を自前で行うブロックは試験前の backup を渡す)。
   // プルアップが確認できた場合は ~0u を返すが、存在しないデバイスに対応するビットは 0 となる。
   // つまり、引数のアドレスリストにある全てのデバイスが存在する場合は ~0u となる。
   __attribute__ ((unused))
