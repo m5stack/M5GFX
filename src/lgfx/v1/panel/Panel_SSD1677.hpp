@@ -152,6 +152,8 @@ namespace lgfx
                    bool mode2_activation, bool enforce_refresh_minimum = true);
     bool _reset_controller_and_face(void);
     bool _ensure_known_face(void);
+    bool _refresh_mode1_text(const uint8_t* planeL, const uint8_t* planeM,
+                             const uint8_t* lut);
     bool _refresh_mode1_absolute(const uint8_t* lsb, const uint8_t* msb,
                                  const uint8_t* lut);
     bool _refresh_mode2_absolute(const uint8_t* lsb, const uint8_t* msb,
