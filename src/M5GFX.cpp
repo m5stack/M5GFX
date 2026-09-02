@@ -538,6 +538,9 @@ namespace m5gfx
   static constexpr uint8_t ft5x06_ili9342c_firmid = 0x10;
   static constexpr uint8_t ft5x06_ili9342e_firmid = 0x12;
   static constexpr uint8_t ft5x06_m5stack_vendor = 0x11;
+  static constexpr uint8_t ft6336u_cores3se_cipher = 0x64;
+  static constexpr uint8_t ft6336u_cores3se_firmid = 0x03;
+  static constexpr uint8_t ft6336u_cores3se_vendor = 0x20;
   static constexpr int32_t ft5x06_version_i2c_freq = 100000;
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
@@ -575,12 +578,18 @@ namespace m5gfx
         touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
         touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
         touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
+        const bool cores3se_ft6336u =
+                           touch_cipher == ft6336u_cores3se_cipher
+                        && touch_firmid == ft6336u_cores3se_firmid
+                        && touch_vendid == ft6336u_cores3se_vendor;
         touch_info_valid = set_work_mode.has_value()
+                        && read_cipher.has_value()
                         && read_firmid.has_value()
                         && read_vendid.has_value()
-                        && touch_vendid == ft5x06_m5stack_vendor
-                        && (touch_firmid == ft5x06_ili9342c_firmid
-                         || touch_firmid == ft5x06_ili9342e_firmid);
+                        && (cores3se_ft6336u
+                         || (touch_vendid == ft5x06_m5stack_vendor
+                          && (touch_firmid == ft5x06_ili9342c_firmid
+                           || touch_firmid == ft5x06_ili9342e_firmid)));
         if (!touch_info_valid)
         {
           lgfx::delay(20);
