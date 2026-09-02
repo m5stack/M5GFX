@@ -23,6 +23,7 @@
 #include "lgfx/v1/panel/Panel_ST7735.hpp"
 #include "lgfx/v1/panel/Panel_ST7789.hpp"
 #include "lgfx/v1/panel/Panel_GC9A01.hpp"
+#include "lgfx/v1/panel/Panel_JD9853.hpp"
 #include "lgfx/v1/panel/Panel_GDEW0154M09.hpp"
 #include "lgfx/v1/panel/Panel_GDEW0154D67.hpp"
 #include "lgfx/v1/panel/Panel_IT8951.hpp"
@@ -2228,13 +2229,14 @@ namespace m5gfx
             bus_spi->config(bus_cfg);
             bus_spi->init();
 
-            auto p = new Panel_ST7789();
+            auto p = new Panel_JD9853();
             p->bus(bus_spi);
             {
               auto cfg = p->config();
               cfg.pin_cs = GPIO_NUM_45;
               cfg.pin_rst = GPIO_NUM_NC;
               cfg.memory_width = 240;
+              // Chain Captain uses a 240-line window at y=80 in a 320-line GRAM.
               cfg.memory_height = 320;
               cfg.panel_width = 240;
               cfg.panel_height = 240;
@@ -2242,7 +2244,7 @@ namespace m5gfx
               cfg.offset_y = 0;
               cfg.offset_rotation = 2;
               cfg.readable = false;
-              cfg.invert = true;
+              cfg.rgb_order = true;
               cfg.bus_shared = false;
               p->config(cfg);
               p->setRotation(0);
