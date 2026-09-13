@@ -18,6 +18,8 @@ Contributors:
 
 #include "Panel_LT8912B.hpp"
 
+#include <type_traits>
+
 #if SOC_MIPI_DSI_SUPPORTED
 
 #include "../common.hpp"
@@ -346,7 +348,7 @@ err:
 static esp_err_t panel_lt8912b_del(esp_lcd_panel_t *panel)
 {
     lt8912b_panel_t *lt8912b = g_lt8912b_context;
-    
+
     if (!lt8912b) {
         ESP_LOGE(TAG, "LT8912B context is NULL!");
         return ESP_ERR_INVALID_STATE;
@@ -364,12 +366,12 @@ static esp_err_t panel_lt8912b_del(esp_lcd_panel_t *panel)
 static esp_err_t panel_lt8912b_reset(esp_lcd_panel_t *panel)
 {
     lt8912b_panel_t *lt8912b = g_lt8912b_context;
-    
+
     if (!lt8912b) {
         ESP_LOGE(TAG, "LT8912B context is NULL!");
         return ESP_ERR_INVALID_STATE;
     }
-    
+
     esp_lcd_panel_io_handle_t io_main = lt8912b->io.main;
 
     // perform hardware reset
@@ -467,13 +469,13 @@ static esp_err_t _panel_lt8912b_send_mipi_basic_set(esp_lcd_panel_io_handle_t io
 static esp_err_t _panel_lt8912b_send_video_setup(esp_lcd_panel_t *panel)
 {
     lt8912b_panel_t *lt8912b = g_lt8912b_context;
-    
+
     if (!lt8912b) {
         ESP_LOGE(TAG, "LT8912B context is NULL!");
         return ESP_ERR_INVALID_STATE;
     }
     (void)panel;
-    
+
     esp_lcd_panel_io_handle_t io_cec_dsi = lt8912b->io.cec_dsi;
     const auto& timing = lt8912b->video_timing;
 
@@ -506,13 +508,13 @@ static esp_err_t _panel_lt8912b_send_video_setup(esp_lcd_panel_t *panel)
 static esp_err_t _panel_lt8912b_send_avi_infoframe(esp_lcd_panel_t *panel)
 {
     lt8912b_panel_t *lt8912b = g_lt8912b_context;
-    
+
     if (!lt8912b) {
         ESP_LOGE(TAG, "LT8912B context is NULL!");
         return ESP_ERR_INVALID_STATE;
     }
     (void)panel;
-    
+
     esp_lcd_panel_io_handle_t io_main = lt8912b->io.main;
     esp_lcd_panel_io_handle_t io_avi = lt8912b->io.avi;
     const auto& timing = lt8912b->video_timing;
@@ -567,8 +569,8 @@ static esp_err_t _panel_lt8912b_detect_input_mipi(esp_lcd_panel_t *panel)
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io_main, 0xC3, &val_c3, 1), TAG, "read 0xC3 failed");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io_main, 0xC4, &val_c4, 1), TAG, "read 0xC4 failed");
 
-    const uint16_t h_res = ((uint16_t)(val_c4 & 0xF0) << 4) | val_c2;
-    const uint16_t v_res = ((uint16_t)(val_c4 & 0x0F) << 8) | val_c3;
+    [[maybe_unused]] const uint16_t h_res = ((uint16_t)(val_c4 & 0xF0) << 4) | val_c2;
+    [[maybe_unused]] const uint16_t v_res = ((uint16_t)(val_c4 & 0x0F) << 8) | val_c3;
     ESP_LOGD(TAG, "MIPI input: H=%u, V=%u", h_res, v_res);
 
     return ESP_OK;
@@ -727,13 +729,13 @@ static esp_err_t panel_lt8912b_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
 static esp_err_t panel_lt8912b_sleep(esp_lcd_panel_t *panel, bool sleep)
 {
     lt8912b_panel_t *lt8912b = g_lt8912b_context;
-    
+
     if (!lt8912b) {
         ESP_LOGE(TAG, "LT8912B context is NULL!");
         return ESP_ERR_INVALID_STATE;
     }
     (void)panel;
-    
+
     esp_lcd_panel_io_handle_t io_main = lt8912b->io.main;
 
     if (sleep) {
@@ -769,6 +771,20 @@ namespace lgfx
  inline namespace v1
  {
 //----------------------------------------------------------------------------
+
+  // esp_lcd renamed the DSI callback on_refresh_done to on_frame_buf_complete and
+  // deprecated the old name. The rename was backported (5.5.5, 6.0.3, 6.1), so
+  // it is detected by member presence rather than by ESP-IDF version.
+  template <typename T, typename = void>
+  struct has_on_frame_buf_complete : std::false_type {};
+  template <typename T>
+  struct has_on_frame_buf_complete<T, decltype(void(&T::on_frame_buf_complete))> : std::true_type {};
+
+  template <typename T, typename Fn>
+  static void assign_refresh_done_callback(T& callbacks, Fn fn, std::true_type) { callbacks.on_frame_buf_complete = fn; }
+  template <typename T, typename Fn>
+  static void assign_refresh_done_callback(T& callbacks, Fn fn, std::false_type) { callbacks.on_refresh_done = fn; }
+
   static constexpr const char* TAG = "Panel_LT8912B";
 
 #if defined(LGFX_PANEL_LT8912B_HAS_M5_I2C)
@@ -1054,7 +1070,8 @@ namespace lgfx
     }
     if (_refresh_done_sem) {
       esp_lcd_dpi_panel_event_callbacks_t callbacks = {};
-      callbacks.on_refresh_done = on_refresh_done;
+      assign_refresh_done_callback(callbacks, on_refresh_done, has_on_frame_buf_complete<esp_lcd_dpi_panel_event_callbacks_t>{});
+
       (void)esp_lcd_dpi_panel_register_event_callbacks(_panel_handle, &callbacks, this);
     }
 
@@ -1084,6 +1101,7 @@ namespace lgfx
     _lines_buffer = line_array;
     return true;
   }
+
 
   bool Panel_LT8912B::init(bool use_reset)
   {
