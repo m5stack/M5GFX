@@ -191,6 +191,7 @@ namespace m5gfx
     std::shared_ptr<lgfx::ILight> _light_last;
 #endif
     std::vector<DisplayState> _displayStateStack;
+    bool _is_st7121 = false;
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
@@ -203,6 +204,9 @@ namespace m5gfx
     using LGFXBase::drawBitmap;
 
     static M5GFX* getInstance(void) { return _instance; }
+
+    /// True after the Tab5 touch firmware identifies an ST7121 display.
+    bool isST7121(void) const { return _is_st7121; }
 
     void progressBar(int x, int y, int w, int h, uint8_t val);
     void pushState(void);
