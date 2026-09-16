@@ -3143,15 +3143,17 @@ The usage of each pin is as follows.
                    board == board_t::board_M5Tab5X ? "board_M5Tab5X" : "board_M5Tab5");
 
           static constexpr const uint8_t reg_data_io1_1[] = {
-            0x03, 0b01111111, 0,   // PI4IO_REG_IO_DIR
+            // Preload LOW before enabling the reset outputs on repeated initialization.
             0x05, 0b01000110, 0,   // PI4IO_REG_OUT_SET (bit4=LCD Reset,bit5=GT911 TouchReset  LOW)
+            0x03, 0b01111111, 0,   // PI4IO_REG_IO_DIR
             0x07, 0b00000000, 0,   // PI4IO_REG_OUT_H_IM
             0x0D, 0b01111111, 0,   // PI4IO_REG_PULL_SEL
             0x0B, 0b01111111, 0,   // PI4IO_REG_PULL_EN
             0xFF,0xFF,0xFF,
           };
           static constexpr const uint8_t reg_data_io1_2[] = {
-            0x05, 0b01110110, 0,   // PI4IO_REG_OUT_SET (bit4=LCD Reset,bit5=GT911 TouchReset  HIGH)
+            0x03, 0b01101111, 0,   // PI4IO_REG_IO_DIR (LCD Reset input, pull-up already enabled)
+            0x05, 0b01110110, 0,   // PI4IO_REG_OUT_SET (bit5=GT911 TouchReset HIGH; LCD Reset stays input)
             0xFF,0xFF,0xFF,
           };
 
