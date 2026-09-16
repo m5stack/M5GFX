@@ -1221,7 +1221,6 @@ namespace m5gfx
 
   board_t M5GFX::autodetect(bool use_reset, board_t board)
   {
-    _is_st7121 = false;
     auto bus_spi = new Bus_SPI();
     _bus_last.reset(bus_spi);
 
@@ -3212,10 +3211,6 @@ The usage of each pin is as follows.
                 }
                 if (fw_version == 1) {
                   hit_st7121 = true;
-                  _is_st7121 = true;
-                  // Only a confirmed ST7121 switches LCD_RST to input pull-up.
-                  // The shared reset sequence above still drives HIGH before identification.
-                  lgfx::i2c::bitOff(probe_i2c_port, pi4io1_i2c_addr, 0x03, 1 << 4, 100000);
                   break;
                 }
                 if (fw_version == 3) {
