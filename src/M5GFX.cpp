@@ -318,80 +318,18 @@ namespace m5gfx
     }
   };
 
-  struct Panel_M5StackCore2 : public lgfx::Panel_ILI9342
+  /// The Core2 has shipped with an ILI9342C and, later, an ILI9342E. The two need
+  /// different init lists, so the board-specific part is a template over the panel.
+  template <class Base>
+  struct Panel_M5StackCore2_T : public Base
   {
-    Panel_M5StackCore2(void)
+    Panel_M5StackCore2_T(void)
     {
-      _cfg.pin_cs = GPIO_NUM_5;
-      _cfg.invert = true;
-      _cfg.offset_rotation = 3;
+      this->_cfg.pin_cs = GPIO_NUM_5;
+      this->_cfg.invert = true;
+      this->_cfg.offset_rotation = 3;
 
-      _rotation = 1; // default rotation
-    }
-
-    void initPanelByTouchVersion()
-    {
-      static constexpr uint8_t touch_addr = 0x38;
-      static constexpr uint8_t cipher_reg = 0xA3;
-      static constexpr uint8_t firmid_reg = 0xA6;
-      static constexpr uint8_t vendid_reg = 0xA8;
-      static constexpr uint8_t ili9342c_firmid = 0x10;
-      static constexpr uint8_t ili9342e_firmid = 0x12;
-      static constexpr uint8_t m5stack_vendor = 0x11;
-      static constexpr int32_t version_i2c_freq = 100000;
-
-      uint8_t touch_cipher = 0;
-      uint8_t touch_firmid = 0;
-      uint8_t touch_vendid = 0;
-      bool touch_info_valid = false;
-      for (int retry = 0; retry < 5 && !touch_info_valid; ++retry)
-      {
-        auto set_work_mode = lgfx::i2c::writeRegister8(
-            axp_i2c_port, touch_addr, 0x00, 0x00, 0, version_i2c_freq);
-        auto read_cipher = lgfx::i2c::readRegister8(
-            axp_i2c_port, touch_addr, cipher_reg, version_i2c_freq);
-        auto read_firmid = lgfx::i2c::readRegister8(
-            axp_i2c_port, touch_addr, firmid_reg, version_i2c_freq);
-        auto read_vendid = lgfx::i2c::readRegister8(
-            axp_i2c_port, touch_addr, vendid_reg, version_i2c_freq);
-
-        touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
-        touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
-        touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
-        touch_info_valid = set_work_mode.has_value()
-                        && read_firmid.has_value()
-                        && read_vendid.has_value()
-                        && touch_vendid == m5stack_vendor
-                        && (touch_firmid == ili9342c_firmid
-                         || touch_firmid == ili9342e_firmid);
-        if (!touch_info_valid)
-        {
-          lgfx::delay(20);
-        }
-      }
-
-      bool use_ili9342e = touch_info_valid
-                       && touch_firmid == ili9342e_firmid;
-      if (touch_info_valid)
-      {
-        ESP_LOGI(LIBRARY_NAME,
-                 "Core2 touch CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x, panel:%s",
-                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid,
-                 use_ili9342e ? "ILI9342E" : "ILI9342C");
-      }
-      else
-      {
-        ESP_LOGW(LIBRARY_NAME,
-                 "Core2 touch version read failed (CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x), panel:ILI9342C",
-                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid);
-      }
-
-      if (use_ili9342e)
-      {
-        startWrite(true);
-        command_list(getIli9342EInitCommands());
-        endWrite();
-      }
+      this->_rotation = 1; // default rotation
     }
 
     void rst_control(bool level) override
@@ -401,32 +339,9 @@ namespace m5gfx
       // AXP192 reg 0x96 = GPIO3&4 control
       lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, bits, mask, axp_i2c_freq);
     }
-
-  protected:
-    static const uint8_t* getIli9342EInitCommands()
-    {
-      static constexpr uint8_t list0[] =
-      {
-        0xDD, 1, 0x01,
-        0x3A, 1, 0x55,
-        0x21, 0,
-        0x36, 1, 0x08,
-        0xD5, 1, 0x00,
-        0xB1, 1, 0x22,
-        0xC8, 1, 0x38,
-        0xCB, 1, 0x1C,
-        0xC9, 1, 0x1A,
-        0xCA, 1, 0x1A,
-        0xB7, 4, 0x5A,0x41,0x11,0x19,
-        0xE4,15, 0x04,0x08,0x11,0x06,0x12,0x07,0x3A,0x76,0x47,0x07,0x0F,0x0A,0x11,0x19,0x05,
-        0xE5,15, 0x02,0x03,0x07,0x06,0x12,0x07,0x36,0x5F,0x48,0x06,0x10,0x0C,0x16,0x14,0x09,
-        0x11, 0 + CMD_INIT_DELAY, 120,
-        0x29, 0 + CMD_INIT_DELAY, 120,
-        0xFF,0xFF,
-      };
-      return list0;
-    }
   };
+  using Panel_M5StackCore2  = Panel_M5StackCore2_T<lgfx::Panel_ILI9342>;
+  using Panel_M5StackCore2E = Panel_M5StackCore2_T<lgfx::Panel_ILI9342E>;
 
   struct Light_M5StackCore2 : public lgfx::ILight
   {
@@ -577,84 +492,23 @@ namespace m5gfx
   static constexpr int_fast16_t aw9523_i2c_addr = 0x58; // AW9523B
   static constexpr int_fast16_t axp_i2c_addr = 0x34;    // AXP2101
   static constexpr int_fast16_t gc0308_i2c_addr = 0x21; // GC0308
-  static constexpr int_fast16_t ft5x06_i2c_addr = 0x38;
-  static constexpr uint8_t ft5x06_cipher_reg = 0xA3;
-  static constexpr uint8_t ft5x06_firmid_reg = 0xA6;
-  static constexpr uint8_t ft5x06_vendid_reg = 0xA8;
-  static constexpr uint8_t ft5x06_ili9342c_firmid = 0x10;
-  static constexpr uint8_t ft5x06_ili9342e_firmid = 0x12;
-  static constexpr uint8_t ft5x06_m5stack_vendor = 0x11;
-  static constexpr int32_t ft5x06_version_i2c_freq = 100000;
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
   static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
   static constexpr int_fast16_t chain_captain_i2c_sda = GPIO_NUM_3;
   static constexpr int_fast16_t chain_captain_i2c_scl = GPIO_NUM_2;
 
-  struct Panel_M5StackCoreS3 : public lgfx::Panel_ILI9342
+  /// The CoreS3 family has shipped with an ILI9342C and, later, an ILI9342E (see Panel_M5StackCore2_T).
+  template <class Base>
+  struct Panel_M5StackCoreS3_T : public Base
   {
-    Panel_M5StackCoreS3(void)
+    Panel_M5StackCoreS3_T(void)
     {
-      _cfg.pin_cs = GPIO_NUM_3;
-      _cfg.invert = true;
-      _cfg.offset_rotation = 3;
+      this->_cfg.pin_cs = GPIO_NUM_3;
+      this->_cfg.invert = true;
+      this->_cfg.offset_rotation = 3;
 
-      _rotation = 1; // default rotation
-    }
-
-    void initPanelByTouchVersion()
-    {
-      uint8_t touch_cipher = 0;
-      uint8_t touch_firmid = 0;
-      uint8_t touch_vendid = 0;
-      bool touch_info_valid = false;
-      for (int retry = 0; retry < 5 && !touch_info_valid; ++retry)
-      {
-        auto set_work_mode = lgfx::i2c::writeRegister8(
-          i2c_port, ft5x06_i2c_addr, 0x00, 0x00, 0, ft5x06_version_i2c_freq);
-        auto read_cipher = lgfx::i2c::readRegister8(
-          i2c_port, ft5x06_i2c_addr, ft5x06_cipher_reg, ft5x06_version_i2c_freq);
-        auto read_firmid = lgfx::i2c::readRegister8(
-          i2c_port, ft5x06_i2c_addr, ft5x06_firmid_reg, ft5x06_version_i2c_freq);
-        auto read_vendid = lgfx::i2c::readRegister8(
-          i2c_port, ft5x06_i2c_addr, ft5x06_vendid_reg, ft5x06_version_i2c_freq);
-        touch_cipher = read_cipher.has_value() ? read_cipher.value() : 0;
-        touch_firmid = read_firmid.has_value() ? read_firmid.value() : 0;
-        touch_vendid = read_vendid.has_value() ? read_vendid.value() : 0;
-        touch_info_valid = set_work_mode.has_value()
-                        && read_firmid.has_value()
-                        && read_vendid.has_value()
-                        && touch_vendid == ft5x06_m5stack_vendor
-                        && (touch_firmid == ft5x06_ili9342c_firmid
-                         || touch_firmid == ft5x06_ili9342e_firmid);
-        if (!touch_info_valid)
-        {
-          lgfx::delay(20);
-        }
-      }
-
-      bool use_ili9342e = touch_info_valid
-                       && touch_firmid == ft5x06_ili9342e_firmid;
-      if (touch_info_valid)
-      {
-        ESP_LOGI(LIBRARY_NAME,
-                 "CoreS3 touch CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x, panel:%s",
-                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid,
-                 use_ili9342e ? "ILI9342E" : "ILI9342C");
-      }
-      else
-      {
-        ESP_LOGW(LIBRARY_NAME,
-                 "CoreS3 touch version read failed (CIPHER:0x%02x / FIRMID:0x%02x / VENDID:0x%02x), panel:ILI9342C",
-                 (int)touch_cipher, (int)touch_firmid, (int)touch_vendid);
-      }
-
-      if (use_ili9342e)
-      {
-        startWrite(true);
-        command_list(getIli9342EInitCommands());
-        endWrite();
-      }
+      this->_rotation = 1; // default rotation
     }
 
     void rst_control(bool level) override
@@ -668,7 +522,7 @@ namespace m5gfx
 
     void cs_control(bool flg) override
     {
-      lgfx::Panel_ILI9342::cs_control(flg);
+      Base::cs_control(flg);
       // CS操作時にGPIO35の役割を切り替える (MISO or D/C);
 
       // FSPIQ_IN_IDX==FSPI MISO / SIG_GPIO_OUT_IDX==GPIO OUT
@@ -681,32 +535,9 @@ namespace m5gfx
                              : GPIO_ENABLE1_W1TS_REG
                            ) = 1u << (GPIO_NUM_35 & 31);
     }
-
-  protected:
-    static const uint8_t* getIli9342EInitCommands()
-    {
-      static constexpr uint8_t list0[] =
-      {
-        0xDD, 1, 0x01,
-        0x3A, 1, 0x55,
-        0x21, 0,
-        0x36, 1, 0x08,
-        0xD5, 1, 0x00,
-        0xB1, 1, 0x22,
-        0xC8, 1, 0x38,
-        0xCB, 1, 0x1C,
-        0xC9, 1, 0x1A,
-        0xCA, 1, 0x1A,
-        0xB7, 4, 0x5A,0x41,0x11,0x19,
-        0xE4,15, 0x04,0x08,0x11,0x06,0x12,0x07,0x3A,0x76,0x47,0x07,0x0F,0x0A,0x11,0x19,0x05,
-        0xE5,15, 0x02,0x03,0x07,0x06,0x12,0x07,0x36,0x5F,0x48,0x06,0x10,0x0C,0x16,0x14,0x09,
-        0x11, 0 + CMD_INIT_DELAY, 120,
-        0x29, 0 + CMD_INIT_DELAY, 120,
-        0xFF,0xFF,
-      };
-      return list0;
-    }
   };
+  using Panel_M5StackCoreS3  = Panel_M5StackCoreS3_T<lgfx::Panel_ILI9342>;
+  using Panel_M5StackCoreS3E = Panel_M5StackCoreS3_T<lgfx::Panel_ILI9342E>;
 
   struct Touch_M5StackCoreS3 : public lgfx::Touch_FT5x06
   {
@@ -1069,6 +900,112 @@ namespace m5gfx
     return res;
   }
 
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
+  /// Tell an ILI9342E from an ILI9342C. Two of the E's level-2 registers are written and read
+  /// back through D9h (Get External Register for SPI):
+  ///  - DDh (Set EXTC, W/R on the E) = 01h. On the C the command is undefined (a NOP).
+  ///  - CBh (Power Control 6 on the E) = 1Ch, the value the E init list writes anyway. On the
+  ///    C the command is undefined as well, so nothing is stored that could be read back.
+  /// The E reads both values back; the C returned constants (00h / 0Fh / 1Fh / 3Fh) on every
+  /// unit measured. Only values the probe wrote itself are compared, and D9h is cleared first,
+  /// so the answer does not depend on what a previous firmware left in the panel (the CoreS3
+  /// does not reset its LCD at boot). A try that matches neither key set is inconclusive and
+  /// is repeated (_identify_ili9342); the caller falls back to the C when it stays so.
+  /// When the E keys do not match, the C is confirmed by its own datasheet-defined identity:
+  /// with its EXTC key sent, D3h (Read ID4) gives 93h 42h. That step is skipped on an E so
+  /// that no C command reaches an E. The C datasheet does not define what a C returns for the
+  /// E keys, so the "not E" side rests on measurement; the ID4 check exists to make the C
+  /// side positive. D9h is returned to 00h afterwards: while it still holds an index the panel
+  /// misreads the parameters of the following writes.
+  /// The reads go through a panel object (not yet initialized) so that the board's CS / D-C
+  /// handling applies; as it is not initialized, each transaction is closed with a NOP, which
+  /// both panels ignore. The caller then creates the panel of the detected type.
+  /// The ILI9342E needs about 1 us after RAMRD before the first pixel is valid. At the 16 MHz
+  /// read clock used here the eight dummy clocks are not enough and it returns one stale pixel
+  /// (24 bits) first, so that pixel is skipped as well; at 8 MHz and below the eight clocks
+  /// suffice. Measured on a Core2 and a CoreS3 with the E, not on the C (which keeps 8).
+  static void _set_ili9342e_read(lgfx::Panel_ILI9342* p, std::uint32_t freq_read)
+  {
+    auto cfg = p->config();
+    cfg.dummy_read_pixel = (freq_read > 8000000) ? 32 : 8;
+    p->config(cfg);
+  }
+
+  enum class ili9342_variant_t : std::uint8_t { unknown, c, e };
+
+  /// One try of the identity keys. Silent, so that the caller can repeat it while the panel
+  /// is not answering (see _identify_ili9342). keys[] receives the raw read-backs for the log.
+  static ili9342_variant_t _probe_ili9342_variant(lgfx::Panel_LCD* p, std::uint32_t keys[4], bool try_c_key = true)
+  {
+    auto write8 = [&](std::uint8_t cmd, std::uint8_t data)
+    {
+      p->startWrite();
+      p->writeCommand(cmd, 1);
+      p->writeData(data, 1);
+      p->endWrite();
+    };
+    // One dummy bit shifts the byte left by one; normalise to the datasheet value.
+    std::uint8_t dummy_bits = p->config().dummy_read_bits;
+    auto read_param = [&](std::uint8_t cmd, std::uint8_t index) -> std::uint32_t
+    {
+      write8(0xD9, 0x10 | index);
+      std::uint32_t v = p->readCommand(cmd, 0, 1) & 0xFF;
+      return (dummy_bits == 1) ? ((v >> 1) & 0x7F) : v;
+    };
+    write8(0xD9, 0x00);   // a leftover index would make the panel misread the parameters below
+                          // (D9h needs EXTC on the E, and a firmware that left an index had it on)
+    write8(0xDD, 0x01);
+    write8(0xCB, 0x1C);
+    keys[0] = read_param(0xDD, 1);
+    keys[1] = read_param(0xCB, 1);
+    write8(0xD9, 0x00);   // the last read left an index behind
+    if (keys[0] == 0x01 && keys[1] == 0x1C) { return ili9342_variant_t::e; }
+    if (!try_c_key) { return ili9342_variant_t::unknown; }   // a known E is only waited for; no C command reaches it
+    // Not an E: confirm the C by its own Read ID4 (D3h = 00h 93h 42h), reachable once its EXTC key is sent.
+    p->startWrite();
+    p->writeCommand(0xC8, 1);
+    p->writeData(0xFF, 1);
+    p->writeData(0x93, 1);
+    p->writeData(0x42, 1);
+    p->endWrite();
+    keys[2] = read_param(0xD3, 2);
+    keys[3] = read_param(0xD3, 3);
+    write8(0xD9, 0x00);
+    // the normalisation keeps 7 bits, so 93h compares as 13h
+    return (keys[2] == (0x93 & 0x7F) && keys[3] == 0x42) ? ili9342_variant_t::c : ili9342_variant_t::unknown;
+  }
+
+  /// Identify the panel, repeating the probe every millisecond for up to poll_ms while neither
+  /// key set answers. A panel that is reloading its registers after a reset (see the Core2 path)
+  /// gives constants for a few milliseconds; a C answers at once.
+  static ili9342_variant_t _identify_ili9342(lgfx::Panel_LCD* p, std::uint32_t keys[4], std::uint32_t poll_ms, bool try_c_key = true)
+  {
+    auto v = _probe_ili9342_variant(p, keys, try_c_key);
+    for (std::uint32_t waited = 0; v == ili9342_variant_t::unknown && waited < poll_ms; ++waited)
+    {
+      lgfx::delay(1);
+      v = _probe_ili9342_variant(p, keys, try_c_key);
+    }
+    return v;
+  }
+
+  static void _log_ili9342_variant(ili9342_variant_t v, const std::uint32_t keys[4])
+  {
+    switch (v)
+    {
+    case ili9342_variant_t::e:
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x -> ILI9342E", (int)keys[0], (int)keys[1]);
+      break;
+    case ili9342_variant_t::c:
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> ILI9342C", (int)keys[0], (int)keys[1], (int)keys[2], (int)keys[3]);
+      break;
+    default:
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> neither key answered, ILI9342C assumed", (int)keys[0], (int)keys[1], (int)keys[2], (int)keys[3]);
+      break;
+    }
+  }
+#endif
+
   void M5GFX::_set_backlight(lgfx::ILight* bl)
   {
 //  if (_light_last) { delete _light_last; }
@@ -1182,24 +1119,9 @@ namespace m5gfx
       return false;
     }
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-    if (board == board_t::board_M5StackCore2)
-    {
-      static_cast<Panel_M5StackCore2*>(_panel_last.get())
-        ->initPanelByTouchVersion();
-    }
-#endif
-
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     switch (board) {
     default:
-      break;
-
-    case board_t::board_M5StackCoreS3:
-    case board_t::board_M5StackCoreS3SE:
-    case board_t::board_M5StackChan:
-      static_cast<Panel_M5StackCoreS3*>(_panel_last.get())
-        ->initPanelByTouchVersion();
       break;
 
     case board_t::board_M5StopWatch:
@@ -1508,13 +1430,24 @@ namespace m5gfx
 
             bool isAxp192 = axp_exists == 192;
 
+            // Power the panel and release its reset line, but do not pulse the reset yet: the
+            // ILI9342C/E probe below reads registers, and a reset applied while the panel is
+            // displaying (a reboot) is followed by the panel reloading its registers from NV
+            // memory for up to 120 ms (ILI9342E datasheet 12.4, reset in Sleep Out mode; about
+            // 6 ms measured). Reads during that time return a constant and the E was taken for
+            // a C. The panel is probed as it is and reset afterwards; the probe is then repeated
+            // until the panel answers again, which also times the init sequence that follows.
             i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_first : reg_data_axp2101_first, axp_i2c_freq);
-            if (use_reset) {
+            i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_second : reg_data_axp2101_second, axp_i2c_freq);
+            lgfx::delay(5);   // a panel that was just powered answers after about 2 ms (measured on the E)
+            auto lcd_reset = [&](void)
+            { // LCD (and, on the Tough, touch) reset pulse. Commands are accepted 5 ms after release
+              // (datasheet); 10 ms keeps the touch controller check below no earlier than it used to be.
               i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_reset : reg_data_axp2101_reset, axp_i2c_freq);
               lgfx::delay(1);
-            }
-            i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_second : reg_data_axp2101_second, axp_i2c_freq);
-            lgfx::delay(1);
+              i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_second : reg_data_axp2101_second, axp_i2c_freq);
+              lgfx::delay(10);
+            };
 
             {
               gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_15, GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38 };
@@ -1529,13 +1462,51 @@ namespace m5gfx
               _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
               id = _read_panel_id(bus_spi, GPIO_NUM_5);
+              bool reset_done = false;
+              if ((id & 0xFF) != 0xE3 && use_reset)
+              { // A panel that does not answer as it is gets the reset first, as it always did.
+                lcd_reset();
+                reset_done = true;
+                id = _read_panel_id(bus_spi, GPIO_NUM_5);
+              }
               if ((id & 0xFF) == 0xE3)
               {   // ILI9342c
                 bus_cfg.freq_write = 40000000;
                 bus_cfg.freq_read  = 16000000;
                 bus_spi->config(bus_cfg);
 
-                auto p = new Panel_M5StackCore2();
+                lgfx::Panel_ILI9342* p;
+                {
+                  Panel_M5StackCore2 panel_probe;
+                  panel_probe.bus(bus_spi);
+                  std::uint32_t keys[4] = { 0, 0, 0, 0 };
+                  auto variant = _identify_ili9342(&panel_probe, keys, reset_done ? 120 : 1);
+                  if (use_reset && !reset_done)
+                  { // Reset the identified panel (and the Tough touch controller); the init sequence
+                    // is sent later without another reset. Keep probing until the panel answers its
+                    // keys again, so that the init sequence is not written while it reloads its
+                    // registers (up to 120 ms by the datasheet, about 6 ms measured on the E).
+                    // A panel already known to be an E is only asked for its own keys.
+                    lcd_reset();
+                    std::uint32_t keys_after[4] = { 0, 0, 0, 0 };
+                    auto after = _identify_ili9342(&panel_probe, keys_after, 120, variant != ili9342_variant_t::e);
+                    if (after != ili9342_variant_t::unknown)
+                    {
+                      variant = after;
+                      for (int i = 0; i < 4; ++i) { keys[i] = keys_after[i]; }
+                    }
+                  }
+                  _log_ili9342_variant(variant, keys);
+                  if (variant == ili9342_variant_t::e)
+                  {
+                    p = new Panel_M5StackCore2E();
+                    _set_ili9342e_read(p, bus_cfg.freq_read);
+                  }
+                  else
+                  {
+                    p = new Panel_M5StackCore2();
+                  }
+                }
                 p->bus(bus_spi);
                 _panel_last.reset(p);
 
@@ -1841,7 +1812,26 @@ namespace m5gfx
               bus_cfg.freq_write = 40000000;
               bus_cfg.freq_read  = 16000000;
               bus_spi->config(bus_cfg);
-              auto p = new Panel_M5StackCoreS3();
+              lgfx::Panel_ILI9342* p;
+              {
+                Panel_M5StackCoreS3 panel_probe;
+                panel_probe.bus(bus_spi);
+                std::uint32_t keys[4] = { 0, 0, 0, 0 };
+                auto variant = _identify_ili9342(&panel_probe, keys, 1);   // no LCD reset on this board: one repeat
+                _log_ili9342_variant(variant, keys);
+                if (variant == ili9342_variant_t::e)
+                {
+                  p = new Panel_M5StackCoreS3E();
+                  _set_ili9342e_read(p, bus_cfg.freq_read);
+                  auto cfg = p->config();
+                  cfg.readable = false;   // the frame memory cannot be read back on this combination yet
+                  p->config(cfg);
+                }
+                else
+                {
+                  p = new Panel_M5StackCoreS3();
+                }
+              }
               p->bus(bus_spi);
               _panel_last.reset(p);
 
@@ -3143,15 +3133,17 @@ The usage of each pin is as follows.
                    board == board_t::board_M5Tab5X ? "board_M5Tab5X" : "board_M5Tab5");
 
           static constexpr const uint8_t reg_data_io1_1[] = {
-            0x03, 0b01111111, 0,   // PI4IO_REG_IO_DIR
+            // Preload LOW before enabling the reset outputs on repeated initialization.
             0x05, 0b01000110, 0,   // PI4IO_REG_OUT_SET (bit4=LCD Reset,bit5=GT911 TouchReset  LOW)
+            0x03, 0b01111111, 0,   // PI4IO_REG_IO_DIR
             0x07, 0b00000000, 0,   // PI4IO_REG_OUT_H_IM
             0x0D, 0b01111111, 0,   // PI4IO_REG_PULL_SEL
             0x0B, 0b01111111, 0,   // PI4IO_REG_PULL_EN
             0xFF,0xFF,0xFF,
           };
           static constexpr const uint8_t reg_data_io1_2[] = {
-            0x05, 0b01110110, 0,   // PI4IO_REG_OUT_SET (bit4=LCD Reset,bit5=GT911 TouchReset  HIGH)
+            0x03, 0b01101111, 0,   // PI4IO_REG_IO_DIR (LCD Reset input, pull-up already enabled)
+            0x05, 0b01110110, 0,   // PI4IO_REG_OUT_SET (bit5=GT911 TouchReset HIGH; LCD Reset stays input)
             0xFF,0xFF,0xFF,
           };
 
