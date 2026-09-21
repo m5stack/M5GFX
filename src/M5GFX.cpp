@@ -909,7 +909,8 @@ namespace m5gfx
   /// The E reads both values back; the C returned constants (00h / 0Fh / 1Fh / 3Fh) on every
   /// unit measured. Only values the probe wrote itself are compared, and D9h is cleared first,
   /// so the answer does not depend on what a previous firmware left in the panel (the CoreS3
-  /// does not reset its LCD at boot). A try that does not match is repeated once.
+  /// does not reset its LCD at boot). A try that matches neither key set is inconclusive and
+  /// is repeated (_identify_ili9342); the caller falls back to the C when it stays so.
   /// When the E keys do not match, the C is confirmed by its own datasheet-defined identity:
   /// with its EXTC key sent, D3h (Read ID4) gives 93h 42h. That step is skipped on an E so
   /// that no C command reaches an E. The C datasheet does not define what a C returns for the
@@ -930,7 +931,11 @@ namespace m5gfx
     p->config(cfg);
   }
 
-  static bool _probe_ili9342e(lgfx::Panel_LCD* p)
+  enum class ili9342_variant_t : std::uint8_t { unknown, c, e };
+
+  /// One try of the identity keys. Silent, so that the caller can repeat it while the panel
+  /// is not answering (see _identify_ili9342). keys[] receives the raw read-backs for the log.
+  static ili9342_variant_t _probe_ili9342_variant(lgfx::Panel_LCD* p, std::uint32_t keys[4], bool try_c_key = true)
   {
     auto write8 = [&](std::uint8_t cmd, std::uint8_t data)
     {
@@ -947,39 +952,57 @@ namespace m5gfx
       std::uint32_t v = p->readCommand(cmd, 0, 1) & 0xFF;
       return (dummy_bits == 1) ? ((v >> 1) & 0x7F) : v;
     };
-    bool is_e = false;
-    std::uint32_t dd = 0, cb = 0;
-    for (int retry = 0; retry < 2 && !is_e; ++retry)
-    {
-      write8(0xD9, 0x00);   // a leftover index would make the panel misread the parameters below
-                            // (D9h needs EXTC on the E, and a firmware that left an index had it on)
-      write8(0xDD, 0x01);
-      write8(0xCB, 0x1C);
-      dd = read_param(0xDD, 1);
-      cb = read_param(0xCB, 1);
-      is_e = (dd == 0x01) && (cb == 0x1C);
-    }
-    if (is_e)
-    {
-      write8(0xD9, 0x00);
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x -> ILI9342E", (int)dd, (int)cb);
-      return true;
-    }
-    // Not an E: confirm the C by its Read ID4 (D3h = 00h 93h 42h), reachable once its EXTC key is sent.
+    write8(0xD9, 0x00);   // a leftover index would make the panel misread the parameters below
+                          // (D9h needs EXTC on the E, and a firmware that left an index had it on)
+    write8(0xDD, 0x01);
+    write8(0xCB, 0x1C);
+    keys[0] = read_param(0xDD, 1);
+    keys[1] = read_param(0xCB, 1);
     write8(0xD9, 0x00);   // the last read left an index behind
+    if (keys[0] == 0x01 && keys[1] == 0x1C) { return ili9342_variant_t::e; }
+    if (!try_c_key) { return ili9342_variant_t::unknown; }   // a known E is only waited for; no C command reaches it
+    // Not an E: confirm the C by its own Read ID4 (D3h = 00h 93h 42h), reachable once its EXTC key is sent.
     p->startWrite();
     p->writeCommand(0xC8, 1);
     p->writeData(0xFF, 1);
     p->writeData(0x93, 1);
     p->writeData(0x42, 1);
     p->endWrite();
-    std::uint32_t id2 = read_param(0xD3, 2);
-    std::uint32_t id3 = read_param(0xD3, 3);
+    keys[2] = read_param(0xD3, 2);
+    keys[3] = read_param(0xD3, 3);
     write8(0xD9, 0x00);
-    bool is_c = (id2 == (0x93 & 0x7F)) && (id3 == 0x42);   // the normalisation keeps 7 bits, so 93h compares as 13h
-    ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> %s", (int)dd, (int)cb, (int)id2, (int)id3,
-             is_c ? "ILI9342C" : "not ILI9342E, ILI9342C assumed");
-    return false;
+    // the normalisation keeps 7 bits, so 93h compares as 13h
+    return (keys[2] == (0x93 & 0x7F) && keys[3] == 0x42) ? ili9342_variant_t::c : ili9342_variant_t::unknown;
+  }
+
+  /// Identify the panel, repeating the probe every millisecond for up to poll_ms while neither
+  /// key set answers. A panel that is reloading its registers after a reset (see the Core2 path)
+  /// gives constants for a few milliseconds; a C answers at once.
+  static ili9342_variant_t _identify_ili9342(lgfx::Panel_LCD* p, std::uint32_t keys[4], std::uint32_t poll_ms, bool try_c_key = true)
+  {
+    auto v = _probe_ili9342_variant(p, keys, try_c_key);
+    for (std::uint32_t waited = 0; v == ili9342_variant_t::unknown && waited < poll_ms; ++waited)
+    {
+      lgfx::delay(1);
+      v = _probe_ili9342_variant(p, keys, try_c_key);
+    }
+    return v;
+  }
+
+  static void _log_ili9342_variant(ili9342_variant_t v, const std::uint32_t keys[4])
+  {
+    switch (v)
+    {
+    case ili9342_variant_t::e:
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x -> ILI9342E", (int)keys[0], (int)keys[1]);
+      break;
+    case ili9342_variant_t::c:
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> ILI9342C", (int)keys[0], (int)keys[1], (int)keys[2], (int)keys[3]);
+      break;
+    default:
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> neither key answered, ILI9342C assumed", (int)keys[0], (int)keys[1], (int)keys[2], (int)keys[3]);
+      break;
+    }
   }
 #endif
 
@@ -1407,13 +1430,24 @@ namespace m5gfx
 
             bool isAxp192 = axp_exists == 192;
 
+            // Power the panel and release its reset line, but do not pulse the reset yet: the
+            // ILI9342C/E probe below reads registers, and a reset applied while the panel is
+            // displaying (a reboot) is followed by the panel reloading its registers from NV
+            // memory for up to 120 ms (ILI9342E datasheet 12.4, reset in Sleep Out mode; about
+            // 6 ms measured). Reads during that time return a constant and the E was taken for
+            // a C. The panel is probed as it is and reset afterwards; the probe is then repeated
+            // until the panel answers again, which also times the init sequence that follows.
             i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_first : reg_data_axp2101_first, axp_i2c_freq);
-            if (use_reset) {
+            i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_second : reg_data_axp2101_second, axp_i2c_freq);
+            lgfx::delay(5);   // a panel that was just powered answers after about 2 ms (measured on the E)
+            auto lcd_reset = [&](void)
+            { // LCD (and, on the Tough, touch) reset pulse. Commands are accepted 5 ms after release
+              // (datasheet); 10 ms keeps the touch controller check below no earlier than it used to be.
               i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_reset : reg_data_axp2101_reset, axp_i2c_freq);
               lgfx::delay(1);
-            }
-            i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_second : reg_data_axp2101_second, axp_i2c_freq);
-            lgfx::delay(use_reset ? 5 : 1);   // the panel accepts commands 5 ms after its reset is released
+              i2c_write_register8_array(probe_i2c_port, axp_i2c_addr, isAxp192 ? reg_data_axp192_second : reg_data_axp2101_second, axp_i2c_freq);
+              lgfx::delay(10);
+            };
 
             {
               gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_15, GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38 };
@@ -1428,6 +1462,13 @@ namespace m5gfx
               _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
 
               id = _read_panel_id(bus_spi, GPIO_NUM_5);
+              bool reset_done = false;
+              if ((id & 0xFF) != 0xE3 && use_reset)
+              { // A panel that does not answer as it is gets the reset first, as it always did.
+                lcd_reset();
+                reset_done = true;
+                id = _read_panel_id(bus_spi, GPIO_NUM_5);
+              }
               if ((id & 0xFF) == 0xE3)
               {   // ILI9342c
                 bus_cfg.freq_write = 40000000;
@@ -1438,7 +1479,25 @@ namespace m5gfx
                 {
                   Panel_M5StackCore2 panel_probe;
                   panel_probe.bus(bus_spi);
-                  if (_probe_ili9342e(&panel_probe))
+                  std::uint32_t keys[4] = { 0, 0, 0, 0 };
+                  auto variant = _identify_ili9342(&panel_probe, keys, reset_done ? 120 : 1);
+                  if (use_reset && !reset_done)
+                  { // Reset the identified panel (and the Tough touch controller); the init sequence
+                    // is sent later without another reset. Keep probing until the panel answers its
+                    // keys again, so that the init sequence is not written while it reloads its
+                    // registers (up to 120 ms by the datasheet, about 6 ms measured on the E).
+                    // A panel already known to be an E is only asked for its own keys.
+                    lcd_reset();
+                    std::uint32_t keys_after[4] = { 0, 0, 0, 0 };
+                    auto after = _identify_ili9342(&panel_probe, keys_after, 120, variant != ili9342_variant_t::e);
+                    if (after != ili9342_variant_t::unknown)
+                    {
+                      variant = after;
+                      for (int i = 0; i < 4; ++i) { keys[i] = keys_after[i]; }
+                    }
+                  }
+                  _log_ili9342_variant(variant, keys);
+                  if (variant == ili9342_variant_t::e)
                   {
                     p = new Panel_M5StackCore2E();
                     _set_ili9342e_read(p, bus_cfg.freq_read);
@@ -1757,7 +1816,10 @@ namespace m5gfx
               {
                 Panel_M5StackCoreS3 panel_probe;
                 panel_probe.bus(bus_spi);
-                if (_probe_ili9342e(&panel_probe))
+                std::uint32_t keys[4] = { 0, 0, 0, 0 };
+                auto variant = _identify_ili9342(&panel_probe, keys, 1);   // no LCD reset on this board: one repeat
+                _log_ili9342_variant(variant, keys);
+                if (variant == ili9342_variant_t::e)
                 {
                   p = new Panel_M5StackCoreS3E();
                   _set_ili9342e_read(p, bus_cfg.freq_read);
