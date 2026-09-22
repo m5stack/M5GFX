@@ -297,9 +297,9 @@ namespace m5gfx
     {
       _cfg.pin_cs  = GPIO_NUM_14;
       _cfg.pin_rst = GPIO_NUM_33;
-      _cfg.offset_rotation = 3;
+      _cfg.offset_rotation = 0;
 
-      _rotation = 1;
+      _rotation = 0;
     }
 
     bool init(bool use_reset) override
@@ -327,9 +327,9 @@ namespace m5gfx
     {
       this->_cfg.pin_cs = GPIO_NUM_5;
       this->_cfg.invert = true;
-      this->_cfg.offset_rotation = 3;
+      this->_cfg.offset_rotation = 0;
 
-      this->_rotation = 1; // default rotation
+      this->_rotation = 0; // default rotation
     }
 
     void rst_control(bool level) override
@@ -506,9 +506,9 @@ namespace m5gfx
     {
       this->_cfg.pin_cs = GPIO_NUM_3;
       this->_cfg.invert = true;
-      this->_cfg.offset_rotation = 3;
+      this->_cfg.offset_rotation = 0;
 
-      this->_rotation = 1; // default rotation
+      this->_rotation = 0; // default rotation
     }
 
     void rst_control(bool level) override
@@ -1364,8 +1364,9 @@ namespace m5gfx
               {
                 auto cfg = p->config();
                 cfg.pin_rst = 15;
+                cfg.offset_rotation = 1;
                 p->config(cfg);
-                p->setRotation(1);
+                p->setRotation(0);
               }
               p->bus(bus_spi);
               _panel_last.reset(p);
@@ -2376,13 +2377,16 @@ namespace m5gfx
             paperdiy_found = _check_m5pm1(probe_i2c_port);
           }
           if (!paperdiy_found && board != board_t::board_M5PaperDIY) {
+            // DinMeter shares these pins with its encoder/button. An ACK alone
+            // is not enough to identify the PaperS3 touch controller.
+            static constexpr uint8_t product_id_reg[] = { 0x81, 0x40 };
             for (auto addr: gt911_i2c_addr) {
-              if (lgfx::i2c::beginTransaction(probe_i2c_port, addr, 400000).has_value()) {
-                gt911_found = lgfx::i2c::endTransaction(probe_i2c_port).has_value();
-                if (gt911_found) {
-                  break;
-                }
-              }
+              uint8_t product_id[4] = {};
+              gt911_found = lgfx::i2c::transactionWriteRead(probe_i2c_port, addr,
+                  product_id_reg, sizeof(product_id_reg), product_id, sizeof(product_id), 400000).has_value()
+                  && product_id[0] == '9' && product_id[1] == '1'
+                  && product_id[2] == '1' && product_id[3] == 0;
+              if (gt911_found) break;
             }
           }
           if (paperdiy_found || gt911_found) {
@@ -2597,7 +2601,7 @@ namespace m5gfx
             cfg.panel_height = 240;
             cfg.offset_x     = 52;
             cfg.offset_y     = 40;
-            cfg.offset_rotation = 2;
+            cfg.offset_rotation = 3;
             cfg.readable = true;
             cfg.invert = true;
             p->config(cfg);
@@ -2703,7 +2707,7 @@ The usage of each pin is as follows.
               cfg.panel_width = 135;
               cfg.offset_x     = 52;
               cfg.offset_y     = 40;
-              rotation = 1;
+              cfg.offset_rotation = 1;
               if (board == board_t::board_M5Cardputer) {
                 ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
               } else {
@@ -2806,7 +2810,7 @@ The usage of each pin is as follows.
             cfg.panel_height = 240;
             cfg.offset_x     = 52;
             cfg.offset_y     = 40;
-            cfg.offset_rotation = 0;
+            cfg.offset_rotation = 1;
             cfg.readable = true;
             cfg.invert = true;
             cfg.bus_shared = true;
@@ -3707,13 +3711,13 @@ The usage of each pin is as follows.
             cfg.pin_cs  = GPIO_NUM_25;
             cfg.pin_rst = GPIO_NUM_NC;
             cfg.invert = true;
-            cfg.offset_rotation = 3;
+            cfg.offset_rotation = 0;
             cfg.panel_width  = 320;
             cfg.panel_height = 240;
             cfg.readable = true;
             cfg.bus_shared = true;
             p->config(cfg);
-            p->setRotation(1);
+            p->setRotation(0);
           }
           p->bus(bus_spi);
           _panel_last.reset(p);
@@ -3963,16 +3967,17 @@ init_clear:
 
     case board_M5Station:
     case board_M5Cardputer:
+    case board_M5CardputerADV:
+    case board_M5DinMeter:
       w = 240;
       h = 135;
-      pnl_cfg.offset_rotation = 3;
-      r = 1;
+      pnl_cfg.offset_rotation = 0;
+      r = 0;
       break;
 
     case board_M5StickCPlus:
     case board_M5StickCPlus2:
     case board_M5StickS3:
-    case board_M5DinMeter:
     case board_M5StampPLC:
     case board_ArduinoNessoN1:
       w = 135;
@@ -3980,15 +3985,15 @@ init_clear:
       break;
 
     case board_M5StackCore2:
-      pnl_cfg.offset_rotation = 3;
-      r = 1;
+      pnl_cfg.offset_rotation = 0;
+      r = 0;
       break;
     case board_M5Stack:
     case board_M5StackCoreS3:
     case board_M5StackCoreS3SE:
     case board_M5StackChan:
-      pnl_cfg.offset_rotation = 3;
-      r = 1;
+      pnl_cfg.offset_rotation = 0;
+      r = 0;
       break;
 
     case board_M5Dial:
