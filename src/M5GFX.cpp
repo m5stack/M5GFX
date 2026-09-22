@@ -618,7 +618,7 @@ namespace m5gfx
     }
   };
 
-  struct Light_M5StackStampPLC : public lgfx::ILight
+  struct Light_M5StackStamPLC : public lgfx::ILight
   {
     bool _is_backlight_inited = false;
 
@@ -2774,7 +2774,7 @@ The usage of each pin is as follows.
         for (auto pin: backup_pins) { pin.restore(); }
       }
 
-      if (board == 0 || board == board_t::board_M5StampPLC)
+      if (board == 0 || board == board_t::board_M5StamPLC)
       {
         gpio::pin_backup_t backup_pins[] = { GPIO_NUM_3, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8, GPIO_NUM_9, GPIO_NUM_10, GPIO_NUM_12 };
         _pin_reset(GPIO_NUM_3, use_reset); // LCD RST
@@ -2793,7 +2793,7 @@ The usage of each pin is as follows.
         //  check panel (ST7789)
         if ((id & 0xFB) == 0x81) // 0x81 or 0x85
         {
-          board = board_t::board_M5StampPLC;
+          board = board_t::board_M5StamPLC;
           bus_spi->release();
           bus_cfg.freq_write = 40000000;
           bus_cfg.freq_read  = 16000000;
@@ -2817,7 +2817,7 @@ The usage of each pin is as follows.
             p->config(cfg);
           }
           _panel_last.reset(p);
-          _set_backlight(new Light_M5StackStampPLC());
+          _set_backlight(new Light_M5StackStamPLC());
           goto init_clear;
         }
         bus_spi->release();
@@ -3910,7 +3910,7 @@ init_clear:
     case board_M5DinMeter:     title = "M5DinMeter";     break;
     case board_M5AirQ:         title = "M5AirQ";         break;
     case board_M5VAMeter:      title = "M5VAMeter";      break;
-    case board_M5StampPLC:     title = "M5StampPLC";     break;
+    case board_M5StamPLC:      title = "M5StamPLC";      break;
     case board_M5Tab5:         title = "M5Tab5";         break;
     case board_M5Tab5X:        title = "M5Tab5X";        break;
     case board_M5UnitPoEP4:    title = "M5UnitPoEP4";    break;
@@ -3981,7 +3981,7 @@ init_clear:
       h = 240;
       break;
 
-    case board_M5StampPLC:
+    case board_M5StamPLC:
       w = 135;
       h = 240;
       pnl_cfg.offset_rotation = 1;
