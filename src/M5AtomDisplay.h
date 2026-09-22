@@ -215,12 +215,11 @@ public:
 
     {
       auto cfg = p->config();
-      cfg.offset_rotation = 3;
+      cfg.offset_rotation = 0;
       cfg.pin_cs     = spi_cs;
       cfg.readable   = false;
       cfg.bus_shared = false;
       p->config(cfg);
-      p->setRotation(1);
 
       lgfx::Panel_M5HDMI::config_resolution_t cfg_reso;
       cfg_reso.logical_width  = _config.logical_width;

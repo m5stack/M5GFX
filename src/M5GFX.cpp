@@ -2815,7 +2815,6 @@ The usage of each pin is as follows.
             cfg.invert = true;
             cfg.bus_shared = true;
             p->config(cfg);
-            p->setRotation(1);
           }
           _panel_last.reset(p);
           _set_backlight(new Light_M5StackStampPLC());
@@ -3816,10 +3815,9 @@ The usage of each pin is as follows.
           {
             auto cfg = p->config();
             cfg.bus_shared = false;
-            // rotation 1 (the default) shows upright with the buttons at the top
-            cfg.offset_rotation = 3;
+            // rotation 0 shows upright with the buttons at the top
+            cfg.offset_rotation = 0;
             p->config(cfg);
-            p->setRotation(1);
           }
           p->bus(bus_i2c);
           _panel_last.reset(p);
@@ -3935,14 +3933,14 @@ init_clear:
       h = 540;
       pnl_cfg.offset_rotation = 3;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-      r = 1;
+      r = 0;
       break;
 
     case board_M5PaperColor:
       w = 400;
       h = 600;
       pnl_cfg.offset_rotation = 0;
-      r = 1;
+      r = 0;
       break;
 
     case board_M5PaperMono:
@@ -3950,7 +3948,7 @@ init_clear:
       h = 480;
       pnl_cfg.offset_rotation = 3;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-      r = 1;
+      r = 0;
       break;
 
     case board_M5StackCoreInk:
@@ -3978,10 +3976,16 @@ init_clear:
     case board_M5StickCPlus:
     case board_M5StickCPlus2:
     case board_M5StickS3:
-    case board_M5StampPLC:
     case board_ArduinoNessoN1:
       w = 135;
       h = 240;
+      break;
+
+    case board_M5StampPLC:
+      w = 135;
+      h = 240;
+      pnl_cfg.offset_rotation = 1;
+      r = 0;
       break;
 
     case board_M5StackCore2:
