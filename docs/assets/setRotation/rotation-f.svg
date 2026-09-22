@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1010" viewBox="0 0 1480 1010" role="img" aria-labelledby="title desc">
+<title id="title">M5GFX setRotation: all eight orientations of F</title>
+<desc id="desc">Front view of a fixed screen, relative to rotation zero. The top row shows zero, ninety, one hundred eighty, and two hundred seventy degrees clockwise. The bottom row reverses logical Y before those rotations. Each view marks the positive X and Y directions. Odd values exchange logical width and height.</desc>
+<defs>
+  <path id="glyph-f" d="M0 0 H3 V1 H1 V2 H2 V3 H1 V5 H0 Z"/>
+  <marker id="arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto-start-reverse"><path d="M0 0 L5 2.5 L0 5 Z" fill="#111827"/></marker>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #172438; }
+    .call { font-family: Consolas, 'Courier New', monospace; font-size: 21px; font-weight: 700; }
+    .detail { font-size: 16px; fill: #4b5e76; }
+    .axis-label { font-size: 13px; font-weight: 700; fill: #111827; text-anchor: middle; dominant-baseline: middle; }
+    rect[width="264"][height="176"] { fill: #ffffff; }
+    use[href="#glyph-f"] { fill: #000000; }
+    g[data-coordinate-map] > rect:nth-of-type(1) { fill: #ff0000 !important; }
+    g[data-coordinate-map] > rect:nth-of-type(2) { fill: #00ff00 !important; }
+    g[data-coordinate-map] > rect:nth-of-type(3) { fill: #0000ff !important; }
+    g[data-coordinate-map] > rect:nth-of-type(4) { fill: #000000 !important; }
+    g[data-coordinate-map] > path { stroke: #111827; }
+    g[data-coordinate-map] > circle { display: none; }
+    .axis-label[x="24"][y="24"], .axis-label[x="240"][y="24"],
+    .axis-label[x="240"][y="152"], .axis-label[x="24"][y="152"],
+    .detail[x="22"][y="291"] { display: none; }
+  </style>
+</defs>
+<rect width="1480" height="1010" fill="#ffffff"/>
+<text x="42" y="48" font-size="15" font-weight="700" letter-spacing="2" fill="#52647a">M5GFX / API REFERENCE</text>
+<text x="40" y="101" font-size="42" font-weight="700">One F. Eight display orientations.</text>
+<text x="42" y="137" font-size="19" fill="#4b5e76">Keep the screen fixed. View it from the front. Rotation 0 is the reference pose.</text>
+<text x="42" y="181" font-size="15" font-weight="700" letter-spacing="1.2">0–3 / ROTATION</text>
+
+<g id="rotation-0" data-rotation="0" transform="translate(40 199)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(0)</text>
+<text class="detail" x="22" y="61">Reference</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="0" transform="matrix(1 0 0 1 0 0)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="251" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="163" width="8" height="8" fill="#38bdf8"/>
+<rect x="251" y="163" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(132.0 88.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="24" y="24">0,0</text>
+<text class="axis-label" x="65" y="13">X</text>
+<text class="axis-label" x="13" y="65">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = W × H</text></g>
+<g id="rotation-1" data-rotation="1" transform="translate(394 199)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(1)</text>
+<text class="detail" x="22" y="61">90° clockwise</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="1" transform="matrix(0 1 -1 0 264 0)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="163" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="251" width="8" height="8" fill="#38bdf8"/>
+<rect x="163" y="251" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(88.0 132.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="240" y="24">0,0</text>
+<text class="axis-label" x="251" y="65">X</text>
+<text class="axis-label" x="199" y="13">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = H × W</text></g>
+<g id="rotation-2" data-rotation="2" transform="translate(748 199)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(2)</text>
+<text class="detail" x="22" y="61">180°</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="2" transform="matrix(-1 0 0 -1 264 176)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="251" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="163" width="8" height="8" fill="#38bdf8"/>
+<rect x="251" y="163" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(132.0 88.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="240" y="152">0,0</text>
+<text class="axis-label" x="199" y="163">X</text>
+<text class="axis-label" x="251" y="111">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = W × H</text></g>
+<g id="rotation-3" data-rotation="3" transform="translate(1102 199)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(3)</text>
+<text class="detail" x="22" y="61">270° clockwise</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="3" transform="matrix(0 -1 1 0 0 176)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="163" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="251" width="8" height="8" fill="#38bdf8"/>
+<rect x="163" y="251" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(88.0 132.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="24" y="152">0,0</text>
+<text class="axis-label" x="13" y="111">X</text>
+<text class="axis-label" x="65" y="163">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = H × W</text></g>
+<g id="rotation-4" data-rotation="4" transform="translate(40 556)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(4)</text>
+<text class="detail" x="22" y="61">Mirror Y</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="4" transform="matrix(1 0 0 -1 0 176)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="251" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="163" width="8" height="8" fill="#38bdf8"/>
+<rect x="251" y="163" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(132.0 88.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="24" y="152">0,0</text>
+<text class="axis-label" x="65" y="163">X</text>
+<text class="axis-label" x="13" y="111">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = W × H</text></g>
+<g id="rotation-5" data-rotation="5" transform="translate(394 556)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(5)</text>
+<text class="detail" x="22" y="61">Mirror Y + 90° clockwise</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="5" transform="matrix(0 1 1 0 0 0)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="163" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="251" width="8" height="8" fill="#38bdf8"/>
+<rect x="163" y="251" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(88.0 132.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="24" y="24">0,0</text>
+<text class="axis-label" x="13" y="65">X</text>
+<text class="axis-label" x="65" y="13">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = H × W</text></g>
+<g id="rotation-6" data-rotation="6" transform="translate(748 556)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(6)</text>
+<text class="detail" x="22" y="61">Mirror Y + 180°</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="6" transform="matrix(-1 0 0 1 264 0)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="251" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="163" width="8" height="8" fill="#38bdf8"/>
+<rect x="251" y="163" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(132.0 88.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="240" y="24">0,0</text>
+<text class="axis-label" x="199" y="13">X</text>
+<text class="axis-label" x="251" y="65">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = W × H</text></g>
+<g id="rotation-7" data-rotation="7" transform="translate(1102 556)">
+<rect x="0" y="0" width="338" height="314" rx="12" fill="#f5f7fa" stroke="#dce3eb"/>
+<text class="call" x="22" y="35">setRotation(7)</text>
+<text class="detail" x="22" y="61">Mirror Y + 270° clockwise</text>
+<g transform="translate(37 84)"><rect width="264" height="176" rx="2" fill="#101e32"/>
+<g data-coordinate-map="7" transform="matrix(0 -1 -1 0 264 176)">
+<rect x="5" y="5" width="8" height="8" fill="#f59e0b"/>
+<rect x="163" y="5" width="8" height="8" fill="#22c55e"/>
+<rect x="5" y="251" width="8" height="8" fill="#38bdf8"/>
+<rect x="163" y="251" width="8" height="8" fill="#f472b6"/>
+<g transform="translate(88.0 132.0)"><g transform="scale(18)"><use href="#glyph-f" transform="translate(-1.5 -2.5)" fill="#ffffff"/></g></g>
+<path d="M0 49 V0 H49" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<circle cx="0" cy="0" r="4" fill="#ffffff"/></g>
+<text class="axis-label" x="240" y="152">0,0</text>
+<text class="axis-label" x="251" y="111">X</text>
+<text class="axis-label" x="199" y="163">Y</text>
+</g>
+<text class="detail" x="22" y="291">width × height = H × W</text></g>
+
+<text x="42" y="539" font-size="15" font-weight="700" letter-spacing="1.2">4–7 / REFLECT LOGICAL Y, THEN ROTATE</text>
+<line x1="42" y1="896" x2="1438" y2="896" stroke="#dce3eb"/>
+<text x="42" y="925" font-size="17" font-weight="700">Mirror Y = top/bottom reflection before rotation. Value 6 is a left/right reflection.</text>
+<text x="42" y="952" font-size="16" fill="#4b5e76">W and H are the dimensions at rotation 0. The F is redrawn after each call; the physical screen does not turn.</text>
+<text x="42" y="980" font-size="15" fill="#4b5e76">Generic LCD mapping, non-mirrored mounting. Device startup orientation can differ. See docs/api/display.md.</text>
+</svg>
