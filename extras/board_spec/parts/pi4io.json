@@ -2,5 +2,14 @@
   "id": "pi4io", "name": "PI4IOE5V6408", "kind": "io_expander",
   "bus": { "kind": "i2c" }, "i2c_addr": ["0x43", "0x44"],
   "id_probe": { "reg": "0x01", "value": "0x00", "match": "ack_only" },
-  "pins": {}
+  "pins": {
+    "p0": { "cap": ["input", "output"] },
+    "p1": { "cap": ["input", "output"] },
+    "p2": { "cap": ["input", "output"] },
+    "p3": { "cap": ["input", "output"] },
+    "p4": { "cap": ["input", "output"] },
+    "p5": { "cap": ["input", "output"] },
+    "p6": { "cap": ["input", "output"] },
+    "p7": { "cap": ["input", "output"] }
+  }
 }

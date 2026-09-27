@@ -156,7 +156,7 @@
         "rtc": [],
         "led_strip": ["count"],
         "power_hold": ["active_low"],
-        "backlight": ["freq", "channel", "invert", "offset"],
+        "backlight": ["freq", "channel", "invert", "offset", "i2c_freq"],
         "led": [],
         "vibration": [],
         "camera": [],

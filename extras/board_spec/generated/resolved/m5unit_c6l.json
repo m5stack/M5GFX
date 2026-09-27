@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "id": "m5unit_c6l",
+  "name": "M5UnitC6L",
+  "legacy_board_id": 25,
+  "chip": "esp32c6",
+  "spec": {
+    "display": {
+      "resolution": [
+        64,
+        48
+      ],
+      "touch": false
+    }
+  },
+  "pins": {
+    "2": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:port_b.1",
+        "conn:port_c.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:port_b.2",
+        "conn:port_c.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "dev:oled.cs"
+      ]
+    },
+    "8": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:oled.rst"
+      ]
+    },
+    "18": {
+      "roles": [
+        "dev:oled.dc"
+      ],
+      "note": "Board-family pull signature input when the OLED is deselected"
+    },
+    "20": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "22": {
+      "roles": [
+        "bus:main_spi.miso"
+      ],
+      "note": "Legacy setup routes this NC signal as MISO",
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI2_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 10000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "oled": {
+      "kind": "display",
+      "part": "ssd1306",
+      "bus": "main_spi",
+      "spec": {
+        "width": 64,
+        "height": 48,
+        "offset_x": 32,
+        "offset_y": 0,
+        "rotation_offset": 0,
+        "readable": true,
+        "three_wire": true
+      },
+      "signals": {
+        "cs": "gpio:6",
+        "rst": "gpio:15",
+        "dc": "gpio:18"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "power_hold": {
+      "kind": "power_hold",
+      "spec": {
+        "active_low": false
+      },
+      "signals": {
+        "enable": "gpio:2"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "connectors": {
+    "port_b": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "positions": {
+        "1": "gpio:4",
+        "2": "gpio:5",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_c": {
+      "type": "hy2_4p",
+      "standard": "port_uart",
+      "positions": {
+        "1": "gpio:4",
+        "2": "gpio:5",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

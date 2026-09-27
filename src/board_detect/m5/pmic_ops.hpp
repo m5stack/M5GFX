@@ -30,6 +30,10 @@ namespace pmic_ops
     { 100000, 0, 0x43, 0, 1, 0 },
     { 100000, 0, 0x44, 0, 1, 0 },
   };
+  static constexpr ops::i2c_device_t nesson1_devices[] = {
+    { 100000, 0, 0x44, 0, 1, 0 },
+    { 100000, 0, 0x43, 0, 1, 0 },
+  };
   static constexpr ops::i2c_device_t cores3_devices[] = {
     { 400000, 0, 0x58, 0, 1, 0 },
     { 400000, 0, 0x34, 0, 1, 0 },
@@ -127,6 +131,15 @@ namespace pmic_ops
     ops::i2c_write8(1, 0x05, 0x89), ops::delay_ms(10),
     ops::i2c_write8(0, 0x03, 0x6F), ops::i2c_write8(0, 0x05, 0x76),
     ops::gpio_set_mode(23, ops::gpio_mode_t::input), ops::delay_ms(100),
+  };
+  static constexpr ops::op_t nesson1_power_on[] = {
+    ops::i2c_write8(0, 0x03, 0xC7), ops::i2c_write8(0, 0x07, 0x18),
+    ops::i2c_write8(0, 0x05, 0x00), ops::i2c_write8(0, 0x0D, 0x80),
+    ops::i2c_write8(0, 0x0B, 0xFF), ops::i2c_write8(0, 0x05, 0x82),
+    ops::i2c_write8(1, 0x03, 0xE0), ops::i2c_write8(1, 0x05, 0x80),
+    ops::i2c_write8(1, 0x07, 0x1C), ops::i2c_write8(1, 0x0D, 0xC3),
+    ops::i2c_write8(1, 0x0B, 0xC3), ops::i2c_write8(1, 0x09, 0x03),
+    ops::i2c_write8(1, 0x11, 0xFC),
   };
   static constexpr ops::op_t toughc5_reset_assert[] = {
     ops::i2c_bit_off(1, 0x05, 0x08), ops::delay_ms(2),

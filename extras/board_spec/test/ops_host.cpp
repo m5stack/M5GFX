@@ -665,6 +665,33 @@ static void test_tab5_sequence()
       && fake.writes[13].new_value == 0x76);
 }
 
+static void test_nesson1_sequence()
+{
+  const bdops::gpio_scope_t scope = { 31, nullptr, 0 };
+  fake_t fake;
+  assert(bdops::run_ops(
+    backend(fake), pmicops::nesson1_devices, 2,
+    pmicops::nesson1_power_on,
+    sizeof(pmicops::nesson1_power_on) / sizeof(pmicops::nesson1_power_on[0]),
+    scope).status == bdops::op_status_t::ok);
+  assert(fake.writes.size() == 13 && fake.gpios.empty() && fake.now == 0);
+  static const std::uint8_t expected[][3] = {
+    { 0x44, 0x03, 0xC7 }, { 0x44, 0x07, 0x18 }, { 0x44, 0x05, 0x00 },
+    { 0x44, 0x0D, 0x80 }, { 0x44, 0x0B, 0xFF }, { 0x44, 0x05, 0x82 },
+    { 0x43, 0x03, 0xE0 }, { 0x43, 0x05, 0x80 }, { 0x43, 0x07, 0x1C },
+    { 0x43, 0x0D, 0xC3 }, { 0x43, 0x0B, 0xC3 }, { 0x43, 0x09, 0x03 },
+    { 0x43, 0x11, 0xFC },
+  };
+  for (std::size_t i = 0; i < 13; ++i)
+  {
+    assert(fake.writes[i].addr == expected[i][0]);
+    assert(fake.writes[i].reg == expected[i][1]);
+    assert(fake.writes[i].new_value == expected[i][2]);
+  }
+  assert(pmicops::nesson1_devices[0].flags == 0
+      && pmicops::nesson1_devices[1].flags == 0);
+}
+
 static void test_all_descriptor_gpio_scopes()
 {
   // Exhaustive list of descriptors whose operation lists touch SoC GPIOs.
@@ -815,6 +842,7 @@ int main()
   test_corematrix_sequence();
   test_corep4x_sequence();
   test_tab5_sequence();
+  test_nesson1_sequence();
   test_all_descriptor_gpio_scopes();
   test_dedicated_release_summary();
   test_i2c_bus_held_sda_recovery();

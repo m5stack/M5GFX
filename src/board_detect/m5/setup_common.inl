@@ -250,37 +250,41 @@ namespace m5
     std::int16_t y_min;
     std::int16_t y_max;
     std::uint8_t offset_rotation;
+    bool bus_shared;
 
     constexpr i2c_touch_desc_t(std::uint8_t addr_)
     : addr(addr_), port(setup_sentinel::no_pin), sda(setup_sentinel::no_pin),
       scl(setup_sentinel::no_pin), pin_int(setup_sentinel::no_pin), freq(400000),
       x_min(0), x_max(0), y_min(0), y_max(0),
-      offset_rotation(setup_sentinel::keep_u8) {}
+      offset_rotation(setup_sentinel::keep_u8), bus_shared(false) {}
 
     constexpr i2c_touch_desc_t(std::uint8_t addr_, std::int8_t port_, std::int8_t sda_,
                                std::int8_t scl_, std::int8_t pin_int_, std::uint32_t freq_,
                                std::int16_t x_min_, std::int16_t x_max_,
                                std::int16_t y_min_, std::int16_t y_max_,
-                               std::uint8_t offset_rotation_)
+                               std::uint8_t offset_rotation_, bool bus_shared_)
     : addr(addr_), port(port_), sda(sda_), scl(scl_), pin_int(pin_int_), freq(freq_),
       x_min(x_min_), x_max(x_max_), y_min(y_min_), y_max(y_max_),
-      offset_rotation(offset_rotation_) {}
+      offset_rotation(offset_rotation_), bus_shared(bus_shared_) {}
 
     constexpr i2c_touch_desc_t with_port(int value) const
-    { return { addr, static_cast<std::int8_t>(value), sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, offset_rotation }; }
+    { return { addr, static_cast<std::int8_t>(value), sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, offset_rotation, bus_shared }; }
 
     constexpr i2c_touch_desc_t with_pins(int sda_, int scl_, int interrupt) const
-    { return { addr, port, static_cast<std::int8_t>(sda_), static_cast<std::int8_t>(scl_), static_cast<std::int8_t>(interrupt), freq, x_min, x_max, y_min, y_max, offset_rotation }; }
+    { return { addr, port, static_cast<std::int8_t>(sda_), static_cast<std::int8_t>(scl_), static_cast<std::int8_t>(interrupt), freq, x_min, x_max, y_min, y_max, offset_rotation, bus_shared }; }
 
     constexpr i2c_touch_desc_t with_freq(std::uint32_t value) const
-    { return { addr, port, sda, scl, pin_int, value, x_min, x_max, y_min, y_max, offset_rotation }; }
+    { return { addr, port, sda, scl, pin_int, value, x_min, x_max, y_min, y_max, offset_rotation, bus_shared }; }
 
     constexpr i2c_touch_desc_t with_range(std::int16_t x_min_, std::int16_t x_max_,
                                           std::int16_t y_min_, std::int16_t y_max_) const
-    { return { addr, port, sda, scl, pin_int, freq, x_min_, x_max_, y_min_, y_max_, offset_rotation }; }
+    { return { addr, port, sda, scl, pin_int, freq, x_min_, x_max_, y_min_, y_max_, offset_rotation, bus_shared }; }
 
     constexpr i2c_touch_desc_t with_rotation(std::uint8_t value) const
-    { return { addr, port, sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, value }; }
+    { return { addr, port, sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, value, bus_shared }; }
+
+    constexpr i2c_touch_desc_t with_bus_shared(bool value) const
+    { return { addr, port, sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, offset_rotation, value }; }
   };
 
   struct pwm_light_desc_t
@@ -437,7 +441,7 @@ namespace m5
     cfg.y_min = desc.y_min;
     cfg.y_max = desc.y_max;
     if (desc.offset_rotation != setup_sentinel::keep_u8) { cfg.offset_rotation = desc.offset_rotation; }
-    cfg.bus_shared = false;
+    cfg.bus_shared = desc.bus_shared;
     target->config(cfg);
     return target;
   }

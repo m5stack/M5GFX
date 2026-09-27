@@ -164,6 +164,14 @@
         "wiring_fields": ["display", "i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32c5_wiring.hpp",
         "specs_output": "esp32c5_specs.hpp"
       },
+      "m5unit_c6l": {
+        "chip": "esp32c6", "legacy_board_id": 25, "cpp_namespace": "unitc6l", "board_enum": "board_M5UnitC6L", "desc_name": "desc_unitc6l",
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32c6_wiring.hpp", "specs_output": "esp32c6_specs.hpp"
+      },
+      "arduino_nesso_n1": {
+        "chip": "esp32c6", "legacy_board_id": 23, "cpp_namespace": "nesson1", "board_enum": "board_ArduinoNessoN1", "desc_name": "desc_nesson1",
+        "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32c6_wiring.hpp", "specs_output": "esp32c6_specs.hpp", "identity_devices": ["pi4io2", "pi4io1"]
+      },
       "m5stack_corematrix": {
         "chip": "esp32c61", "legacy_board_id": 152, "cpp_namespace": "corematrix", "board_enum": "board_M5CoreMatrix", "desc_name": "desc_corematrix",
         "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32c61_wiring.hpp",

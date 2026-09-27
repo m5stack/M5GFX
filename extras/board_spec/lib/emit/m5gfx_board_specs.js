@@ -92,6 +92,9 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
     (row.roles ?? []).includes("dev:backlight.pwm"))?.[0];
   const backlightI2c = backlightBus?.kind === "i2c" ? {
     i2cAddr: hex(backlightDevice?.i2c_addr, `${board.id}.backlight.i2c_addr`),
+    ...(backlightDevice?.spec?.i2c_freq === undefined ? {} : {
+      i2cFreq: integer(backlightDevice.spec.i2c_freq, `${board.id}.backlight.i2c_freq`),
+    }),
   } : null;
   if (!bus || !display) throw new Error(`${board.id} specs are incomplete`);
   const panels = {};
@@ -307,6 +310,8 @@ export function renderM5GFXSpecsHeader(specs) {
     if (entry.backlightI2c) {
       lines.push("", "namespace backlight_i2c {",
         `  constexpr std::uint8_t i2c_addr = ${uint(entry.backlightI2c.i2cAddr)};`,
+        ...(entry.backlightI2c.i2cFreq === undefined ? [] :
+          [`  constexpr std::uint32_t i2c_freq = ${entry.backlightI2c.i2cFreq};`]),
         "} // namespace backlight_i2c");
     }
     if (entry.pmic) {

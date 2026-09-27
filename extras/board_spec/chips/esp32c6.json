@@ -1,0 +1,17 @@
+{
+  "id": "esp32c6",
+  "soc": "esp32c6",
+  "package": "generic",
+  "gpio_count": 31,
+  "input_only": [],
+  "strapping": [8, 9, 15],
+  "no_internal_pull": [],
+  "reserved": [24, 25, 26, 27, 28, 29, 30],
+  "reserved_conditional": {},
+  "usb": { "dn": 12, "dp": 13 },
+  "sdmmc": { "gpio_matrix": true },
+  "spi_hosts": 1,
+  "i2c_hosts": 2,
+  "i2s_ports": 1,
+  "lp_gpio": { "first": 0, "last": 7 }
+}
