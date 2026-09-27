@@ -79,17 +79,18 @@
     },
     "busKind": {
       "type": "string",
-      "enum": ["spi", "i2c", "i2s", "sdmmc", "uart", "pdm", "dsi"],
+      "enum": ["spi", "i2c", "i2s", "sdmmc", "uart", "pdm", "dsi", "parallel_epd"],
       "x-signals": {
-        "spi": ["sclk", "mosi", "miso"],
+        "spi": ["sclk", "mosi", "miso", "io0", "io1", "io2", "io3"],
         "i2c": ["sda", "scl"],
         "i2s": ["mck", "bck", "ws", "data_out", "data_in"],
         "sdmmc": ["clk", "cmd", "d0", "d1", "d2", "d3"],
         "uart": ["tx", "rx", "rts", "cts"],
         "pdm": ["ws", "data_in"],
-        "dsi": ["clk", "d0", "d1", "d2", "d3"]
+        "dsi": ["clk", "d0", "d1", "d2", "d3"],
+        "parallel_epd": ["data0", "data1", "data2", "data3", "data4", "data5", "data6", "data7", "pwr", "spv", "ckv", "sph", "oe", "le", "cl"]
       },
-      "x-output-signals": ["sclk", "mosi", "mck", "bck", "ws", "data_out", "clk", "cmd", "tx", "rts"]
+      "x-output-signals": ["sclk", "mosi", "mck", "bck", "ws", "data_out", "clk", "cmd", "tx", "rts", "data0", "data1", "data2", "data3", "data4", "data5", "data6", "data7", "pwr", "spv", "ckv", "sph", "oe", "le", "cl"]
     },
     "device": {
       "type": "object",
@@ -117,12 +118,13 @@
     },
     "deviceKind": {
       "type": "string",
-      "enum": ["display", "sd", "touch", "pmic", "sensor", "speaker", "mic", "imu", "rtc", "led_strip", "led", "vibration", "power_hold", "backlight", "camera", "transceiver", "regulator"],
+      "enum": ["display", "sd", "touch", "pmic", "io_expander", "sensor", "speaker", "mic", "imu", "rtc", "led_strip", "led", "vibration", "power_hold", "backlight", "camera", "transceiver", "regulator"],
       "x-signals": {
         "display": ["cs", "dc", "rst", "busy", "backlight", "power"],
         "sd": ["clk", "cmd", "d0", "d1", "d2", "d3", "cd", "wp"],
         "touch": ["int", "rst"],
         "pmic": [],
+        "io_expander": [],
         "sensor": [],
         "speaker": ["data_out", "enable"],
         "mic": ["data_in"],
@@ -139,17 +141,18 @@
       },
       "x-output-signals": ["cs", "dc", "rst", "power", "data", "data_out", "enable", "pwm"],
       "x-spec-properties": {
-        "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "three_wire", "panel_type"],
+        "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "rgb_order", "three_wire", "panel_type", "line_padding"],
         "sd": [],
         "touch": ["x_min", "x_max", "y_min", "y_max", "rotation_offset"],
         "pmic": [],
+        "io_expander": [],
         "sensor": [],
         "speaker": [],
         "mic": [],
         "imu": [],
         "rtc": [],
         "led_strip": ["count"],
-        "power_hold": [],
+        "power_hold": ["active_low"],
         "backlight": ["freq", "channel", "invert", "offset"],
         "led": [],
         "vibration": [],

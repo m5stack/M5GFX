@@ -34,8 +34,9 @@ namespace ops
     // Current PMIC descriptions use write8/masked8 (including bit helpers).
     // Delay/GPIO are available to future detection lists; transfer remains a
     // reserved, unsupported operation. wait_ready cannot shorten one lgfx I2C
-    // transaction, so its deadline may overrun by about 26 ms, but no new
-    // transaction begins after its remaining time reaches zero.
+    // transaction. Deadline overrun depends on the lower I2C implementation
+    // (hardware is about 26 ms; software I2C may take tens of milliseconds
+    // with SCL stuck), but no new transaction begins at zero remaining time.
     delay_ms,
     gpio_set_mode,
     gpio_write_high,

@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "id": "m5paperdiy",
+  "name": "M5PaperDIY",
+  "legacy_board_id": 34,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        960,
+        540
+      ],
+      "touch": false
+    },
+    "storage": {
+      "psram_mode": "opi",
+      "sd": true
+    }
+  },
+  "pins": {
+    "3": {
+      "roles": [],
+      "note": "BtnB, active low"
+    },
+    "4": {
+      "roles": [],
+      "note": "BtnA, active low"
+    },
+    "6": {
+      "roles": [
+        "bus:epd_bus.data0"
+      ]
+    },
+    "7": {
+      "roles": [
+        "bus:epd_bus.data2"
+      ]
+    },
+    "8": {
+      "roles": [
+        "bus:epd_bus.data6"
+      ]
+    },
+    "9": {
+      "roles": [
+        "bus:epd_bus.data4"
+      ]
+    },
+    "10": {
+      "roles": [
+        "bus:epd_bus.data7"
+      ]
+    },
+    "11": {
+      "roles": [
+        "bus:epd_bus.data5"
+      ]
+    },
+    "12": {
+      "roles": [
+        "bus:epd_bus.data3"
+      ]
+    },
+    "13": {
+      "roles": [
+        "bus:epd_bus.sph"
+      ]
+    },
+    "14": {
+      "roles": [
+        "bus:epd_bus.data1"
+      ]
+    },
+    "15": {
+      "roles": [
+        "bus:epd_bus.le"
+      ]
+    },
+    "16": {
+      "roles": [
+        "bus:epd_bus.cl"
+      ]
+    },
+    "17": {
+      "roles": [
+        "bus:epd_bus.spv"
+      ]
+    },
+    "18": {
+      "roles": [
+        "bus:epd_bus.ckv"
+      ]
+    },
+    "38": {
+      "roles": [
+        "bus:sd_spi.mosi",
+        "dev:sd.cmd"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "bus:sd_spi.sclk",
+        "dev:sd.clk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "40": {
+      "roles": [
+        "bus:sd_spi.miso",
+        "dev:sd.d0"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "42": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "45": {
+      "roles": [
+        "bus:epd_bus.oe"
+      ]
+    },
+    "46": {
+      "roles": [
+        "bus:epd_bus.pwr"
+      ]
+    },
+    "47": {
+      "roles": [
+        "dev:sd.d3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "epd_bus": {
+      "kind": "parallel_epd",
+      "signals": [
+        "data0",
+        "data1",
+        "data2",
+        "data3",
+        "data4",
+        "data5",
+        "data6",
+        "data7",
+        "pwr",
+        "spv",
+        "ckv",
+        "sph",
+        "oe",
+        "le",
+        "cl"
+      ],
+      "fixed": false,
+      "freq": 16000000
+    },
+    "sd_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "fixed": false,
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 100000,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    }
+  },
+  "devices": {
+    "epd": {
+      "kind": "display",
+      "part": "ed047tc1",
+      "bus": "epd_bus",
+      "spec": {
+        "width": 960,
+        "height": 540,
+        "memory_width": 960,
+        "memory_height": 540,
+        "offset_x": 0,
+        "offset_y": 0,
+        "rotation_offset": 3,
+        "line_padding": 8
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "sd_spi",
+      "verified": {
+        "bus": "generated",
+        "signals": "generated",
+        "derived": "generated"
+      },
+      "signals": {
+        "cmd": "gpio:38",
+        "clk": "gpio:39",
+        "d0": "gpio:40",
+        "d3": "gpio:47"
+      },
+      "derived": {
+        "modes": [
+          "spi",
+          "sdio1"
+        ],
+        "bus": "sd_spi",
+        "cs": "gpio:47"
+      }
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:42",
+        "2": "gpio:41",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

@@ -45,8 +45,9 @@ namespace ops
                              std::uint32_t timeout_ms)
   {
     // lgfx has no per-call timeout. Do not begin another fixed-time transaction
-    // once the runner's deadline is reached; one in-flight attempt can overrun
-    // by i2c_stall_limit_us plus a few byte times (about 26 ms maximum).
+    // once the runner's deadline is reached. An in-flight attempt's overrun
+    // depends on the lower I2C implementation: hardware is about 26 ms, while
+    // software I2C may take tens of milliseconds with SCL stuck.
     if (timeout_ms == 0) { return false; }
     const auto port = lgfx_port(context, device);
     const bool began = lgfx::i2c::beginTransaction(port, device.addr,

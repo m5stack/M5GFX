@@ -70,6 +70,8 @@ namespace m5
     options(generated_options::airq::names),
   };
   static const board_def_t& board_airq = desc_airq.def;
+  // gpio_power() keeps its active-high meaning; only gpio_power_low() holds low.
+  static_assert(desc_airq.power.hold_high, "AirQ power hold stays active high");
 
   static constexpr board_desc_t desc_stamplc = {
     { id(lgfx::board_M5StamPLC), "M5StamPLC", 0 },
@@ -148,7 +150,7 @@ namespace m5
   static constexpr board_desc_t desc_sticks3 = {
     { id(lgfx::board_M5StickS3), "M5StickS3", 0 },
     i2c_power_polled(specs::sticks3::pmic::i2c_freq, sticks3_pmic_variants,
-                     pmic_ops::sticks3_devices, 200, 200, 200),
+                     pmic_ops::pm1_devices, 200, 200, 200),
     gpio_reset(wiring::sticks3::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
     display_pins(wiring::sticks3::display_sclk, wiring::sticks3::display_mosi,
                  wiring::sticks3::display_miso, wiring::sticks3::display_dc,
@@ -160,6 +162,161 @@ namespace m5
     no_direct_reset_panel_reload_wait(), no_options(),
   };
   static const board_def_t& board_sticks3 = desc_sticks3.def;
+
+  static const pmic_variant_t stopwatch_pmic_variants[] = {
+    pmic_variant_ack_only(specs::stopwatch::pmic::i2c_addr,
+                          specs::stopwatch::pmic::id_reg,
+                          ops::list(pmic_ops::stopwatch_power_on),
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
+                          { nullptr, 0 }, 0),
+  };
+  static const pmic_variant_t papermono_pmic_variants[] = {
+    pmic_variant_ack_only(specs::papermono::pmic::i2c_addr,
+                          specs::papermono::pmic::id_reg,
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
+                          ops::list(pmic_ops::papermono_no_display_power_on),
+#else
+                          ops::list(pmic_ops::papermono_power_on),
+#endif
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
+                          { nullptr, 0 }, 0),
+  };
+  static constexpr board_desc_t desc_stopwatch = {
+    { id(lgfx::board_M5StopWatch), "M5StopWatch", 0 },
+    i2c_power_confirmed(specs::stopwatch::pmic::i2c_freq, stopwatch_pmic_variants,
+                        pmic_ops::pm1_family_devices),
+    no_reset(), no_shared_sd(),
+    // display_pins predates QSPI; io0 occupies its mandatory MOSI slot for validation.
+    display_pins(wiring::stopwatch::display_sclk, wiring::stopwatch::display_io0,
+                 wiring::stopwatch::display_miso, wiring::stopwatch::display_dc,
+                 wiring::stopwatch::display_cs, wiring::stopwatch::display_rst,
+                 wiring::stopwatch::display_busy),
+    pins(wiring::stopwatch::hold),
+    internal_i2c(wiring::stopwatch::internal_i2c_sda, wiring::stopwatch::internal_i2c_scl,
+                 wiring::stopwatch::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_stopwatch = desc_stopwatch.def;
+  static constexpr board_desc_t desc_papermono = {
+    { id(lgfx::board_M5PaperMono), "M5PaperMono", 0 },
+    i2c_power_confirmed(specs::papermono::pmic::i2c_freq, papermono_pmic_variants,
+                        pmic_ops::pm1_family_devices),
+    no_reset(), no_shared_sd(),
+    display_pins(wiring::papermono::display_sclk, wiring::papermono::display_mosi,
+                 wiring::papermono::display_miso, wiring::papermono::display_dc,
+                 wiring::papermono::display_cs, wiring::papermono::display_rst,
+                 wiring::papermono::display_busy),
+    pins(wiring::papermono::hold),
+    internal_i2c(wiring::papermono::internal_i2c_sda, wiring::papermono::internal_i2c_scl,
+                 wiring::papermono::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_papermono = desc_papermono.def;
+
+  static const pmic_variant_t chaincaptain_pmic_variants[] = {
+    pmic_variant_ack_only(specs::chaincaptain::pmic::i2c_addr,
+                          specs::chaincaptain::pmic::id_reg,
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
+                          ops::no_ops(), reg_bit(0, 0), reg_bit(0, 0),
+                          ops::no_ops(), ops::no_ops(), { nullptr, 0 }, 0),
+#else
+                          ops::list(pmic_ops::chaincaptain_power_on),
+                          reg_bit(0, 0), reg_bit(0, 0),
+                          ops::list(pmic_ops::chaincaptain_reset_assert),
+                          ops::list(pmic_ops::chaincaptain_reset_release), { nullptr, 0 }, 0),
+#endif
+  };
+  static const pmic_variant_t papercolor_pmic_variants[] = {
+    pmic_variant_ack_only(specs::papercolor::pmic::i2c_addr,
+                          specs::papercolor::pmic::id_reg,
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
+                          ops::no_ops(),
+#else
+                          ops::list(pmic_ops::papercolor_power_on),
+#endif
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
+                          { nullptr, 0 }, 0),
+  };
+  static constexpr board_desc_t desc_chaincaptain = {
+    { id(lgfx::board_M5ChainCaptain), "M5ChainCaptain", 0 },
+    i2c_power_confirmed(specs::chaincaptain::pmic::i2c_freq,
+                        chaincaptain_pmic_variants, pmic_ops::pm1_family_devices),
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
+    no_reset(),
+#else
+    i2c_reset(10, 20, reset_hold_when_skipped),
+#endif
+    no_shared_sd(),
+    display_pins(wiring::chaincaptain::display_sclk, wiring::chaincaptain::display_mosi,
+                 wiring::chaincaptain::display_miso, wiring::chaincaptain::display_dc,
+                 wiring::chaincaptain::display_cs, wiring::chaincaptain::display_rst,
+                 wiring::chaincaptain::display_busy),
+    pins(wiring::chaincaptain::hold),
+    internal_i2c(wiring::chaincaptain::internal_i2c_sda,
+                 wiring::chaincaptain::internal_i2c_scl,
+                 wiring::chaincaptain::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_chaincaptain = desc_chaincaptain.def;
+  static constexpr board_desc_t desc_papercolor = {
+    { id(lgfx::board_M5PaperColor), "M5PaperColor", 0 },
+    i2c_power_confirmed(specs::papercolor::pmic::i2c_freq,
+                        papercolor_pmic_variants, pmic_ops::pm1_devices),
+#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
+    no_reset(), no_shared_sd(),
+#else
+    gpio_reset(wiring::papercolor::reset_gpio, 2, 10, reset_hold_when_skipped),
+    shared_sd(wiring::papercolor::shared_sd_sclk, wiring::papercolor::shared_sd_mosi,
+              wiring::papercolor::shared_sd_miso, wiring::papercolor::shared_sd_sd_cs,
+              wiring::papercolor::shared_sd_other_cs),
+#endif
+    display_pins(wiring::papercolor::display_sclk, wiring::papercolor::display_mosi,
+                 wiring::papercolor::display_miso, wiring::papercolor::display_dc,
+                 wiring::papercolor::display_cs, wiring::papercolor::display_rst,
+                 wiring::papercolor::display_busy),
+    pins(wiring::papercolor::hold),
+    internal_i2c(wiring::papercolor::internal_i2c_sda,
+                 wiring::papercolor::internal_i2c_scl,
+                 wiring::papercolor::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_papercolor = desc_papercolor.def;
+
+  // Paper family: a parallel EPD on the LCD peripheral, so the description
+  // carries no SPI display pins. PaperS3 holds its power-off request line low
+  // after confirmation (PWROFF_PULSE, active low); PaperDIY powers the EPD
+  // through the M5PM1 instead. Both boards share the same internal I2C pins.
+  static_assert(specs::papers3::power_hold::active_low,
+                "PaperS3 power hold description follows the catalog level");
+  static constexpr board_desc_t desc_papers3 = {
+    { id(lgfx::board_M5PaperS3), "M5PaperS3", 0 },
+    gpio_power_low(wiring::papers3::power_gpio), no_reset(), no_shared_sd(),
+    no_display_pins(), no_pins(),
+    internal_i2c(wiring::papers3::internal_i2c_sda, wiring::papers3::internal_i2c_scl,
+                 wiring::papers3::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_papers3 = desc_papers3.def;
+  static const pmic_variant_t paperdiy_pmic_variants[] = {
+    pmic_variant_ack_only(specs::paperdiy::pmic::i2c_addr, specs::paperdiy::pmic::id_reg,
+                          ops::list(pmic_ops::paperdiy_power_on),
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
+                          { nullptr, 0 }, 0),
+  };
+  static constexpr board_desc_t desc_paperdiy = {
+    { id(lgfx::board_M5PaperDIY), "M5PaperDIY", 0 },
+    i2c_power_confirmed(specs::paperdiy::pmic::i2c_freq, paperdiy_pmic_variants,
+                        pmic_ops::pm1_devices),
+    no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    // hw_port = -1: the legacy path released the probe port after the PM1
+    // writes and never opened the hardware port (no touch on PaperDIY).
+    internal_i2c(wiring::paperdiy::internal_i2c_sda, wiring::paperdiy::internal_i2c_scl, -1),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_paperdiy = desc_paperdiy.def;
+  static_assert(wiring::papers3::internal_i2c_sda == wiring::paperdiy::internal_i2c_sda
+             && wiring::papers3::internal_i2c_scl == wiring::paperdiy::internal_i2c_scl,
+                "Paper family members share one internal I2C pin pair");
 
   static const spi_id_probe_t atoms3_probes[] = {
     spi_id_probe(specs::atoms3::probe_st7735s::cmd, specs::atoms3::probe_st7735s::mask,
@@ -306,6 +463,182 @@ namespace m5
     static const board_desc_t* const descriptions_[];
   };
 
+  class pm1_family_detector_t final : public board_detector_t
+  {
+  public:
+    pm1_family_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      static constexpr std::uint8_t addresses[] = { 0x32, 0x68, 0x15, 0x50 };
+      std::uint32_t bits = ~0u;
+      for (auto addr : addresses)
+      {
+        bits = (bits << 1)
+             + probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
+                             wiring::stopwatch::internal_i2c_scl, addr);
+      }
+      signature_bits_ = bits;
+      return bits == ~0b0001u || (bits & ~1u) == ~0b0011u;
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (result == nullptr) { return false; }
+      std::uint8_t pm1_id[2] = {};
+      if (!probe_i2c_read(ctx, wiring::stopwatch::internal_i2c_sda,
+                          wiring::stopwatch::internal_i2c_scl, 0x6E, 0,
+                          pm1_id, sizeof(pm1_id), 100000, 200)
+       || (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0]) != 0x2050)
+      {
+        return false;
+      }
+      std::uint8_t ioe_id[2] = {};
+      if (!probe_i2c_read(ctx, wiring::stopwatch::internal_i2c_sda,
+                          wiring::stopwatch::internal_i2c_scl, 0x4F, 0,
+                          ioe_id, sizeof(ioe_id), 100000, 200))
+      {
+        return false;
+      }
+      result->assign(signature_bits_ == ~0b0001u ? &desc_stopwatch : &desc_papermono);
+      return true;
+    }
+
+  private:
+    static const board_def_t* const members_[];
+    mutable std::uint32_t signature_bits_ = 0;
+  };
+
+  class pm1_ext_family_detector_t final : public board_detector_t
+  {
+  public:
+    pm1_ext_family_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      static constexpr std::uint8_t chain_addresses[] = { 0x32, 0x4F, 0x68, 0x6E };
+      bool all_ack = true;
+      for (auto addr : chain_addresses)
+      {
+        all_ack &= probe_i2c_ack(ctx, wiring::chaincaptain::internal_i2c_sda,
+                                 wiring::chaincaptain::internal_i2c_scl, addr);
+      }
+      if (all_ack)
+      {
+        candidate_ = candidate_t::chaincaptain;
+        return true;
+      }
+      static constexpr std::uint8_t paper_addresses[] = { 0x32, 0x44 };
+      all_ack = true;
+      for (auto addr : paper_addresses)
+      {
+        all_ack &= probe_i2c_ack(ctx, wiring::papercolor::internal_i2c_sda,
+                                 wiring::papercolor::internal_i2c_scl, addr);
+      }
+      candidate_ = all_ack ? candidate_t::papercolor : candidate_t::none;
+      return all_ack;
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (result == nullptr || candidate_ == candidate_t::none) { return false; }
+      std::uint8_t pm1_id[2] = {};
+      if (!probe_i2c_read(ctx, wiring::chaincaptain::internal_i2c_sda,
+                          wiring::chaincaptain::internal_i2c_scl,
+                          pmic_ops::pm1_i2c_addr, 0, pm1_id, sizeof(pm1_id),
+                          pmic_ops::pm1_i2c_freq, 200)
+       || (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0])
+            != pmic_ops::pm1_device_id)
+      {
+        return false;
+      }
+      if (candidate_ == candidate_t::chaincaptain)
+      {
+        std::uint8_t ioe_id[2] = {};
+        if (!probe_i2c_read(ctx, wiring::chaincaptain::internal_i2c_sda,
+                            wiring::chaincaptain::internal_i2c_scl,
+                            pmic_ops::ioe1_i2c_addr, 0, ioe_id, sizeof(ioe_id),
+                            pmic_ops::pm1_i2c_freq, 200))
+        {
+          // The legacy ChainCaptain block fell through to PaperColor here.
+          if (!probe_i2c_ack(ctx, wiring::papercolor::internal_i2c_sda,
+                             wiring::papercolor::internal_i2c_scl, 0x44))
+          {
+            return false;
+          }
+          result->assign(&desc_papercolor);
+          return true;
+        }
+        result->assign(&desc_chaincaptain);
+        return true;
+      }
+      result->assign(&desc_papercolor);
+      return true;
+    }
+
+  private:
+    enum class candidate_t : std::uint8_t { none, chaincaptain, papercolor };
+    static const board_def_t* const members_[];
+    mutable candidate_t candidate_ = candidate_t::none;
+  };
+
+  // PaperDIY and PaperS3 share the internal I2C pins, and DinMeter's encoder
+  // and button sit on the same GPIOs. The signature only checks that both
+  // lines carry an external pull-up (they read high against the internal
+  // pull-down); confirmation reads device IDs and never writes.
+  class paper_family_detector_t final : public board_detector_t
+  {
+  public:
+    paper_family_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      const auto mask = (std::uint64_t(1) << wiring::papers3::internal_i2c_sda)
+                      | (std::uint64_t(1) << wiring::papers3::internal_i2c_scl);
+      return probe_pin_pulls(ctx, mask).pulldown_high == mask;
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (result == nullptr) { return false; }
+      // The legacy block skipped the PM1 read when hinted PaperS3 and the
+      // GT911 read when hinted PaperDIY; each skip saves up to 200 ms or two
+      // touch-controller transactions, so the hint keeps that meaning here.
+      if (ctx.hint != desc_papers3.def.id)
+      {
+        std::uint8_t pm1_id[2] = {};
+        if (probe_i2c_read(ctx, wiring::papers3::internal_i2c_sda,
+                           wiring::papers3::internal_i2c_scl,
+                           pmic_ops::pm1_i2c_addr, 0, pm1_id, sizeof(pm1_id),
+                           pmic_ops::pm1_i2c_freq, 200)
+         && (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0]) == pmic_ops::pm1_device_id)
+        {
+          result->assign(&desc_paperdiy);
+          return true;
+        }
+      }
+      if (ctx.hint != desc_paperdiy.def.id)
+      {
+        // An ACK alone is not enough to identify the PaperS3 touch controller
+        // (DinMeter shares these pins): require the GT911 product ID string.
+        static constexpr std::uint8_t gt911_addresses[] = { 0x14, 0x5D };
+        static constexpr std::uint16_t gt911_product_id_reg = 0x8140;
+        for (auto addr : gt911_addresses)
+        {
+          std::uint8_t product_id[4] = {};
+          if (probe_i2c_read16(ctx, wiring::papers3::internal_i2c_sda,
+                               wiring::papers3::internal_i2c_scl, addr,
+                               gt911_product_id_reg, product_id, sizeof(product_id),
+                               specs::papers3::touch::i2c_freq, 0)
+           && product_id[0] == '9' && product_id[1] == '1'
+           && product_id[2] == '1' && product_id[3] == 0)
+          {
+            result->assign(&desc_papers3);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+  private:
+    static const board_def_t* const members_[];
+  };
+
   class cardputer_family_detector_t final : public board_detector_t
   {
   public:
@@ -426,21 +759,49 @@ namespace m5
   const board_desc_t* const pmic_id_detector_t::descriptions_[] = { &desc_sticks3, nullptr };
   static const pmic_id_detector_t pmic_id_detector;
   static const board_detector_t* const esp32s3_detectors_pmic[] = { &pmic_id_detector, nullptr };
+  const board_def_t* const pm1_family_detector_t::members_[] = {
+    &board_stopwatch, &board_papermono, nullptr,
+  };
+  static const pm1_family_detector_t pm1_family_detector;
+  static const board_detector_t* const esp32s3_detectors_pm1[] = {
+    &pm1_family_detector, nullptr,
+  };
+  const board_def_t* const pm1_ext_family_detector_t::members_[] = {
+    &board_chaincaptain, &board_papercolor, nullptr,
+  };
+  static const pm1_ext_family_detector_t pm1_ext_family_detector;
+  static const board_detector_t* const esp32s3_detectors_pm1_ext[] = {
+    &pm1_ext_family_detector, nullptr,
+  };
+  const board_def_t* const paper_family_detector_t::members_[] = {
+    &board_paperdiy, &board_papers3, nullptr,
+  };
+  static const paper_family_detector_t paper_family_detector;
+  static const board_detector_t* const esp32s3_detectors_paper[] = {
+    &paper_family_detector, nullptr,
+  };
   static const board_detector_t* const esp32s3_detectors[] = {
     &dial_detector, &spi_id_detector, &cardputer_family_detector, &atoms3r_detector,
+    &pm1_family_detector, &pm1_ext_family_detector, &paper_family_detector,
     &airq_detector, &stamplc_detector, &pmic_id_detector, nullptr,
   };
 
-  bool construct_atoms3(const board_result_t& result, display_parts_t* parts);
-  bool construct_atoms3r(const board_result_t& result, display_parts_t* parts);
-  bool construct_dinmeter(const board_result_t& result, display_parts_t* parts);
-  bool construct_airq(const board_result_t& result, display_parts_t* parts);
-  bool construct_stamplc(const board_result_t& result, display_parts_t* parts);
-  bool construct_dial(const board_result_t& result, display_parts_t* parts);
-  bool construct_cardputer(const board_result_t& result, display_parts_t* parts);
-  bool construct_cardputer_adv(const board_result_t& result, display_parts_t* parts);
-  bool construct_vameter(const board_result_t& result, display_parts_t* parts);
-  bool construct_sticks3(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_atoms3(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_atoms3r(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_dinmeter(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_airq(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_stamplc(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_dial(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_cardputer(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_cardputer_adv(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_vameter(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_sticks3(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_stopwatch(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_papermono(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_chaincaptain(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_papercolor(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_papers3(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_paperdiy(const board_result_t& result, display_parts_t* parts);
 
   const char* atoms3_success_annotation(const board_result_t& result)
   {
@@ -463,6 +824,12 @@ namespace m5
     { &desc_cardputer_adv, construct_cardputer_adv, "board_M5CardputerADV", nullptr },
     { &desc_vameter, construct_vameter, "board_M5VAMeter", nullptr },
     { &desc_sticks3, construct_sticks3, "board_M5StickS3", nullptr },
+    { &desc_stopwatch, construct_stopwatch, "board_M5StopWatch", nullptr },
+    { &desc_papermono, construct_papermono, "board_M5PaperMono", nullptr },
+    { &desc_chaincaptain, construct_chaincaptain, "board_M5ChainCaptain", nullptr },
+    { &desc_papercolor, construct_papercolor, "board_M5PaperColor", nullptr },
+    { &desc_papers3, construct_papers3, "board_M5PaperS3", nullptr },
+    { &desc_paperdiy, construct_paperdiy, "board_M5PaperDIY", nullptr },
   };
 
   const board_desc_t* find_board_desc(board_id_t board)

@@ -28,6 +28,9 @@ const M5GFX_SENTINELS = {
 };
 
 export const DEVICE_KIND_SPEC_KEYS = {
+  power_hold: {
+    active_low: { type: "boolean", default: false, "x-cpp-type": "bool" },
+  },
   backlight: {
     freq: { type: "integer", minimum: 1, maximum: 4294967295, required: true, "x-cpp-type": "std::uint32_t" },
     channel: { type: "integer", minimum: 0, maximum: 7, required: true, "x-cpp-type": "std::uint8_t" },

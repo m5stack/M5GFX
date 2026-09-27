@@ -30,13 +30,13 @@ namespace m5
              && panel_stack.bus_shared == -1 && panel_paper.bus_shared == -1,
                 "ESP32 D0WDQ6 panels must preserve their class bus_shared defaults");
 
-  bool construct_station(const board_result_t&, display_parts_t* parts)
+  construct_status_t construct_station(const board_result_t&, display_parts_t* parts)
   {
     display_parts_owner_t out;
     out.bus.reset(make_spi_bus(bus_station));
     out.panel.reset(make_panel<Panel_M5StickCPlus>(panel_station, out.bus.get()));
     out.light.reset(make_default_part<Light_M5Tough>());
-    return out.release_to(parts);
+    return construct_status(out.release_to(parts));
   }
 
   void construct_core_panel(const board_result_t& result, std::uint32_t lcd_e_option,
@@ -51,7 +51,7 @@ namespace m5
     else { out->panel.reset(make_panel<Panel_M5StackCore2>(panel_core, out->bus.get())); }
   }
 
-  bool construct_core2(const board_result_t& result, display_parts_t* parts)
+  construct_status_t construct_core2(const board_result_t& result, display_parts_t* parts)
   {
     display_parts_owner_t out;
     construct_core_panel(result, generated_options::core2::lcd_e, bus_core2, &out);
@@ -62,29 +62,29 @@ namespace m5
     out.panel->touch(out.touch.get());
     float affine[6] = { 1, 0, 0, 0, 1, 0 };
     out.panel->setCalibrateAffine(affine);
-    return out.release_to(parts);
+    return construct_status(out.release_to(parts));
   }
 
-  bool construct_tough(const board_result_t& result, display_parts_t* parts)
+  construct_status_t construct_tough(const board_result_t& result, display_parts_t* parts)
   {
     display_parts_owner_t out;
     construct_core_panel(result, generated_options::tough::lcd_e, bus_tough, &out);
     out.light.reset(make_default_part<Light_M5Tough>());
     out.touch.reset(make_i2c_touch<lgfx::Touch_CHSC6540>(touch_tough));
     out.panel->touch(out.touch.get());
-    return out.release_to(parts);
+    return construct_status(out.release_to(parts));
   }
 
-  bool construct_stack(const board_result_t&, display_parts_t* parts)
+  construct_status_t construct_stack(const board_result_t&, display_parts_t* parts)
   {
     display_parts_owner_t out;
     out.bus.reset(make_spi_bus(bus_stack));
     out.panel.reset(make_panel<Panel_M5Stack>(panel_stack, out.bus.get()));
     out.light.reset(make_pwm_light(light_stack));
-    return out.release_to(parts);
+    return construct_status(out.release_to(parts));
   }
 
-  bool construct_paper(const board_result_t&, display_parts_t* parts)
+  construct_status_t construct_paper(const board_result_t&, display_parts_t* parts)
   {
     display_parts_owner_t out;
     out.bus.reset(make_spi_bus(bus_paper));
@@ -95,10 +95,10 @@ namespace m5
 #endif
     out.touch.reset(make_i2c_touch<lgfx::Touch_GT911>(touch_desc));
     out.panel->touch(out.touch.get());
-    return out.release_to(parts);
+    return construct_status(out.release_to(parts));
   }
 
-  bool setup_esp32_d0wdq6(const board_result_t& result, display_parts_t* parts)
+  construct_status_t setup_esp32_d0wdq6(const board_result_t& result, display_parts_t* parts)
   {
     return setup_board(esp32_d0wdq6_boards, result, parts);
   }

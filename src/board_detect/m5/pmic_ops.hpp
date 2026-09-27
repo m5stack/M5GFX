@@ -12,11 +12,19 @@ namespace m5
 {
 namespace pmic_ops
 {
+  static constexpr std::uint32_t pm1_i2c_freq = 100000;
+  static constexpr std::uint8_t pm1_i2c_addr = 0x6E;
+  static constexpr std::uint8_t ioe1_i2c_addr = 0x4F;
+  static constexpr std::uint16_t pm1_device_id = 0x2050;
   static constexpr ops::i2c_device_t core2_devices[] = {
     { 400000, 0, 0x34, 0, 1, 0 },
   };
-  static constexpr ops::i2c_device_t sticks3_devices[] = {
-    { 100000, 0, 0x6E, 0, 1, 0 },
+  static constexpr ops::i2c_device_t pm1_devices[] = {
+    { pm1_i2c_freq, 0, pm1_i2c_addr, 0, 1, 0 },
+  };
+  static constexpr ops::i2c_device_t pm1_family_devices[] = {
+    { pm1_i2c_freq, 0, pm1_i2c_addr, 0, 1, 0 },
+    { pm1_i2c_freq, 0, ioe1_i2c_addr, 0, 1, 0 },
   };
 
   static constexpr ops::op_t power192[] = {
@@ -47,6 +55,58 @@ namespace pmic_ops
     ops::i2c_bit_on(0, 0x10, 0x04),
     ops::i2c_bit_off(0, 0x13, 0x04),
     ops::i2c_bit_on(0, 0x11, 0x04),
+  };
+  static constexpr ops::op_t stopwatch_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_bit_on(0, 0x06, 0x17),
+    ops::gpio_set_mode(39, ops::gpio_mode_t::output), ops::gpio_write_high(39),
+    ops::i2c_write8(1, 0x23, 0x00), ops::i2c_bit_off(1, 0x13, 0x9D),
+    ops::i2c_bit_on(1, 0x03, 0x9D), ops::i2c_bit_on(1, 0x05, 0x99),
+    ops::delay_ms(10), ops::i2c_bit_off(1, 0x05, 0x18), ops::delay_ms(8),
+    ops::i2c_bit_on(1, 0x05, 0x18), ops::delay_ms(2),
+    ops::i2c_bit_off(1, 0x14, 0x02), ops::i2c_bit_on(1, 0x04, 0x02),
+    ops::i2c_bit_off(1, 0x06, 0x02),
+  };
+  static constexpr ops::op_t papermono_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_bit_on(0, 0x06, 0x17),
+    ops::gpio_set_mode(16, ops::gpio_mode_t::output), ops::gpio_write_high(16),
+    ops::i2c_bit_on(1, 0x03, 0x34), ops::i2c_bit_on(1, 0x04, 0x30),
+    ops::i2c_bit_on(1, 0x05, 0x04), ops::i2c_bit_on(1, 0x06, 0x30),
+    ops::i2c_bit_off(1, 0x13, 0x34), ops::i2c_bit_off(1, 0x14, 0x34),
+    ops::i2c_bit_off(1, 0x05, 0x30), ops::delay_ms(8),
+    ops::i2c_bit_on(1, 0x05, 0x30), ops::delay_ms(2),
+  };
+  static constexpr ops::op_t papermono_no_display_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_bit_on(0, 0x06, 0x17),
+  };
+  static constexpr ops::op_t chaincaptain_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_write8(1, 0x23, 0x00),
+    ops::i2c_bit_off(1, 0x14, 0x08), ops::i2c_bit_on(1, 0x04, 0x08),
+    ops::i2c_bit_on(1, 0x06, 0x08), ops::i2c_bit_off(1, 0x13, 0x01),
+    ops::i2c_bit_on(1, 0x03, 0x01),
+  };
+  static constexpr ops::op_t chaincaptain_reset_assert[] = {
+    ops::i2c_bit_off(1, 0x05, 0x01),
+  };
+  static constexpr ops::op_t chaincaptain_reset_release[] = {
+    ops::i2c_bit_on(1, 0x05, 0x01),
+  };
+  // PaperDIY: M5PM1 GPIO2 drives EPD_PWR.
+  static constexpr ops::op_t paperdiy_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_bit_off(0, 0x16, 0x30), ops::i2c_bit_on(0, 0x10, 0x04),
+    ops::i2c_bit_off(0, 0x13, 0x04), ops::i2c_bit_on(0, 0x11, 0x04),
+    ops::delay_ms(10),
+  };
+  static constexpr ops::op_t papercolor_power_on[] = {
+    ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_bit_off(0, 0x16, 0xC3), ops::i2c_bit_on(0, 0x10, 0x09),
+    ops::i2c_bit_off(0, 0x13, 0x09), ops::i2c_bit_on(0, 0x11, 0x09),
+    ops::i2c_write8(0, 0x09, 0x00), ops::delay_ms(100),
+    ops::gpio_set_mode(44, ops::gpio_mode_t::output), ops::gpio_write_high(44),
   };
 }
 }

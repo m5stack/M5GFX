@@ -61,6 +61,12 @@ function panel(spec, definitions, label) {
     rotationOffset: optionalInteger(spec.rotation_offset ?? partDefault(definitions, "rotation_offset"), `${label}.rotation_offset`),
     invert: optionalBoolean(spec.invert ?? partDefault(definitions, "invert"), `${label}.invert`),
     readable: optionalBoolean(spec.readable ?? partDefault(definitions, "readable"), `${label}.readable`),
+    ...(spec.rgb_order === undefined && partDefault(definitions, "rgb_order") === undefined ? {} : {
+      rgbOrder: optionalBoolean(spec.rgb_order ?? partDefault(definitions, "rgb_order"), `${label}.rgb_order`),
+    }),
+    ...(spec.line_padding === undefined && partDefault(definitions, "line_padding") === undefined ? {} : {
+      linePadding: optionalInteger(spec.line_padding ?? partDefault(definitions, "line_padding"), `${label}.line_padding`),
+    }),
   };
   Object.defineProperty(result, "cppTypes", {
     value: Object.fromEntries(Object.entries(definitions ?? {}).map(([key, definition]) => [key, definition["x-cpp-type"] ?? "int"])),
@@ -70,8 +76,8 @@ function panel(spec, definitions, label) {
 
 export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
   if (!mapping?.specsOutput) return null;
-  const bus = board.buses?.main_spi;
   const display = Object.values(board.devices ?? {}).find((device) => device.kind === "display");
+  const bus = board.buses?.[display?.bus];
   const backlightDevice = board.devices?.backlight;
   const backlightBus = board.buses?.[backlightDevice?.bus];
   const backlight = backlightBus?.kind === "i2c" ? null : backlightDevice?.spec;
@@ -99,13 +105,16 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       idValue: hex(pmicPart?.id_probe?.value, `${board.id}.${pmicDevice.part}.id_probe.value`),
     }),
   } : null;
-  const touchDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "touch" && device.bus === "internal_i2c");
+  const touchDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "touch" && board.buses?.[device.bus]?.kind === "i2c");
   const touchPart = parts[touchDevice?.part];
   const touchBus = board.buses?.[touchDevice?.bus];
   const touchSpec = touchDevice?.spec ?? {};
   if (touchDevice) assertM5GFXSentinelTypes(touchPart?.spec_keys, `${board.id}.${touchDevice.part}`);
+  // A part with several addresses and no board value leaves the address to
+  // the touch driver's own default/probe order (i2cAddr === null).
+  const touchAddr = touchDevice?.i2c_addr ?? (touchPart?.i2c_addr?.length === 1 ? touchPart.i2c_addr[0] : undefined);
   const touch = touchDevice ? {
-    i2cAddr: hex(touchDevice.i2c_addr ?? touchPart?.i2c_addr?.[0], `${board.id}.${touchDevice.part}.i2c_addr`),
+    i2cAddr: touchAddr === undefined ? null : hex(touchAddr, `${board.id}.${touchDevice.part}.i2c_addr`),
     i2cFreq: integer(touchBus?.freq, `${board.id}.${touchDevice.bus}.freq`),
     xMin: integer(touchSpec.x_min ?? partDefault(touchPart?.spec_keys, "x_min"), `${board.id}.${touchDevice.part}.x_min`),
     xMax: integer(touchSpec.x_max, `${board.id}.${touchDevice.part}.x_max`),
@@ -113,14 +122,24 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
     yMax: integer(touchSpec.y_max, `${board.id}.${touchDevice.part}.y_max`),
     rotationOffset: optionalInteger(touchSpec.rotation_offset, `${board.id}.${touchDevice.part}.rotation_offset`),
   } : null;
+  const powerHold = Object.values(board.devices ?? {}).find((device) => device.kind === "power_hold");
   return {
     namespace: mapping.cppNamespace,
-    bus: {
+    bus: bus.kind === "parallel_epd" ? {
+      kind: "parallel_epd",
+      speed: integer(bus.freq, `${board.id}.${display.bus}.freq`),
+      width: (bus.signals ?? []).filter((signal) => /^data\d+$/.test(signal)).length,
+    } : {
       host: host(bus.preferred_host),
       hostSymbol: typeof bus.preferred_host === "string" ? bus.preferred_host : null,
-      freqWrite: integer(bus.freq, `${board.id}.main_spi.freq`),
-      freqRead: integer(bus.freq_read, `${board.id}.main_spi.freq_read`),
+      freqWrite: integer(bus.freq, `${board.id}.${display.bus}.freq`),
+      freqRead: integer(bus.freq_read, `${board.id}.${display.bus}.freq_read`),
       threeWire: display.spec?.three_wire ?? !(bus.signals ?? []).includes("miso"),
+    },
+    // Emitted only when the board states the level; boards without it keep
+    // the active-high default and their generated header unchanged.
+    powerHold: powerHold?.spec?.active_low === undefined ? null : {
+      activeLow: optionalBoolean(powerHold.spec.active_low, `${board.id}.power_hold.active_low`),
     },
     panels,
     probes,
@@ -152,11 +171,16 @@ export function renderM5GFXSpecsHeader(specs) {
     '#include "../setup_sentinels.hpp"',
   ];
   for (const entry of entries) {
-    lines.push("", `namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace ${entry.namespace} {`,
-      `constexpr int bus_host = ${entry.bus.hostSymbol ?? entry.bus.host};`,
-      `constexpr std::uint32_t bus_freq_write = ${entry.bus.freqWrite};`,
-      `constexpr std::uint32_t bus_freq_read = ${entry.bus.freqRead};`,
-      `constexpr bool bus_three_wire = ${boolean(entry.bus.threeWire)};`);
+    lines.push("", `namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace ${entry.namespace} {`);
+    if (entry.bus.kind === "parallel_epd") {
+      lines.push(`constexpr std::uint32_t bus_speed = ${entry.bus.speed};`,
+        `constexpr std::uint8_t bus_width = ${entry.bus.width};`);
+    } else {
+      lines.push(`constexpr int bus_host = ${entry.bus.hostSymbol ?? entry.bus.host};`,
+        `constexpr std::uint32_t bus_freq_write = ${entry.bus.freqWrite};`,
+        `constexpr std::uint32_t bus_freq_read = ${entry.bus.freqRead};`,
+        `constexpr bool bus_three_wire = ${boolean(entry.bus.threeWire)};`);
+    }
     for (const [name, value] of Object.entries(entry.panels)) {
       const cpp = (key) => value.cppTypes[key] ?? "int";
       lines.push("", `namespace panel_${name} {`,
@@ -169,6 +193,10 @@ export function renderM5GFXSpecsHeader(specs) {
       `  constexpr ${cpp("rotation_offset")} rotation_offset = ${value.rotationOffset ?? "setup_sentinel::keep_u8"};`,
       `  constexpr ${cpp("invert")} invert = ${value.invert === null ? "setup_sentinel::keep_i8" : optionalFlag(value.invert)};`,
       `  constexpr ${cpp("readable")} readable = ${value.readable === null ? "setup_sentinel::keep_i8" : optionalFlag(value.readable)};`,
+      ...(value.rgbOrder === undefined || value.rgbOrder === null ? [] :
+        [`  constexpr ${cpp("rgb_order")} rgb_order = ${optionalFlag(value.rgbOrder)};`]),
+      ...(value.linePadding === undefined || value.linePadding === null ? [] :
+        [`  constexpr ${cpp("line_padding")} line_padding = ${value.linePadding};`]),
         `} // namespace panel_${name}`);
     }
     for (const [name, value] of Object.entries(entry.probes)) {
@@ -202,9 +230,15 @@ export function renderM5GFXSpecsHeader(specs) {
           [`  constexpr std::uint8_t id_value = ${uint(entry.pmic.idValue)};`]),
         "} // namespace pmic");
     }
+    if (entry.powerHold) {
+      lines.push("", "namespace power_hold {",
+        `  constexpr bool active_low = ${boolean(entry.powerHold.activeLow)};`,
+        "} // namespace power_hold");
+    }
     if (entry.touch) {
       lines.push("", "namespace touch {",
-        `  constexpr std::uint8_t i2c_addr = ${uint(entry.touch.i2cAddr)};`,
+        ...(entry.touch.i2cAddr === null ? [] :
+          [`  constexpr std::uint8_t i2c_addr = ${uint(entry.touch.i2cAddr)};`]),
         `  constexpr std::uint32_t i2c_freq = ${entry.touch.i2cFreq};`,
         `  constexpr int x_min = ${entry.touch.xMin};`,
         `  constexpr int x_max = ${entry.touch.xMax};`,

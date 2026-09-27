@@ -51,9 +51,22 @@ map directly to their M5HAL bytecode counterparts. Masked writes and bounded
 ready waits require dedicated critical operations or orchestration when a
 future lowering layer is added.
 The lgfx backend cannot shorten an I2C transaction already in flight. A bounded
-ready wait therefore starts no transaction with zero time remaining, while one
-attempt may exceed the list deadline by at most the fixed stall limit plus a few
-byte times (about 26 ms).
+ready wait therefore starts no transaction with zero time remaining. How far an
+in-flight attempt can exceed the list deadline depends on the lower I2C
+implementation: hardware I2C is about 26 ms, while software I2C can take tens
+of milliseconds when SCL is stuck.
+
+### Migration behavior notes
+
+- ChainCaptain detection holds the generated display chip-select high during
+  prepare. The legacy block first drove it during panel initialization; the
+  earlier deselection is intentional and matches the transaction discipline
+  used by other migrated boards.
+- Paper family (PaperS3 / PaperDIY) signature no longer drives the internal
+  I2C lines high before the pull-up check; it only measures them against the
+  internal pull-down (and pull-up) with a 10 us settle, which is read-only.
+  PaperS3 drives its power-off request line low before setting it to output,
+  and the detection transaction records the parallel-EPD pins as well.
 
 The editor includes all catalog boards, parts, and chip data. It can also open or accept
 dragged board JSON files, keeps best-effort drafts in `localStorage`, and

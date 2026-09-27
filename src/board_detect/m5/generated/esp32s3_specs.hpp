@@ -394,3 +394,193 @@ namespace pmic {
 } // namespace pmic
 
 } } } } } // namespace m5gfx::board_detect::m5::specs::sticks3
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace stopwatch {
+constexpr int bus_host = SPI2_HOST;
+constexpr std::uint32_t bus_freq_write = 80000000;
+constexpr std::uint32_t bus_freq_read = 1000000;
+constexpr bool bus_three_wire = true;
+
+namespace panel_co5300 {
+  constexpr int width = 468;
+  constexpr int height = 468;
+  constexpr int memory_width = setup_sentinel::keep_dimension;
+  constexpr int memory_height = setup_sentinel::keep_dimension;
+  constexpr int offset_x = 6;
+  constexpr int offset_y = 0;
+  constexpr int rotation_offset = 0;
+  constexpr int invert = 0;
+  constexpr int readable = 0;
+} // namespace panel_co5300
+
+namespace pmic {
+  constexpr std::uint8_t i2c_addr = 0x6E;
+  constexpr std::uint32_t i2c_freq = 100000;
+  constexpr std::uint8_t id_reg = 0x0;
+} // namespace pmic
+
+namespace touch {
+  constexpr std::uint8_t i2c_addr = 0x15;
+  constexpr std::uint32_t i2c_freq = 400000;
+  constexpr int x_min = 0;
+  constexpr int x_max = 233;
+  constexpr int y_min = 0;
+  constexpr int y_max = 233;
+  constexpr int rotation_offset = 0;
+} // namespace touch
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::stopwatch
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace papermono {
+constexpr int bus_host = SPI2_HOST;
+constexpr std::uint32_t bus_freq_write = 40000000;
+constexpr std::uint32_t bus_freq_read = 10000000;
+constexpr bool bus_three_wire = true;
+
+namespace panel_ssd1677 {
+  constexpr int width = 800;
+  constexpr int height = 480;
+  constexpr int memory_width = setup_sentinel::keep_dimension;
+  constexpr int memory_height = setup_sentinel::keep_dimension;
+  constexpr int offset_x = 0;
+  constexpr int offset_y = 0;
+  constexpr int rotation_offset = 3;
+  constexpr int invert = 0;
+  constexpr int readable = 0;
+} // namespace panel_ssd1677
+
+namespace backlight_i2c {
+  constexpr std::uint8_t i2c_addr = 0x6E;
+} // namespace backlight_i2c
+
+namespace pmic {
+  constexpr std::uint8_t i2c_addr = 0x6E;
+  constexpr std::uint32_t i2c_freq = 100000;
+  constexpr std::uint8_t id_reg = 0x0;
+} // namespace pmic
+
+namespace touch {
+  constexpr std::uint8_t i2c_addr = 0x38;
+  constexpr std::uint32_t i2c_freq = 400000;
+  constexpr int x_min = 0;
+  constexpr int x_max = 479;
+  constexpr int y_min = 0;
+  constexpr int y_max = 799;
+  constexpr int rotation_offset = 0;
+} // namespace touch
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::papermono
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace chaincaptain {
+constexpr int bus_host = SPI2_HOST;
+constexpr std::uint32_t bus_freq_write = 40000000;
+constexpr std::uint32_t bus_freq_read = 16000000;
+constexpr bool bus_three_wire = true;
+
+namespace panel_jd9853 {
+  constexpr int width = 240;
+  constexpr int height = 240;
+  constexpr int memory_width = 240;
+  constexpr int memory_height = 320;
+  constexpr int offset_x = 0;
+  constexpr int offset_y = 0;
+  constexpr int rotation_offset = 2;
+  constexpr int invert = 0;
+  constexpr int readable = 0;
+  constexpr int rgb_order = 1;
+} // namespace panel_jd9853
+
+namespace backlight_i2c {
+  constexpr std::uint8_t i2c_addr = 0x4F;
+} // namespace backlight_i2c
+
+namespace pmic {
+  constexpr std::uint8_t i2c_addr = 0x6E;
+  constexpr std::uint32_t i2c_freq = 100000;
+  constexpr std::uint8_t id_reg = 0x0;
+} // namespace pmic
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::chaincaptain
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace papercolor {
+constexpr int bus_host = SPI2_HOST;
+constexpr std::uint32_t bus_freq_write = 4000000;
+constexpr std::uint32_t bus_freq_read = 1000000;
+constexpr bool bus_three_wire = true;
+
+namespace panel_ed2208 {
+  constexpr int width = 400;
+  constexpr int height = 600;
+  constexpr int memory_width = setup_sentinel::keep_dimension;
+  constexpr int memory_height = setup_sentinel::keep_dimension;
+  constexpr int offset_x = 0;
+  constexpr int offset_y = 0;
+  constexpr int rotation_offset = 0;
+  constexpr int invert = 0;
+  constexpr int readable = 0;
+} // namespace panel_ed2208
+
+namespace pmic {
+  constexpr std::uint8_t i2c_addr = 0x6E;
+  constexpr std::uint32_t i2c_freq = 100000;
+  constexpr std::uint8_t id_reg = 0x0;
+} // namespace pmic
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::papercolor
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace papers3 {
+constexpr std::uint32_t bus_speed = 16000000;
+constexpr std::uint8_t bus_width = 8;
+
+namespace panel_ed047tc1 {
+  constexpr int width = 960;
+  constexpr int height = 540;
+  constexpr int memory_width = 960;
+  constexpr int memory_height = 540;
+  constexpr int offset_x = 0;
+  constexpr int offset_y = 0;
+  constexpr int rotation_offset = 3;
+  constexpr int invert = setup_sentinel::keep_i8;
+  constexpr int readable = setup_sentinel::keep_i8;
+  constexpr std::uint8_t line_padding = 8;
+} // namespace panel_ed047tc1
+
+namespace power_hold {
+  constexpr bool active_low = true;
+} // namespace power_hold
+
+namespace touch {
+  constexpr std::uint32_t i2c_freq = 400000;
+  constexpr int x_min = 0;
+  constexpr int x_max = 539;
+  constexpr int y_min = 0;
+  constexpr int y_max = 959;
+  constexpr int rotation_offset = 1;
+} // namespace touch
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::papers3
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace paperdiy {
+constexpr std::uint32_t bus_speed = 16000000;
+constexpr std::uint8_t bus_width = 8;
+
+namespace panel_ed047tc1 {
+  constexpr int width = 960;
+  constexpr int height = 540;
+  constexpr int memory_width = 960;
+  constexpr int memory_height = 540;
+  constexpr int offset_x = 0;
+  constexpr int offset_y = 0;
+  constexpr int rotation_offset = 3;
+  constexpr int invert = setup_sentinel::keep_i8;
+  constexpr int readable = setup_sentinel::keep_i8;
+  constexpr std::uint8_t line_padding = 8;
+} // namespace panel_ed047tc1
+
+namespace pmic {
+  constexpr std::uint8_t i2c_addr = 0x6E;
+  constexpr std::uint32_t i2c_freq = 100000;
+  constexpr std::uint8_t id_reg = 0x0;
+} // namespace pmic
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::paperdiy

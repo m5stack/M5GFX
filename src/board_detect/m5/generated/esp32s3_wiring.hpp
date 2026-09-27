@@ -179,8 +179,126 @@ namespace sticks3 {
   constexpr bool touches_opi_pins = false;
 } // namespace sticks3
 
+namespace stopwatch {
+  constexpr std::int8_t display_sclk = 40;
+  constexpr std::int8_t display_mosi = -1;
+  constexpr std::int8_t display_miso = -1;
+  constexpr std::int8_t display_io0 = 41;
+  constexpr std::int8_t display_io1 = 42;
+  constexpr std::int8_t display_io2 = 46;
+  constexpr std::int8_t display_io3 = 45;
+  constexpr std::int8_t display_dc = -1;
+  constexpr std::int8_t display_cs = 39;
+  constexpr std::int8_t display_rst = -1;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t internal_i2c_sda = 47;
+  constexpr std::int8_t internal_i2c_scl = 48;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t touch_int = 13;
+  constexpr std::int8_t hold[] = { 39 };
+  constexpr bool touches_opi_pins = false;
+} // namespace stopwatch
+
+namespace papermono {
+  constexpr std::int8_t display_sclk = 15;
+  constexpr std::int8_t display_mosi = 14;
+  constexpr std::int8_t display_miso = -1;
+  constexpr std::int8_t display_dc = 17;
+  constexpr std::int8_t display_cs = 16;
+  constexpr std::int8_t display_rst = -1;
+  constexpr std::int8_t display_busy = 18;
+  constexpr std::int8_t internal_i2c_sda = 47;
+  constexpr std::int8_t internal_i2c_scl = 48;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t touch_int = 4;
+  constexpr std::int8_t hold[] = { 16 };
+  constexpr bool touches_opi_pins = false;
+} // namespace papermono
+
+namespace chaincaptain {
+  constexpr std::int8_t display_sclk = 15;
+  constexpr std::int8_t display_mosi = 16;
+  constexpr std::int8_t display_miso = -1;
+  constexpr std::int8_t display_dc = 46;
+  constexpr std::int8_t display_cs = 45;
+  constexpr std::int8_t display_rst = -1;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t internal_i2c_sda = 3;
+  constexpr std::int8_t internal_i2c_scl = 2;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t hold[] = { 45 };
+  constexpr bool touches_opi_pins = false;
+} // namespace chaincaptain
+
+namespace papercolor {
+  constexpr std::int8_t display_sclk = 15;
+  constexpr std::int8_t display_mosi = 13;
+  constexpr std::int8_t display_miso = 14;
+  constexpr std::int8_t display_dc = 43;
+  constexpr std::int8_t display_cs = 44;
+  constexpr std::int8_t display_rst = 12;
+  constexpr std::int8_t display_busy = 11;
+  constexpr std::int8_t shared_sd_sclk = 15;
+  constexpr std::int8_t shared_sd_mosi = 13;
+  constexpr std::int8_t shared_sd_miso = 14;
+  constexpr std::int8_t shared_sd_sd_cs = 47;
+  constexpr std::int8_t shared_sd_other_cs = 44;
+  constexpr std::int8_t internal_i2c_sda = 3;
+  constexpr std::int8_t internal_i2c_scl = 2;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t reset_gpio = 12;
+  constexpr std::int8_t hold[] = { 47, 44 };
+  constexpr bool touches_opi_pins = false;
+} // namespace papercolor
+
+namespace papers3 {
+  constexpr std::int8_t display_data0 = 6;
+  constexpr std::int8_t display_data1 = 14;
+  constexpr std::int8_t display_data2 = 7;
+  constexpr std::int8_t display_data3 = 12;
+  constexpr std::int8_t display_data4 = 9;
+  constexpr std::int8_t display_data5 = 11;
+  constexpr std::int8_t display_data6 = 8;
+  constexpr std::int8_t display_data7 = 10;
+  constexpr std::int8_t display_pwr = 46;
+  constexpr std::int8_t display_spv = 17;
+  constexpr std::int8_t display_ckv = 18;
+  constexpr std::int8_t display_sph = 13;
+  constexpr std::int8_t display_oe = 45;
+  constexpr std::int8_t display_le = 15;
+  constexpr std::int8_t display_cl = 16;
+  constexpr std::int8_t internal_i2c_sda = 41;
+  constexpr std::int8_t internal_i2c_scl = 42;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t power_gpio = 44;
+  constexpr std::int8_t touch_int = 48;
+  constexpr bool touches_opi_pins = false;
+} // namespace papers3
+
+namespace paperdiy {
+  constexpr std::int8_t display_data0 = 6;
+  constexpr std::int8_t display_data1 = 14;
+  constexpr std::int8_t display_data2 = 7;
+  constexpr std::int8_t display_data3 = 12;
+  constexpr std::int8_t display_data4 = 9;
+  constexpr std::int8_t display_data5 = 11;
+  constexpr std::int8_t display_data6 = 8;
+  constexpr std::int8_t display_data7 = 10;
+  constexpr std::int8_t display_pwr = 46;
+  constexpr std::int8_t display_spv = 17;
+  constexpr std::int8_t display_ckv = 18;
+  constexpr std::int8_t display_sph = 13;
+  constexpr std::int8_t display_oe = 45;
+  constexpr std::int8_t display_le = 15;
+  constexpr std::int8_t display_cl = 16;
+  constexpr std::int8_t internal_i2c_sda = 41;
+  constexpr std::int8_t internal_i2c_scl = 42;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace paperdiy
+
 namespace detection {
-  constexpr std::int8_t unconditional_pins[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 21, 38, 39, 40, 41, 42, 45, 46, 47, 48 };
+  constexpr std::int8_t unconditional_pins[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 };
   constexpr std::int8_t opi_pins[] = { 33, 34, 35, 36, 37 };
 } // namespace detection
 

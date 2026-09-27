@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "id": "m5stopwatch",
+  "name": "M5StopWatch",
+  "legacy_board_id": 30,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        468,
+        468
+      ],
+      "touch": true
+    },
+    "storage": {
+      "psram_mb": 0
+    }
+  },
+  "pins": {
+    "10": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "11": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "13": {
+      "roles": [
+        "dev:touch.int"
+      ]
+    },
+    "38": {
+      "roles": [],
+      "note": "OLED TE input"
+    },
+    "39": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "40": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "bus:main_spi.io0"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "42": {
+      "roles": [
+        "bus:main_spi.io1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "45": {
+      "roles": [
+        "bus:main_spi.io3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "46": {
+      "roles": [
+        "bus:main_spi.io2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "47": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "bus:touch_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "48": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "bus:touch_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "io0",
+        "io1",
+        "io2",
+        "io3"
+      ],
+      "preferred_host": "SPI2_HOST",
+      "fixed": false,
+      "freq": 80000000,
+      "freq_read": 1000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 100000,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "touch_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 400000,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "co5300",
+      "bus": "main_spi",
+      "spec": {
+        "width": 468,
+        "height": 468,
+        "offset_x": 6,
+        "offset_y": 0,
+        "rotation_offset": 0,
+        "invert": false,
+        "readable": false,
+        "three_wire": true
+      },
+      "signals": {
+        "cs": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "cst816s",
+      "bus": "touch_i2c",
+      "i2c_addr": "0x15",
+      "spec": {
+        "x_min": 0,
+        "x_max": 233,
+        "y_min": 0,
+        "y_max": 233,
+        "rotation_offset": 0
+      },
+      "signals": {
+        "int": "gpio:13"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c"
+    },
+    "ioe": {
+      "kind": "io_expander",
+      "part": "m5ioe1",
+      "bus": "internal_i2c"
+    },
+    "rtc": {
+      "kind": "rtc",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x32"
+    },
+    "imu": {
+      "kind": "imu",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x68"
+    },
+    "nfc": {
+      "kind": "sensor",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x50"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:11",
+        "2": "gpio:10",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

@@ -414,6 +414,50 @@ namespace board_detect
     return cache.pullup_ok && (cache.ack[addr >> 5] & bit);
   }
 
+  bool probe_i2c_read(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
+                      std::uint8_t reg, std::uint8_t* data, std::size_t length,
+                      std::uint32_t freq, std::uint32_t poll_ms)
+  {
+    if (data == nullptr || length == 0 || addr < 0x08 || addr > 0x77) { return false; }
+    if (!lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value()) { return false; }
+    const auto started = lgfx::millis();
+    bool success = false;
+    do
+    {
+      success = !lgfx::i2c::readRegister(ctx.i2c_port_probe, addr, reg,
+                                         data, length, freq).has_error();
+      if (success) { break; }
+      lgfx::delay(1);
+    } while (lgfx::millis() - started < poll_ms);
+    lgfx::i2c::release(ctx.i2c_port_probe);
+    ctx.transaction->restore_start({ pin_sda, pin_scl });
+    return success;
+  }
+
+  bool probe_i2c_read16(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
+                        std::uint16_t reg, std::uint8_t* data, std::size_t length,
+                        std::uint32_t freq, std::uint32_t poll_ms)
+  {
+    if (data == nullptr || length == 0 || addr < 0x08 || addr > 0x77) { return false; }
+    if (!lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value()) { return false; }
+    const std::uint8_t reg_bytes[] = {
+      static_cast<std::uint8_t>(reg >> 8), static_cast<std::uint8_t>(reg),
+    };
+    const auto started = lgfx::millis();
+    bool success = false;
+    do
+    {
+      success = lgfx::i2c::transactionWriteRead(ctx.i2c_port_probe, addr, reg_bytes,
+                                                sizeof(reg_bytes), data, length,
+                                                freq).has_value();
+      if (success) { break; }
+      lgfx::delay(1);
+    } while (lgfx::millis() - started < poll_ms);
+    lgfx::i2c::release(ctx.i2c_port_probe);
+    ctx.transaction->restore_start({ pin_sda, pin_scl });
+    return success;
+  }
+
   pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask)
   {
     static constexpr std::size_t max_pins = 64;
@@ -606,16 +650,17 @@ namespace board_detect
       return read_register(port, power, addr, reg, value, retry_budget);
     }
 
-    bool run_sequence(int port, const power_desc_t& power, ops::op_list_t sequence,
-                      const ops::retry_policy_t* policy = nullptr)
+    ops::run_result_t run_sequence(int port, const power_desc_t& power,
+                                   ops::op_list_t sequence,
+                                   pin_list_t gpio_pins = no_pins(),
+                                   const ops::retry_policy_t* policy = nullptr)
     {
       const int ports[] = { port };
       ops::lgfx_backend_context_t backend_context { ports, 1 };
-      const ops::gpio_scope_t no_gpio { GPIO_NUM_MAX, nullptr, 0 };
+      const ops::gpio_scope_t gpio_scope { GPIO_NUM_MAX, gpio_pins.data, gpio_pins.size };
       return ops::run_ops(ops::lgfx_backend(&backend_context),
                           power.devices, power.device_count,
-                          sequence.data, sequence.size, no_gpio, policy).status
-          == ops::op_status_t::ok;
+                          sequence.data, sequence.size, gpio_scope, policy);
     }
 
     const pmic_variant_t* read_variant(const power_desc_t& power, int port,
@@ -712,17 +757,18 @@ namespace board_detect
     };
 
     // Unchecked primitives; callers must first pass description_valid().
-    bool prepare_power(const board_desc_t& desc, board_result_t& result, int i2c_port);
+    bool prepare_power(const board_desc_t& desc, board_result_t& result, int i2c_port,
+                       bool retain_confirmed_board = false);
     bool prepare_sd_spi(const board_desc_t& desc, board_result_t& result,
                         const prepare_ctx_t& ctx);
   }
 
   bool startup_detail::prepare_power(const board_desc_t& desc, board_result_t& result,
-                                     int i2c_port)
+                                     int i2c_port, bool retain_confirmed_board)
   {
     if (result.prepared & prepared_power) { return true; }
     const auto& power = desc.power;
-    if (power.hold_pin >= 0) { startup_detail::pin_level(power.hold_pin, true); }
+    if (power.hold_pin >= 0) { startup_detail::pin_level(power.hold_pin, power.hold_high); }
     if (power.variants == nullptr || power.variant_count == 0)
     {
       result.prepared |= prepared_power;
@@ -732,23 +778,39 @@ namespace board_detect
     // Wake-up polling and every PMIC transaction share one retry window so a
     // partially responsive controller cannot multiply the configured delay.
     startup_detail::retry_budget_t retry_budget(power.wake_poll_ms);
-    const auto* variant = startup_detail::read_variant(power, i2c_port, retry_budget);
+    const auto* variant = power.variant_confirmed && power.variant_count == 1
+                        ? &power.variants[0]
+                        : startup_detail::read_variant(power, i2c_port, retry_budget);
     if (variant == nullptr) { return false; }
-    std::uint8_t power_state;
-    if (!startup_detail::read_register(i2c_port, power, variant->i2c_addr,
+    std::uint8_t power_state = variant->power_state.mask;
+    if (variant->power_state.mask
+     && !startup_detail::read_register(i2c_port, power, variant->i2c_addr,
                                        variant->power_state.reg, &power_state,
                                        retry_budget)) { return false; }
     std::uint8_t reset_state = power_state;
-    if (variant->reset_state.reg != variant->power_state.reg
+    if (variant->reset_state.mask && variant->reset_state.reg != variant->power_state.reg
      && !startup_detail::read_register(i2c_port, power, variant->i2c_addr,
                                        variant->reset_state.reg, &reset_state,
                                        retry_budget)) { return false; }
     const bool power_was_off = !(power_state & variant->power_state.mask);
     const bool reset_was_low = !(reset_state & variant->reset_state.mask);
     const ops::retry_policy_t retry_policy { retry_budget.deadline_ms(), 1 };
-    const bool wrote_power = startup_detail::run_sequence(i2c_port, power,
-                                                           variant->power_on, &retry_policy);
-    if (!wrote_power) { return false; }
+    const auto power_result = startup_detail::run_sequence(i2c_port, power,
+                                                            variant->power_on,
+                                                            desc.hold_high_pins,
+                                                            &retry_policy);
+    if (power_result.status != ops::op_status_t::ok)
+    {
+      if (!retain_confirmed_board) { return false; }
+      // Detection has already established the board identity. Power/IOE writes
+      // are post-identification setup, so a partial hardware failure must not
+      // turn the confirmed board into a different model; stop the list, warn,
+      // and let construction report whatever hardware remains usable.
+      ESP_LOGW("board_detect",
+               "power_on stopped after board confirmation: op=%u status=%u native=%d",
+               static_cast<unsigned>(power_result.failed_index),
+               static_cast<unsigned>(power_result.status), power_result.native_error);
+    }
     if (power_was_off) { result.prepared &= ~prepared_sd_spi; }
     lgfx::delay(power_was_off || reset_was_low ? power.cold_wait_ms : power.warm_wait_ms);
     result.prepared |= prepared_power;
@@ -837,9 +899,19 @@ namespace board_detect
                      && (desc.internal_i2c.sda < 0 || desc.internal_i2c.scl < 0))
                 && !(desc.reset.kind == reset_kind_t::custom && desc.reset.custom == nullptr)
                 && pin_list_valid(desc.hold_high_pins)
-                && list_valid(desc.option_names)
-                && desc.display.sclk >= 0 && desc.display.mosi >= 0 && desc.display.cs >= 0
-                && list_contains(desc.hold_high_pins, desc.display.cs);
+                && list_valid(desc.option_names);
+      // no_display_pins(): every display pin is absent and nothing below may
+      // refer to one. Any other description needs the SPI display signals and
+      // holds its chip select high during detection.
+      const bool display_absent = desc.display.sclk < 0 && desc.display.mosi < 0
+                               && desc.display.miso < 0 && desc.display.dc < 0
+                               && desc.display.cs < 0 && desc.display.rst < 0
+                               && desc.display.busy < 0;
+      valid = valid
+           && (display_absent
+            || (desc.display.sclk >= 0 && desc.display.mosi >= 0 && desc.display.cs >= 0
+             && list_contains(desc.hold_high_pins, desc.display.cs)))
+           && !(display_absent && desc.sd.sd_cs >= 0);
       const std::int8_t described_pins[] = {
         desc.power.hold_pin, desc.reset.pin,
         desc.sd.sclk, desc.sd.mosi, desc.sd.miso, desc.sd.sd_cs, desc.sd.other_cs,
@@ -896,7 +968,7 @@ namespace board_detect
 
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,
                      const prepare_ctx_t& ctx, int i2c_port,
-                     std::uint32_t* detected_option)
+                     std::uint32_t* detected_option, bool retain_confirmed_board)
   {
     const auto& reset = desc.reset;
     if (!startup_detail::description_valid(desc)) { return false; }
@@ -906,7 +978,38 @@ namespace board_detect
       if ((reset.flags & reset_hold_when_skipped)
        && !(result.prepared & prepared_reset_line))
       {
-        startup_detail::pin_reset(reset, false);
+        if (reset.kind == reset_kind_t::i2c_regs)
+        {
+          // Some legacy boards always released an externally held reset and waited for
+          // stabilization even when the caller skipped the assert pulse.  Extend the
+          // GPIO flag's "leave released" meaning to typed I2C reset sequences as well.
+          const auto* variant = desc.power.variant_confirmed && desc.power.variant_count == 1
+                              ? &desc.power.variants[0]
+                              : startup_detail::read_variant(desc.power, i2c_port);
+          if (variant == nullptr) { return false; }
+          startup_detail::retry_budget_t release_budget(desc.power.wake_poll_ms);
+          const ops::retry_policy_t release_policy { release_budget.deadline_ms(), 1 };
+          const auto release_result = startup_detail::run_sequence(
+            i2c_port, desc.power, variant->reset_release, no_pins(), &release_policy);
+          if (release_result.status != ops::op_status_t::ok)
+          {
+            if (!retain_confirmed_board) { return false; }
+            // Detection has already established the board identity.  Legacy
+            // setup ignored reset-register write failures, so warn with the
+            // failed operation and keep the confirmed model instead of probing
+            // another board against partially configured hardware.
+            ESP_LOGW("board_detect",
+                     "reset_release stopped after board confirmation: op=%u status=%u native=%d",
+                     static_cast<unsigned>(release_result.failed_index),
+                     static_cast<unsigned>(release_result.status),
+                     release_result.native_error);
+          }
+          lgfx::delay(reset.post_ms);
+        }
+        else
+        {
+          startup_detail::pin_reset(reset, false);
+        }
         result.prepared |= prepared_reset_line;
       }
       return true;
@@ -915,23 +1018,44 @@ namespace board_detect
     bool ok = true;
     if (reset.kind == reset_kind_t::i2c_regs)
     {
-      const auto* variant = startup_detail::read_variant(desc.power, i2c_port);
+      // Confirmed single-variant families already performed their full ID read;
+      // do not turn a later setup read fault into loss of the detected model.
+      const auto* variant = desc.power.variant_confirmed && desc.power.variant_count == 1
+                          ? &desc.power.variants[0]
+                          : startup_detail::read_variant(desc.power, i2c_port);
       if (variant == nullptr) { return false; }
       // The legacy path gave assert and release independent wake-poll budgets;
       // preserve that retry meaning when executing their typed operation lists.
       startup_detail::retry_budget_t assert_budget(desc.power.wake_poll_ms);
       const ops::retry_policy_t assert_policy { assert_budget.deadline_ms(), 1 };
-      ok = startup_detail::run_sequence(i2c_port, desc.power, variant->reset_assert,
-                                        &assert_policy);
-      if (ok)
+      const auto assert_result = startup_detail::run_sequence(
+        i2c_port, desc.power, variant->reset_assert, no_pins(), &assert_policy);
+      ok = assert_result.status == ops::op_status_t::ok;
+      if (!ok && retain_confirmed_board)
+      {
+        ESP_LOGW("board_detect",
+                 "reset_assert stopped after board confirmation: op=%u status=%u native=%d",
+                 static_cast<unsigned>(assert_result.failed_index),
+                 static_cast<unsigned>(assert_result.status), assert_result.native_error);
+      }
+      if (ok || retain_confirmed_board)
       {
         lgfx::delay(reset.low_ms);
         startup_detail::retry_budget_t release_budget(desc.power.wake_poll_ms);
         const ops::retry_policy_t release_policy { release_budget.deadline_ms(), 1 };
-        ok = startup_detail::run_sequence(i2c_port, desc.power, variant->reset_release,
-                                          &release_policy);
-        if (ok) { lgfx::delay(reset.post_ms); }
+        const auto release_result = startup_detail::run_sequence(
+          i2c_port, desc.power, variant->reset_release, no_pins(), &release_policy);
+        ok = release_result.status == ops::op_status_t::ok;
+        if (!ok && retain_confirmed_board)
+        {
+          ESP_LOGW("board_detect",
+                   "reset_release stopped after board confirmation: op=%u status=%u native=%d",
+                   static_cast<unsigned>(release_result.failed_index),
+                   static_cast<unsigned>(release_result.status), release_result.native_error);
+        }
+        if (ok || retain_confirmed_board) { lgfx::delay(reset.post_ms); }
       }
+      if (retain_confirmed_board) { ok = true; }
     }
     else if (reset.kind == reset_kind_t::custom)
     {
@@ -952,7 +1076,8 @@ namespace board_detect
                     std::uint8_t slow_retry_half_us)
   {
     if (probes == nullptr || probe_count == 0 || result == nullptr
-     || !startup_detail::description_valid(desc)) { return false; }
+     || !startup_detail::description_valid(desc)
+     || desc.display.cs < 0) { return false; }  // no_display_pins() has no SPI ID
     const std::int8_t pins[] = {
       desc.display.cs, desc.display.sclk, desc.display.mosi,
       desc.display.dc, desc.display.rst,
@@ -1059,9 +1184,10 @@ namespace board_detect
       if (desc.power.variants != nullptr)
       {
         startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
-        if (!i2c.opened || !startup_detail::prepare_power(desc, result, i2c.port)) { return false; }
+        if (!i2c.opened
+         || !startup_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
       }
-      else if (!startup_detail::prepare_power(desc, result, ctx.i2c_port_probe)) { return false; }
+      else if (!startup_detail::prepare_power(desc, result, ctx.i2c_port_probe, true)) { return false; }
     }
     if (!startup_detail::prepare_sd_spi(desc, result, ctx)) { return false; }
     const bool reset_was_prepared = result.prepared & prepared_reset;
@@ -1070,9 +1196,15 @@ namespace board_detect
       if (desc.reset.kind == reset_kind_t::i2c_regs)
       {
         startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
-        if (!i2c.opened || !prepare_reset(desc, result, ctx, i2c.port)) { return false; }
+        if (!i2c.opened || !prepare_reset(desc, result, ctx, i2c.port, nullptr, true))
+        {
+          return false;
+        }
       }
-      else if (!prepare_reset(desc, result, ctx, ctx.i2c_port_probe)) { return false; }
+      else if (!prepare_reset(desc, result, ctx, ctx.i2c_port_probe, nullptr, true))
+      {
+        return false;
+      }
     }
     if (!reset_was_prepared && (result.prepared & prepared_reset)
      && desc.direct_reset_panel_reload_wait_ms)

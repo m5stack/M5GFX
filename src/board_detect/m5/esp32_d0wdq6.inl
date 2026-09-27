@@ -125,6 +125,8 @@ namespace m5
   static const board_def_t& board_tough = desc_tough.def;
   static const board_def_t& board_stack = desc_stack.def;
   static const board_def_t& board_paper = desc_paper.def;
+  // gpio_power() keeps its active-high meaning; only gpio_power_low() holds low.
+  static_assert(desc_paper.power.hold_high, "Paper power hold stays active high");
 
   namespace detail
   {
@@ -413,11 +415,11 @@ namespace m5
     }
   }
 
-  bool construct_station(const board_result_t& result, display_parts_t* parts);
-  bool construct_core2(const board_result_t& result, display_parts_t* parts);
-  bool construct_tough(const board_result_t& result, display_parts_t* parts);
-  bool construct_stack(const board_result_t& result, display_parts_t* parts);
-  bool construct_paper(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_station(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_core2(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_tough(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_stack(const board_result_t& result, display_parts_t* parts);
+  construct_status_t construct_paper(const board_result_t& result, display_parts_t* parts);
   static const board_entry_t esp32_d0wdq6_boards[] = {
     { &desc_station, construct_station, nullptr, nullptr },
     { &desc_core2, construct_core2, nullptr, nullptr },

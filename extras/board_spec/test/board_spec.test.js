@@ -149,7 +149,7 @@ test("valid Core2 has only the expected target warning", () => {
 });
 
 test("all catalog boards validate against their chip tables", () => {
-  assert.deepEqual(catalogFiles, ["m5airq.json", "m5atoms3.json", "m5atoms3r.json", "m5cardputer.json", "m5cardputer_adv.json", "m5dial.json", "m5dinmeter.json", "m5paper.json", "m5stack.json", "m5stack_core2.json", "m5stamplc.json", "m5station.json", "m5sticks3.json", "m5timercam.json", "m5tough.json", "m5vameter.json"]);
+  assert.deepEqual(catalogFiles, ["m5airq.json", "m5atoms3.json", "m5atoms3r.json", "m5cardputer.json", "m5cardputer_adv.json", "m5chaincaptain.json", "m5dial.json", "m5dinmeter.json", "m5paper.json", "m5papercolor.json", "m5paperdiy.json", "m5papermono.json", "m5papers3.json", "m5stack.json", "m5stack_core2.json", "m5stamplc.json", "m5station.json", "m5sticks3.json", "m5stopwatch.json", "m5timercam.json", "m5tough.json", "m5vameter.json"]);
   assert.deepEqual(validateCatalog(catalogBoards, (item) => ({ ...context, chip: chips[item.chip] })).filter((item) => item.severity !== "warning"), []);
 });
 
@@ -159,9 +159,9 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
   assert.deepEqual(parseGeneratedWiring(source), legacyEsp32Wiring);
 });
 
-test("all 24 revision and runtime combinations match snapshots", async () => {
+test("all 30 revision and runtime combinations match snapshots", async () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 24);
+  assert.equal(outputs.length, 30);
   for (const output of outputs) {
     const snapshot = await fs.readFile(path.join(root, "generated/resolved", output.filename), "utf8");
     assert.equal(snapshot, formatBoard(output.board), output.filename);
@@ -251,6 +251,10 @@ test("shared SD SPI modes and pin-table values stay stable", () => {
     m5cardputer: { sd_mmc_clk: 40, sd_mmc_cmd: 14, sd_mmc_d0: 39, sd_mmc_d3: 12 },
     m5cardputer_adv: { sd_mmc_clk: 40, sd_mmc_cmd: 14, sd_mmc_d0: 39, sd_mmc_d3: 12 },
     m5paper: { sd_mmc_clk: 14, sd_mmc_cmd: 12, sd_mmc_d0: 13, sd_mmc_d3: 4 },
+    m5papercolor: { sd_mmc_clk: 15, sd_mmc_cmd: 13, sd_mmc_d0: 14, sd_mmc_d3: 47 },
+    m5paperdiy: { sd_mmc_clk: 39, sd_mmc_cmd: 38, sd_mmc_d0: 40, sd_mmc_d3: 47 },
+    m5papers3: { sd_mmc_clk: 39, sd_mmc_cmd: 38, sd_mmc_d0: 40, sd_mmc_d3: 47 },
+    m5papermono: { sd_mmc_clk: 13, sd_mmc_cmd: 12, sd_mmc_d0: 11, sd_mmc_d1: 10, sd_mmc_d2: 9, sd_mmc_d3: 8 },
     m5stack: { sd_mmc_clk: 18, sd_mmc_cmd: 23, sd_mmc_d0: 19, sd_mmc_d3: 4 },
     m5stack_core2: { sd_mmc_clk: 18, sd_mmc_cmd: 23, sd_mmc_d0: 38, sd_mmc_d3: 4 },
     m5stamplc: { sd_mmc_clk: 7, sd_mmc_cmd: 8, sd_mmc_d0: 9, sd_mmc_d3: 10 },
@@ -263,8 +267,10 @@ test("shared SD SPI modes and pin-table values stay stable", () => {
       const derived = source.id === "m5stamplc"
         ? { modes: ["spi", "sdio1"], bus: "main_spi", cs: "gpio:10" }
         : source.buses[source.devices.sd.bus].kind === "sdmmc"
-        ? { modes: ["sdio1"] }
-        : { modes: ["spi"], bus: "main_spi", cs: "gpio:4" };
+        ? { modes: source.id === "m5papermono" ? ["sdio1", "sdio4"] : ["sdio1"] }
+        : { modes: ["m5papercolor", "m5papers3", "m5paperdiy"].includes(source.id) ? ["spi", "sdio1"] : ["spi"],
+            bus: source.devices.sd.bus,
+            cs: ["m5papercolor", "m5papers3", "m5paperdiy"].includes(source.id) ? "gpio:47" : "gpio:4" };
       assert.deepEqual(output.board.devices.sd.derived, derived, output.filename);
     }
   }
@@ -349,7 +355,7 @@ test("M5Unified live pin tables match generated values", async (t) => {
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
   const compared = spawnSync(process.execPath, ["cli/spec.js", "compare-pintable", "--m5unified", m5unified], { cwd: root, encoding: "utf8" });
   assert.equal(compared.status, 0, compared.stderr || compared.stdout);
-  assert.match(compared.stdout, /comparison passed: 16 board\(s\), 800 value\(s\), 2 target\(s\)/);
+  assert.match(compared.stdout, /comparison passed: 22 board\(s\), 1100 value\(s\), 2 target\(s\)/);
 });
 
 test("M5GFX wiring emitter maps every board-description GPIO", () => {
@@ -365,6 +371,8 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
     m5dinmeter: { display: [6, 5, -1, 4, 7, 8, -1], sd: null, i2c: [11, 12, 1], reset: 8, power: 46, hold: [7] },
     m5stamplc: { display: [7, 8, 9, 6, 12, 3, -1], sd: [7, 8, 9, 10, 12], i2c: [13, 15, 1], reset: 3, power: -1, hold: [10, 12] },
     m5sticks3: { display: [40, 39, -1, 45, 41, 21, -1], sd: null, i2c: [47, 48, 1], reset: 21, power: -1, hold: [41] },
+    m5stopwatch: { display: [40, -1, -1, 41, 42, 46, 45, -1, 39, -1, -1], sd: null, i2c: [47, 48, 1], reset: -1, power: -1, hold: [39] },
+    m5papermono: { display: [15, 14, -1, 17, 16, -1, 18], sd: null, i2c: [47, 48, 1], reset: -1, power: -1, hold: [16] },
   };
   const entries = [];
   for (const source of catalogBoards.filter((item) => expected[item.id])) {
@@ -464,7 +472,7 @@ test("AtomS3R generated specs preserve the legacy setup", async () => {
 
   const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
   assert.match(wiringHeader, /namespace atoms3r \{[\s\S]*?touches_opi_pins = false/);
-  assert.match(wiringHeader, /unconditional_pins\[\] = \{[^}]*14, 15,[^}]*21,[^}]*42, 45,[^}]*48/);
+  assert.match(wiringHeader, /unconditional_pins\[\] = \{[^}]*14, 15,[^}]*21,[^}]*42, 43, 44, 45,[^}]*48/);
   assert.doesNotMatch(wiringHeader, /unconditional_pins\[\] = \{[^}]*\b0\b[^}]*\}/);
 });
 
@@ -479,6 +487,47 @@ test("StickS3 generated display, backlight, and PMIC specs match the legacy setu
   const header = renderM5GFXSpecsHeader(emitted);
   assert.match(header, /namespace pmic \{[\s\S]*i2c_addr = 0x6E;[\s\S]*i2c_freq = 100000;[\s\S]*id_reg = 0x0;/);
   assert.doesNotMatch(header, /namespace pmic \{[\s\S]*id_value/);
+});
+
+test("ChainCaptain and PaperColor generated setup preserves legacy fields", async () => {
+  const chain = catalogBoards.find((item) => item.id === "m5chaincaptain");
+  const paper = catalogBoards.find((item) => item.id === "m5papercolor");
+  const chainResolved = resolveCatalog(chain)[0].board;
+  const paperResolved = resolveCatalog(paper)[0].board;
+  const chainSpecs = emitM5GFXSpecs(chain, [chainResolved], parts,
+    m5gfxBoardMapping(target, chain.id));
+  const paperSpecs = emitM5GFXSpecs(paper, [paperResolved], parts,
+    m5gfxBoardMapping(target, paper.id));
+  const chainWiring = emitM5GFXWiring(chainResolved, parts, target);
+  const paperWiring = emitM5GFXWiring(paperResolved, parts, target);
+  assert.deepEqual(chainSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST",
+    freqWrite: 40000000, freqRead: 16000000, threeWire: true });
+  assert.deepEqual(chainSpecs.panels.jd9853, { width: 240, height: 240,
+    memoryWidth: 240, memoryHeight: 320, offsetX: 0, offsetY: 0,
+    rotationOffset: 2, invert: false, readable: false, rgbOrder: true });
+  assert.deepEqual(chainWiring.display,
+    { sclk: 15, mosi: 16, miso: -1, dc: 46, cs: 45, rst: -1, busy: -1 });
+  assert.deepEqual(paperSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST",
+    freqWrite: 4000000, freqRead: 1000000, threeWire: true });
+  assert.deepEqual(paperSpecs.panels.ed2208, { width: 400, height: 600,
+    memoryWidth: null, memoryHeight: null, offsetX: 0, offsetY: 0,
+    rotationOffset: 0, invert: false, readable: false });
+  assert.deepEqual(paperWiring.display,
+    { sclk: 15, mosi: 13, miso: 14, dc: 43, cs: 44, rst: 12, busy: 11 });
+  assert.deepEqual(paperWiring.sharedSd,
+    { sclk: 15, mosi: 13, miso: 14, sd_cs: 47, other_cs: 44 });
+
+  const detector = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3.inl"), "utf8");
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  assert.match(detector, /chain_addresses\[\] = \{ 0x32, 0x4F, 0x68, 0x6E \}/);
+  assert.match(detector, /paper_addresses\[\] = \{ 0x32, 0x44 \}/);
+  assert.match(detector, /desc_chaincaptain[\s\S]*?i2c_reset\(10, 20, reset_hold_when_skipped\)/);
+  assert.match(detector, /desc_papercolor[\s\S]*?shared_sd\(wiring::papercolor::shared_sd_sclk/);
+  assert.doesNotMatch(detector, /TEMP\(commit 1\)/);
+  assert.doesNotMatch(main, /chain_captain_i2c_addr_list|papercolor_i2c_addr_list|chain_captain_i2c_sda/);
+  const setup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3_setup.inl"), "utf8");
+  assert.match(setup, /panel_chaincaptain[\s\S]*?with_rgb_order[\s\S]*?with_bus_shared\(false\)/);
+  assert.match(setup, /panel_papercolor[\s\S]*?display_rst[\s\S]*?with_bus_shared\(true\)/);
 });
 
 test("Dial and DinMeter generated specs preserve the legacy setup", async () => {
@@ -861,6 +910,34 @@ test("detection transaction exposes non-consuming start-state restoration", asyn
   assert.match(implementation, /index = count_; index != 0; --index[\s\S]*?restore_if_changed\(saved_\[index - 1\]\)/);
   assert.match(gpio, /matches_current[\s\S]*?_io_mux_gpio_reg\s*==[\s\S]*?_gpio_pin_reg\s*==[\s\S]*?_gpio_func_out_reg\s*==[\s\S]*?_gpio_enable\s*==[\s\S]*?_gpio_out\s*==[\s\S]*?_in_func_num\s*==[\s\S]*?_gpio_func_in_reg\s*==/);
   assert.match(main, /prepare_ctx\.transaction = &transaction/);
+});
+
+test("confirmed boards survive post-detection power setup failures", async () => {
+  const implementation = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  assert.match(implementation, /prepare_power\(desc, result, i2c\.port, true\)/);
+  assert.match(implementation, /if \(!retain_confirmed_board\) \{ return false; \}[\s\S]*?power_on stopped after board confirmation:[\s\S]*?failed_index[\s\S]*?status[\s\S]*?native_error/);
+  assert.match(main, /construct_result == board_detect::m5::construct_status_t::no_display[\s\S]*?transaction\.restore_start\(result\.desc->hold_high_pins\.data,[\s\S]*?result\.desc->hold_high_pins\.size\)/);
+  assert.doesNotMatch(main, /Legacy fallback retained|stopwatch_i2c_addr_list/);
+});
+
+test("confirmed boards tolerate reset-list faults while confirm remains strict", async () => {
+  const implementation = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
+  const esp32 = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_d0wdq6.inl"), "utf8");
+  assert.match(implementation, /prepare_reset\(desc, result, ctx, i2c\.port, nullptr, true\)/);
+  assert.match(implementation, /variant_confirmed && desc\.power\.variant_count == 1[\s\S]*?&desc\.power\.variants\[0\]/);
+  assert.match(implementation, /if \(!retain_confirmed_board\) \{ return false; \}[\s\S]*?reset_release stopped after board confirmation: op=%u status=%u native=%d/);
+  assert.match(implementation, /reset_assert stopped after board confirmation: op=%u status=%u native=%d/);
+  assert.match(esp32, /prepare_reset\(desc_station, \*result, prepare_ctx, i2c\.port\)/);
+  assert.doesNotMatch(esp32, /prepare_reset\(desc_(?:station|core2|tough)[^\n]*true\)/);
+});
+
+test("PM1 extension failure injection rejects only its selected board", async () => {
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  assert.match(main, /board_t setup_board = board_t::board_unknown/);
+  assert.match(main, /FAIL_CHAINCAPTAIN_SETUP[\s\S]*?setup_board == board_t::board_M5ChainCaptain/);
+  assert.match(main, /FAIL_PAPERCOLOR_SETUP[\s\S]*?setup_board == board_t::board_M5PaperColor/);
+  assert.doesNotMatch(main, /FAIL_PAPERCOLOR_SETUP\)[\s\S]{0,100}\(void\)parts;\s*return false;\s*#endif\s*return _adopt/);
 });
 
 test("generated wiring header links from two translation units", async (t) => {
@@ -1518,4 +1595,96 @@ test("composition validation reports C3 contract errors", () => {
   assert.ok(validateAccessory(bad, { connectorTypes }).some((item) => item.id === "E_ACC_HOST_POS") === false);
   const composedBad = compose(host, [{ id: bad.id }], { accessories: { ...accessories, [bad.id]: bad }, connectorTypes });
   assert.ok(composedBad.issues.some((item) => item.id === "E_ACC_HOST_POS"));
+});
+
+test("gpio_power keeps the active-high hold level for existing members", () => {
+  for (const source of [d0wdq6Source, esp32s3Source]) {
+    const users = [...source.matchAll(/gpio_power(_low)?\(wiring::([a-z0-9_]+)::power_gpio\)/g)];
+    for (const [, low, board] of users) {
+      if (["papers3"].includes(board)) assert.equal(low, "_low", board);
+      else assert.equal(low, undefined, board);
+    }
+  }
+  assert.match(d0wdq6Source, /static_assert\(desc_paper\.power\.hold_high/);
+  assert.match(esp32s3Source, /static_assert\(desc_airq\.power\.hold_high/);
+});
+
+test("no_display_pins is limited to parallel-EPD members", () => {
+  const allowed = new Set(["papers3", "paperdiy"]);
+  for (const source of [d0wdq6Source, esp32s3Source]) {
+    const descs = [...source.matchAll(/static constexpr board_desc_t desc_([a-z0-9_]+) = \{([\s\S]*?)\n  \};/g)];
+    assert.ok(descs.length > 0);
+    for (const [, name, body] of descs) {
+      assert.equal(body.includes("no_display_pins()"), allowed.has(name), name);
+      assert.equal(/(?<!no_)display_pins\(/.test(body), !allowed.has(name), name);
+    }
+  }
+});
+
+test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async () => {
+  const papers3 = catalogBoards.find((item) => item.id === "m5papers3");
+  const paperdiy = catalogBoards.find((item) => item.id === "m5paperdiy");
+  const s3Resolved = resolveCatalog(papers3)[0].board;
+  const diyResolved = resolveCatalog(paperdiy)[0].board;
+  const s3Specs = emitM5GFXSpecs(papers3, [s3Resolved], parts, m5gfxBoardMapping(target, papers3.id));
+  const diySpecs = emitM5GFXSpecs(paperdiy, [diyResolved], parts, m5gfxBoardMapping(target, paperdiy.id));
+  const s3Wiring = emitM5GFXWiring(s3Resolved, parts, target);
+  const diyWiring = emitM5GFXWiring(diyResolved, parts, target);
+  const epdPins = { data0: 6, data1: 14, data2: 7, data3: 12, data4: 9, data5: 11, data6: 8, data7: 10,
+    pwr: 46, spv: 17, ckv: 18, sph: 13, oe: 45, le: 15, cl: 16 };
+  const epdPanel = { width: 960, height: 540, memoryWidth: 960, memoryHeight: 540, offsetX: 0, offsetY: 0,
+    rotationOffset: 3, invert: null, readable: null, linePadding: 8 };
+  for (const [specs, wiring] of [[s3Specs, s3Wiring], [diySpecs, diyWiring]]) {
+    assert.deepEqual(specs.bus, { kind: "parallel_epd", speed: 16000000, width: 8 });
+    assert.deepEqual(specs.panels.ed047tc1, epdPanel);
+    assert.deepEqual(wiring.display, epdPins);
+    assert.deepEqual(wiring.i2c, { sda: 41, scl: 42, port: 1 });
+    assert.deepEqual(wiring.hold, []);
+    assert.equal(wiring.sharedSd, null);
+  }
+  assert.deepEqual(s3Specs.touch, { i2cAddr: null, i2cFreq: 400000, xMin: 0, xMax: 539, yMin: 0, yMax: 959, rotationOffset: 1 });
+  assert.deepEqual(s3Specs.powerHold, { activeLow: true });
+  assert.equal(s3Specs.pmic, null);
+  assert.equal(s3Wiring.powerGpio, 44);
+  assert.equal(s3Wiring.touchInt, 48);
+  assert.deepEqual(diySpecs.pmic, { i2cAddr: 0x6E, i2cFreq: 100000, idReg: 0x00 });
+  assert.equal(diySpecs.touch, null);
+  assert.equal(diySpecs.powerHold, null);
+  assert.equal(diyWiring.powerGpio, -1);
+  const s3Header = renderM5GFXSpecsHeader(s3Specs);
+  assert.match(s3Header, /bus_speed = 16000000;\nconstexpr std::uint8_t bus_width = 8;/);
+  assert.match(s3Header, /line_padding = 8;/);
+  assert.match(s3Header, /namespace power_hold \{\n  constexpr bool active_low = true;/);
+  assert.doesNotMatch(s3Header, /touch \{[\s\S]*?i2c_addr/);
+  assert.doesNotMatch(s3Header, /bus_host|bus_three_wire/);
+
+  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const unconditional = /unconditional_pins\[\] = \{ ([^}]*) \}/.exec(wiringHeader)[1].split(", ").map(Number);
+  assert.deepEqual(unconditional, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]);
+  for (const pin of [...Object.values(epdPins), 41, 42, 44, 48]) {
+    assert.ok(unconditional.includes(pin), `GPIO ${pin}`);
+    assert.ok(!chipS3.reserved_conditional.opi.includes(pin), `GPIO ${pin} is an OPI pin`);
+  }
+  assert.match(wiringHeader, /namespace papers3 \{[\s\S]*?touches_opi_pins = false;/);
+  assert.match(wiringHeader, /namespace paperdiy \{[\s\S]*?touches_opi_pins = false;/);
+
+  const detector = esp32s3Source;
+  assert.match(detector, /desc_papers3 = \{[\s\S]*?gpio_power_low\(wiring::papers3::power_gpio\), no_reset\(\), no_shared_sd\(\),\n\s*no_display_pins\(\), no_pins\(\)/);
+  assert.match(detector, /desc_paperdiy = \{[\s\S]*?i2c_power_confirmed\(specs::paperdiy::pmic::i2c_freq, paperdiy_pmic_variants,\n\s*pmic_ops::pm1_devices\)[\s\S]*?internal_i2c\(wiring::paperdiy::internal_i2c_sda, wiring::paperdiy::internal_i2c_scl, -1\)/);
+  // PM1 first (skipped only when hinted PaperS3), then GT911 (skipped only when hinted PaperDIY).
+  const confirm = /class paper_family_detector_t[\s\S]*?bool confirm[\s\S]*?\n  private:/.exec(detector)[0];
+  assert.match(confirm, /ctx\.hint != desc_papers3\.def\.id[\s\S]*?probe_i2c_read\([\s\S]*?pmic_ops::pm1_i2c_addr, 0, pm1_id, sizeof\(pm1_id\),\n\s*pmic_ops::pm1_i2c_freq, 200\)[\s\S]*?== pmic_ops::pm1_device_id[\s\S]*?assign\(&desc_paperdiy\)[\s\S]*?ctx\.hint != desc_paperdiy\.def\.id[\s\S]*?gt911_addresses\[\] = \{ 0x14, 0x5D \}[\s\S]*?gt911_product_id_reg = 0x8140[\s\S]*?probe_i2c_read16\([\s\S]*?specs::papers3::touch::i2c_freq, 0\)[\s\S]*?'9'[\s\S]*?assign\(&desc_papers3\)/);
+  assert.match(detector, /paper_family_detector_t::members_\[\] = \{\n\s*&board_paperdiy, &board_papers3, nullptr,/);
+  assert.match(detector, /&pm1_ext_family_detector, &paper_family_detector,/);
+  assert.match(detector, /\{ &desc_papers3, construct_papers3, "board_M5PaperS3", nullptr \},\n\s*\{ &desc_paperdiy, construct_paperdiy, "board_M5PaperDIY", nullptr \},/);
+
+  const setup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3_setup.inl"), "utf8");
+  assert.match(setup, /panel_papers3 =[\s\S]*?with_memory\(specs::papers3::panel_ed047tc1::memory_width[\s\S]*?with_bus_shared\(false\);/);
+  assert.match(setup, /touch_papers3 =\n\s*i2c_touch_default_addr\(\)/);
+  assert.match(setup, /construct_papers3[\s\S]*?make_epd_panel\(panel_papers3, specs::papers3::panel_ed047tc1::line_padding[\s\S]*?make_i2c_touch<lgfx::Touch_GT911>\(touch_papers3\)/);
+  assert.match(setup, /construct_paperdiy[\s\S]*?make_epd_panel\(panel_paperdiy, specs::paperdiy::panel_ed047tc1::line_padding/);
+  assert.doesNotMatch(setup, /construct_paperdiy[\s\S]*?make_i2c_touch[\s\S]*?construct_status_t setup_esp32s3/);
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  assert.match(main, /esp32s3_detectors_pm1_ext[\s\S]*?esp32s3_detectors_paper[\s\S]*?esp32s3_detectors_spi_id/);
+  assert.doesNotMatch(main, /paper_i2c_sda|gt911_i2c_addr|paperdiy_found|TEMP\(commit 1\)/);
 });

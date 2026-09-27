@@ -232,7 +232,7 @@ static void test_wait_and_gpio()
     const bdops::op_t operations[] = { bdops::i2c_wait_ready(0, 5, 3) };
     assert(bdops::run_ops(backend(fake), devices, 1, operations, 1, gpio_scope).status
            == bdops::op_status_t::timeout);
-    assert(fake.now == 5 && fake.ready_attempts == 3);
+    assert(fake.now == 5 && fake.ready_attempts == 2);
   }
   {
     fake_t fake;
@@ -302,7 +302,7 @@ static void test_legacy_conversion()
   assert_same_sequence(legacy_release2101, pmicops::release2101,
                        pmicops::core2_devices, 400000);
   assert_same_sequence(legacy_sticks3, pmicops::sticks3_power_on,
-                       pmicops::sticks3_devices, 100000);
+                       pmicops::pm1_devices, 100000);
 }
 
 template <std::size_t N>
@@ -344,7 +344,7 @@ static void test_core2_restore_coverage()
 
 static bdops::op_status_t run_legacy_sticks3(fake_t& fake, std::uint32_t deadline)
 {
-  const auto& device = pmicops::sticks3_devices[0];
+  const auto& device = pmicops::pm1_devices[0];
   for (const auto& write : legacy_sticks3)
   {
     for (;;)
@@ -377,7 +377,7 @@ static bdops::op_status_t run_legacy_sticks3(fake_t& fake, std::uint32_t deadlin
 
 static bool run_sticks3_reads(fake_t& fake, std::uint32_t deadline)
 {
-  const auto& device = pmicops::sticks3_devices[0];
+  const auto& device = pmicops::pm1_devices[0];
   const std::uint16_t registers[] = { 0x00, 0x11 };
   for (auto reg : registers)
   {
@@ -409,7 +409,7 @@ static void assert_sticks3_retry_equivalent(int write_failures,
   {
     const bdops::retry_policy_t policy { 200, 1 };
     converted_status = bdops::run_ops(
-      backend(converted), pmicops::sticks3_devices, 1,
+      backend(converted), pmicops::pm1_devices, 1,
       pmicops::sticks3_power_on,
       sizeof(pmicops::sticks3_power_on) / sizeof(pmicops::sticks3_power_on[0]),
       gpio_scope, &policy).status;
@@ -441,6 +441,115 @@ static void test_sticks3_retry_equivalence()
   assert_sticks3_retry_equivalent(0, { 2, 3 });
 }
 
+static void test_pm1_family_sequences()
+{
+  {
+    fake_t fake;
+    static const std::int8_t pins[] = { 39 };
+    const bdops::gpio_scope_t scope = { 49, pins, 1 };
+    const auto result = bdops::run_ops(
+      backend(fake), pmicops::pm1_family_devices, 2,
+      pmicops::stopwatch_power_on,
+      sizeof(pmicops::stopwatch_power_on) / sizeof(pmicops::stopwatch_power_on[0]), scope);
+    assert(result.status == bdops::op_status_t::ok);
+    assert(fake.writes.size() == 12 && fake.gpios.size() == 2 && fake.now == 20);
+    assert(fake.writes[0].addr == 0x6E && fake.writes[0].reg == 0x09);
+    assert(fake.writes[3].addr == 0x4F && fake.writes[3].reg == 0x23);
+    assert(fake.writes.back().addr == 0x4F && fake.writes.back().reg == 0x06);
+    assert(fake.gpios[0].pin == 39 && fake.gpios[0].value == 100);
+    assert(fake.gpios[1].pin == 39 && fake.gpios[1].value == 1);
+  }
+  {
+    fake_t fake;
+    static const std::int8_t pins[] = { 16 };
+    const bdops::gpio_scope_t scope = { 49, pins, 1 };
+    const auto result = bdops::run_ops(
+      backend(fake), pmicops::pm1_family_devices, 2,
+      pmicops::papermono_power_on,
+      sizeof(pmicops::papermono_power_on) / sizeof(pmicops::papermono_power_on[0]), scope);
+    assert(result.status == bdops::op_status_t::ok);
+    assert(fake.writes.size() == 11 && fake.gpios.size() == 2 && fake.now == 10);
+    assert(fake.writes[0].addr == 0x6E && fake.writes[0].reg == 0x09);
+    assert(fake.writes[3].addr == 0x4F && fake.writes[3].reg == 0x03);
+    assert(fake.writes.back().addr == 0x4F && fake.writes.back().reg == 0x05);
+    assert(fake.gpios[0].pin == 16 && fake.gpios[0].value == 100);
+    assert(fake.gpios[1].pin == 16 && fake.gpios[1].value == 1);
+  }
+}
+
+static void test_pm1_ext_family_sequences()
+{
+  {
+    fake_t fake;
+    const bdops::gpio_scope_t scope = { 49, nullptr, 0 };
+    assert(bdops::run_ops(
+      backend(fake), pmicops::pm1_family_devices, 2,
+      pmicops::chaincaptain_power_on,
+      sizeof(pmicops::chaincaptain_power_on) / sizeof(pmicops::chaincaptain_power_on[0]),
+      scope).status == bdops::op_status_t::ok);
+    assert(fake.writes.size() == 8);
+    assert(fake.writes[0].addr == 0x6E && fake.writes[0].reg == 0x09);
+    assert(fake.writes[2].addr == 0x4F && fake.writes[2].reg == 0x23);
+    assert(fake.writes.back().addr == 0x4F && fake.writes.back().reg == 0x03);
+    assert(bdops::run_ops(
+      backend(fake), pmicops::pm1_family_devices, 2,
+      pmicops::chaincaptain_reset_assert, 1, scope).status == bdops::op_status_t::ok);
+    delay(&fake, 10);
+    assert(bdops::run_ops(
+      backend(fake), pmicops::pm1_family_devices, 2,
+      pmicops::chaincaptain_reset_release, 1, scope).status == bdops::op_status_t::ok);
+    delay(&fake, 20);
+    assert(fake.writes[8].reg == 0x05 && fake.writes[8].new_value == 0);
+    assert(fake.writes[9].reg == 0x05 && fake.writes[9].new_value == 1);
+    assert(fake.now == 30);
+
+    fake_t skipped;
+    assert(bdops::run_ops(
+      backend(skipped), pmicops::pm1_family_devices, 2,
+      pmicops::chaincaptain_reset_release, 1, scope).status == bdops::op_status_t::ok);
+    delay(&skipped, 20);
+    assert(skipped.writes.size() == 1 && skipped.writes[0].reg == 0x05);
+    assert(skipped.writes[0].new_value == 1 && skipped.now == 20);
+  }
+  {
+    fake_t fake;
+    static const std::int8_t pins[] = { 44 };
+    const bdops::gpio_scope_t scope = { 49, pins, 1 };
+    assert(bdops::run_ops(
+      backend(fake), pmicops::pm1_devices, 1,
+      pmicops::papercolor_power_on,
+      sizeof(pmicops::papercolor_power_on) / sizeof(pmicops::papercolor_power_on[0]),
+      scope).status == bdops::op_status_t::ok);
+    assert(fake.writes.size() == 6 && fake.now == 100 && fake.gpios.size() == 2);
+    assert(fake.writes[1].reg == 0x16 && fake.writes[1].new_value == 0);
+    assert(fake.writes[2].reg == 0x10 && fake.writes[2].new_value == 0x09);
+    assert(fake.writes[3].reg == 0x13 && fake.writes[3].new_value == 0);
+    assert(fake.writes[4].reg == 0x11 && fake.writes[4].new_value == 0x09);
+    assert(fake.gpios[0].pin == 44 && fake.gpios[0].value == 100);
+    assert(fake.gpios[1].pin == 44 && fake.gpios[1].value == 1);
+  }
+}
+
+static void test_paper_family_sequences()
+{
+  fake_t fake;
+  const bdops::gpio_scope_t scope = { 49, nullptr, 0 };
+  assert(bdops::run_ops(
+    backend(fake), pmicops::pm1_devices, 1,
+    pmicops::paperdiy_power_on,
+    sizeof(pmicops::paperdiy_power_on) / sizeof(pmicops::paperdiy_power_on[0]),
+    scope).status == bdops::op_status_t::ok);
+  // Legacy order: 0x09, 0x0A full writes, then GPIO2 function/direction/
+  // push-pull/output bits, then a 10 ms settle; no SoC GPIO is touched.
+  assert(fake.writes.size() == 6 && fake.gpios.empty() && fake.now == 10);
+  assert(fake.writes[0].addr == 0x6E && fake.writes[0].reg == 0x09 && fake.writes[0].new_value == 0);
+  assert(fake.writes[1].reg == 0x0A && fake.writes[1].new_value == 0);
+  assert(fake.writes[2].reg == 0x16 && fake.writes[2].new_value == 0);
+  assert(fake.writes[3].reg == 0x10 && fake.writes[3].new_value == 0x04);
+  assert(fake.writes[4].reg == 0x13 && fake.writes[4].new_value == 0);
+  assert(fake.writes[5].reg == 0x11 && fake.writes[5].new_value == 0x04);
+}
+
 int main()
 {
   static_assert(sizeof(bdops::op_t) <= 16, "source IR operation grew beyond its ROM budget");
@@ -450,5 +559,8 @@ int main()
   test_legacy_conversion();
   test_core2_restore_coverage();
   test_sticks3_retry_equivalence();
+  test_pm1_family_sequences();
+  test_pm1_ext_family_sequences();
+  test_paper_family_sequences();
   return 0;
 }

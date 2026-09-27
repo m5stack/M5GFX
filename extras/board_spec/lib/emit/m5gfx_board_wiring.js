@@ -17,6 +17,8 @@ export function m5gfxBoardMapping(target, boardId) {
   };
 }
 
+export const PARALLEL_EPD_SIGNALS = ["data0", "data1", "data2", "data3", "data4", "data5", "data6", "data7", "pwr", "spv", "ckv", "sph", "oe", "le", "cl"];
+
 // M5GFX board detection intentionally consumes only the base-board wiring.
 // Accessory/composition wiring is not an input to these board descriptors.
 
@@ -39,7 +41,8 @@ export function wiringFieldsForRole(board, sourceRole, parts) {
   if (bus) {
     const display = Object.values(board.devices ?? {}).find((device) => device.kind === "display");
     const sd = Object.values(board.devices ?? {}).find((device) => device.kind === "sd");
-    if (display?.bus === bus[1] && ["sclk", "mosi", "miso"].includes(bus[2])) fields.push(`display_${bus[2]}`);
+    if (display?.bus === bus[1] && ["sclk", "mosi", "miso", "io0", "io1", "io2", "io3"].includes(bus[2])) fields.push(`display_${bus[2]}`);
+    if (display?.bus === bus[1] && board.buses?.[bus[1]]?.kind === "parallel_epd") fields.push(`display_${bus[2]}`);
     if (sd?.bus === display?.bus && sd.bus === bus[1]) {
       const name = { sclk: "shared_sd_sclk", mosi: "shared_sd_mosi", miso: "shared_sd_miso" }[bus[2]];
       if (name) fields.push(name);
@@ -91,8 +94,15 @@ export function emitM5GFXWiringForMapping(board, parts, mapping) {
   requireWiringParts(parts);
   const assigned = wiringAssignments(board, parts);
   const value = (name) => assigned[name] ?? -1;
-  const display = Object.fromEntries(["sclk", "mosi", "miso", "dc", "cs", "rst", "busy"].map((name) => [name, value(`display_${name}`)]));
+  const quadNames = ["io0", "io1", "io2", "io3"];
+  const hasQuad = quadNames.some((name) => value(`display_${name}`) >= 0);
   const displayDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "display");
+  const displayBus = board.buses?.[displayDevice?.bus];
+  // A parallel EPD has no SPI display pins; its wiring is the bus signal list.
+  const displayNames = displayBus?.kind === "parallel_epd"
+    ? PARALLEL_EPD_SIGNALS
+    : ["sclk", "mosi", "miso", ...(hasQuad ? quadNames : []), "dc", "cs", "rst", "busy"];
+  const display = Object.fromEntries(displayNames.map((name) => [name, value(`display_${name}`)]));
   const sdDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "sd");
   const sharesSdBus = sdDevice && sdDevice.bus === displayDevice?.bus;
   if (sharesSdBus && !sdDevice.derived?.modes?.includes("spi")) {
@@ -114,7 +124,7 @@ export function emitM5GFXWiringForMapping(board, parts, mapping) {
     if (display.rst < 0) throw new Error(`${board.id}: reset uses display_rst but the display reset GPIO is unavailable`);
     resetGpio = display.rst;
   }
-  const hold = sharedSd ? [sharedSd.sd_cs, display.cs] : [display.cs];
+  const hold = sharedSd ? [sharedSd.sd_cs, display.cs] : [display.cs ?? -1];
   return {
     mapping,
     display,

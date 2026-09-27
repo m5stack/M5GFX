@@ -229,6 +229,10 @@ namespace board_detect
   {
     // GPIO-held and I2C-controlled power are mutually exclusive.
     std::int8_t hold_pin;
+    // Level that keeps the board powered while hold_pin is driven. Most hold
+    // pins are active high; a low-active pulse input (for example a power-off
+    // request line) is held low instead.
+    bool hold_high;
     std::uint32_t i2c_freq;
     const ops::i2c_device_t* devices;
     std::uint8_t device_count;
@@ -239,6 +243,8 @@ namespace board_detect
     // Some always-on controllers NACK the first access while waking from idle.
     // Zero preserves the single-attempt behavior for controllers that do not need polling.
     std::uint8_t wake_poll_ms;
+    // The detector already confirmed the sole variant (including multi-byte IDs).
+    bool variant_confirmed;
   };
 
   using reset_custom_fn_t = bool (*)(const board_desc_t&, const prepare_ctx_t&,
@@ -349,12 +355,18 @@ namespace board_detect
 
   constexpr power_desc_t no_power()
   {
-    return { -1, 0, nullptr, 0, nullptr, 0, 0, 0, 0 };
+    return { -1, true, 0, nullptr, 0, nullptr, 0, 0, 0, 0, false };
   }
 
   constexpr power_desc_t gpio_power(int hold_pin)
   {
-    return { static_cast<std::int8_t>(hold_pin), 0, nullptr, 0, nullptr, 0, 0, 0, 0 };
+    return { static_cast<std::int8_t>(hold_pin), true, 0, nullptr, 0, nullptr, 0, 0, 0, 0, false };
+  }
+
+  // The hold pin is driven low to keep power (active-low power-off request line).
+  constexpr power_desc_t gpio_power_low(int hold_pin)
+  {
+    return { static_cast<std::int8_t>(hold_pin), false, 0, nullptr, 0, nullptr, 0, 0, 0, 0, false };
   }
 
   template <std::size_t N, std::size_t D>
@@ -363,8 +375,8 @@ namespace board_detect
                                    const ops::i2c_device_t (&devices)[D],
                                    std::uint8_t warm_wait_ms, std::uint8_t cold_wait_ms)
   {
-    return { -1, freq, devices, list_size_t<D>::value,
-             variants, list_size_t<N>::value, warm_wait_ms, cold_wait_ms, 0 };
+    return { -1, true, freq, devices, list_size_t<D>::value,
+             variants, list_size_t<N>::value, warm_wait_ms, cold_wait_ms, 0, false };
   }
 
   template <std::size_t N, std::size_t D>
@@ -375,8 +387,17 @@ namespace board_detect
                                           std::uint8_t cold_wait_ms,
                                           std::uint8_t wake_poll_ms)
   {
-    return { -1, freq, devices, list_size_t<D>::value, variants, list_size_t<N>::value,
-             warm_wait_ms, cold_wait_ms, wake_poll_ms };
+    return { -1, true, freq, devices, list_size_t<D>::value, variants, list_size_t<N>::value,
+             warm_wait_ms, cold_wait_ms, wake_poll_ms, false };
+  }
+
+  template <std::size_t N, std::size_t D>
+  constexpr power_desc_t i2c_power_confirmed(std::uint32_t freq,
+                                              const pmic_variant_t (&variants)[N],
+                                              const ops::i2c_device_t (&devices)[D])
+  {
+    return { -1, true, freq, devices, list_size_t<D>::value, variants, list_size_t<N>::value,
+             0, 0, 0, true };
   }
 
   constexpr std::uint16_t direct_reset_panel_reload_wait(std::uint16_t milliseconds)
@@ -433,6 +454,14 @@ namespace board_detect
              static_cast<std::int8_t>(miso), static_cast<std::int8_t>(dc),
              static_cast<std::int8_t>(cs), static_cast<std::int8_t>(rst),
              static_cast<std::int8_t>(busy) };
+  }
+
+  // A board whose display is not on a SoC SPI bus (for example a parallel
+  // EPD driven by the LCD peripheral). Such a description holds no chip
+  // select, cannot be probed by SPI ID, and cannot share an SD bus.
+  constexpr display_pins_t no_display_pins()
+  {
+    return { -1, -1, -1, -1, -1, -1, -1 };
   }
 
   constexpr i2c_desc_t no_internal_i2c()
@@ -523,6 +552,15 @@ namespace board_detect
   board_result_t detect_board(const board_detector_t* const* list, board_id_t hint, probe_ctx_t& ctx);
 
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr);
+  bool probe_i2c_read(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
+                      std::uint8_t reg, std::uint8_t* data, std::size_t length,
+                      std::uint32_t freq, std::uint32_t poll_ms);
+  // Same contract with a 16-bit register address sent MSB first (the
+  // i2c_device_t::register_address_bytes == 2 layout). The 8-bit overload
+  // above is unchanged.
+  bool probe_i2c_read16(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
+                        std::uint16_t reg, std::uint8_t* data, std::size_t length,
+                        std::uint32_t freq, std::uint32_t poll_ms);
 
   // Recover a slave that retained SDA after the controller was reset during a
   // transaction. Leaves both pins as inputs so the caller can inspect them;
@@ -610,7 +648,8 @@ namespace board_detect
   // Kept callable by family detectors; validates desc before touching hardware.
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,
                      const prepare_ctx_t& ctx, int i2c_port,
-                     std::uint32_t* detected_option = nullptr);
+                     std::uint32_t* detected_option = nullptr,
+                     bool retain_confirmed_board = false);
   bool prepare(const board_desc_t& desc, board_result_t& result, const prepare_ctx_t& ctx);
 }
 }

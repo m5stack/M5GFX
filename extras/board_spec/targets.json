@@ -91,6 +91,36 @@
         "chip": "esp32s3", "legacy_board_id": 26, "cpp_namespace": "sticks3", "board_enum": "board_M5StickS3", "desc_name": "desc_sticks3",
         "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5stopwatch": {
+        "chip": "esp32s3", "legacy_board_id": 30, "cpp_namespace": "stopwatch", "board_enum": "board_M5StopWatch", "desc_name": "desc_stopwatch",
+        "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5papermono": {
+        "chip": "esp32s3", "legacy_board_id": 29, "cpp_namespace": "papermono", "board_enum": "board_M5PaperMono", "desc_name": "desc_papermono",
+        "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5chaincaptain": {
+        "chip": "esp32s3", "legacy_board_id": 32, "cpp_namespace": "chaincaptain", "board_enum": "board_M5ChainCaptain", "desc_name": "desc_chaincaptain",
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5papercolor": {
+        "chip": "esp32s3", "legacy_board_id": 28, "cpp_namespace": "papercolor", "board_enum": "board_M5PaperColor", "desc_name": "desc_papercolor",
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5papers3": {
+        "chip": "esp32s3", "legacy_board_id": 19, "cpp_namespace": "papers3", "board_enum": "board_M5PaperS3", "desc_name": "desc_papers3",
+        "wiring_fields": ["display", "i2c", "power", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5paperdiy": {
+        "chip": "esp32s3", "legacy_board_id": 34, "cpp_namespace": "paperdiy", "board_enum": "board_M5PaperDIY", "desc_name": "desc_paperdiy",
+        "wiring_fields": ["display", "i2c"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
       }
     }
   },
