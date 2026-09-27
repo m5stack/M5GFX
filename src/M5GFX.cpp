@@ -619,13 +619,18 @@ namespace m5gfx
 
   struct Light_M5StackAtomS3R : public lgfx::ILight
   {
+    Light_M5StackAtomS3R(int i2c_port, int sda, int scl, std::uint8_t i2c_addr,
+                         std::uint32_t i2c_freq)
+    : _i2c_port(i2c_port), _sda(sda), _scl(scl), _i2c_addr(i2c_addr),
+      _i2c_freq(i2c_freq) {}
+
     bool init(uint8_t brightness) override
     {
-      lgfx::i2c::init(i2c_port, GPIO_NUM_45, GPIO_NUM_0);
-      lgfx::i2c::writeRegister8(i2c_port, 48, 0x00, 0b01000000, 0, i2c_freq);
+      lgfx::i2c::init(_i2c_port, _sda, _scl);
+      lgfx::i2c::writeRegister8(_i2c_port, _i2c_addr, 0x00, 0b01000000, 0, _i2c_freq);
       lgfx::delay(1);
-      lgfx::i2c::writeRegister8(i2c_port, 48, 0x08, 0b00000001, 0, i2c_freq);
-      lgfx::i2c::writeRegister8(i2c_port, 48, 0x70, 0b00000000, 0, i2c_freq);
+      lgfx::i2c::writeRegister8(_i2c_port, _i2c_addr, 0x08, 0b00000001, 0, _i2c_freq);
+      lgfx::i2c::writeRegister8(_i2c_port, _i2c_addr, 0x70, 0b00000000, 0, _i2c_freq);
 
       setBrightness(brightness);
       return true;
@@ -633,26 +638,36 @@ namespace m5gfx
 
     void setBrightness(uint8_t brightness) override
     {
-      lgfx::i2c::writeRegister8(i2c_port, 48, 0x0e, brightness, 0, i2c_freq);
+      lgfx::i2c::writeRegister8(_i2c_port, _i2c_addr, 0x0e, brightness, 0, _i2c_freq);
     }
+
+  private:
+    int _i2c_port;
+    int _sda;
+    int _scl;
+    std::uint8_t _i2c_addr;
+    std::uint32_t _i2c_freq;
   };
 
   struct Light_M5StackStamPLC : public lgfx::ILight
   {
+    Light_M5StackStamPLC(int i2c_port, int sda, int scl, std::uint8_t i2c_addr)
+    : _i2c_port(i2c_port), _sda(sda), _scl(scl), _i2c_addr(i2c_addr) {}
+
     bool _is_backlight_inited = false;
 
     bool init(uint8_t brightness) override
     {
-      lgfx::i2c::init(i2c_port, GPIO_NUM_13, GPIO_NUM_15);
+      lgfx::i2c::init(_i2c_port, _sda, _scl);
 
       // set direction: output
-      lgfx::i2c::bitOn(i2c_port, pi4io1_i2c_addr, 0x03, 1 << 7, i2c_freq);
+      lgfx::i2c::bitOn(_i2c_port, _i2c_addr, 0x03, 1 << 7, i2c_freq);
 
       // set pull mode: down
-      lgfx::i2c::bitOff(i2c_port, pi4io1_i2c_addr, 0x0D, 1 << 7, i2c_freq);
+      lgfx::i2c::bitOff(_i2c_port, _i2c_addr, 0x0D, 1 << 7, i2c_freq);
 
       // set high impedance: off
-      lgfx::i2c::bitOff(i2c_port, pi4io1_i2c_addr, 0x07, 1 << 7, i2c_freq);
+      lgfx::i2c::bitOff(_i2c_port, _i2c_addr, 0x07, 1 << 7, i2c_freq);
 
       _is_backlight_inited = true;
       setBrightness(brightness);
@@ -664,11 +679,17 @@ namespace m5gfx
       if (!_is_backlight_inited) init(127);
 
       if (brightness == 0) {
-        lgfx::i2c::bitOn(i2c_port, pi4io1_i2c_addr, 0x05, 1 << 7, i2c_freq);
+        lgfx::i2c::bitOn(_i2c_port, _i2c_addr, 0x05, 1 << 7, i2c_freq);
       } else {
-        lgfx::i2c::bitOff(i2c_port, pi4io1_i2c_addr, 0x05, 1 << 7, i2c_freq);
+        lgfx::i2c::bitOff(_i2c_port, _i2c_addr, 0x05, 1 << 7, i2c_freq);
       }
     }
+
+  private:
+    int _i2c_port;
+    int _sda;
+    int _scl;
+    std::uint8_t _i2c_addr;
   };
 
   struct Light_M5PaperMono : public lgfx::ILight
@@ -2250,311 +2271,80 @@ namespace m5gfx
         }
       }
 
-      // Cardputer-family hardware uses an ESP32-S3FN8 without PSRAM.  If OPI
-      // PSRAM is already active, GPIO33..37 are its data/strobe bus instead.
-      if (!conditional_detection_pins_unavailable()
-       && (board == 0
+      if (board == 0
        || board == board_t::board_M5Cardputer
        || board == board_t::board_M5CardputerADV
-       || board == board_t::board_M5VAMeter))
+       || board == board_t::board_M5VAMeter)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_33, GPIO_NUM_34, GPIO_NUM_35, GPIO_NUM_36, GPIO_NUM_37 };
-        _pin_reset(GPIO_NUM_33, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_35;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_36;
-        bus_cfg.pin_dc   = GPIO_NUM_34;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_37);
-        //  check panel (ST7789)
-        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_cardputer,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_SETUP)
+                                 (void)parts;
+                                 return false;
+#else
+                                 return _adopt_detected_parts(parts.bus, parts.panel,
+                                                              parts.light, parts.touch);
+#endif
+                               }))
         {
-/*
-Here, VAMeter/Cardputer/CardputerADV will be automatically recognized.
-The usage of each pin is as follows.
-|    |  VAMeter  | Cardputer  |CardputerADV|
-|:--:+:---------:+:----------:+:----------:|
-| G5 | SYS_SDA   | KEY_MATRIX |  External  |
-| G6 | SYS_SCL   | KEY_MATRIX |  External  |
-| G7 |  NC       | KEY_MATRIX |Internal FPC|
-| G8 | External  |  74HC138   |  SYS_SDA   |
-| G9 | External  |  74HC138   |  SYS_SCL   |
-*/
-          board = board_t::board_M5Cardputer;
-          gpio::pin_backup_t backup_pins2[] = { GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_8, GPIO_NUM_9 };
-          auto result = lgfx::gpio::command(
-            (const uint8_t[]) {
-            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_9,
-            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_8,
-            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_6,
-            lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_5,
-            lgfx::gpio::command_read               , GPIO_NUM_9,
-            lgfx::gpio::command_read               , GPIO_NUM_8,
-            lgfx::gpio::command_read               , GPIO_NUM_6,
-            lgfx::gpio::command_read               , GPIO_NUM_5,
-            lgfx::gpio::command_end
-            }
-          );
-          for (auto &bup : backup_pins2) { bup.restore(); }
-          if ((result & 3) == 3) {
-            m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_5, GPIO_NUM_6);
-            // Keep the probe result out of `result`; the CardputerADV check below
-            // still needs the G8/G9 bits of the GPIO read.
-            bool is_vameter = (m5gfx::i2c::transactionWrite(1, 0x40, nullptr, 0).has_value()
-                            && m5gfx::i2c::transactionWrite(1, 0x41, nullptr, 0).has_value());
-            backup_i2c_setting.restore();
-            if (is_vameter) {
-              board = board_t::board_M5VAMeter;
-            }
-          }
-          if (board == board_t::board_M5Cardputer) {
-            if ((result & 0x0C) == 0x0C) {
-              board = board_t::board_M5CardputerADV;
-            }
-          }
-          bus_spi->release();
-          bus_cfg.spi_host = SPI3_HOST;
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          auto p = new Panel_ST7789();
-          p->bus(bus_spi);
-          {
-            auto cfg = p->config();
-            cfg.pin_cs  = GPIO_NUM_37;
-            cfg.pin_rst = GPIO_NUM_33;
-            cfg.panel_height = 240;
-            cfg.offset_rotation = 0;
-            cfg.readable = true;
-            cfg.invert = true;
-            int rotation = 0;
-            int bl_freq = 256;
-            int bl_offset = 16;
-            if (board == board_t::board_M5VAMeter) {
-              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5VAMeter");
-              cfg.panel_width = 240;
-              cfg.offset_x     = 0;
-              cfg.offset_y     = 0;
-              bl_freq = 512;
-              bl_offset = 64;
-            } else {
-              cfg.panel_width = 135;
-              cfg.offset_x     = 52;
-              cfg.offset_y     = 40;
-              cfg.offset_rotation = 1;
-              if (board == board_t::board_M5Cardputer) {
-                ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Cardputer");
-              } else {
-                ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5CardputerADV");
-              }
-            }
-            p->config(cfg);
-            p->setRotation(rotation);
-            _panel_last.reset(p);
-            _set_pwm_backlight(GPIO_NUM_38, 7, bl_freq, false, bl_offset);
-          }
-
           goto init_clear;
         }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5AirQ)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_2, GPIO_NUM_3, GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6 };
-        _pin_reset( GPIO_NUM_2, true); // EPDがDeepSleepしている場合は自動認識に失敗する。そのためRST制御を必ず行う。;
-        bus_cfg.pin_mosi = GPIO_NUM_6;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_5;
-        bus_cfg.pin_dc   = GPIO_NUM_3;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        lgfx::Panel_HasBuffer* p = nullptr;
-        id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x2f ,0);
-        if (id == 0x00010001)
-        { //  check panel (e-paper GDEW0154D67)
-          p = new lgfx::Panel_GDEW0154D67();
-        } else {
-          id = _read_panel_id(bus_spi, GPIO_NUM_4, 0x70, 0);
-          if ((id & 0xFFFF00FFu) == 0x00F00000u)
-          { //  check panel (e-paper GDEW0154M09)
-            // ID of first lot  : 0x00F00000u
-            // ID of 2023/11/17 : 0x00F01600u
-            p = new lgfx::Panel_GDEW0154M09();
-          }
-        }
-        if (p != nullptr)
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_airq,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_AIRQ_SETUP)
+                                 (void)parts;
+                                 return false;
+#else
+                                 return _adopt_detected_parts(parts.bus, parts.panel,
+                                                              parts.light, parts.touch);
+#endif
+                               }))
         {
-          _pin_level(GPIO_NUM_46, true);  // POWER_HOLD_PIN 46
-          board = board_t::board_M5AirQ;
-          ESP_LOGI(LIBRARY_NAME, "[Autodetect] M5AirQ");
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          p->bus(bus_spi);
-          _panel_last.reset(p);
-          auto cfg = p->config();
-          cfg.panel_height = 200;
-          cfg.panel_width  = 200;
-          cfg.pin_cs   = GPIO_NUM_4;
-          cfg.pin_rst  = GPIO_NUM_2;
-          cfg.pin_busy = GPIO_NUM_1;
-          p->config(cfg);
           goto init_clear;
         }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5StamPLC)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_3, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8, GPIO_NUM_9, GPIO_NUM_10, GPIO_NUM_12 };
-        _pin_reset(GPIO_NUM_3, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_8;
-        bus_cfg.pin_miso = GPIO_NUM_9;
-        bus_cfg.pin_sclk = GPIO_NUM_7;
-        bus_cfg.pin_dc   = GPIO_NUM_6;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-
-        _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_10);
-
-        id = _read_panel_id(bus_spi, GPIO_NUM_12);
-        //  check panel (ST7789)
-        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_stamplc,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_STAMPLC_SETUP)
+                                 (void)parts;
+                                 return false;
+#else
+                                 return _adopt_detected_parts(parts.bus, parts.panel,
+                                                              parts.light, parts.touch);
+#endif
+                               }))
         {
-          board = board_t::board_M5StamPLC;
-          bus_spi->release();
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_cfg.spi_3wire = true;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          auto p = new Panel_ST7789();
-          p->bus(bus_spi);
-          {
-            auto cfg = p->config();
-            cfg.pin_cs  = GPIO_NUM_12;
-            cfg.pin_rst = GPIO_NUM_3;
-            cfg.panel_width = 135;
-            cfg.panel_height = 240;
-            cfg.offset_x     = 52;
-            cfg.offset_y     = 40;
-            cfg.offset_rotation = 1;
-            cfg.readable = true;
-            cfg.invert = true;
-            cfg.bus_shared = true;
-            p->config(cfg);
-          }
-          _panel_last.reset(p);
-          _set_backlight(new Light_M5StackStamPLC());
           goto init_clear;
         }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
- 
+
       break;
     case 1: // EFUSE_PKG_VERSION_ESP32S3PICO: // LGA56
 
       if (board == 0 || board == board_t::board_M5AtomS3R)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_14, GPIO_NUM_15, GPIO_NUM_21, GPIO_NUM_42, GPIO_NUM_48 };
-        _pin_reset(GPIO_NUM_48, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_21;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_15;
-        bus_cfg.pin_dc   = GPIO_NUM_42;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_14);
-        bool is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
-        bool is_gc9107 = (id & 0xFFFFFF) == 0x079100;
-//      ESP_LOGI(LIBRARY_NAME, "[Autodetect] panel_id: 0x%08x", id);
-        if (!is_st7735 && !is_gc9107)
-        { // Some GC9107 batches return a valid ID only at low clock rates;
-          // re-probe slowly before giving up.
-          // (ST7735 does not answer at this rate, but a healthy one has
-          //  already been caught by the first probe above.)
-          bus_spi->release();
-          bus_cfg.freq_write = 100000;
-          bus_cfg.freq_read  = 100000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          id = _read_panel_id(bus_spi, GPIO_NUM_14);
-          // restore the probe speed in bus_cfg: later board probes reuse it
-          // without setting the frequency themselves.
-          bus_cfg.freq_write = 8000000;
-          bus_cfg.freq_read  = 8000000;
-          is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
-          is_gc9107 = (id & 0xFFFFFF) == 0x079100;
-        }
-        if (is_st7735 || is_gc9107)
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_atoms3r,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
         {
-          board = board_t::board_M5AtomS3R;
-          bus_spi->release();
-          bus_cfg.spi_host = SPI3_HOST;
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          if (is_st7735)
-          {  //  check panel (ST7735S)
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3R (ST7735)");
-            auto p = new lgfx::Panel_ST7735S();
-            p->bus(bus_spi);
-            {
-              auto cfg = p->config();
-              cfg.pin_cs  = GPIO_NUM_14;
-              cfg.pin_rst = GPIO_NUM_48;
-              cfg.panel_width = 128;
-              cfg.panel_height = 128;
-              cfg.memory_height = 132;
-              cfg.offset_x = 2;
-              cfg.offset_y = 1;
-              cfg.offset_rotation = 2;
-              cfg.readable = true;
-              cfg.bus_shared = false;
-              cfg.invert = true;
-              p->config(cfg);
-            }
-            _panel_last.reset(p);
-          } else // if (is_gc9107)
-          {
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3R (GC9107)");
-            auto p = new Panel_GC9107();
-            p->bus(bus_spi);
-            {
-              auto cfg = p->config();
-              cfg.pin_cs  = GPIO_NUM_14;
-              cfg.pin_rst = GPIO_NUM_48;
-              cfg.panel_width = 128;
-              cfg.panel_height = 128;
-              cfg.offset_y = 32;
-              cfg.readable = false;
-              cfg.bus_shared = false;
-              p->config(cfg);
-            }
-            _panel_last.reset(p);
-          }
-          _set_backlight(new Light_M5StackAtomS3R());
-
           goto init_clear;
         }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
-      
+
       if (board == 0 || board == board_t::board_M5StickS3)
       {
         if (try_setup_detected(board_detect::m5::esp32s3_detectors_pmic,

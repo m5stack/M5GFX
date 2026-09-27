@@ -96,6 +96,11 @@ export function validatePartCatalog(parts) {
       continue;
     }
     issues.push(...definitionIssues(id, part.spec_keys));
+    if (part.id_probe?.dummy_bits !== undefined
+     && (!Number.isInteger(part.id_probe.dummy_bits)
+      || part.id_probe.dummy_bits < 0 || part.id_probe.dummy_bits > 255)) {
+      issues.push({ id: "E_PART_ID_PROBE", path: `/${id}/id_probe/dummy_bits`, message: "dummy_bits must be an integer from 0 to 255" });
+    }
   }
   for (const [kind, definitions] of Object.entries(DEVICE_KIND_SPEC_KEYS)) issues.push(...definitionIssues(`kind:${kind}`, definitions));
   return issues;
@@ -127,7 +132,9 @@ export function validateParts(board, parts, { resolved = true } = {}) {
     ])];
     for (const [fragment, fragmentPath] of fragments) {
       if (!fragment.part) {
-        const definitions = DEVICE_KIND_SPEC_KEYS[fragment.kind];
+        const definitions = fragment.kind === "backlight" && busKind(board, fragment) === "i2c"
+          ? null
+          : DEVICE_KIND_SPEC_KEYS[fragment.kind];
         if (definitions) validateSpec(fragment.spec, { id: `${fragment.kind} kind`, spec_keys: definitions }, `${fragmentPath}/spec`, issues);
         continue;
       }

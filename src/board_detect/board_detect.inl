@@ -13,6 +13,13 @@ namespace m5gfx
 {
 namespace board_detect
 {
+  static void restore_if_changed(lgfx::gpio::pin_backup_t& saved)
+  {
+    // restore() briefly disables output driving. Skip it when every saved
+    // register already matches so an unchanged output cannot momentarily float.
+    if (!saved.matches_current()) { saved.restore(); }
+  }
+
   bool detection_gpio_snapshot_t::capture(pin_list_t unconditional,
                                           pin_list_t conditional,
                                           bool include_conditional)
@@ -46,7 +53,7 @@ namespace board_detect
 
   void detection_gpio_snapshot_t::rollback()
   {
-    for (std::size_t index = count_; index != 0; --index) { saved_[index - 1].restore(); }
+    for (std::size_t index = count_; index != 0; --index) { restore_if_changed(saved_[index - 1]); }
   }
 
   void detection_gpio_snapshot_t::restore_start(const std::int8_t* pins,
@@ -81,7 +88,7 @@ namespace board_detect
       {
         if (pins[requested] == pin)
         {
-          saved_[index - 1].restore();
+          restore_if_changed(saved_[index - 1]);
           break;
         }
       }
@@ -529,11 +536,12 @@ namespace board_detect
   }
 
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
-                                int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits)
+                                int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits,
+                                std::uint32_t half_us)
   {
     lgfx::gpio_hi(pin_cs);
     lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
-    soft_spi_t bus(pin_sclk, pin_mosi, pin_miso, pin_dc);
+    soft_spi_t bus(pin_sclk, pin_mosi, pin_miso, pin_dc, half_us);
     bus.init();
     bus.beginTransaction();
     lgfx::gpio_lo(pin_cs);
@@ -893,7 +901,12 @@ namespace board_detect
     if (result.prepared & prepared_reset) { return true; }
     if (!(reset.flags & reset_always) && !ctx.allow_reset)
     {
-      if (reset.flags & reset_hold_when_skipped) { startup_detail::pin_reset(reset, false); }
+      if ((reset.flags & reset_hold_when_skipped)
+       && !(result.prepared & prepared_reset_line))
+      {
+        startup_detail::pin_reset(reset, false);
+        result.prepared |= prepared_reset_line;
+      }
       return true;
     }
 
@@ -917,6 +930,7 @@ namespace board_detect
     else if (reset.kind == reset_kind_t::gpio)
     {
       startup_detail::pin_reset(reset, true);
+      result.prepared |= prepared_reset_line;
     }
     if (ok) { result.prepared |= prepared_reset; }
     return ok;
@@ -924,7 +938,8 @@ namespace board_detect
 
   bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
                     const spi_id_probe_t* probes, std::size_t probe_count,
-                    board_result_t* result)
+                    board_result_t* result, bool three_wire,
+                    std::uint8_t slow_retry_half_us)
   {
     if (probes == nullptr || probe_count == 0 || result == nullptr
      || !startup_detail::description_valid(desc)) { return false; }
@@ -932,29 +947,54 @@ namespace board_detect
       desc.display.cs, desc.display.sclk, desc.display.mosi,
       desc.display.dc, desc.display.rst,
     };
+    const std::int8_t shared_sd_pins[] = {
+      desc.display.cs, desc.display.sclk, desc.display.mosi,
+      desc.display.dc, desc.display.rst,
+      desc.sd.sclk, desc.sd.mosi, desc.sd.miso, desc.sd.sd_cs,
+    };
+    const auto restore_probe_pins = [&]()
+    {
+      if (desc.sd.sd_cs >= 0) { ctx.transaction->restore_start(shared_sd_pins); }
+      else                    { ctx.transaction->restore_start(pins); }
+    };
     board_result_t candidate;
     candidate.assign(&desc);
     prepare_ctx_t prepare_ctx;
     prepare_ctx.allow_reset = ctx.allow_reset;
     prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
     prepare_ctx.transaction = ctx.transaction;
+    if (desc.sd.sd_cs >= 0)
+    {
+      // Keep both devices deselected while the shared SD bus is switched to
+      // SPI mode. Descriptions without shared SD take the original path.
+      startup_detail::pin_level(desc.sd.sd_cs, true);
+      startup_detail::pin_level(desc.display.cs, true);
+      if (!startup_detail::prepare_sd_spi(desc, candidate, prepare_ctx))
+      {
+        restore_probe_pins();
+        return false;
+      }
+    }
     if (!prepare_reset(desc, candidate, prepare_ctx, ctx.i2c_port_probe))
     {
-      ctx.transaction->restore_start(pins);
+      restore_probe_pins();
       return false;
     }
-    const int read_pin = desc.display.miso >= 0 ? desc.display.miso : desc.display.mosi;
+    const int read_pin = three_wire || desc.display.miso < 0
+                       ? desc.display.mosi : desc.display.miso;
     std::uint8_t last_cmd = 0;
+    std::uint8_t last_dummy_bits = 0;
     std::uint32_t id = 0;
     bool have_id = false;
     for (std::size_t index = 0; index < probe_count; ++index)
     {
       const auto& probe = probes[index];
-      if (!have_id || probe.cmd != last_cmd)
+      if (!have_id || probe.cmd != last_cmd || probe.dummy_bits != last_dummy_bits)
       {
         id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
-                             desc.display.dc, desc.display.cs, probe.cmd, 1);
+                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits);
         last_cmd = probe.cmd;
+        last_dummy_bits = probe.dummy_bits;
         have_id = true;
       }
       for (std::size_t value = 0; value < probe.value_count; ++value)
@@ -965,7 +1005,30 @@ namespace board_detect
         return true;
       }
     }
-    ctx.transaction->restore_start(pins);
+    if (slow_retry_half_us > 0)
+    {
+      // AtomS3R has shipped with GC9107 batches that answer only at a slow
+      // clock. Its alternatives share one command, so re-read that command
+      // exactly once and compare the result against every matching probe.
+      const auto retry_cmd = probes[0].cmd;
+      id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
+                           desc.display.dc, desc.display.cs, retry_cmd,
+                           probes[0].dummy_bits,
+                           slow_retry_half_us);
+      for (std::size_t index = 0; index < probe_count; ++index)
+      {
+        const auto& probe = probes[index];
+        if (probe.cmd != retry_cmd) { continue; }
+        for (std::size_t value = 0; value < probe.value_count; ++value)
+        {
+          if ((id & probe.mask) != probe.values[value]) { continue; }
+          candidate.option = probe.option_bit;
+          *result = candidate;
+          return true;
+        }
+      }
+    }
+    restore_probe_pins();
     return false;
   }
 

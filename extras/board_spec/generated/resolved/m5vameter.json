@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "id": "m5vameter",
+  "name": "M5VAMeter",
+  "legacy_board_id": 16,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        240,
+        240
+      ],
+      "touch": false
+    },
+    "storage": {
+      "psram_mb": 0,
+      "sd": false
+    }
+  },
+  "pins": {
+    "5": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "note": "System I2C SDA",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "note": "System I2C SCL",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "7": {
+      "roles": [],
+      "note": "Not connected"
+    },
+    "8": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "note": "External Port A SDA",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "9": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "note": "External Port A SCL",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "dev:lcd.rst"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:lcd.dc"
+      ]
+    },
+    "35": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "36": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "37": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:backlight.pwm"
+      ]
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "st7789v2",
+      "bus": "main_spi",
+      "spec": {
+        "width": 240,
+        "height": 240,
+        "offset_x": 0,
+        "offset_y": 0,
+        "rotation_offset": 0,
+        "invert": true,
+        "readable": true
+      },
+      "signals": {
+        "rst": "gpio:33",
+        "dc": "gpio:34",
+        "cs": "gpio:37"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "backlight": {
+      "kind": "backlight",
+      "spec": {
+        "freq": 512,
+        "channel": 7,
+        "invert": false,
+        "offset": 64
+      },
+      "verified": {
+        "spec": "generated",
+        "signals": "generated"
+      },
+      "signals": {
+        "pwm": "gpio:38"
+      }
+    },
+    "probe_device_0": {
+      "kind": "sensor",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x40",
+      "verified": {
+        "i2c_addr": "datasheet"
+      }
+    },
+    "probe_device_1": {
+      "kind": "sensor",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x41",
+      "verified": {
+        "i2c_addr": "datasheet"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:9",
+        "2": "gpio:8",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

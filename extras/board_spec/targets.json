@@ -4,11 +4,11 @@
     "boards": {
       "m5station": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 9, "cpp_namespace": "station", "board_enum": "board_M5Station", "desc_name": "desc_station",
-        "wiring_fields": ["display", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp"
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp"
       },
       "m5stack_core2": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 2, "cpp_namespace": "core2", "board_enum": "board_M5StackCore2", "desc_name": "desc_core2",
-        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp",
         "options": [
           { "name": "new_pmic", "bit": 0, "select": { "pmic": "axp2101" } },
           { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
@@ -16,7 +16,7 @@
       },
       "m5tough": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 8, "cpp_namespace": "tough", "board_enum": "board_M5Tough", "desc_name": "desc_tough",
-        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp",
         "options": [
           { "name": "reserved", "bit": 0 },
           { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
@@ -40,9 +40,15 @@
         "specs_output": "esp32s3_specs.hpp",
         "options": [{ "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }]
       },
+      "m5atoms3r": {
+        "chip": "esp32s3", "legacy_board_id": 18, "cpp_namespace": "atoms3r", "board_enum": "board_M5AtomS3R", "desc_name": "desc_atoms3r",
+        "wiring_fields": ["display", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }]
+      },
       "m5dial": {
         "chip": "esp32s3", "legacy_board_id": 12, "cpp_namespace": "dial", "board_enum": "board_M5Dial", "desc_name": "desc_dial",
-        "wiring_fields": ["display", "i2c", "hold", "backlight", "touch"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "touch"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp"
       },
       "m5dinmeter": {
@@ -50,9 +56,40 @@
         "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp"
       },
+      "m5airq": {
+        "chip": "esp32s3", "legacy_board_id": 15, "cpp_namespace": "airq", "board_enum": "board_M5AirQ", "desc_name": "desc_airq",
+        "wiring_fields": ["display", "hold", "power"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "m09", "bit": 0, "select": { "epd": "gdew0154m09" } }]
+      },
+      "m5stamplc": {
+        "chip": "esp32s3", "legacy_board_id": 21, "cpp_namespace": "stamplc", "board_enum": "board_M5StamPLC", "desc_name": "desc_stamplc",
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5cardputer": {
+        "chip": "esp32s3", "legacy_board_id": 14, "cpp_namespace": "cardputer", "board_enum": "board_M5Cardputer", "desc_name": "desc_cardputer",
+        "wiring_fields": ["display", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "cardputer_subdivision": {
+          "sense_i2c_from_boards": ["m5cardputer_adv", "m5vameter"],
+          "vameter_board": "m5vameter",
+          "vameter_i2c_devices": ["probe_device_0", "probe_device_1"]
+        }
+      },
+      "m5cardputer_adv": {
+        "chip": "esp32s3", "legacy_board_id": 24, "cpp_namespace": "cardputer_adv", "board_enum": "board_M5CardputerADV", "desc_name": "desc_cardputer_adv",
+        "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5vameter": {
+        "chip": "esp32s3", "legacy_board_id": 16, "cpp_namespace": "vameter", "board_enum": "board_M5VAMeter", "desc_name": "desc_vameter",
+        "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
       "m5sticks3": {
         "chip": "esp32s3", "legacy_board_id": 26, "cpp_namespace": "sticks3", "board_enum": "board_M5StickS3", "desc_name": "desc_sticks3",
-        "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp"
       }
     }

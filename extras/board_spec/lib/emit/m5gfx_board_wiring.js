@@ -12,6 +12,8 @@ export function m5gfxBoardMapping(target, boardId) {
     wiringOutput: source.wiring_output,
     specsOutput: source.specs_output,
     options: source.options ?? [],
+    descInternalI2c: source.desc_internal_i2c ?? false,
+    cardputerSubdivision: source.cardputer_subdivision ?? null,
   };
 }
 
@@ -130,16 +132,47 @@ function constant(name, value) {
   return `constexpr std::int8_t ${name} = ${value};`;
 }
 
+function cardputerSubdivisionForEntry(entry, entries) {
+  const config = entry.emitted.mapping.cardputerSubdivision;
+  if (!config) return null;
+  const byBoard = new Map(entries.map((item) => [item.board.id, item]));
+  const sensePins = [];
+  for (const boardId of config.sense_i2c_from_boards ?? []) {
+    const source = byBoard.get(boardId);
+    if (!source?.emitted.i2c) throw new Error(`${entry.board.id}: Cardputer subdivision source ${boardId} needs internal I2C wiring`);
+    sensePins.push(source.emitted.i2c.sda, source.emitted.i2c.scl);
+  }
+  const i2cSource = byBoard.get(config.vameter_board);
+  if (!i2cSource?.emitted.i2c) throw new Error(`${entry.board.id}: Cardputer VAMeter source ${config.vameter_board} needs internal I2C wiring`);
+  const addresses = (config.vameter_i2c_devices ?? []).map((deviceId) => {
+    const device = i2cSource.board.devices?.[deviceId];
+    if (device?.bus !== "internal_i2c" || !device.i2c_addr) {
+      throw new Error(`${entry.board.id}: Cardputer VAMeter device ${deviceId} needs an internal I2C address`);
+    }
+    return Number.parseInt(device.i2c_addr.slice(2), 16);
+  });
+  if ([...new Set(sensePins)].length !== 4 || [...new Set(addresses)].length !== 2) {
+    throw new Error(`${entry.board.id}: Cardputer subdivision needs four sense pins and two I2C addresses`);
+  }
+  return {
+    sensePins: [...new Set(sensePins)].sort((left, right) => left - right),
+    i2cAddresses: [...new Set(addresses)],
+    i2cSda: i2cSource.emitted.i2c.sda,
+    i2cScl: i2cSource.emitted.i2c.scl,
+  };
+}
+
 function descriptorPins(emitted) {
-  // This is deliberately the union of every GPIO represented by the board
-  // description, not only pins currently driven by detection. It keeps the
-  // transaction and conditional-pin metadata conservative if construction
-  // starts initializing another described part in the future.
+  // Keep the transaction and conditional-pin metadata conservative for every
+  // part described to board detection. Target metadata distinguishes an I2C
+  // bus that the generated wiring exposes from one that the descriptor opens.
   const fields = new Set(emitted.mapping.fields);
   const values = [];
   if (fields.has("display")) values.push(...Object.values(emitted.display));
   if (fields.has("shared_sd") && emitted.sharedSd) values.push(...Object.values(emitted.sharedSd));
-  if (fields.has("i2c") && emitted.i2c) values.push(emitted.i2c.sda, emitted.i2c.scl);
+  if (fields.has("i2c") && emitted.i2c && emitted.mapping.descInternalI2c) {
+    values.push(emitted.i2c.sda, emitted.i2c.scl);
+  }
   if (emitted.mapping.reset) values.push(emitted.resetGpio);
   if (fields.has("power")) values.push(emitted.powerGpio);
   if (fields.has("backlight")) values.push(emitted.backlightGpio);
@@ -149,7 +182,10 @@ function descriptorPins(emitted) {
 }
 
 export function detectionPinsForEntries(entries) {
-  return [...new Set(entries.flatMap(({ emitted }) => descriptorPins(emitted)))].sort((left, right) => left - right);
+  return [...new Set(entries.flatMap((entry) => {
+    const subdivision = cardputerSubdivisionForEntry(entry, entries);
+    return [...descriptorPins(entry.emitted), ...(subdivision?.sensePins ?? [])];
+  }))].sort((left, right) => left - right);
 }
 
 export function partitionDetectionPins(entries, chip) {
@@ -166,8 +202,10 @@ export function partitionDetectionPins(entries, chip) {
 
 export function validateDetectionPins(entries, chip, pins = detectionPinsForEntries(entries)) {
   const available = new Set(pins);
-  for (const { board, emitted } of entries) {
-    for (const pin of descriptorPins(emitted)) {
+  for (const entry of entries) {
+    const { board, emitted } = entry;
+    const subdivision = cardputerSubdivisionForEntry(entry, entries);
+    for (const pin of [...descriptorPins(emitted), ...(subdivision?.sensePins ?? [])]) {
       if (!available.has(pin)) throw new Error(`${board.id}: descriptor GPIO ${pin} is absent from the detection pin set`);
       if (chip.reserved?.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} is reserved by ${chip.id}`);
       const conditional = chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
@@ -196,8 +234,12 @@ export function renderM5GFXWiringHeader(entries) {
   ];
   for (const entry of entries) {
     const value = entry.emitted;
+    const subdivision = cardputerSubdivisionForEntry(entry, entries);
     const fields = new Set(value.mapping.fields);
-    const boardPins = descriptorPins(value);
+    const boardPins = [
+      ...descriptorPins(value),
+      ...(subdivision?.sensePins ?? []),
+    ];
     lines.push("", `namespace ${value.mapping.cppNamespace} {`);
     if (fields.has("display")) for (const [name, pin] of Object.entries(value.display)) lines.push(`  ${constant(`display_${name}`, pin)}`);
     if (fields.has("shared_sd") && value.sharedSd) for (const [name, pin] of Object.entries(value.sharedSd)) lines.push(`  ${constant(`shared_sd_${name}`, pin)}`);
@@ -213,6 +255,14 @@ export function renderM5GFXWiringHeader(entries) {
     if (fields.has("hold")) lines.push(`  constexpr std::int8_t hold[] = { ${value.hold.join(", ")} };`);
     for (const [mode, pins] of Object.entries(chip.reserved_conditional ?? {})) {
       lines.push(`  constexpr bool touches_${mode}_pins = ${boardPins.some((pin) => pins.includes(pin))};`);
+    }
+    if (subdivision) {
+      lines.push("  namespace cardputer_subdivision {");
+      lines.push(`    constexpr std::int8_t sense_pins[] = { ${subdivision.sensePins.join(", ")} };`);
+      lines.push(`    constexpr std::uint8_t vameter_i2c_addrs[] = { ${subdivision.i2cAddresses.map((value) => `0x${value.toString(16).toUpperCase()}`).join(", ")} };`);
+      lines.push(`    constexpr std::int8_t vameter_i2c_sda = ${subdivision.i2cSda};`);
+      lines.push(`    constexpr std::int8_t vameter_i2c_scl = ${subdivision.i2cScl};`);
+      lines.push("  } // namespace cardputer_subdivision");
     }
     lines.push(`} // namespace ${value.mapping.cppNamespace}`);
   }

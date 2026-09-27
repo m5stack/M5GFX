@@ -59,8 +59,26 @@ export function validateTarget(board, target = {}) {
   if (boardTarget.reset !== undefined && boardTarget.reset !== "display_rst") {
     issue("E_TGT_RESET", `${boardPath}/reset`, `${boardTarget.reset} is not a supported reset source`);
   }
+  if (boardTarget.desc_internal_i2c !== undefined && typeof boardTarget.desc_internal_i2c !== "boolean") {
+    issue("E_TGT_DESC_INTERNAL_I2C", `${boardPath}/desc_internal_i2c`, "desc_internal_i2c must be a boolean");
+  }
+  if (boardTarget.desc_internal_i2c && !(boardTarget.wiring_fields ?? []).includes("i2c")) {
+    issue("E_TGT_DESC_INTERNAL_I2C", `${boardPath}/desc_internal_i2c`, "desc_internal_i2c requires the i2c wiring field");
+  }
   if (boardTarget.wiring_output && (!boardTarget.cpp_namespace || !boardTarget.desc_name)) {
     issue("E_TGT_GENERATION_FIELDS", boardPath, "generated wiring requires cpp_namespace and desc_name");
+  }
+  if (boardTarget.cardputer_subdivision !== undefined) {
+    const subdivision = boardTarget.cardputer_subdivision;
+    if (!subdivision || typeof subdivision !== "object" || Array.isArray(subdivision)
+     || !Array.isArray(subdivision.sense_i2c_from_boards) || !subdivision.sense_i2c_from_boards.length
+     || subdivision.sense_i2c_from_boards.some((id) => typeof id !== "string")
+     || typeof subdivision.vameter_board !== "string"
+     || !Array.isArray(subdivision.vameter_i2c_devices) || !subdivision.vameter_i2c_devices.length
+     || subdivision.vameter_i2c_devices.some((id) => typeof id !== "string")) {
+      issue("E_TGT_CARDPUTER_SUBDIVISION", `${boardPath}/cardputer_subdivision`,
+            "Cardputer subdivision needs sense boards, a VAMeter board, and named I2C devices");
+    }
   }
   const options = targetOptions(target, board.id);
   const slots = new Set();
@@ -129,6 +147,14 @@ export function validateTargets(boards, target = {}) {
       if (prior && (prior.field !== field || prior.chip !== entry.chip)) {
         issues.push({ id: "E_TGT_OUTPUT_COLLISION", path: `${path}/${field}`, message: `${value} is also ${prior.field} for ${prior.id} (${prior.chip})` });
       } else if (!prior) outputs.set(value, { field, id, chip: entry.chip });
+    }
+    const subdivision = entry.cardputer_subdivision;
+    for (const sourceId of [...(subdivision?.sense_i2c_from_boards ?? []), subdivision?.vameter_board].filter(Boolean)) {
+      if (!catalog.has(sourceId)) issues.push({ id: "E_TGT_CARDPUTER_SUBDIVISION", path: `${path}/cardputer_subdivision`, message: `${sourceId} is not in the board catalog` });
+    }
+    const vameter = catalog.get(subdivision?.vameter_board);
+    for (const deviceId of subdivision?.vameter_i2c_devices ?? []) {
+      if (!vameter?.devices?.[deviceId]) issues.push({ id: "E_TGT_CARDPUTER_SUBDIVISION", path: `${path}/cardputer_subdivision/vameter_i2c_devices`, message: `${deviceId} is not on ${subdivision.vameter_board}` });
     }
   }
   for (const board of boards) issues.push(...validateTarget(board, target));

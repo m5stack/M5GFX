@@ -349,6 +349,7 @@ protected:
       void setPin(int pin_num) { _pin_num = pin_num; }
       int getPin(void) const { return _pin_num; }
       void backup(void);
+      bool matches_current(void) const;
       void restore(void);
 
     private:

@@ -27,6 +27,9 @@ function probe(part, label) {
     cmd: hex(source.reg, `${label}.id_probe.reg`),
     mask: hex(source.mask, `${label}.id_probe.mask`),
     values: values.map((value) => hex(value, `${label}.id_probe.value`)),
+    ...(source.dummy_bits === undefined ? {} : {
+      dummyBits: integer(source.dummy_bits, `${label}.id_probe.dummy_bits`),
+    }),
   };
 }
 
@@ -68,13 +71,18 @@ function panel(spec, definitions, label) {
 export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
   if (!mapping?.specsOutput) return null;
   const bus = board.buses?.main_spi;
-  const display = board.devices?.lcd;
-  const backlight = board.devices?.backlight?.spec;
-  if (!bus || !display || !backlight) throw new Error(`${board.id} specs are incomplete`);
+  const display = Object.values(board.devices ?? {}).find((device) => device.kind === "display");
+  const backlightDevice = board.devices?.backlight;
+  const backlightBus = board.buses?.[backlightDevice?.bus];
+  const backlight = backlightBus?.kind === "i2c" ? null : backlightDevice?.spec;
+  const backlightI2c = backlightBus?.kind === "i2c" ? {
+    i2cAddr: hex(backlightDevice?.i2c_addr, `${board.id}.backlight.i2c_addr`),
+  } : null;
+  if (!bus || !display) throw new Error(`${board.id} specs are incomplete`);
   const panels = {};
   const probes = {};
   for (const variant of resolvedVariants) {
-    const device = variant.devices?.lcd;
+    const device = Object.values(variant.devices ?? {}).find((item) => item.kind === "display");
     const name = device?.part;
     if (!name || panels[name]) continue;
     panels[name] = panel(device.spec ?? {}, parts[name]?.spec_keys, `${board.id}.${name}`);
@@ -112,16 +120,17 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       hostSymbol: typeof bus.preferred_host === "string" ? bus.preferred_host : null,
       freqWrite: integer(bus.freq, `${board.id}.main_spi.freq`),
       freqRead: integer(bus.freq_read, `${board.id}.main_spi.freq_read`),
-      threeWire: !(bus.signals ?? []).includes("miso"),
+      threeWire: display.spec?.three_wire ?? !(bus.signals ?? []).includes("miso"),
     },
     panels,
     probes,
-    backlight: {
+    backlight: backlight ? {
       freq: integer(backlight.freq, `${board.id}.backlight.freq`),
       channel: integer(backlight.channel, `${board.id}.backlight.channel`),
       invert: optionalBoolean(backlight.invert ?? partDefault(DEVICE_KIND_SPEC_KEYS.backlight, "invert"), `${board.id}.backlight.invert`),
       offset: integer(backlight.offset ?? partDefault(DEVICE_KIND_SPEC_KEYS.backlight, "offset"), `${board.id}.backlight.offset`),
-    },
+    } : null,
+    backlightI2c,
     pmic,
     touch,
   };
@@ -165,16 +174,25 @@ export function renderM5GFXSpecsHeader(specs) {
     for (const [name, value] of Object.entries(entry.probes)) {
       lines.push("", `namespace probe_${name} {`,
       `  constexpr std::uint8_t cmd = ${uint(value.cmd)};`,
+      ...(value.dummyBits === undefined ? [] :
+        [`  constexpr std::uint8_t dummy_bits = ${value.dummyBits};`]),
       `  constexpr std::uint32_t mask = ${uint(value.mask)};`,
       `  constexpr std::uint32_t values[] = { ${value.values.map(uint).join(", ")} };`,
         `} // namespace probe_${name}`);
     }
-    lines.push("", "namespace backlight {",
-      `  constexpr std::uint32_t freq = ${entry.backlight.freq};`,
-      `  constexpr std::uint8_t channel = ${entry.backlight.channel};`,
-      `  constexpr bool invert = ${boolean(entry.backlight.invert)};`,
-      `  constexpr std::uint8_t offset = ${entry.backlight.offset};`,
-      "} // namespace backlight");
+    if (entry.backlight) {
+      lines.push("", "namespace backlight {",
+        `  constexpr std::uint32_t freq = ${entry.backlight.freq};`,
+        `  constexpr std::uint8_t channel = ${entry.backlight.channel};`,
+        `  constexpr bool invert = ${boolean(entry.backlight.invert)};`,
+        `  constexpr std::uint8_t offset = ${entry.backlight.offset};`,
+        "} // namespace backlight");
+    }
+    if (entry.backlightI2c) {
+      lines.push("", "namespace backlight_i2c {",
+        `  constexpr std::uint8_t i2c_addr = ${uint(entry.backlightI2c.i2cAddr)};`,
+        "} // namespace backlight_i2c");
+    }
     if (entry.pmic) {
       lines.push("", "namespace pmic {",
         `  constexpr std::uint8_t i2c_addr = ${uint(entry.pmic.i2cAddr)};`,

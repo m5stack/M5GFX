@@ -45,6 +45,10 @@ namespace board_detect
     prepared_reset  = 1u << 1,
     prepared_sd_spi = 1u << 2,
     panel_dirty     = 1u << 3,
+    // The GPIO reset line has been driven inactive, but a reset pulse may not
+    // have been allowed. Keep this distinct from prepared_reset so a later
+    // reset-enabled prepare can still pulse the panel reset.
+    prepared_reset_line = 1u << 4,
   };
 
   enum class detect_status_t : std::uint8_t
@@ -589,11 +593,13 @@ namespace board_detect
 
   // The first received byte occupies bits 0..7. Bits within each byte arrive MSB first.
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
-                                int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits);
+                                int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits,
+                                std::uint32_t half_us = 1);
 
   struct spi_id_probe_t
   {
     std::uint8_t cmd;
+    std::uint8_t dummy_bits;
     std::uint32_t mask;
     const std::uint32_t* values;
     std::uint8_t value_count;
@@ -603,14 +609,16 @@ namespace board_detect
   template <std::size_t N>
   constexpr spi_id_probe_t spi_id_probe(std::uint8_t cmd, std::uint32_t mask,
                                         const std::uint32_t (&values)[N],
-                                        std::uint32_t option_bit)
+                                        std::uint32_t option_bit,
+                                        std::uint8_t dummy_bits = 1)
   {
-    return { cmd, mask, values, list_size_t<N>::value, option_bit };
+    return { cmd, dummy_bits, mask, values, list_size_t<N>::value, option_bit };
   }
 
   bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
                     const spi_id_probe_t* probes, std::size_t probe_count,
-                    board_result_t* result);
+                    board_result_t* result, bool three_wire,
+                    std::uint8_t slow_retry_half_us = 0);
 
   // Kept callable by family detectors; validates desc before touching hardware.
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,

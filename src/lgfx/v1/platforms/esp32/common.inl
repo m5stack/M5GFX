@@ -665,6 +665,21 @@ namespace lgfx
       }
     }
 
+    bool pin_backup_t::matches_current(void) const
+    {
+      if ((size_t)_pin_num >= GPIO_NUM_MAX) { return false; }
+
+      const pin_backup_t current(_pin_num);
+      return _io_mux_gpio_reg   == current._io_mux_gpio_reg
+          && _gpio_pin_reg      == current._gpio_pin_reg
+          && _gpio_func_out_reg == current._gpio_func_out_reg
+          && _gpio_enable       == current._gpio_enable
+          && _gpio_out          == current._gpio_out
+          && _in_func_num       == current._in_func_num
+          && ((uint16_t)_in_func_num >= 256
+           || _gpio_func_in_reg == current._gpio_func_in_reg);
+    }
+
     void pin_backup_t::restore(void)
     {
       auto pin_num = (size_t)_pin_num;

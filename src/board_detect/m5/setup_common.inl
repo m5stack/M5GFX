@@ -289,8 +289,8 @@ namespace m5
     return target;
   }
 
-  template <class PartT>
-  PartT* make_default_part() { return new PartT(); }
+  template <class PartT, class... Args>
+  PartT* make_default_part(Args... args) { return new PartT(args...); }
 
   struct display_parts_owner_t
   {

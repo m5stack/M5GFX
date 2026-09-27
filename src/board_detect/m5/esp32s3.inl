@@ -33,6 +33,18 @@ namespace m5
   };
   static const board_def_t& board_atoms3 = desc_atoms3.def;
 
+  static constexpr board_desc_t desc_atoms3r = {
+    { id(lgfx::board_M5AtomS3R), "M5AtomS3R", 0 },
+    no_power(), gpio_reset(wiring::atoms3r::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    display_pins(wiring::atoms3r::display_sclk, wiring::atoms3r::display_mosi,
+                 wiring::atoms3r::display_miso, wiring::atoms3r::display_dc,
+                 wiring::atoms3r::display_cs, wiring::atoms3r::display_rst,
+                 wiring::atoms3r::display_busy),
+    pins(wiring::atoms3r::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
+    options(generated_options::atoms3r::names),
+  };
+  static const board_def_t& board_atoms3r = desc_atoms3r.def;
+
   static constexpr board_desc_t desc_dinmeter = {
     { id(lgfx::board_M5DinMeter), "M5DinMeter", 0 },
     no_power(), gpio_reset(wiring::dinmeter::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
@@ -44,6 +56,34 @@ namespace m5
     no_options(),
   };
   static const board_def_t& board_dinmeter = desc_dinmeter.def;
+
+  static constexpr board_desc_t desc_airq = {
+    { id(lgfx::board_M5AirQ), "M5AirQ", 0 },
+    gpio_power(wiring::airq::power_gpio),
+    gpio_reset(wiring::airq::reset_gpio, 2, 10, reset_always), no_shared_sd(),
+    display_pins(wiring::airq::display_sclk, wiring::airq::display_mosi,
+                 wiring::airq::display_miso, wiring::airq::display_dc,
+                 wiring::airq::display_cs, wiring::airq::display_rst,
+                 wiring::airq::display_busy),
+    pins(wiring::airq::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
+    options(generated_options::airq::names),
+  };
+  static const board_def_t& board_airq = desc_airq.def;
+
+  static constexpr board_desc_t desc_stamplc = {
+    { id(lgfx::board_M5StamPLC), "M5StamPLC", 0 },
+    no_power(), gpio_reset(wiring::stamplc::reset_gpio, 2, 10, reset_hold_when_skipped),
+    shared_sd(wiring::stamplc::shared_sd_sclk, wiring::stamplc::shared_sd_mosi,
+              wiring::stamplc::shared_sd_miso, wiring::stamplc::shared_sd_sd_cs,
+              wiring::stamplc::shared_sd_other_cs),
+    display_pins(wiring::stamplc::display_sclk, wiring::stamplc::display_mosi,
+                 wiring::stamplc::display_miso, wiring::stamplc::display_dc,
+                 wiring::stamplc::display_cs, wiring::stamplc::display_rst,
+                 wiring::stamplc::display_busy),
+    pins(wiring::stamplc::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
+    no_options(),
+  };
+  static const board_def_t& board_stamplc = desc_stamplc.def;
 
   static constexpr board_desc_t desc_dial = {
     { id(lgfx::board_M5Dial), "M5Dial", 0 },
@@ -58,6 +98,42 @@ namespace m5
     no_direct_reset_panel_reload_wait(), no_options(),
   };
   static const board_def_t& board_dial = desc_dial.def;
+
+  static constexpr board_desc_t desc_cardputer = {
+    { id(lgfx::board_M5Cardputer), "M5Cardputer", 0 },
+    no_power(), gpio_reset(wiring::cardputer::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    display_pins(wiring::cardputer::display_sclk, wiring::cardputer::display_mosi,
+                 wiring::cardputer::display_miso, wiring::cardputer::display_dc,
+                 wiring::cardputer::display_cs, wiring::cardputer::display_rst,
+                 wiring::cardputer::display_busy),
+    pins(wiring::cardputer::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
+    no_options(),
+  };
+  static const board_def_t& board_cardputer = desc_cardputer.def;
+
+  static constexpr board_desc_t desc_cardputer_adv = {
+    { id(lgfx::board_M5CardputerADV), "M5CardputerADV", 0 },
+    no_power(), gpio_reset(wiring::cardputer_adv::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    display_pins(wiring::cardputer_adv::display_sclk, wiring::cardputer_adv::display_mosi,
+                 wiring::cardputer_adv::display_miso, wiring::cardputer_adv::display_dc,
+                 wiring::cardputer_adv::display_cs, wiring::cardputer_adv::display_rst,
+                 wiring::cardputer_adv::display_busy),
+    pins(wiring::cardputer_adv::hold), no_internal_i2c(),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_cardputer_adv = desc_cardputer_adv.def;
+
+  static constexpr board_desc_t desc_vameter = {
+    { id(lgfx::board_M5VAMeter), "M5VAMeter", 0 },
+    no_power(), gpio_reset(wiring::vameter::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    display_pins(wiring::vameter::display_sclk, wiring::vameter::display_mosi,
+                 wiring::vameter::display_miso, wiring::vameter::display_dc,
+                 wiring::vameter::display_cs, wiring::vameter::display_rst,
+                 wiring::vameter::display_busy),
+    pins(wiring::vameter::hold), no_internal_i2c(),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_vameter = desc_vameter.def;
 
   static const pmic_write_t sticks3_power_on[] = {
     pmic_write(specs::sticks3::pmic::i2c_addr, 0x09, 0x00, 0x00),
@@ -95,13 +171,40 @@ namespace m5
     spi_id_probe(specs::atoms3::probe_gc9107::cmd, specs::atoms3::probe_gc9107::mask,
                  specs::atoms3::probe_gc9107::values, generated_options::atoms3::gc9107),
   };
+  static const spi_id_probe_t atoms3r_probes[] = {
+    spi_id_probe(specs::atoms3r::probe_st7735s::cmd, specs::atoms3r::probe_st7735s::mask,
+                 specs::atoms3r::probe_st7735s::values, 0),
+    spi_id_probe(specs::atoms3r::probe_gc9107::cmd, specs::atoms3r::probe_gc9107::mask,
+                 specs::atoms3r::probe_gc9107::values, generated_options::atoms3r::gc9107),
+  };
   static const spi_id_probe_t dinmeter_probes[] = {
     spi_id_probe(specs::dinmeter::probe_st7789v2::cmd, specs::dinmeter::probe_st7789v2::mask,
                  specs::dinmeter::probe_st7789v2::values, 0),
   };
+  static constexpr spi_id_probe_t airq_probes[] = {
+    spi_id_probe(specs::airq::probe_gdew0154d67::cmd,
+                 specs::airq::probe_gdew0154d67::mask,
+                 specs::airq::probe_gdew0154d67::values, 0,
+                 specs::airq::probe_gdew0154d67::dummy_bits),
+    spi_id_probe(specs::airq::probe_gdew0154m09::cmd,
+                 specs::airq::probe_gdew0154m09::mask,
+                 specs::airq::probe_gdew0154m09::values,
+                 generated_options::airq::m09,
+                 specs::airq::probe_gdew0154m09::dummy_bits),
+  };
   static const spi_id_probe_t dial_probes[] = {
     spi_id_probe(specs::dial::probe_gc9a01::cmd, specs::dial::probe_gc9a01::mask,
                  specs::dial::probe_gc9a01::values, 0),
+  };
+  static const spi_id_probe_t cardputer_probes[] = {
+    spi_id_probe(specs::cardputer::probe_st7789v2::cmd,
+                 specs::cardputer::probe_st7789v2::mask,
+                 specs::cardputer::probe_st7789v2::values, 0),
+  };
+  static const spi_id_probe_t stamplc_probes[] = {
+    spi_id_probe(specs::stamplc::probe_st7789v2::cmd,
+                 specs::stamplc::probe_st7789v2::mask,
+                 specs::stamplc::probe_st7789v2::values, 0),
   };
 
   struct spi_id_member_t
@@ -109,7 +212,9 @@ namespace m5
     const board_desc_t* desc;
     const spi_id_probe_t* probes;
     std::uint8_t probe_count;
+    bool three_wire;
     bool touches_conditional_pins;
+    std::uint8_t slow_retry_half_us;
   };
 
   class spi_id_detector_t final : public board_detector_t
@@ -149,7 +254,8 @@ namespace m5
         // those pins; another member of the same family may remain safe.
         return false;
       }
-      return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result);
+      return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result,
+                          member.three_wire, member.slow_retry_half_us);
     }
 
     const spi_id_member_t* members_desc_;
@@ -203,32 +309,141 @@ namespace m5
     static const board_def_t* const members_[];
     static const board_desc_t* const descriptions_[];
   };
+
+  class cardputer_family_detector_t final : public board_detector_t
+  {
+  public:
+    cardputer_family_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t&) const override { return true; }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (result == nullptr || ctx.conditional_pins_unavailable) { return false; }
+      if (!probe_spi_id(ctx, desc_cardputer, cardputer_probes,
+                        sizeof(cardputer_probes) / sizeof(cardputer_probes[0]), result,
+                        specs::cardputer::bus_three_wire))
+      {
+        return false;
+      }
+
+      std::uint64_t sense_mask = 0;
+      for (const auto pin : wiring::cardputer::cardputer_subdivision::sense_pins)
+      {
+        sense_mask |= std::uint64_t(1) << pin;
+      }
+      const auto pulls = probe_pin_pulls(ctx, sense_mask);
+      const std::uint64_t vameter_mask =
+        (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_sda)
+        | (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_scl);
+      const std::uint64_t adv_mask =
+        (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_sda)
+        | (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_scl);
+
+      const board_desc_t* chosen = &desc_cardputer;
+      if ((pulls.pulldown_high & vameter_mask) == vameter_mask
+       && probe_i2c_ack(ctx, wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                       wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
+                       wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[0])
+       && probe_i2c_ack(ctx, wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                       wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
+                       wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]))
+      {
+        chosen = &desc_vameter;
+      }
+      else if ((pulls.pulldown_high & adv_mask) == adv_mask)
+      {
+        chosen = &desc_cardputer_adv;
+      }
+      result->assign(chosen);
+      return true;
+    }
+
+  private:
+    static const board_def_t* const members_[];
+  };
   static const board_def_t* const spi_id_members[] = { &board_atoms3, &board_dinmeter, nullptr };
-  static const spi_id_member_t spi_id_member_descs[] = {
-    { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]), wiring::atoms3::touches_opi_pins },
-    { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]), wiring::dinmeter::touches_opi_pins },
+  static constexpr spi_id_member_t spi_id_member_descs[] = {
+    { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]),
+      specs::atoms3::bus_three_wire, wiring::atoms3::touches_opi_pins, 0 },
+    { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
+      specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0 },
   };
   static const spi_id_detector_t spi_id_detector(
     spi_id_members, spi_id_member_descs,
     sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
   static const board_detector_t* const esp32s3_detectors_spi_id[] = { &spi_id_detector, nullptr };
   static const board_def_t* const dial_members[] = { &board_dial, nullptr };
-  static const spi_id_member_t dial_member_descs[] = {
-    { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]), wiring::dial::touches_opi_pins },
+  static constexpr spi_id_member_t dial_member_descs[] = {
+    { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]),
+      specs::dial::bus_three_wire, wiring::dial::touches_opi_pins, 0 },
   };
   static const spi_id_detector_t dial_detector(
     dial_members, dial_member_descs,
     sizeof(dial_member_descs) / sizeof(dial_member_descs[0]));
   static const board_detector_t* const esp32s3_detectors_dial[] = { &dial_detector, nullptr };
+  static const board_def_t* const atoms3r_members[] = { &board_atoms3r, nullptr };
+  static constexpr spi_id_member_t atoms3r_member_descs[] = {
+    { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
+      specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5 },
+  };
+  static const spi_id_detector_t atoms3r_detector(
+    atoms3r_members, atoms3r_member_descs,
+    sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
+  static const board_detector_t* const esp32s3_detectors_atoms3r[] = { &atoms3r_detector, nullptr };
+
+  static const board_def_t* const airq_members[] = { &board_airq, nullptr };
+  static constexpr spi_id_member_t airq_member_descs[] = {
+    { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
+      specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0 },
+  };
+  static const spi_id_detector_t airq_detector(
+    airq_members, airq_member_descs,
+    sizeof(airq_member_descs) / sizeof(airq_member_descs[0]));
+  static const board_detector_t* const esp32s3_detectors_airq[] = {
+    &airq_detector, nullptr,
+  };
+
+  static const board_def_t* const stamplc_members[] = { &board_stamplc, nullptr };
+  static constexpr spi_id_member_t stamplc_member_descs[] = {
+    { &desc_stamplc, stamplc_probes, sizeof(stamplc_probes) / sizeof(stamplc_probes[0]),
+      specs::stamplc::bus_three_wire, wiring::stamplc::touches_opi_pins, 0 },
+  };
+  static const spi_id_detector_t stamplc_detector(
+    stamplc_members, stamplc_member_descs,
+    sizeof(stamplc_member_descs) / sizeof(stamplc_member_descs[0]));
+  static const board_detector_t* const esp32s3_detectors_stamplc[] = {
+    &stamplc_detector, nullptr,
+  };
+
+  // Shared-SD preparation must not add hardware steps to existing members.
+  static_assert(desc_atoms3.sd.sd_cs < 0 && desc_dinmeter.sd.sd_cs < 0
+             && desc_dial.sd.sd_cs < 0 && desc_atoms3r.sd.sd_cs < 0,
+                "existing ESP32-S3 SPI ID members do not prepare shared SD");
+
+  const board_def_t* const cardputer_family_detector_t::members_[] = {
+    &board_cardputer, &board_cardputer_adv, &board_vameter, nullptr,
+  };
+  static const cardputer_family_detector_t cardputer_family_detector;
+  static const board_detector_t* const esp32s3_detectors_cardputer[] = {
+    &cardputer_family_detector, nullptr,
+  };
   const board_def_t* const pmic_id_detector_t::members_[] = { &board_sticks3, nullptr };
   const board_desc_t* const pmic_id_detector_t::descriptions_[] = { &desc_sticks3, nullptr };
   static const pmic_id_detector_t pmic_id_detector;
   static const board_detector_t* const esp32s3_detectors_pmic[] = { &pmic_id_detector, nullptr };
-  static const board_detector_t* const esp32s3_detectors[] = { &dial_detector, &spi_id_detector, &pmic_id_detector, nullptr };
+  static const board_detector_t* const esp32s3_detectors[] = {
+    &dial_detector, &spi_id_detector, &cardputer_family_detector, &atoms3r_detector,
+    &airq_detector, &stamplc_detector, &pmic_id_detector, nullptr,
+  };
 
   bool construct_atoms3(const board_result_t& result, display_parts_t* parts);
+  bool construct_atoms3r(const board_result_t& result, display_parts_t* parts);
   bool construct_dinmeter(const board_result_t& result, display_parts_t* parts);
+  bool construct_airq(const board_result_t& result, display_parts_t* parts);
+  bool construct_stamplc(const board_result_t& result, display_parts_t* parts);
   bool construct_dial(const board_result_t& result, display_parts_t* parts);
+  bool construct_cardputer(const board_result_t& result, display_parts_t* parts);
+  bool construct_cardputer_adv(const board_result_t& result, display_parts_t* parts);
+  bool construct_vameter(const board_result_t& result, display_parts_t* parts);
   bool construct_sticks3(const board_result_t& result, display_parts_t* parts);
 
   const char* atoms3_success_annotation(const board_result_t& result)
@@ -236,10 +451,21 @@ namespace m5
     return result.option & generated_options::atoms3::gc9107 ? " (GC9107)" : " (ST7735)";
   }
 
+  const char* atoms3r_success_annotation(const board_result_t& result)
+  {
+    return result.option & generated_options::atoms3r::gc9107 ? " (GC9107)" : " (ST7735)";
+  }
+
   static const board_entry_t esp32s3_boards[] = {
     { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation },
+    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation },
     { &desc_dinmeter, construct_dinmeter, "board_M5DinMeter", nullptr },
+    { &desc_airq, construct_airq, "M5AirQ", nullptr },
+    { &desc_stamplc, construct_stamplc, "board_M5StamPLC", nullptr },
     { &desc_dial, construct_dial, "board_M5Dial", nullptr },
+    { &desc_cardputer, construct_cardputer, "board_M5Cardputer", nullptr },
+    { &desc_cardputer_adv, construct_cardputer_adv, "board_M5CardputerADV", nullptr },
+    { &desc_vameter, construct_vameter, "board_M5VAMeter", nullptr },
     { &desc_sticks3, construct_sticks3, "board_M5StickS3", nullptr },
   };
 

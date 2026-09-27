@@ -1,0 +1,14 @@
+{
+  "id": "gdew0154m09",
+  "name": "GDEW0154M09",
+  "kind": "display",
+  "vendor": "Good Display",
+  "bus": { "kind": "spi" },
+  "signals": { "required": ["cs", "dc", "rst"], "optional": ["busy"] },
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" }
+  },
+  "id_probe": { "reg": "0x70", "dummy_bits": 0, "mask": "0xFFFF00FF", "value": "0x00F00000" },
+  "verified": { "signals": null, "id_probe": "generated" }
+}
