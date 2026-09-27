@@ -146,6 +146,26 @@ namespace m5
     { return { width, height, memory_width, memory_height, offset_x, offset_y, pin_cs, pin_rst, pin_busy, offset_rotation, initial_rotation, invert, readable, bus_shared, enabled }; }
   };
 
+  struct i2c_bus_desc_t
+  {
+    std::int8_t port;
+    std::uint32_t freq_write;
+    std::uint32_t freq_read;
+    std::int8_t sda;
+    std::int8_t scl;
+    std::uint8_t addr;
+    std::uint8_t prefix_len;
+  };
+
+  constexpr i2c_bus_desc_t i2c_bus(int port, std::uint32_t freq_write,
+                                   std::uint32_t freq_read, int sda, int scl,
+                                   std::uint8_t addr, std::uint8_t prefix_len)
+  {
+    return { static_cast<std::int8_t>(port), freq_write, freq_read,
+             static_cast<std::int8_t>(sda), static_cast<std::int8_t>(scl),
+             addr, prefix_len };
+  }
+
   // Parallel EPD bus (Bus_EPD). Pins follow the Bus_EPD::config_t names;
   // unused data lines stay at no_pin.
   struct epd_bus_desc_t
@@ -266,6 +286,21 @@ namespace m5
     cfg.pin_io1 = desc.io1;
     cfg.pin_io2 = desc.io2;
     cfg.pin_io3 = desc.io3;
+    bus->config(cfg);
+    return bus;
+  }
+
+  lgfx::Bus_I2C* make_i2c_bus(const i2c_bus_desc_t& desc)
+  {
+    auto bus = new lgfx::Bus_I2C();
+    auto cfg = bus->config();
+    cfg.i2c_port = desc.port;
+    cfg.freq_write = desc.freq_write;
+    cfg.freq_read = desc.freq_read;
+    cfg.pin_sda = desc.sda;
+    cfg.pin_scl = desc.scl;
+    cfg.i2c_addr = desc.addr;
+    cfg.prefix_len = desc.prefix_len;
     bus->config(cfg);
     return bus;
   }
@@ -408,6 +443,17 @@ namespace m5
     parts->light = light.release();
     parts->touch = touch.release();
     return true;
+  }
+
+  void destroy_display_parts(display_parts_t* parts)
+  {
+    if (parts == nullptr) { return; }
+    if (parts->bus != nullptr) { parts->bus->release(); }
+    delete parts->touch;
+    delete parts->light;
+    delete parts->panel;
+    delete parts->bus;
+    *parts = {};
   }
 }
 }

@@ -38,15 +38,18 @@
 
 #include "board_detect/m5/setup_sentinels.hpp"
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
 #include "board_detect/board_detect.inl"
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 #include "board_detect/m5/esp32_d0wdq6.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/m5/esp32s3.inl"
-#else
+#elif defined (CONFIG_IDF_TARGET_ESP32C5)
 #include "board_detect/m5/esp32c5.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+#include "board_detect/m5/esp32c61.inl"
 #endif
+
 #endif
 
 #if defined ( CONFIG_IDF_TARGET_ESP32P4 )
@@ -239,43 +242,6 @@ namespace m5gfx
   static constexpr std::uint8_t m5ioe1_i2c_addr = 0x4F; // M5IOE1 device i2c address
   static constexpr std::uint8_t pi4io1_i2c_addr = 0x43;
   static constexpr std::uint8_t pi4io2_i2c_addr = 0x44;
-
-  static constexpr std::uint16_t m5pm1_device_id = 0x2050; // M5PM1 device id (register 0x00~0x01)
-
-  __attribute__ ((unused))
-  static bool _check_m5pm1(int i2c_port, uint32_t timeout_ms = 200)
-  {
-    uint32_t start_time = lgfx::millis();
-    uint16_t read_buf = 0;
-    do {
-      auto result = lgfx::i2c::readRegister(i2c_port, m5pm1_i2c_addr, 0x00, (uint8_t*)&read_buf, sizeof(read_buf), m5pm1_i2c_freq); // Try to read M5PM1 device id
-      if (!result.has_error()) {
-        return (read_buf == m5pm1_device_id) ? true : false;
-      }
-      lgfx::delay(1);
-    } while (lgfx::millis() - start_time < timeout_ms);
-
-    ESP_LOGV(LIBRARY_NAME, "M5PM1 not found");
-    return false;
-  }
-  
-  __attribute__ ((unused))
-  static bool _check_m5ioe1(int i2c_port, uint32_t timeout_ms = 200)
-  {
-    uint32_t start_time = lgfx::millis();
-    uint16_t read_buf = 0;
-    do {
-      auto result = lgfx::i2c::readRegister(i2c_port, m5ioe1_i2c_addr, 0x00, (uint8_t*)&read_buf, sizeof(read_buf), m5ioe1_i2c_freq); // Try to read M5IOE1 device id
-      if (!result.has_error()) {
-        ESP_LOGV(LIBRARY_NAME, "M5IOE1 found, uid: 0x%04x", read_buf);
-        return true;
-      }
-      lgfx::delay(1);
-    } while (lgfx::millis() - start_time < timeout_ms);
-
-    ESP_LOGV(LIBRARY_NAME, "M5IOE1 not found");
-    return false;
-  }
 
 #if defined (CONFIG_IDF_TARGET_ESP32P4)
   struct Light_M5CoreP4X : public lgfx::ILight
@@ -849,12 +815,6 @@ namespace m5gfx
     std::uint32_t _freq;
   };
 
-#elif defined (CONFIG_IDF_TARGET_ESP32C61)
-
-  static constexpr int32_t i2c_freq = 400000;
-  static constexpr int_fast16_t i2c_port = I2C_NUM_0;
-  static constexpr std::uint8_t tm1680_i2c_addr = 0x72; // CoreMatrix LED matrix driver
-
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 
   static constexpr int32_t i2c_freq = 400000;
@@ -951,7 +911,7 @@ namespace m5gfx
     return res;
   }
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
   /// Tell an ILI9342E from an ILI9342C. Two of the E's level-2 registers are written and read
   /// back through D9h (Get External Register for SPI):
   ///  - DDh (Set EXTC, W/R on the E) = 01h. On the C the command is undefined (a NOP).
@@ -1065,9 +1025,11 @@ namespace m5gfx
 #include "board_detect/m5/esp32s3_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 #include "board_detect/m5/esp32c5_setup.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+#include "board_detect/m5/esp32c61_setup.inl"
 #endif
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static bool conditional_detection_pins_unavailable()
   {
@@ -1091,8 +1053,10 @@ namespace m5gfx
     return board_detect::m5::setup_esp32_d0wdq6(result, parts);
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
     return board_detect::m5::setup_esp32s3(result, parts);
-#else
+#elif defined (CONFIG_IDF_TARGET_ESP32C5)
     return board_detect::m5::setup_esp32c5(result, parts);
+#else
+    return board_detect::m5::setup_esp32c61(result, parts);
 #endif
   }
 
@@ -1104,7 +1068,7 @@ namespace m5gfx
                                  board_t* setup_board = nullptr)
   {
     if (detector_matched != nullptr) { *detector_matched = false; }
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32C5)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
     board_detect::detection_transaction_t transaction(
       board_detect::pins(board_detect::m5::wiring::detection::unconditional_pins),
       board_detect::no_pins(), false);
@@ -1211,11 +1175,10 @@ namespace m5gfx
     }
     if (!setup(parts))
     {
-      // A constructed SPI bus may have been initialized by a rejecting setup.
-      // Release it before the transaction restores its GPIO routing. The
-      // current adopter is infallible; a future rejecting adopter must ensure
-      // it initialized and owns this host before returning false.
-      if (parts.bus != nullptr) { parts.bus->release(); }
+      // A rejecting adopter must not retain any of these raw pointers. Release
+      // the bus before rollback restores its GPIO routing, then destroy every
+      // constructed part so repeated failure injection cannot leak them.
+      board_detect::m5::destroy_display_parts(&parts);
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
                static_cast<unsigned>(result.def->id));
       transaction.rollback();
@@ -2406,74 +2369,21 @@ namespace m5gfx
 
     if (board == 0 || board == board_t::board_M5CoreMatrix)
     {
-      // CoreMatrix: system I2C SDA=G0 / SCL=G1 (physically shared with Grove and M-Bus)
-      static constexpr int_fast16_t corematrix_i2c_sda = GPIO_NUM_0;
-      static constexpr int_fast16_t corematrix_i2c_scl = GPIO_NUM_1;
-
-      gpio::pin_backup_t backup_pins[] =
-      { GPIO_NUM_0
-      , GPIO_NUM_1
-      };
-
-      // Probe over software I2C; the hardware port is left untouched until the board is confirmed
-      probe_i2c_t probe(corematrix_i2c_sda, corematrix_i2c_scl);
-
-      if (_check_m5pm1(probe_i2c_port) && _check_m5ioe1(probe_i2c_port)) {
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
-
-        // Drive M5IOE1 PIN4 (LEDS_EN) high to power the LED matrix rail.
-        // The TM1680 sits on that rail and does not respond on I2C until powered.
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
-        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x13, 1 << 3, m5ioe1_i2c_freq); // PIN4 push-pull
-        lgfx::i2c::bitOn (probe_i2c_port, m5ioe1_i2c_addr, 0x03, 1 << 3, m5ioe1_i2c_freq); // PIN4 output
-        lgfx::i2c::bitOn (probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq); // PIN4 HIGH
-        lgfx::delay(20); // wait for the rail to rise and the TM1680 to complete POR
-
-        // The TM1680 has no ID register; check for an address ACK only
-        bool hit = lgfx::i2c::beginTransaction(probe_i2c_port, tm1680_i2c_addr, 100000, false).has_value()
-                && lgfx::i2c::endTransaction(probe_i2c_port).has_value();
-        if (hit)
-        {
-          board = board_t::board_M5CoreMatrix;
-          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5CoreMatrix");
-
-          // Board confirmed: the Bus_I2C below opens the hardware port
-          probe.release();
-
-          auto bus_i2c = new Bus_I2C();
-          {
-            auto cfg = bus_i2c->config();
-            cfg.i2c_port = i2c_port;
-            cfg.freq_write = i2c_freq;
-            cfg.freq_read  = i2c_freq;
-            cfg.pin_sda = corematrix_i2c_sda;
-            cfg.pin_scl = corematrix_i2c_scl;
-            cfg.i2c_addr = tm1680_i2c_addr;
-            cfg.prefix_len = 0; // the TM1680 protocol has no command/data prefix byte
-            bus_i2c->config(cfg);
-          }
-          _bus_last.reset(bus_i2c);
-
-          auto p = new lgfx::Panel_TM1680();
-          {
-            auto cfg = p->config();
-            cfg.bus_shared = false;
-            // rotation 0 shows upright with the buttons at the top
-            cfg.offset_rotation = 0;
-            p->config(cfg);
-          }
-          p->bus(bus_i2c);
-          _panel_last.reset(p);
-
-          goto init_clear;
-        }
-        // Not this board: restore the LED matrix power rail
-        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);
+      if (try_setup_detected(board_detect::m5::esp32c61_detectors,
+                             board, use_reset, false, &board,
+                             [this](board_detect::m5::display_parts_t& parts)
+                             {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_COREMATRIX_SETUP)
+                               (void)parts;
+                               return false;
+#else
+                               return _adopt_detected_parts(parts.bus, parts.panel,
+                                                            parts.light, parts.touch);
+#endif
+                             }))
+      {
+        goto init_clear;
       }
-      // Reached only when no board was detected; only the software port was touched
-      probe.release();
-      for (auto &bup : backup_pins) { bup.restore(); }
     }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32H2)

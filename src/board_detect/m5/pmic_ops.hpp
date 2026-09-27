@@ -95,6 +95,12 @@ namespace pmic_ops
     ops::i2c_bit_off(0, 0x16, 0x30), ops::i2c_bit_on(0, 0x10, 0x04),
     ops::i2c_bit_off(0, 0x13, 0x04),
   };
+  static constexpr ops::op_t corematrix_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_write8(1, 0x23, 0x00), ops::i2c_bit_off(1, 0x13, 0x08),
+    ops::i2c_bit_on(1, 0x03, 0x08), ops::i2c_bit_on(1, 0x05, 0x08),
+    ops::delay_ms(20),
+  };
   static constexpr ops::op_t toughc5_reset_assert[] = {
     ops::i2c_bit_off(1, 0x05, 0x08), ops::delay_ms(2),
     ops::i2c_bit_on(1, 0x05, 0x08), ops::delay_ms(10),

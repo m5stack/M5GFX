@@ -575,6 +575,27 @@ static void test_toughc5_sequences()
   assert(fake.writes.back().new_value == 0x04 && fake.now == 34);
 }
 
+static void test_corematrix_sequence()
+{
+  const bdops::gpio_scope_t scope = { 30, nullptr, 0 };
+  fake_t fake;
+  fake.registers[std::make_pair(0x4F, 0x13)] = 0xFF;
+  fake.registers[std::make_pair(0x4F, 0x03)] = 0x01;
+  fake.registers[std::make_pair(0x4F, 0x05)] = 0x80;
+  assert(bdops::run_ops(
+    backend(fake), pmicops::pm1_family_devices, 2,
+    pmicops::corematrix_power_on,
+    sizeof(pmicops::corematrix_power_on) / sizeof(pmicops::corematrix_power_on[0]),
+    scope).status == bdops::op_status_t::ok);
+  assert(fake.writes.size() == 6 && fake.now == 20 && fake.gpios.empty());
+  assert(fake.writes[0].addr == 0x6E && fake.writes[0].reg == 0x09 && fake.writes[0].new_value == 0);
+  assert(fake.writes[1].addr == 0x6E && fake.writes[1].reg == 0x0A && fake.writes[1].new_value == 0);
+  assert(fake.writes[2].addr == 0x4F && fake.writes[2].reg == 0x23 && fake.writes[2].new_value == 0);
+  assert(fake.writes[3].addr == 0x4F && fake.writes[3].reg == 0x13 && fake.writes[3].new_value == 0xF7);
+  assert(fake.writes[4].addr == 0x4F && fake.writes[4].reg == 0x03 && fake.writes[4].new_value == 0x09);
+  assert(fake.writes[5].addr == 0x4F && fake.writes[5].reg == 0x05 && fake.writes[5].new_value == 0x88);
+}
+
 static void test_dedicated_release_summary()
 {
   const std::uint16_t samples[] = { 3, 4, 0, 3, bdetect::dedicated_release_no_high };
@@ -628,26 +649,38 @@ static void test_i2c_bus_held_sda_recovery()
   {
     const line_state_t samples[] = { { false, true }, { true, true } };
     int sampled = 0;
+    int waited = 0;
     int recovered = 0;
     assert(bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
-      [&]() { return samples[sampled++]; }, [&]() { ++recovered; }));
-    assert(sampled == 2 && recovered == 1);
+      [&]() { return samples[sampled++]; }, [&]() { ++waited; }, [&]() { ++recovered; }));
+    assert(sampled == 2 && waited == 0 && recovered == 1);
   }
   {
     const line_state_t no_scl(false, false);
     int sampled = 0;
+    int waited = 0;
     int recovered = 0;
     assert(!bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
-      [&]() { ++sampled; return no_scl; }, [&]() { ++recovered; }));
-    assert(sampled == 1 && recovered == 0);
+      [&]() { ++sampled; return no_scl; }, [&]() { ++waited; }, [&]() { ++recovered; }));
+    assert(sampled == 1 && waited == 0 && recovered == 0);
+  }
+  {
+    const line_state_t samples[] = { { true, false, true }, { true, true } };
+    int sampled = 0;
+    int waited = 0;
+    int recovered = 0;
+    assert(bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
+      [&]() { return samples[sampled++]; }, [&]() { ++waited; }, [&]() { ++recovered; }));
+    assert(sampled == 2 && waited == 1 && recovered == 0);
   }
   {
     const line_state_t idle(true, true);
     int sampled = 0;
+    int waited = 0;
     int recovered = 0;
     assert(bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
-      [&]() { ++sampled; return idle; }, [&]() { ++recovered; }));
-    assert(sampled == 1 && recovered == 0);
+      [&]() { ++sampled; return idle; }, [&]() { ++waited; }, [&]() { ++recovered; }));
+    assert(sampled == 1 && waited == 0 && recovered == 0);
   }
 }
 
@@ -665,6 +698,7 @@ int main()
   test_pm1_ext_family_sequences();
   test_paper_family_sequences();
   test_toughc5_sequences();
+  test_corematrix_sequence();
   test_dedicated_release_summary();
   test_i2c_bus_held_sda_recovery();
   return 0;

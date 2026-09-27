@@ -203,6 +203,7 @@
         "standard": { "type": "string" },
         "positions": { "type": "object", "additionalProperties": { "$ref": "#/definitions/endpoint" } },
         "multi_gpio": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }, "uniqueItems": true },
+        "shared_gpio": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }, "uniqueItems": true },
         "note": { "type": "string" },
         "verified": { "$ref": "#/definitions/verified" },
         "measured_by": { "$ref": "#/definitions/measuredBy" },

@@ -143,6 +143,11 @@
         "chip": "esp32c5", "legacy_board_id": 33, "cpp_namespace": "toughc5", "board_enum": "board_M5ToughC5", "desc_name": "desc_toughc5",
         "wiring_fields": ["display", "i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32c5_wiring.hpp",
         "specs_output": "esp32c5_specs.hpp"
+      },
+      "m5stack_corematrix": {
+        "chip": "esp32c61", "legacy_board_id": 152, "cpp_namespace": "corematrix", "board_enum": "board_M5CoreMatrix", "desc_name": "desc_corematrix",
+        "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32c61_wiring.hpp",
+        "specs_output": "esp32c61_specs.hpp"
       }
     }
   },

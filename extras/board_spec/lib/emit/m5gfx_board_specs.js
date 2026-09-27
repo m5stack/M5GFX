@@ -163,6 +163,13 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       kind: "parallel_epd",
       speed: integer(bus.freq, `${board.id}.${display.bus}.freq`),
       width: (bus.signals ?? []).filter((signal) => /^data\d+$/.test(signal)).length,
+    } : bus.kind === "i2c" ? {
+      kind: "i2c",
+      port: integer(bus.preferred_host, `${board.id}.${display.bus}.preferred_host`),
+      freqWrite: integer(bus.freq, `${board.id}.${display.bus}.freq`),
+      freqRead: integer(bus.freq_read ?? bus.freq, `${board.id}.${display.bus}.freq_read`),
+      addr: hex(display.i2c_addr, `${board.id}.${display.part}.i2c_addr`),
+      prefixLen: 0,
     } : {
       host: host(bus.preferred_host),
       hostSymbol: typeof bus.preferred_host === "string" ? bus.preferred_host : null,
@@ -211,6 +218,12 @@ export function renderM5GFXSpecsHeader(specs) {
     if (entry.bus.kind === "parallel_epd") {
       lines.push(`constexpr std::uint32_t bus_speed = ${entry.bus.speed};`,
         `constexpr std::uint8_t bus_width = ${entry.bus.width};`);
+    } else if (entry.bus.kind === "i2c") {
+      lines.push(`constexpr int bus_port = ${entry.bus.port};`,
+        `constexpr std::uint32_t bus_freq_write = ${entry.bus.freqWrite};`,
+        `constexpr std::uint32_t bus_freq_read = ${entry.bus.freqRead};`,
+        `constexpr std::uint8_t bus_i2c_addr = ${uint(entry.bus.addr)};`,
+        `constexpr std::uint8_t bus_prefix_len = ${entry.bus.prefixLen};`);
     } else {
       lines.push(`constexpr int bus_host = ${entry.bus.hostSymbol ?? entry.bus.host};`,
         `constexpr std::uint32_t bus_freq_write = ${entry.bus.freqWrite};`,

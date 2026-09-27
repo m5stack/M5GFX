@@ -432,24 +432,25 @@ namespace board_detect
     return result;
   }
 
+  bool wait_i2c_scl_high(int pin_scl)
+  {
+    lgfx::gpio_hi(pin_scl);
+    lgfx::delayMicroseconds(5);
+    if (lgfx::gpio_in(pin_scl)) { return true; }
+    const auto started = lgfx::micros();
+    while (lgfx::micros() - started < 25000)
+    {
+      if (lgfx::gpio_in(pin_scl)) { return true; }
+      lgfx::delayMicroseconds(1);
+    }
+    return false;
+  }
+
   bool release_held_sda(int pin_sda, int pin_scl)
   {
     lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
     lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
     lgfx::delayMicroseconds(10);
-    auto wait_scl_high = [pin_scl]() -> bool
-    {
-      lgfx::gpio_hi(pin_scl);
-      lgfx::delayMicroseconds(5);
-      if (lgfx::gpio_in(pin_scl)) { return true; }
-      const auto started = lgfx::micros();
-      while (lgfx::micros() - started < 25000)
-      {
-        if (lgfx::gpio_in(pin_scl)) { return true; }
-        lgfx::delayMicroseconds(1);
-      }
-      return false;
-    };
 
     // A reset of this MCU during a transfer can leave a peripheral holding
     // SDA low while it waits for more clocks. Clock it out (up to 9 bits) and
@@ -461,14 +462,14 @@ namespace board_detect
       {
         lgfx::gpio_lo(pin_scl);
         lgfx::delayMicroseconds(5);
-        if (!wait_scl_high()) { bus_released = false; break; }
+        if (!wait_i2c_scl_high(pin_scl)) { bus_released = false; break; }
       }
       if (bus_released)
       {
         lgfx::gpio_lo(pin_scl);
         lgfx::gpio_lo(pin_sda);
         lgfx::delayMicroseconds(5);
-        bus_released = wait_scl_high();
+        bus_released = wait_i2c_scl_high(pin_scl);
         if (bus_released)
         {
           lgfx::gpio_hi(pin_sda);
@@ -488,7 +489,19 @@ namespace board_detect
     auto sample = [&]() -> i2c_bus_probe_detail::line_state_t
     {
       const auto pulls = probe_pin_pulls(ctx, mask);
-      return { bool(pulls.pulldown_high & sda_bit), bool(pulls.pulldown_high & scl_bit) };
+      return { bool(pulls.pulldown_high & sda_bit),
+               bool(pulls.pulldown_high & scl_bit),
+               !(pulls.pullup_high & scl_bit) };
+    };
+    auto wait_scl = [&]()
+    {
+      // A floating pin is raised by the internal pull-up during sample() and
+      // never reaches this path. Only an externally held-low SCL receives the
+      // legacy soft-I2C clock-stretch allowance.
+      lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
+      lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
+      wait_i2c_scl_high(pin_scl);
+      ctx.transaction->restore_start({ pin_sda, pin_scl });
     };
     auto recover = [&]()
     {
@@ -499,7 +512,7 @@ namespace board_detect
       release_held_sda(pin_sda, pin_scl);
       ctx.transaction->restore_start({ pin_sda, pin_scl });
     };
-    return i2c_bus_probe_detail::probe_i2c_bus_present(sample, recover);
+    return i2c_bus_probe_detail::probe_i2c_bus_present(sample, wait_scl, recover);
   }
 
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr)

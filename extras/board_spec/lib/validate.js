@@ -201,12 +201,19 @@ function validateConnectors(board, chip, connectorTypes, errors, resolved) {
       errors.push(error("E_CONN_TYPE_MISSING", `${path}/standard`, `standard ${connector.standard} is not declared by ${connector.type}`));
     }
     const known = new Set(type.positions.map((position) => position.id));
-    for (const position of [...Object.keys(connector.positions ?? {}), ...(connector.multi_gpio ?? [])]) {
+    for (const position of [...Object.keys(connector.positions ?? {}), ...(connector.multi_gpio ?? []), ...(connector.shared_gpio ?? [])]) {
       if (!known.has(position)) errors.push(error("E_CONN_POS_UNKNOWN", `${path}/positions/${position}`, `position ${position} is not declared by ${connector.type}`));
     }
 
     if (resolved) {
       const gpioPositions = new Map();
+      const gpioPositionCounts = new Map();
+      for (const endpoint of Object.values(connector.positions ?? {})) {
+        for (const item of Array.isArray(endpoint) ? endpoint : [endpoint]) {
+          const gpio = /^gpio:(\d+)$/.exec(item)?.[1];
+          if (gpio !== undefined) gpioPositionCounts.set(gpio, (gpioPositionCounts.get(gpio) ?? 0) + 1);
+        }
+      }
       for (const position of known) {
         if (!own(connector.positions ?? {}, position)) errors.push(error("E_CONN_POS_MISSING", `${path}/positions/${position}`, "resolved connector position is missing"));
         else {
@@ -217,10 +224,19 @@ function validateConnectors(board, chip, connectorTypes, errors, resolved) {
           validateConnectorEndpoint(endpoint, `${path}/positions/${position}`, type, chip, errors, true);
           for (const item of Array.isArray(endpoint) ? endpoint : [endpoint]) {
             const gpio = /^gpio:(\d+)$/.exec(item)?.[1];
-            if (gpio !== undefined && gpioPositions.has(gpio) && gpioPositions.get(gpio) !== position) {
+            if (gpio !== undefined && gpioPositions.has(gpio) && gpioPositions.get(gpio) !== position
+             && !(connector.shared_gpio ?? []).includes(position)) {
               errors.push(error("E_CONN_SAME_GPIO", `${path}/positions/${position}`, `GPIO ${gpio} is also assigned to position ${gpioPositions.get(gpio)}`));
             } else if (gpio !== undefined) gpioPositions.set(gpio, position);
           }
+        }
+      }
+      for (const position of connector.shared_gpio ?? []) {
+        const endpoint = connector.positions?.[position];
+        const gpios = (Array.isArray(endpoint) ? endpoint : [endpoint])
+          .map((item) => /^gpio:(\d+)$/.exec(item)?.[1]).filter((item) => item !== undefined);
+        if (!gpios.some((gpio) => gpioPositionCounts.get(gpio) > 1)) {
+          errors.push(warning("W_CONN_SHARED_UNUSED", `${path}/shared_gpio`, `position ${position} declares shared_gpio but its GPIO is not used by another position`));
         }
       }
       continue;
