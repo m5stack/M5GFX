@@ -40,6 +40,16 @@
         "specs_output": "esp32s3_specs.hpp",
         "options": [{ "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }]
       },
+      "m5dial": {
+        "chip": "esp32s3", "legacy_board_id": 12, "cpp_namespace": "dial", "board_enum": "board_M5Dial", "desc_name": "desc_dial",
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "touch"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5dinmeter": {
+        "chip": "esp32s3", "legacy_board_id": 13, "cpp_namespace": "dinmeter", "board_enum": "board_M5DinMeter", "desc_name": "desc_dinmeter",
+        "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
       "m5sticks3": {
         "chip": "esp32s3", "legacy_board_id": 26, "cpp_namespace": "sticks3", "board_enum": "board_M5StickS3", "desc_name": "desc_sticks3",
         "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",

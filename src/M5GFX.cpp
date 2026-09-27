@@ -1562,72 +1562,13 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5Dial)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8 };
-        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_5;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_6;
-        bus_cfg.pin_dc   = GPIO_NUM_4;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_7);
-        if ((id & 0xFFFFFF) == 0x019a00)
-        {  //  check panel (GC9A01)
-          board = board_t::board_M5Dial;
-          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5Dial");
-          bus_spi->release();
-          bus_cfg.freq_write = 80000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          auto p = new Panel_GC9A01();
-          p->bus(bus_spi);
-          {
-            auto cfg = p->config();
-            cfg.pin_cs  = GPIO_NUM_7;
-            cfg.pin_rst = GPIO_NUM_8;
-            cfg.panel_width = 240;
-            cfg.panel_height = 240;
-            cfg.readable = false;
-            cfg.invert = true;
-            p->config(cfg);
-          }
-          _panel_last.reset(p);
-          _set_pwm_backlight(GPIO_NUM_9, 7, 44100);
-
-          {
-            auto t = new m5gfx::Touch_FT5x06();
-            if (t) {
-              _touch_last.reset(t);
-
-              auto cfg = t->config();
-
-              cfg.x_min = 0;
-              cfg.x_max = 239;
-              cfg.y_min = 0;
-              cfg.y_max = 239;
-              cfg.pin_int = GPIO_NUM_14;
-              cfg.bus_shared = false;
-              cfg.offset_rotation = 0;
-
-              cfg.i2c_port = 1;
-              cfg.i2c_addr = 0x38;
-              cfg.pin_sda = GPIO_NUM_11;
-              cfg.pin_scl = GPIO_NUM_12;
-              cfg.freq = 400000;
-
-              t->config(cfg);
-
-              _panel_last->touch(t);
-            }
-          }
-
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_dial,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
+        {
           goto init_clear;
         }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5StopWatch || board == board_t::board_M5PaperMono)
@@ -2205,7 +2146,7 @@ namespace m5gfx
         for (auto &bup : backup_pins) { bup.restore(); }
       }
 
-      if (board == 0 || board == board_t::board_M5AtomS3)
+      if (board == 0 || board == board_t::board_M5AtomS3 || board == board_t::board_M5DinMeter)
       {
         if (try_setup_detected(board_detect::m5::esp32s3_detectors_spi_id,
                                board, use_reset, false, &board,
@@ -2214,52 +2155,6 @@ namespace m5gfx
         {
           goto init_clear;
         }
-      }
-
-      if (board == 0 || board == board_t::board_M5DinMeter)
-      {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_7, GPIO_NUM_8 };
-        _pin_reset(GPIO_NUM_8, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_5;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_6;
-        bus_cfg.pin_dc   = GPIO_NUM_4;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_7);
-        if ((id & 0xFB) == 0x81) // 0x81 or 0x85
-        {  //  check panel (ST7789)
-          board = board_t::board_M5DinMeter;
-          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5DinMeter");
-          bus_spi->release();
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          auto p = new Panel_ST7789();
-          p->bus(bus_spi);
-          {
-            auto cfg = p->config();
-            cfg.pin_cs  = GPIO_NUM_7;
-            cfg.pin_rst = GPIO_NUM_8;
-            cfg.panel_width = 135;
-            cfg.panel_height = 240;
-            cfg.offset_x     = 52;
-            cfg.offset_y     = 40;
-            cfg.offset_rotation = 3;
-            cfg.readable = true;
-            cfg.invert = true;
-            p->config(cfg);
-          }
-          _panel_last.reset(p);
-          _set_pwm_backlight(GPIO_NUM_9, 7, 256, false, 16);
-
-          goto init_clear;
-        }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0

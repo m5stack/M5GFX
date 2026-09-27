@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "id": "m5dial",
+  "name": "M5Dial",
+  "legacy_board_id": 12,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        240,
+        240
+      ],
+      "touch": true
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [],
+      "note": "BtnB / encoder push, active low"
+    },
+    "1": {
+      "roles": [
+        "conn:port_b.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "conn:port_b.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "dev:buzzer.data_out"
+      ]
+    },
+    "4": {
+      "roles": [
+        "dev:lcd.dc"
+      ]
+    },
+    "5": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "7": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "8": {
+      "roles": [
+        "dev:lcd.rst"
+      ]
+    },
+    "9": {
+      "roles": [
+        "dev:backlight.pwm"
+      ]
+    },
+    "11": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "12": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "13": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "dev:touch.int"
+      ]
+    },
+    "15": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "dev:led.data"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "42": {
+      "roles": [],
+      "note": "BtnA, active low"
+    },
+    "46": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi"
+      ],
+      "preferred_host": "SPI2_HOST",
+      "fixed": false,
+      "freq": 80000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "freq": 400000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "gc9a01",
+      "bus": "main_spi",
+      "spec": {
+        "width": 240,
+        "height": 240,
+        "invert": true,
+        "readable": false
+      },
+      "signals": {
+        "dc": "gpio:4",
+        "cs": "gpio:7",
+        "rst": "gpio:8"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "backlight": {
+      "kind": "backlight",
+      "spec": {
+        "freq": 44100,
+        "channel": 7,
+        "invert": false,
+        "offset": 0
+      },
+      "verified": {
+        "spec": "generated",
+        "signals": "generated"
+      },
+      "signals": {
+        "pwm": "gpio:9"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "ft5x06",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x38",
+      "spec": {
+        "x_min": 0,
+        "x_max": 239,
+        "y_min": 0,
+        "y_max": 239,
+        "rotation_offset": 0
+      },
+      "signals": {
+        "int": "gpio:14"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "led": {
+      "kind": "led_strip",
+      "part": "sk6812",
+      "verified": {
+        "part": "datasheet",
+        "signals": "generated"
+      },
+      "signals": {
+        "data": "gpio:21"
+      }
+    },
+    "power_hold": {
+      "kind": "power_hold",
+      "signals": {
+        "enable": "gpio:46"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "buzzer": {
+      "kind": "speaker",
+      "signals": {
+        "data_out": "gpio:3"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:15",
+        "2": "gpio:13",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_b": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:2",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

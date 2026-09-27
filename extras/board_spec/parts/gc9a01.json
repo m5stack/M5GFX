@@ -1,9 +1,11 @@
 {
-  "id": "st7789v2", "name": "ST7789V2", "kind": "display", "vendor": "Sitronix",
-  "bus": { "kind": "spi" }, "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight", "power"] },
+  "id": "gc9a01", "name": "GC9A01", "kind": "display", "vendor": "GalaxyCore",
+  "bus": { "kind": "spi", "modes": ["3wire"] }, "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight"] },
   "spec_keys": {
     "width": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
     "height": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
+    "memory_width": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
+    "memory_height": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
     "offset_x": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
     "offset_y": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
     "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
@@ -11,6 +13,6 @@
     "readable": { "type": "boolean", "x-cpp-type": "int" },
     "panel_type": { "type": "string" }
   },
-  "id_probe": { "reg": "0x04", "mask": "0xFB", "value": "0x81" },
-  "verified": { "signals": null, "id_probe": "generated" }
+  "id_probe": { "reg": "0x04", "mask": "0xFFFFFF", "value": "0x019A00" },
+  "verified": { "id_probe": "generated" }
 }

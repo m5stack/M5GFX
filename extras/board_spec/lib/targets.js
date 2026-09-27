@@ -1,6 +1,6 @@
 import { choiceSlots } from "./choices.js";
 
-const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "hold"]);
+const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "touch", "hold"]);
 const CPP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const OUTPUT_FILENAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.hpp$/;
 

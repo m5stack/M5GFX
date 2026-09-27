@@ -20,6 +20,39 @@ namespace atoms3 {
   constexpr std::int8_t hold[] = { 15 };
 } // namespace atoms3
 
+namespace dial {
+  constexpr std::int8_t display_sclk = 6;
+  constexpr std::int8_t display_mosi = 5;
+  constexpr std::int8_t display_miso = -1;
+  constexpr std::int8_t display_dc = 4;
+  constexpr std::int8_t display_cs = 7;
+  constexpr std::int8_t display_rst = 8;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t internal_i2c_sda = 11;
+  constexpr std::int8_t internal_i2c_scl = 12;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t reset_gpio = 8;
+  constexpr std::int8_t backlight_gpio = 9;
+  constexpr std::int8_t touch_int = 14;
+  constexpr std::int8_t hold[] = { 7 };
+} // namespace dial
+
+namespace dinmeter {
+  constexpr std::int8_t display_sclk = 6;
+  constexpr std::int8_t display_mosi = 5;
+  constexpr std::int8_t display_miso = -1;
+  constexpr std::int8_t display_dc = 4;
+  constexpr std::int8_t display_cs = 7;
+  constexpr std::int8_t display_rst = 8;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t internal_i2c_sda = 11;
+  constexpr std::int8_t internal_i2c_scl = 12;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t reset_gpio = 8;
+  constexpr std::int8_t backlight_gpio = 9;
+  constexpr std::int8_t hold[] = { 7 };
+} // namespace dinmeter
+
 namespace sticks3 {
   constexpr std::int8_t display_sclk = 40;
   constexpr std::int8_t display_mosi = 39;

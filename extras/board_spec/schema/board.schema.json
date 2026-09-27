@@ -140,7 +140,7 @@
       "x-spec-properties": {
         "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "panel_type"],
         "sd": [],
-        "touch": ["x_max", "y_max"],
+        "touch": ["x_min", "x_max", "y_min", "y_max", "rotation_offset"],
         "pmic": [],
         "speaker": [],
         "mic": [],

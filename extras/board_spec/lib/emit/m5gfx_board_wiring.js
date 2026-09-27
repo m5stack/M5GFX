@@ -60,6 +60,7 @@ export function wiringFieldsForRole(board, sourceRole, parts) {
   }
   if (kind === "power_hold" && deviceRole[2] === "enable") fields.push("power_gpio");
   if (kind === "backlight" && deviceRole[2] === "pwm") fields.push("backlight_gpio");
+  if (kind === "touch" && deviceRole[2] === "int") fields.push("touch_int");
   return fields;
 }
 
@@ -120,6 +121,7 @@ export function emitM5GFXWiringForMapping(board, parts, mapping) {
     resetGpio,
     powerGpio: value("power_gpio"),
     backlightGpio: value("backlight_gpio"),
+    touchInt: value("touch_int"),
     hold: hold.filter((pin) => pin >= 0),
   };
 }
@@ -153,6 +155,7 @@ export function renderM5GFXWiringHeader(entries) {
     if (value.mapping.reset) lines.push(`  ${constant("reset_gpio", value.resetGpio)}`);
     if (fields.has("power")) lines.push(`  ${constant("power_gpio", value.powerGpio)}`);
     if (fields.has("backlight")) lines.push(`  ${constant("backlight_gpio", value.backlightGpio)}`);
+    if (fields.has("touch")) lines.push(`  ${constant("touch_int", value.touchInt)}`);
     if (fields.has("hold")) lines.push(`  constexpr std::int8_t hold[] = { ${value.hold.join(", ")} };`);
     lines.push(`} // namespace ${value.mapping.cppNamespace}`);
   }

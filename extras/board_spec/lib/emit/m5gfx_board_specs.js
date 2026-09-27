@@ -88,6 +88,19 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       idValue: hex(pmicPart?.id_probe?.value, `${board.id}.${pmicDevice.part}.id_probe.value`),
     }),
   } : null;
+  const touchDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "touch" && device.bus === "internal_i2c");
+  const touchPart = parts[touchDevice?.part];
+  const touchBus = board.buses?.[touchDevice?.bus];
+  const touchSpec = touchDevice?.spec ?? {};
+  const touch = touchDevice ? {
+    i2cAddr: hex(touchDevice.i2c_addr ?? touchPart?.i2c_addr?.[0], `${board.id}.${touchDevice.part}.i2c_addr`),
+    i2cFreq: integer(touchBus?.freq, `${board.id}.${touchDevice.bus}.freq`),
+    xMin: integer(touchSpec.x_min, `${board.id}.${touchDevice.part}.x_min`),
+    xMax: integer(touchSpec.x_max, `${board.id}.${touchDevice.part}.x_max`),
+    yMin: integer(touchSpec.y_min, `${board.id}.${touchDevice.part}.y_min`),
+    yMax: integer(touchSpec.y_max, `${board.id}.${touchDevice.part}.y_max`),
+    rotationOffset: optionalInteger(touchSpec.rotation_offset, `${board.id}.${touchDevice.part}.rotation_offset`),
+  } : null;
   return {
     namespace: mapping.cppNamespace,
     bus: {
@@ -106,6 +119,7 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       offset: integer(backlight.offset, `${board.id}.backlight.offset`),
     },
     pmic,
+    touch,
   };
 }
 
@@ -165,6 +179,17 @@ export function renderM5GFXSpecsHeader(specs) {
         ...(entry.pmic.idValue === undefined ? [] :
           [`  constexpr std::uint8_t id_value = ${uint(entry.pmic.idValue)};`]),
         "} // namespace pmic");
+    }
+    if (entry.touch) {
+      lines.push("", "namespace touch {",
+        `  constexpr std::uint8_t i2c_addr = ${uint(entry.touch.i2cAddr)};`,
+        `  constexpr std::uint32_t i2c_freq = ${entry.touch.i2cFreq};`,
+        `  constexpr int x_min = ${entry.touch.xMin};`,
+        `  constexpr int x_max = ${entry.touch.xMax};`,
+        `  constexpr int y_min = ${entry.touch.yMin};`,
+        `  constexpr int y_max = ${entry.touch.yMax};`,
+        `  constexpr int rotation_offset = ${entry.touch.rotationOffset ?? "setup_sentinel::keep_u8"};`,
+        "} // namespace touch");
     }
     lines.push("", `} } } } } // namespace m5gfx::board_detect::m5::specs::${entry.namespace}`);
   }

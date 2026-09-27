@@ -33,6 +33,32 @@ namespace m5
   };
   static const board_def_t& board_atoms3 = desc_atoms3.def;
 
+  static constexpr board_desc_t desc_dinmeter = {
+    { id(lgfx::board_M5DinMeter), "M5DinMeter", 0 },
+    no_power(), gpio_reset(wiring::dinmeter::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    display_pins(wiring::dinmeter::display_sclk, wiring::dinmeter::display_mosi,
+                 wiring::dinmeter::display_miso, wiring::dinmeter::display_dc,
+                 wiring::dinmeter::display_cs, wiring::dinmeter::display_rst,
+                 wiring::dinmeter::display_busy),
+    pins(wiring::dinmeter::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
+    no_options(),
+  };
+  static const board_def_t& board_dinmeter = desc_dinmeter.def;
+
+  static constexpr board_desc_t desc_dial = {
+    { id(lgfx::board_M5Dial), "M5Dial", 0 },
+    no_power(), gpio_reset(wiring::dial::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    display_pins(wiring::dial::display_sclk, wiring::dial::display_mosi,
+                 wiring::dial::display_miso, wiring::dial::display_dc,
+                 wiring::dial::display_cs, wiring::dial::display_rst,
+                 wiring::dial::display_busy),
+    pins(wiring::dial::hold),
+    internal_i2c(wiring::dial::internal_i2c_sda, wiring::dial::internal_i2c_scl,
+                 wiring::dial::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
+  };
+  static const board_def_t& board_dial = desc_dial.def;
+
   static const pmic_write_t sticks3_power_on[] = {
     pmic_write(specs::sticks3::pmic::i2c_addr, 0x09, 0x00, 0x00),
     pmic_write(specs::sticks3::pmic::i2c_addr, 0x16, 0x00, 0xFB),
@@ -69,21 +95,42 @@ namespace m5
     spi_id_probe(specs::atoms3::probe_gc9107::cmd, specs::atoms3::probe_gc9107::mask,
                  specs::atoms3::probe_gc9107::values, generated_options::atoms3::gc9107),
   };
+  static const spi_id_probe_t dinmeter_probes[] = {
+    spi_id_probe(specs::dinmeter::probe_st7789v2::cmd, specs::dinmeter::probe_st7789v2::mask,
+                 specs::dinmeter::probe_st7789v2::values, 0),
+  };
+  static const spi_id_probe_t dial_probes[] = {
+    spi_id_probe(specs::dial::probe_gc9a01::cmd, specs::dial::probe_gc9a01::mask,
+                 specs::dial::probe_gc9a01::values, 0),
+  };
+
+  struct spi_id_member_t
+  {
+    const board_desc_t* desc;
+    const spi_id_probe_t* probes;
+    std::uint8_t probe_count;
+  };
 
   class spi_id_detector_t final : public board_detector_t
   {
   public:
-    spi_id_detector_t() : board_detector_t(members_) {}
+    spi_id_detector_t(const board_def_t* const* members, const spi_id_member_t* members_desc,
+                      std::uint8_t member_count)
+    : board_detector_t(members), members_desc_(members_desc), member_count_(member_count) {}
     bool signature(probe_ctx_t&) const override { return true; }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
-      if (!probe_spi_id(ctx, desc_atoms3, atoms3_probes,
-                        sizeof(atoms3_probes) / sizeof(atoms3_probes[0]), result)) { return false; }
-      return true;
+      for (std::uint8_t index = 0; index < member_count_; ++index)
+      {
+        const auto& member = members_desc_[index];
+        if (probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result)) { return true; }
+      }
+      return false;
     }
 
   private:
-    static const board_def_t* const members_[];
+    const spi_id_member_t* members_desc_;
+    std::uint8_t member_count_;
   };
 
   class pmic_id_detector_t final : public board_detector_t
@@ -130,16 +177,32 @@ namespace m5
     static const board_def_t* const members_[];
     static const board_desc_t* const descriptions_[];
   };
-  const board_def_t* const spi_id_detector_t::members_[] = { &board_atoms3, nullptr };
-  static const spi_id_detector_t spi_id_detector;
+  static const board_def_t* const spi_id_members[] = { &board_atoms3, &board_dinmeter, nullptr };
+  static const spi_id_member_t spi_id_member_descs[] = {
+    { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]) },
+    { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]) },
+  };
+  static const spi_id_detector_t spi_id_detector(
+    spi_id_members, spi_id_member_descs,
+    sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
   static const board_detector_t* const esp32s3_detectors_spi_id[] = { &spi_id_detector, nullptr };
+  static const board_def_t* const dial_members[] = { &board_dial, nullptr };
+  static const spi_id_member_t dial_member_descs[] = {
+    { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]) },
+  };
+  static const spi_id_detector_t dial_detector(
+    dial_members, dial_member_descs,
+    sizeof(dial_member_descs) / sizeof(dial_member_descs[0]));
+  static const board_detector_t* const esp32s3_detectors_dial[] = { &dial_detector, nullptr };
   const board_def_t* const pmic_id_detector_t::members_[] = { &board_sticks3, nullptr };
   const board_desc_t* const pmic_id_detector_t::descriptions_[] = { &desc_sticks3, nullptr };
   static const pmic_id_detector_t pmic_id_detector;
   static const board_detector_t* const esp32s3_detectors_pmic[] = { &pmic_id_detector, nullptr };
-  static const board_detector_t* const esp32s3_detectors[] = { &spi_id_detector, &pmic_id_detector, nullptr };
+  static const board_detector_t* const esp32s3_detectors[] = { &dial_detector, &spi_id_detector, &pmic_id_detector, nullptr };
 
   bool construct_atoms3(const board_result_t& result, display_parts_t* parts);
+  bool construct_dinmeter(const board_result_t& result, display_parts_t* parts);
+  bool construct_dial(const board_result_t& result, display_parts_t* parts);
   bool construct_sticks3(const board_result_t& result, display_parts_t* parts);
 
   const char* atoms3_success_annotation(const board_result_t& result)
@@ -149,6 +212,8 @@ namespace m5
 
   static const board_entry_t esp32s3_boards[] = {
     { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation },
+    { &desc_dinmeter, construct_dinmeter, "board_M5DinMeter", nullptr },
+    { &desc_dial, construct_dial, "board_M5Dial", nullptr },
     { &desc_sticks3, construct_sticks3, "board_M5StickS3", nullptr },
   };
 

@@ -59,6 +59,82 @@ namespace m5
     return out.release_to(parts);
   }
 
+  static constexpr spi_bus_desc_t bus_dinmeter =
+    spi_bus(static_cast<spi_host_device_t>(specs::dinmeter::bus_host))
+      .with_freq(specs::dinmeter::bus_freq_write, specs::dinmeter::bus_freq_read)
+      .with_pins(wiring::dinmeter::display_sclk, wiring::dinmeter::display_mosi,
+                 wiring::dinmeter::display_miso, wiring::dinmeter::display_dc)
+      .with_three_wire(specs::dinmeter::bus_three_wire)
+      .with_dma_channel(SPI_DMA_CH_AUTO);
+  static constexpr panel_desc_t panel_dinmeter =
+    panel()
+      .with_size(specs::dinmeter::panel_st7789v2::width, specs::dinmeter::panel_st7789v2::height)
+      .with_memory(specs::dinmeter::panel_st7789v2::memory_width,
+                   specs::dinmeter::panel_st7789v2::memory_height)
+      .with_offset(specs::dinmeter::panel_st7789v2::offset_x,
+                   specs::dinmeter::panel_st7789v2::offset_y)
+      .with_pins(wiring::dinmeter::display_cs, wiring::dinmeter::display_rst)
+      .with_rotation(specs::dinmeter::panel_st7789v2::rotation_offset)
+      .with_invert(specs::dinmeter::panel_st7789v2::invert)
+      .with_readable(specs::dinmeter::panel_st7789v2::readable);
+  static constexpr pwm_light_desc_t light_dinmeter =
+    pwm_light(wiring::dinmeter::backlight_gpio, specs::dinmeter::backlight::freq,
+              specs::dinmeter::backlight::channel)
+      .with_invert(specs::dinmeter::backlight::invert)
+      .with_offset(specs::dinmeter::backlight::offset);
+
+  bool construct_dinmeter(const board_result_t&, display_parts_t* parts)
+  {
+    display_parts_owner_t out;
+    out.bus.reset(make_spi_bus(bus_dinmeter));
+    out.panel.reset(make_panel<Panel_ST7789>(panel_dinmeter, out.bus.get()));
+    out.light.reset(make_pwm_light(light_dinmeter));
+    return out.release_to(parts);
+  }
+
+  static constexpr spi_bus_desc_t bus_dial =
+    spi_bus(static_cast<spi_host_device_t>(specs::dial::bus_host))
+      .with_freq(specs::dial::bus_freq_write, specs::dial::bus_freq_read)
+      .with_pins(wiring::dial::display_sclk, wiring::dial::display_mosi,
+                 wiring::dial::display_miso, wiring::dial::display_dc)
+      .with_three_wire(specs::dial::bus_three_wire)
+      .with_dma_channel(SPI_DMA_CH_AUTO);
+  static constexpr panel_desc_t panel_dial =
+    panel()
+      .with_size(specs::dial::panel_gc9a01::width, specs::dial::panel_gc9a01::height)
+      .with_memory(specs::dial::panel_gc9a01::memory_width,
+                   specs::dial::panel_gc9a01::memory_height)
+      .with_offset(specs::dial::panel_gc9a01::offset_x, specs::dial::panel_gc9a01::offset_y)
+      .with_pins(wiring::dial::display_cs, wiring::dial::display_rst)
+      .with_rotation(specs::dial::panel_gc9a01::rotation_offset)
+      .with_invert(specs::dial::panel_gc9a01::invert)
+      .with_readable(specs::dial::panel_gc9a01::readable);
+  static constexpr pwm_light_desc_t light_dial =
+    pwm_light(wiring::dial::backlight_gpio, specs::dial::backlight::freq,
+              specs::dial::backlight::channel)
+      .with_invert(specs::dial::backlight::invert)
+      .with_offset(specs::dial::backlight::offset);
+  static constexpr i2c_touch_desc_t touch_dial =
+    i2c_touch(specs::dial::touch::i2c_addr)
+      .with_port(wiring::dial::internal_i2c_port)
+      .with_pins(wiring::dial::internal_i2c_sda, wiring::dial::internal_i2c_scl,
+                 wiring::dial::touch_int)
+      .with_freq(specs::dial::touch::i2c_freq)
+      .with_range(specs::dial::touch::x_min, specs::dial::touch::x_max,
+                  specs::dial::touch::y_min, specs::dial::touch::y_max)
+      .with_rotation(specs::dial::touch::rotation_offset);
+
+  bool construct_dial(const board_result_t&, display_parts_t* parts)
+  {
+    display_parts_owner_t out;
+    out.bus.reset(make_spi_bus(bus_dial));
+    out.panel.reset(make_panel<Panel_GC9A01>(panel_dial, out.bus.get()));
+    out.light.reset(make_pwm_light(light_dial));
+    out.touch.reset(make_i2c_touch<lgfx::Touch_FT5x06>(touch_dial));
+    out.panel->touch(out.touch.get());
+    return out.release_to(parts);
+  }
+
   static constexpr spi_bus_desc_t bus_sticks3 =
     spi_bus(static_cast<spi_host_device_t>(specs::sticks3::bus_host))
       .with_freq(specs::sticks3::bus_freq_write, specs::sticks3::bus_freq_read)

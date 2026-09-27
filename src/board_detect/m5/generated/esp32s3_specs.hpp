@@ -57,6 +57,82 @@ namespace backlight {
 
 } } } } } // namespace m5gfx::board_detect::m5::specs::atoms3
 
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace dial {
+constexpr int bus_host = SPI2_HOST;
+constexpr std::uint32_t bus_freq_write = 80000000;
+constexpr std::uint32_t bus_freq_read = 16000000;
+constexpr bool bus_three_wire = true;
+
+namespace panel_gc9a01 {
+  constexpr int width = 240;
+  constexpr int height = 240;
+  constexpr int memory_width = setup_sentinel::keep_dimension;
+  constexpr int memory_height = setup_sentinel::keep_dimension;
+  constexpr int offset_x = setup_sentinel::keep_offset;
+  constexpr int offset_y = setup_sentinel::keep_offset;
+  constexpr int rotation_offset = setup_sentinel::keep_u8;
+  constexpr int invert = 1;
+  constexpr int readable = 0;
+} // namespace panel_gc9a01
+
+namespace probe_gc9a01 {
+  constexpr std::uint8_t cmd = 0x4;
+  constexpr std::uint32_t mask = 0xFFFFFF;
+  constexpr std::uint32_t values[] = { 0x19A00 };
+} // namespace probe_gc9a01
+
+namespace backlight {
+  constexpr std::uint32_t freq = 44100;
+  constexpr std::uint8_t channel = 7;
+  constexpr bool invert = false;
+  constexpr std::uint8_t offset = 0;
+} // namespace backlight
+
+namespace touch {
+  constexpr std::uint8_t i2c_addr = 0x38;
+  constexpr std::uint32_t i2c_freq = 400000;
+  constexpr int x_min = 0;
+  constexpr int x_max = 239;
+  constexpr int y_min = 0;
+  constexpr int y_max = 239;
+  constexpr int rotation_offset = 0;
+} // namespace touch
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::dial
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace dinmeter {
+constexpr int bus_host = SPI2_HOST;
+constexpr std::uint32_t bus_freq_write = 40000000;
+constexpr std::uint32_t bus_freq_read = 16000000;
+constexpr bool bus_three_wire = true;
+
+namespace panel_st7789v2 {
+  constexpr int width = 135;
+  constexpr int height = 240;
+  constexpr int memory_width = setup_sentinel::keep_dimension;
+  constexpr int memory_height = setup_sentinel::keep_dimension;
+  constexpr int offset_x = 52;
+  constexpr int offset_y = 40;
+  constexpr int rotation_offset = 3;
+  constexpr int invert = 1;
+  constexpr int readable = 1;
+} // namespace panel_st7789v2
+
+namespace probe_st7789v2 {
+  constexpr std::uint8_t cmd = 0x4;
+  constexpr std::uint32_t mask = 0xFB;
+  constexpr std::uint32_t values[] = { 0x81 };
+} // namespace probe_st7789v2
+
+namespace backlight {
+  constexpr std::uint32_t freq = 256;
+  constexpr std::uint8_t channel = 7;
+  constexpr bool invert = false;
+  constexpr std::uint8_t offset = 16;
+} // namespace backlight
+
+} } } } } // namespace m5gfx::board_detect::m5::specs::dinmeter
+
 namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace sticks3 {
 constexpr int bus_host = SPI3_HOST;
 constexpr std::uint32_t bus_freq_write = 40000000;
@@ -74,6 +150,12 @@ namespace panel_st7789v2 {
   constexpr int invert = 1;
   constexpr int readable = 1;
 } // namespace panel_st7789v2
+
+namespace probe_st7789v2 {
+  constexpr std::uint8_t cmd = 0x4;
+  constexpr std::uint32_t mask = 0xFB;
+  constexpr std::uint32_t values[] = { 0x81 };
+} // namespace probe_st7789v2
 
 namespace backlight {
   constexpr std::uint32_t freq = 256;

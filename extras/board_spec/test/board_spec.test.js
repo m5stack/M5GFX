@@ -147,7 +147,7 @@ test("valid Core2 has only the expected target warning", () => {
 });
 
 test("all catalog boards validate against their chip tables", () => {
-  assert.deepEqual(catalogFiles, ["m5atoms3.json", "m5paper.json", "m5stack.json", "m5stack_core2.json", "m5station.json", "m5sticks3.json", "m5timercam.json", "m5tough.json"]);
+  assert.deepEqual(catalogFiles, ["m5atoms3.json", "m5dial.json", "m5dinmeter.json", "m5paper.json", "m5stack.json", "m5stack_core2.json", "m5station.json", "m5sticks3.json", "m5timercam.json", "m5tough.json"]);
   assert.deepEqual(validateCatalog(catalogBoards, (item) => ({ ...context, chip: chips[item.chip] })).filter((item) => item.severity !== "warning"), []);
 });
 
@@ -157,9 +157,9 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
   assert.deepEqual(parseGeneratedWiring(source), legacyEsp32Wiring);
 });
 
-test("all 14 revision and runtime combinations match snapshots", async () => {
+test("all 16 revision and runtime combinations match snapshots", async () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 14);
+  assert.equal(outputs.length, 16);
   for (const output of outputs) {
     const snapshot = await fs.readFile(path.join(root, "generated/resolved", output.filename), "utf8");
     assert.equal(snapshot, formatBoard(output.board), output.filename);
@@ -339,7 +339,7 @@ test("M5Unified live pin tables match generated values", async (t) => {
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
   const compared = spawnSync(process.execPath, ["cli/spec.js", "compare-pintable", "--m5unified", m5unified], { cwd: root, encoding: "utf8" });
   assert.equal(compared.status, 0, compared.stderr || compared.stdout);
-  assert.match(compared.stdout, /comparison passed: 8 board\(s\), 400 value\(s\), 2 target\(s\)/);
+  assert.match(compared.stdout, /comparison passed: 10 board\(s\), 500 value\(s\), 2 target\(s\)/);
 });
 
 test("M5GFX wiring emitter maps every board-description GPIO", () => {
@@ -350,6 +350,8 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
     m5stack: { display: [18, 23, 19, 27, 14, 33, -1], sd: [18, 23, 19, 4, 14], i2c: [21, 22, 0], reset: 33, power: -1, hold: [4, 14] },
     m5paper: { display: [14, 12, 13, -1, 15, 23, 27], sd: [14, 12, 13, 4, 15], i2c: [21, 22, 1], reset: 23, power: 2, hold: [4, 15] },
     m5atoms3: { display: [17, 21, -1, 33, 15, 34, -1], sd: null, i2c: [38, 39, 1], reset: 34, power: -1, hold: [15] },
+    m5dial: { display: [6, 5, -1, 4, 7, 8, -1], sd: null, i2c: [11, 12, 1], reset: 8, power: 46, hold: [7] },
+    m5dinmeter: { display: [6, 5, -1, 4, 7, 8, -1], sd: null, i2c: [11, 12, 1], reset: 8, power: 46, hold: [7] },
     m5sticks3: { display: [40, 39, -1, 45, 41, 21, -1], sd: null, i2c: [47, 48, 1], reset: 21, power: -1, hold: [41] },
   };
   const entries = [];
@@ -370,6 +372,7 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
   assert.match(renderM5GFXWiringHeader(entries), /constexpr std::int8_t display_sclk = 18;/);
   assert.deepEqual(wiringFieldsForRole(board, "bus:main_spi.sclk", parts), ["display_sclk", "shared_sd_sclk"]);
   assert.deepEqual(wiringFieldsForRole(board, "dev:lcd.rst", parts), ["display_rst"]);
+  assert.deepEqual(wiringFieldsForRole(catalogBoards.find((item) => item.id === "m5dial"), "dev:touch.int", parts), ["touch_int"]);
 });
 
 test("AtomS3 exposes the display wiring expected by the future reset declaration", () => {
@@ -411,6 +414,31 @@ test("StickS3 generated display, backlight, and PMIC specs match the legacy setu
   const header = renderM5GFXSpecsHeader(emitted);
   assert.match(header, /namespace pmic \{[\s\S]*i2c_addr = 0x6E;[\s\S]*i2c_freq = 100000;[\s\S]*id_reg = 0x0;/);
   assert.doesNotMatch(header, /namespace pmic \{[\s\S]*id_value/);
+});
+
+test("Dial and DinMeter generated specs preserve the legacy setup", async () => {
+  const dial = catalogBoards.find((item) => item.id === "m5dial");
+  const dialSpecs = emitM5GFXSpecs(dial, resolveCatalog(dial).map((item) => item.board), parts, m5gfxBoardMapping(target, dial.id));
+  assert.deepEqual(dialSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST", freqWrite: 80000000, freqRead: 16000000, threeWire: true });
+  assert.deepEqual(dialSpecs.panels.gc9a01, { width: 240, height: 240, memoryWidth: null, memoryHeight: null, offsetX: null, offsetY: null, rotationOffset: null, invert: true, readable: false });
+  assert.deepEqual(dialSpecs.probes.gc9a01, { cmd: 4, mask: 0xFFFFFF, values: [0x019A00] });
+  assert.deepEqual(dialSpecs.touch, { i2cAddr: 0x38, i2cFreq: 400000, xMin: 0, xMax: 239, yMin: 0, yMax: 239, rotationOffset: 0 });
+
+  const dinmeter = catalogBoards.find((item) => item.id === "m5dinmeter");
+  const dinmeterSpecs = emitM5GFXSpecs(dinmeter, resolveCatalog(dinmeter).map((item) => item.board), parts, m5gfxBoardMapping(target, dinmeter.id));
+  assert.deepEqual(dinmeterSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
+  assert.deepEqual(dinmeterSpecs.panels.st7789v2, { width: 135, height: 240, memoryWidth: null, memoryHeight: null, offsetX: 52, offsetY: 40, rotationOffset: 3, invert: true, readable: true });
+  assert.deepEqual(dinmeterSpecs.probes.st7789v2, { cmd: 4, mask: 0xFB, values: [0x81] });
+  assert.equal(dinmeterSpecs.touch, null);
+
+  const setup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3_setup.inl"), "utf8");
+  assert.match(setup, /bus_dinmeter[\s\S]*?\.with_dma_channel\(SPI_DMA_CH_AUTO\);/);
+  assert.match(setup, /bus_dial[\s\S]*?\.with_dma_channel\(SPI_DMA_CH_AUTO\);/);
+  assert.doesNotMatch(setup, /panel_dinmeter[^;]*\.with_bus_shared\(/);
+  assert.doesNotMatch(setup, /panel_dial[^;]*\.with_bus_shared\(/);
+  assert.match(setup, /construct_dinmeter[\s\S]*?make_panel<Panel_ST7789>\(panel_dinmeter/);
+  assert.match(setup, /construct_dial[\s\S]*?make_panel<Panel_GC9A01>\(panel_dial/);
+  assert.match(setup, /construct_dial[\s\S]*?make_i2c_touch<lgfx::Touch_FT5x06>\(touch_dial/);
 });
 
 test("StickS3 PMIC specs reject unspecified generated values", () => {
