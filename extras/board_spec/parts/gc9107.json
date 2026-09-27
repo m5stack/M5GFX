@@ -1,0 +1,9 @@
+{
+  "id": "gc9107", "name": "GC9107", "kind": "display", "vendor": "GalaxyCore",
+  "bus": { "kind": "spi", "modes": ["3wire"] },
+  "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight"] },
+  "spec_keys": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "panel_type"],
+  "spec": { "memory_width": 128, "memory_height": 160 },
+  "id_probe": { "reg": "0x04", "mask": "0xFFFFFF", "value": "0x079100" },
+  "verified": { "id_probe": "generated" }
+}

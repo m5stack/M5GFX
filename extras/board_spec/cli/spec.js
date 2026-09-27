@@ -11,8 +11,9 @@ import { validateConnectorTypes } from "../lib/ctypes.js";
 import { validatePartCatalog } from "../lib/parts.js";
 import { renderRevisionDoc } from "../lib/targets.js";
 import { formatBoard } from "../lib/format.js";
-import { emitPinTable, PIN_NAMES, renderPinTableInl, renderPinTableJson } from "../lib/emit/m5unified_pin_table.js";
+import { emitPinTable, PIN_NAMES, PIN_TABLE_TARGETS, renderPinTableInl, renderPinTableJson } from "../lib/emit/m5unified_pin_table.js";
 import { emitM5GFXWiring, M5GFX_WIRING_BOARDS, renderM5GFXWiringHeader, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
+import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { assertBoard, assertChip, assertSchema, parseJson } from "../lib/model.js";
 import { resolveAll, resolveBoard } from "../lib/resolve.js";
 import { validateBoard, validateCatalog, validateResolvedVariants } from "../lib/validate.js";
@@ -103,13 +104,19 @@ async function pinTableEntries(boards, connectorTypes, contexts, targets) {
   });
 }
 
-async function pinTableOutputs(boards, connectorTypes, contexts, targets) {
+async function pinTableOutputs(boards, connectorTypes, contexts, targets, targetId = "esp32") {
   const entries = await pinTableEntries(boards, connectorTypes, contexts, targets);
   return {
     json: renderPinTableJson(entries),
-    inl: renderPinTableInl(entries),
+    inl: renderPinTableInl(entries, targetId),
     entries,
   };
+}
+
+function pinTableBoards(boards, contexts, targetId) {
+  const target = PIN_TABLE_TARGETS[targetId];
+  if (!target) throw new Error(`unknown pin-table target ${targetId}`);
+  return boards.filter((board) => contexts.get(board.id).chip.soc === target.soc);
 }
 
 async function writePinTableOutputs() {
@@ -121,12 +128,17 @@ async function writePinTableOutputs() {
   const boards = await Promise.all((await boardFiles()).map((filename) => readJson(filename, assertBoard)));
   const contexts = new Map();
   for (const board of boards) contexts.set(board.id, await context(board, schema, connectorTypes, parts, targets, accessories));
-  const output = await pinTableOutputs(boards, connectorTypes, contexts, targets);
   const directory = path.join(root, "generated/m5unified_pin_table");
   await fs.mkdir(directory, { recursive: true });
-  await fs.writeFile(path.join(directory, "esp32.json"), output.json);
-  await fs.writeFile(path.join(directory, "esp32.inl"), output.inl);
-  console.log(`generated M5Unified pin tables for ${boards.length} board(s)`);
+  let count = 0;
+  for (const targetId of Object.keys(PIN_TABLE_TARGETS)) {
+    const selected = pinTableBoards(boards, contexts, targetId);
+    const output = await pinTableOutputs(selected, connectorTypes, contexts, targets, targetId);
+    await fs.writeFile(path.join(directory, `${targetId}.json`), output.json);
+    await fs.writeFile(path.join(directory, `${targetId}.inl`), output.inl);
+    count += selected.length;
+  }
+  console.log(`generated M5Unified pin tables for ${count} board(s) across ${Object.keys(PIN_TABLE_TARGETS).length} target(s)`);
 }
 
 async function assertGeneratedFile(filename, expected) {
@@ -136,16 +148,32 @@ async function assertGeneratedFile(filename, expected) {
   if (actual !== expected) throw new Error(`stale generated artifact: ${path.relative(root, filename)}`);
 }
 
-function wiringEntries(boards, connectorTypes, contexts) {
-  return selectM5GFXWiringBoards(boards).map((board) => {
+function wiringEntries(boards, connectorTypes, contexts, chipId) {
+  const mappings = M5GFX_WIRING_BOARDS.filter((mapping) => boards.some((board) => board.id === mapping.boardId && board.chip === chipId));
+  return selectM5GFXWiringBoards(boards, mappings).map((board) => {
     const ctx = contexts.get(board.id);
     const resolved = resolveBoard(board, {}, connectorTypes, { chip: ctx.chip, parts: ctx.parts });
     return { board, emitted: emitM5GFXWiring(resolved, ctx.parts) };
   });
 }
 
-async function wiringOutput(boards, connectorTypes, contexts) {
-  return renderM5GFXWiringHeader(wiringEntries(boards, connectorTypes, contexts));
+async function wiringOutputs(boards, connectorTypes, contexts, targets) {
+  const outputs = new Map();
+  for (const [chipId, filename] of Object.entries(targets.m5gfx_board_desc?.out_by_chip ?? {})) {
+    outputs.set(filename, renderM5GFXWiringHeader(wiringEntries(boards, connectorTypes, contexts, chipId)));
+  }
+  return outputs;
+}
+
+function specsOutput(boards, connectorTypes, contexts) {
+  const selected = ["m5atoms3", "m5sticks3"].map((id) => {
+    const board = boards.find((item) => item.id === id);
+    if (!board) throw new Error(`${id} board is required for M5GFX specs`);
+    const ctx = contexts.get(board.id);
+    const variants = resolveAll(board, connectorTypes, resolveCatalogs(ctx)).map((item) => item.board);
+    return emitM5GFXSpecs(board, variants, ctx.parts);
+  });
+  return renderM5GFXSpecsHeader(selected);
 }
 
 async function writeWiringOutput() {
@@ -157,9 +185,12 @@ async function writeWiringOutput() {
   const boards = await Promise.all((await boardFiles()).map((filename) => readJson(filename, assertBoard)));
   const contexts = new Map();
   for (const board of boards) contexts.set(board.id, await context(board, schema, connectorTypes, parts, targets, accessories));
-  const filename = path.resolve(root, "../../src/board_detect/m5/generated/esp32_d0wdq6_wiring.hpp");
-  await fs.mkdir(path.dirname(filename), { recursive: true });
-  await fs.writeFile(filename, await wiringOutput(boards, connectorTypes, contexts));
+  const directory = path.resolve(root, "../../src/board_detect/m5/generated");
+  await fs.mkdir(directory, { recursive: true });
+  for (const [filename, output] of await wiringOutputs(boards, connectorTypes, contexts, targets)) {
+    await fs.writeFile(path.join(directory, filename), output);
+  }
+  await fs.writeFile(path.join(directory, "esp32s3_specs.hpp"), specsOutput(boards, connectorTypes, contexts));
   console.log(`generated M5GFX wiring for ${M5GFX_WIRING_BOARDS.length} board(s)`);
 }
 
@@ -291,12 +322,18 @@ async function check() {
   const unexpectedDocs = actualDocs.filter((name) => !expectedDocs.has(name));
   if (unexpectedDocs.length) throw new Error(`unexpected revision doc(s): ${unexpectedDocs.join(", ")}`);
 
-  const pinTables = await pinTableOutputs(boards, connectorTypes, contexts, targets);
   const pinTableDir = path.join(root, "generated/m5unified_pin_table");
-  await assertGeneratedFile(path.join(pinTableDir, "esp32.json"), pinTables.json);
-  await assertGeneratedFile(path.join(pinTableDir, "esp32.inl"), pinTables.inl);
-  const wiringFilename = path.resolve(root, "../../src/board_detect/m5/generated/esp32_d0wdq6_wiring.hpp");
-  await assertGeneratedFile(wiringFilename, await wiringOutput(boards, connectorTypes, contexts));
+  for (const targetId of Object.keys(PIN_TABLE_TARGETS)) {
+    const selected = pinTableBoards(boards, contexts, targetId);
+    const pinTables = await pinTableOutputs(selected, connectorTypes, contexts, targets, targetId);
+    await assertGeneratedFile(path.join(pinTableDir, `${targetId}.json`), pinTables.json);
+    await assertGeneratedFile(path.join(pinTableDir, `${targetId}.inl`), pinTables.inl);
+  }
+  const wiringDirectory = path.resolve(root, "../../src/board_detect/m5/generated");
+  for (const [filename, output] of await wiringOutputs(boards, connectorTypes, contexts, targets)) {
+    await assertGeneratedFile(path.join(wiringDirectory, filename), output);
+  }
+  await assertGeneratedFile(path.join(wiringDirectory, "esp32s3_specs.hpp"), specsOutput(boards, connectorTypes, contexts));
 
   const distFilename = path.join(root, "dist/board_spec_editor.html");
   let dist;
@@ -322,7 +359,7 @@ function gpioDefines(source) {
   return [...new Set(numbers)].sort((left, right) => left - right).map((number) => `#define GPIO_NUM_${number} ${number}`).join("\n");
 }
 
-function comparisonHarness(tableSource) {
+function comparisonHarness(tableSource, targetId, selectedBoards) {
   const boards = {
     m5stack: "board_M5Stack",
     m5stack_core2: "board_M5StackCore2",
@@ -330,15 +367,18 @@ function comparisonHarness(tableSource) {
     m5station: "board_M5Station",
     m5paper: "board_M5Paper",
     m5timercam: "board_M5TimerCam",
+    m5atoms3: "board_M5AtomS3",
+    m5sticks3: "board_M5StickS3",
   };
-  const rows = Object.entries(boards).map(([id, name]) => `  { "${id}", lgfx::board_t::${name} },`).join("\n");
+  const rows = selectedBoards.map(({ id }) => `  { "${id}", lgfx::board_t::${boards[id]} },`).join("\n");
+  const target = PIN_TABLE_TARGETS[targetId];
   return `#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <utility>
 #include "src/lgfx/boards.hpp"
 #define CONFIG_IDF_TARGET 1
-#define CONFIG_IDF_TARGET_ESP32 1
+#define ${target.define} 1
 ${gpioDefines(tableSource)}
 namespace m5 {
 using board_t = lgfx::board_t;
@@ -389,15 +429,6 @@ async function comparePinTable(m5unifiedPath) {
   const tableSource = extractPinTables(await fs.readFile(inlFilename, "utf8"), inlFilename);
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "m5unified-pintable-"));
   try {
-    const source = path.join(temporary, "compare.cpp");
-    const executable = path.join(temporary, "compare");
-    await fs.writeFile(source, comparisonHarness(tableSource));
-    const compiled = spawnSync(compiler, ["-std=c++17", "-I", path.resolve(root, "../.."), source, "-o", executable], { encoding: "utf8" });
-    if (compiled.error || compiled.status !== 0) throw new Error(`pin-table harness compile failed:\n${compiled.error?.message ?? compiled.stderr.trim()}`);
-    const ran = spawnSync(executable, [], { encoding: "utf8" });
-    if (ran.error || ran.status !== 0) throw new Error(`pin-table harness failed:\n${ran.error?.message ?? ran.stderr.trim()}`);
-    const actual = parseActualPinTables(ran.stdout);
-
     const schema = await loadSchema();
     const connectorTypes = await loadConnectorTypes();
     const parts = await loadParts();
@@ -406,10 +437,23 @@ async function comparePinTable(m5unifiedPath) {
     const boards = await Promise.all((await boardFiles()).map((filename) => readJson(filename, assertBoard)));
     const contexts = new Map();
     for (const board of boards) contexts.set(board.id, await context(board, schema, connectorTypes, parts, targets, accessories));
-    const generated = await pinTableEntries(boards, connectorTypes, contexts, targets);
     const differences = [];
-    for (const { board, emitted } of generated) for (const name of PIN_NAMES) {
-      if (emitted.values[name] !== actual[board.id]?.[name]) differences.push([board.id, name, emitted.values[name], actual[board.id]?.[name] ?? "missing"]);
+    let comparedBoards = 0;
+    for (const targetId of Object.keys(PIN_TABLE_TARGETS)) {
+      const selected = pinTableBoards(boards, contexts, targetId);
+      const source = path.join(temporary, `compare-${targetId}.cpp`);
+      const executable = path.join(temporary, `compare-${targetId}`);
+      await fs.writeFile(source, comparisonHarness(tableSource, targetId, selected));
+      const compiled = spawnSync(compiler, ["-std=c++17", "-I", path.resolve(root, "../.."), source, "-o", executable], { encoding: "utf8" });
+      if (compiled.error || compiled.status !== 0) throw new Error(`${targetId} pin-table harness compile failed:\n${compiled.error?.message ?? compiled.stderr.trim()}`);
+      const ran = spawnSync(executable, [], { encoding: "utf8" });
+      if (ran.error || ran.status !== 0) throw new Error(`${targetId} pin-table harness failed:\n${ran.error?.message ?? ran.stderr.trim()}`);
+      const actual = parseActualPinTables(ran.stdout);
+      const generated = await pinTableEntries(selected, connectorTypes, contexts, targets);
+      comparedBoards += generated.length;
+      for (const { board, emitted } of generated) for (const name of PIN_NAMES) {
+        if (emitted.values[name] !== actual[board.id]?.[name]) differences.push([board.id, name, emitted.values[name], actual[board.id]?.[name] ?? "missing"]);
+      }
     }
     if (differences.length) {
       console.log("board | pin_name | generated | actual");
@@ -417,7 +461,7 @@ async function comparePinTable(m5unifiedPath) {
       for (const row of differences) console.log(row.join(" | "));
       throw new Error(`M5Unified pin-table comparison failed: ${differences.length} difference(s)`);
     }
-    console.log(`M5Unified pin-table comparison passed: ${boards.length} board(s), ${boards.length * PIN_NAMES.length} value(s)`);
+    console.log(`M5Unified pin-table comparison passed: ${comparedBoards} board(s), ${comparedBoards * PIN_NAMES.length} value(s), ${Object.keys(PIN_TABLE_TARGETS).length} target(s)`);
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
   }

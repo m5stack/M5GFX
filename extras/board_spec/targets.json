@@ -1,7 +1,14 @@
 {
   "m5gfx_board_desc": {
     "emit": "m5gfx_desc",
+    "out_by_chip": {
+      "esp32_d0wdq6": "esp32_d0wdq6_wiring.hpp",
+      "esp32s3": "esp32s3_wiring.hpp"
+    },
     "options": {
+      "m5atoms3": [
+        { "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }
+      ],
       "m5stack": [
         { "name": "ips", "bit": 0, "select": { "lcd": "ips" } }
       ],

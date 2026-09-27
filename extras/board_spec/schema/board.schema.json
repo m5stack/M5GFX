@@ -83,13 +83,13 @@
       "x-signals": {
         "spi": ["sclk", "mosi", "miso"],
         "i2c": ["sda", "scl"],
-        "i2s": ["bck", "ws", "data_out", "data_in"],
+        "i2s": ["mck", "bck", "ws", "data_out", "data_in"],
         "sdmmc": ["clk", "cmd", "d0", "d1", "d2", "d3"],
         "uart": ["tx", "rx", "rts", "cts"],
         "pdm": ["ws", "data_in"],
         "dsi": ["clk", "d0", "d1", "d2", "d3"]
       },
-      "x-output-signals": ["sclk", "mosi", "bck", "ws", "data_out", "clk", "cmd", "tx", "rts"]
+      "x-output-signals": ["sclk", "mosi", "mck", "bck", "ws", "data_out", "clk", "cmd", "tx", "rts"]
     },
     "device": {
       "type": "object",
@@ -119,7 +119,7 @@
       "type": "string",
       "enum": ["display", "sd", "touch", "pmic", "speaker", "mic", "imu", "rtc", "led_strip", "led", "vibration", "power_hold", "backlight", "camera", "transceiver", "regulator"],
       "x-signals": {
-        "display": ["cs", "dc", "rst", "busy", "backlight"],
+        "display": ["cs", "dc", "rst", "busy", "backlight", "power"],
         "sd": ["clk", "cmd", "d0", "d1", "d2", "d3", "cd", "wp"],
         "touch": ["int", "rst"],
         "pmic": [],
@@ -136,9 +136,9 @@
         "transceiver": ["de", "re"],
         "regulator": ["en"]
       },
-      "x-output-signals": ["cs", "dc", "rst", "data", "data_out", "enable", "pwm"],
+      "x-output-signals": ["cs", "dc", "rst", "power", "data", "data_out", "enable", "pwm"],
       "x-spec-properties": {
-        "display": ["width", "height", "rotation_offset", "panel_type"],
+        "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "panel_type"],
         "sd": [],
         "touch": ["x_max", "y_max"],
         "pmic": [],
@@ -148,7 +148,7 @@
         "rtc": [],
         "led_strip": ["count"],
         "power_hold": [],
-        "backlight": ["freq", "channel"],
+        "backlight": ["freq", "channel", "invert", "offset"],
         "led": [],
         "vibration": [],
         "camera": [],
@@ -222,7 +222,7 @@
     "powerSpec": { "type": "object", "additionalProperties": false, "properties": { "pmic_part": { "type": "string" }, "battery_mah": { "type": "integer" }, "usb": { "enum": ["type-c", "micro"] }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
     "audioSpec": { "type": "object", "additionalProperties": false, "properties": { "speaker_part": { "type": "string" }, "mic_part": { "type": "string" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
     "sensorSpec": { "type": "object", "additionalProperties": false, "properties": { "kind": { "$ref": "#/definitions/id" }, "part": { "type": "string" }, "i2c_addr": { "$ref": "#/definitions/hexByte" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
-    "storageSpec": { "type": "object", "additionalProperties": false, "properties": { "psram_mb": { "type": "integer" }, "flash_mb": { "type": "integer" }, "sd": { "type": "boolean" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "storageSpec": { "type": "object", "additionalProperties": false, "properties": { "psram_mb": { "type": "integer" }, "psram_mode": { "enum": ["quad", "opi"] }, "flash_mb": { "type": "integer" }, "sd": { "type": "boolean" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
     "linkSpec": { "type": "object", "additionalProperties": false, "properties": { "schematic": { "type": "string", "format": "uri" }, "product": { "type": "string", "format": "uri" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
     "revision": {
       "type": "object", "additionalProperties": false, "required": ["id", "name", "select"],

@@ -14,7 +14,8 @@ import { compose, validateAccessory, validateComposition } from "../lib/compose.
 import { isCompatible, validateConnectorTypes } from "../lib/ctypes.js";
 import { deriveSd } from "../lib/derive/sd.js";
 import { consumesPinTableRole, emitPinTable, PIN_NAMES, pinNameForRole } from "../lib/emit/m5unified_pin_table.js";
-import { emitM5GFXWiring, renderM5GFXWiringHeader, selectM5GFXWiringBoards, wiringFieldsForRole } from "../lib/emit/m5gfx_board_wiring.js";
+import { emitM5GFXWiring, emitM5GFXWiringForMapping, renderM5GFXWiringHeader, selectM5GFXWiringBoards, wiringAssignments, wiringFieldsForRole } from "../lib/emit/m5gfx_board_wiring.js";
+import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { formatBoard } from "../lib/format.js";
 import { clone } from "../lib/model.js";
 import { isGeneratedField, pintableAssignments } from "../lib/pintable_roles.js";
@@ -28,6 +29,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const board = JSON.parse(await fs.readFile(path.join(root, "boards/m5stack_core2.json"), "utf8"));
 const schema = JSON.parse(await fs.readFile(path.join(root, "schema/board.schema.json"), "utf8"));
 const chip = JSON.parse(await fs.readFile(path.join(root, "chips/esp32_d0wdq6.json"), "utf8"));
+const chipS3 = JSON.parse(await fs.readFile(path.join(root, "chips/esp32s3.json"), "utf8"));
+const chips = { esp32_d0wdq6: chip, esp32s3: chipS3 };
 const connectorTypeFiles = (await fs.readdir(path.join(root, "connector_types"))).filter((name) => name.endsWith(".json")).sort();
 const connectorTypes = Object.fromEntries(await Promise.all(connectorTypeFiles.map(async (name) => {
   const value = JSON.parse(await fs.readFile(path.join(root, "connector_types", name), "utf8"));
@@ -54,7 +57,7 @@ const i18nMatch = /<script type="application\/json" id="board-spec-i18n">([\s\S]
 const messages = JSON.parse(i18nMatch[1]);
 const compositionTarget = targets.m5unified_pin_table;
 const resolveCatalog = (item) => resolveAll(item, connectorTypes, {
-  chip, parts, accessories,
+  chip: chips[item.chip], parts, accessories,
   composition: compositionTarget.compositions?.[item.id]?.default,
   allow_origins: compositionTarget.allow_origins,
 });
@@ -85,14 +88,14 @@ test("valid Core2 has only the expected target warning", () => {
   assert.deepEqual(validateBoard(board, context).map((item) => item.id), ["W_TGT_REV_INDISTINGUISHABLE"]);
 });
 
-test("all six D0WDQ6 boards validate", () => {
-  assert.deepEqual(catalogFiles, ["m5paper.json", "m5stack.json", "m5stack_core2.json", "m5station.json", "m5timercam.json", "m5tough.json"]);
-  assert.deepEqual(validateCatalog(catalogBoards, () => context).filter((item) => item.severity !== "warning"), []);
+test("all catalog boards validate against their chip tables", () => {
+  assert.deepEqual(catalogFiles, ["m5atoms3.json", "m5paper.json", "m5stack.json", "m5stack_core2.json", "m5station.json", "m5sticks3.json", "m5timercam.json", "m5tough.json"]);
+  assert.deepEqual(validateCatalog(catalogBoards, (item) => ({ ...context, chip: chips[item.chip] })).filter((item) => item.severity !== "warning"), []);
 });
 
-test("all 11 revision combinations match snapshots", async () => {
+test("all 14 revision and runtime combinations match snapshots", async () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 11);
+  assert.equal(outputs.length, 14);
   for (const output of outputs) {
     const snapshot = await fs.readFile(path.join(root, "generated/resolved", output.filename), "utf8");
     assert.equal(snapshot, formatBoard(output.board), output.filename);
@@ -217,6 +220,38 @@ test("M5Unified emitter applies documented overrides last", () => {
   } }), /unknown pin-table override/);
 });
 
+test("AtomS3 pin table matches the ESP32-S3 unknown fallback", () => {
+  const source = catalogBoards.find((item) => item.id === "m5atoms3");
+  const emitted = emitPinTable(resolveCatalog(source)[0].board, compositionTarget).values;
+  assert.deepEqual(Object.fromEntries(Object.entries(emitted).filter(([, value]) => value !== 255)), {
+    in_i2c_scl: 39,
+    in_i2c_sda: 38,
+    port_a_pin1: 1,
+    port_a_pin2: 2,
+  });
+});
+
+test("AtomS3 runtime panels resolve to both probed display parts", () => {
+  const source = catalogBoards.find((item) => item.id === "m5atoms3");
+  const outputs = resolveCatalog(source);
+  assert.deepEqual(outputs.map((output) => output.filename), [
+    "m5atoms3+lcd=st7735s.json",
+    "m5atoms3+lcd=gc9107.json",
+  ]);
+  assert.deepEqual(outputs.map((output) => output.board.devices.lcd.part), ["st7735s", "gc9107"]);
+  assert.deepEqual(outputs.map((output) => output.board.devices.lcd.spec), [
+    { width: 128, height: 128, memory_height: 132, offset_x: 2, offset_y: 1, rotation_offset: 2, invert: true, readable: true, panel_type: "st7735s" },
+    { width: 128, height: 128, offset_x: 0, offset_y: 32, rotation_offset: 0, invert: false, readable: false, panel_type: "gc9107" },
+  ]);
+  assert.deepEqual(source.devices.backlight.spec, { freq: 256, channel: 7, invert: false, offset: 48 });
+  assert.deepEqual(source.spec.storage, { psram_mb: 0 });
+  assert.equal(source.spec.storage.psram_mode, undefined);
+  assert.deepEqual(parts.st7735s.id_probe.values, ["0x7683", "0x897C"]);
+  assert.equal(parts.gc9107.id_probe.value, "0x079100");
+  assert.deepEqual(parts.st7735s.spec, { memory_width: 132, memory_height: 162 });
+  assert.deepEqual(parts.gc9107.spec, { memory_width: 128, memory_height: 160 });
+});
+
 test("M5Unified live pin tables match generated values", async (t) => {
   const compiler = process.env.CXX || "c++";
   const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
@@ -226,7 +261,7 @@ test("M5Unified live pin tables match generated values", async (t) => {
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
   const compared = spawnSync(process.execPath, ["cli/spec.js", "compare-pintable", "--m5unified", m5unified], { cwd: root, encoding: "utf8" });
   assert.equal(compared.status, 0, compared.stderr || compared.stdout);
-  assert.match(compared.stdout, /comparison passed: 6 board\(s\), 300 value\(s\)/);
+  assert.match(compared.stdout, /comparison passed: 8 board\(s\), 400 value\(s\), 2 target\(s\)/);
 });
 
 test("M5GFX wiring emitter maps every board-description GPIO", () => {
@@ -236,10 +271,12 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
     m5tough: { display: [18, 23, 38, 15, 5, -1, -1], sd: [18, 23, 38, 4, 5], i2c: [21, 22, 1], reset: -1, power: -1, hold: [4, 5] },
     m5stack: { display: [18, 23, 19, 27, 14, 33, -1], sd: [18, 23, 19, 4, 14], i2c: [21, 22, 0], reset: 33, power: -1, hold: [4, 14] },
     m5paper: { display: [14, 12, 13, -1, 15, 23, 27], sd: [14, 12, 13, 4, 15], i2c: [21, 22, 1], reset: 23, power: 2, hold: [4, 15] },
+    m5atoms3: { display: [17, 21, -1, 33, 15, 34, -1], sd: null, i2c: [38, 39, 1], reset: 34, power: -1, hold: [15] },
+    m5sticks3: { display: [40, 39, -1, 45, 41, 21, -1], sd: null, i2c: [47, 48, 1], reset: 21, power: -1, hold: [41] },
   };
   const entries = [];
   for (const source of catalogBoards.filter((item) => expected[item.id])) {
-    const resolved = resolveAll(source, connectorTypes, { chip, parts })[0].board;
+    const resolved = resolveAll(source, connectorTypes, { chip: chips[source.chip], parts })[0].board;
     const emitted = emitM5GFXWiring(resolved, parts);
     const flattened = {
       display: Object.values(emitted.display),
@@ -255,6 +292,80 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
   assert.match(renderM5GFXWiringHeader(entries), /constexpr std::int8_t display_sclk = 18;/);
   assert.deepEqual(wiringFieldsForRole(board, "bus:main_spi.sclk", parts), ["display_sclk", "shared_sd_sclk"]);
   assert.deepEqual(wiringFieldsForRole(board, "dev:lcd.rst", parts), ["display_rst"]);
+});
+
+test("AtomS3 exposes the display wiring expected by the future reset declaration", () => {
+  const source = catalogBoards.find((item) => item.id === "m5atoms3");
+  const resolved = resolveCatalog(source)[0].board;
+  const emitted = emitM5GFXWiringForMapping(resolved, parts, {
+    boardId: "m5atoms3", cppNamespace: "atoms3", boardEnum: "board_M5AtomS3", descName: "desc_atoms3",
+    fields: ["display", "hold", "backlight"], reset: "display_rst",
+  });
+  assert.deepEqual(emitted.display, { sclk: 17, mosi: 21, miso: -1, dc: 33, cs: 15, rst: 34, busy: -1 });
+  assert.equal(emitted.resetGpio, 34);
+  assert.equal(emitted.backlightGpio, 16);
+  assert.deepEqual(emitted.hold, [15]);
+});
+
+test("AtomS3 generated panel construction matches every legacy field", async () => {
+  const source = catalogBoards.find((item) => item.id === "m5atoms3");
+  const variants = resolveCatalog(source).map((item) => item.board);
+  const emitted = emitM5GFXSpecs(source, variants, parts);
+  assert.deepEqual(emitted.bus, { host: 2, hostSymbol: "SPI3_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
+  assert.deepEqual(emitted.panels.st7735s, { width: 128, height: 128, memoryWidth: 132, memoryHeight: 132, offsetX: 2, offsetY: 1, rotationOffset: 2, invert: true, readable: true });
+  assert.deepEqual(emitted.panels.gc9107, { width: 128, height: 128, memoryWidth: 128, memoryHeight: 160, offsetX: 0, offsetY: 32, rotationOffset: 0, invert: false, readable: false });
+  assert.deepEqual(emitted.probes.st7735s, { cmd: 4, mask: 0xFFFF, values: [0x7683, 0x897C] });
+  assert.deepEqual(emitted.probes.gc9107, { cmd: 4, mask: 0xFFFFFF, values: [0x079100] });
+  assert.match(renderM5GFXSpecsHeader(emitted), /constexpr int bus_host = SPI3_HOST;/);
+  const setup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3_setup.inl"), "utf8");
+  assert.match(setup, /panel_atoms3_st7735s[^;]*\.with_bus_shared\(false\);/);
+  assert.match(setup, /panel_atoms3_gc9107[^;]*\.with_bus_shared\(false\);/);
+});
+
+test("StickS3 generated display, backlight, and PMIC specs match the legacy setup", () => {
+  const source = catalogBoards.find((item) => item.id === "m5sticks3");
+  const variants = resolveCatalog(source).map((item) => item.board);
+  const emitted = emitM5GFXSpecs(source, variants, parts);
+  assert.deepEqual(emitted.bus, { host: 2, hostSymbol: "SPI3_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
+  assert.deepEqual(emitted.panels.st7789v2, { width: 135, height: 240, memoryWidth: null, memoryHeight: null, offsetX: 52, offsetY: 40, rotationOffset: 0, invert: true, readable: true });
+  assert.deepEqual(emitted.backlight, { freq: 256, channel: 7, invert: false, offset: 16 });
+  assert.deepEqual(emitted.pmic, { i2cAddr: 0x6E, i2cFreq: 100000, idReg: 0x00 });
+  const header = renderM5GFXSpecsHeader(emitted);
+  assert.match(header, /namespace pmic \{[\s\S]*i2c_addr = 0x6E;[\s\S]*i2c_freq = 100000;[\s\S]*id_reg = 0x0;/);
+  assert.doesNotMatch(header, /namespace pmic \{[\s\S]*id_value/);
+});
+
+test("StickS3 PMIC specs reject unspecified generated values", () => {
+  const source = clone(catalogBoards.find((item) => item.id === "m5sticks3"));
+  const variants = resolveCatalog(source).map((item) => item.board);
+  delete source.buses.internal_i2c.freq;
+  assert.throws(() => emitM5GFXSpecs(source, variants, parts), /internal_i2c\.freq must be an integer/);
+});
+
+test("M5GFX specs preserve an unspecified controller memory dimension", () => {
+  const source = catalogBoards.find((item) => item.id === "m5atoms3");
+  const variants = resolveCatalog(source).map((item) => item.board);
+  const withoutMemoryDefaults = clone(parts);
+  delete withoutMemoryDefaults.gc9107.spec;
+  const withoutPanelDefaults = clone(variants);
+  const gc9107 = withoutPanelDefaults.find((variant) => variant.devices.lcd.part === "gc9107");
+  delete gc9107.devices.lcd.spec.offset_x;
+  delete gc9107.devices.lcd.spec.offset_y;
+  delete gc9107.devices.lcd.spec.rotation_offset;
+  delete gc9107.devices.lcd.spec.invert;
+  delete gc9107.devices.lcd.spec.readable;
+  const emitted = emitM5GFXSpecs(source, withoutPanelDefaults, withoutMemoryDefaults);
+  assert.equal(emitted.panels.gc9107.memoryWidth, null);
+  assert.equal(emitted.panels.gc9107.memoryHeight, null);
+  assert.deepEqual(emitted.panels.gc9107, { width: 128, height: 128, memoryWidth: null, memoryHeight: null, offsetX: null, offsetY: null, rotationOffset: null, invert: null, readable: null });
+  assert.match(renderM5GFXSpecsHeader(emitted), /namespace panel_gc9107 \{[\s\S]*memory_width = 0;[\s\S]*memory_height = 0;[\s\S]*offset_x = -32768;[\s\S]*offset_y = -32768;[\s\S]*rotation_offset = 0xFF;[\s\S]*invert = -1;[\s\S]*readable = -1;/);
+});
+
+test("M5GFX wiring APIs require the parts catalog", () => {
+  const resolved = resolveAll(board, connectorTypes, { chip, parts })[0].board;
+  assert.throws(() => wiringFieldsForRole(resolved, "dev:sd.d3"), /requires the parts catalog/);
+  assert.throws(() => wiringAssignments(resolved), /requires the parts catalog/);
+  assert.throws(() => emitM5GFXWiring(resolved), /requires the parts catalog/);
 });
 
 test("M5GFX reset GPIO requires an explicit display-reset declaration", () => {
@@ -482,6 +593,42 @@ test("E_CHIP_RESERVED", () => assertSingle("E_CHIP_RESERVED", fixture((value) =>
   value.pins[39].roles = value.pins[39].roles.filter((role) => role !== "dev:touch.int");
   value.pins[6] = { roles: ["dev:touch.int"], pull: "none" };
 })));
+
+test("ESP32-S3 OPI PSRAM conditionally reserves GPIO33 through GPIO37", () => {
+  assert.deepEqual({
+    gpio_count: chipS3.gpio_count,
+    input_only: chipS3.input_only,
+    strapping: chipS3.strapping,
+    reserved: chipS3.reserved,
+    opi: chipS3.reserved_conditional.opi,
+    usb: chipS3.usb,
+    spi_hosts: chipS3.spi_hosts,
+    i2c_hosts: chipS3.i2c_hosts,
+    i2s_ports: chipS3.i2s_ports,
+  }, {
+    gpio_count: 49,
+    input_only: [],
+    strapping: [0, 3, 45, 46],
+    reserved: [26, 27, 28, 29, 30, 31, 32],
+    opi: [33, 34, 35, 36, 37],
+    usb: { dn: 19, dp: 20 },
+    spi_hosts: 2,
+    i2c_hosts: 2,
+    i2s_ports: 2,
+  });
+  const source = clone(catalogBoards.find((item) => item.id === "m5atoms3"));
+  source.spec.storage = { psram_mode: "opi" };
+  source.pins[35] = { roles: ["dev:lcd.busy"] };
+  const errors = validateBoard(source, { ...context, chip: chipS3 });
+  assert.ok(errors.some((item) => item.id === "E_CHIP_RESERVED_COND" && item.path === "/pins/35/roles"), JSON.stringify(errors, null, 2));
+});
+
+test("ESP32-S3 native USB pins produce warnings when assigned roles", () => {
+  const source = clone(catalogBoards.find((item) => item.id === "m5atoms3"));
+  source.pins[19] = { roles: ["dev:lcd.busy"] };
+  const errors = validateBoard(source, { ...context, chip: chipS3 });
+  assert.ok(errors.some((item) => item.id === "W_CHIP_USB_PIN" && item.severity === "warning" && item.path === "/pins/19/roles"), JSON.stringify(errors, null, 2));
+});
 
 test("E_HEX_FORMAT", () => assertSingle("E_HEX_FORMAT", fixture((value) => { value.devices.touch.i2c_addr = 56; })));
 

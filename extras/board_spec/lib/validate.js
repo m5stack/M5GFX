@@ -119,6 +119,9 @@ function validateRoles(board, chip, schema, errors, resolved) {
       const gpio = Number(entry.gpio);
       if (output && chip.input_only.includes(gpio)) errors.push(error("E_CHIP_INPUT_ONLY", entry.path, `output role ${entry.role} is on input-only GPIO ${gpio}`));
       if (chip.reserved.includes(gpio)) errors.push(error("E_CHIP_RESERVED", entry.path, `GPIO ${gpio} is reserved by the chip/package`));
+      const conditional = chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
+      if (conditional.includes(gpio)) errors.push(error("E_CHIP_RESERVED_COND", entry.path, `GPIO ${gpio} is reserved when PSRAM mode is ${board.spec.storage.psram_mode}`));
+      if (gpio === chip.usb?.dn || gpio === chip.usb?.dp) errors.push(warning("W_CHIP_USB_PIN", entry.path, `GPIO ${gpio} is shared with native USB`));
     }
   }
 

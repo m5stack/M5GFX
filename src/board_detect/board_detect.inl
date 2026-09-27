@@ -153,6 +153,56 @@ namespace board_detect
     return result;
   }
 
+  bool release_held_sda(int pin_sda, int pin_scl)
+  {
+    lgfx::gpio::pin_backup_t backup[] = { pin_sda, pin_scl };
+    lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
+    lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
+    lgfx::delayMicroseconds(10);
+    auto wait_scl_high = [pin_scl]() -> bool
+    {
+      lgfx::gpio_hi(pin_scl);
+      lgfx::delayMicroseconds(5);
+      if (lgfx::gpio_in(pin_scl)) { return true; }
+      const auto started = lgfx::micros();
+      while (lgfx::micros() - started < 25000)
+      {
+        if (lgfx::gpio_in(pin_scl)) { return true; }
+        lgfx::delayMicroseconds(1);
+      }
+      return false;
+    };
+
+    // A reset of this MCU during a transfer can leave a peripheral holding
+    // SDA low while it waits for more clocks. Clock it out (up to 9 bits) and
+    // finish with STOP. Input mode is open drain with the output latch high.
+    bool bus_released = lgfx::gpio_in(pin_scl);
+    if (bus_released && !lgfx::gpio_in(pin_sda))
+    {
+      for (int i = 0; i < 9 && !lgfx::gpio_in(pin_sda); ++i)
+      {
+        lgfx::gpio_lo(pin_scl);
+        lgfx::delayMicroseconds(5);
+        if (!wait_scl_high()) { bus_released = false; break; }
+      }
+      if (bus_released)
+      {
+        lgfx::gpio_lo(pin_scl);
+        lgfx::gpio_lo(pin_sda);
+        lgfx::delayMicroseconds(5);
+        bus_released = wait_scl_high();
+        if (bus_released)
+        {
+          lgfx::gpio_hi(pin_sda);
+          lgfx::delayMicroseconds(10);
+        }
+      }
+    }
+    const bool released = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
+    for (auto& pin : backup) { pin.restore(); }
+    return released;
+  }
+
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr)
   {
     // Reserved addresses are never touched, even if requested accidentally.
@@ -172,19 +222,6 @@ namespace board_detect
       lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
       lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
       lgfx::delayMicroseconds(10);
-      auto wait_scl_high = [pin_scl]() -> bool
-      {
-        lgfx::gpio_hi(pin_scl);
-        lgfx::delayMicroseconds(5);
-        if (lgfx::gpio_in(pin_scl)) { return true; }
-        const auto started = lgfx::micros();
-        while (lgfx::micros() - started < 25000)
-        {
-          if (lgfx::gpio_in(pin_scl)) { return true; }
-          lgfx::delayMicroseconds(1);
-        }
-        return false;
-      };
       // The first check does not wait: a pin pair without pull-ups reads SCL
       // low here, and waiting for it would delay every such detection. Only a
       // bus that has pull-ups and a held SDA is clocked, and only those clocks
@@ -192,29 +229,7 @@ namespace board_detect
       bool bus_released = lgfx::gpio_in(pin_scl);
       if (bus_released && !lgfx::gpio_in(pin_sda))
       {
-        // A reset of this MCU during a transfer can leave a peripheral holding
-        // SDA low while it waits for more clocks; it is not reset with us.
-        // Clock it out (up to 9 bits) and finish with STOP, as the I2C bus
-        // clear procedure specifies. Input mode here is open drain with the
-        // output latch high, so gpio_lo()/gpio_hi() pull low or release.
-        for (int i = 0; i < 9 && !lgfx::gpio_in(pin_sda); ++i)
-        {
-          lgfx::gpio_lo(pin_scl);
-          lgfx::delayMicroseconds(5);
-          if (!wait_scl_high()) { bus_released = false; break; }
-        }
-        if (bus_released)
-        {
-          lgfx::gpio_lo(pin_scl);
-          lgfx::gpio_lo(pin_sda);
-          lgfx::delayMicroseconds(5);
-          bus_released = wait_scl_high();
-          if (bus_released)
-          {
-            lgfx::gpio_hi(pin_sda);
-            lgfx::delayMicroseconds(10);
-          }
-        }
+        bus_released = release_held_sda(pin_sda, pin_scl);
       }
       cache.pullup_ok = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
       for (auto& pin : backup) { pin.restore(); }
@@ -395,6 +410,19 @@ namespace board_detect
 
   namespace startup_detail
   {
+    class retry_budget_t
+    {
+    public:
+      explicit retry_budget_t(std::uint8_t milliseconds)
+      : started_(lgfx::millis()), milliseconds_(milliseconds) {}
+
+      bool exhausted() const { return lgfx::millis() - started_ >= milliseconds_; }
+
+    private:
+      std::uint32_t started_;
+      std::uint8_t milliseconds_;
+    };
+
     void pin_level(int pin, bool high)
     {
       if (high) { lgfx::gpio_hi(pin); }
@@ -402,22 +430,68 @@ namespace board_detect
       lgfx::pinMode(pin, lgfx::pin_mode_t::output);
     }
 
-    bool write_sequence(int port, const power_desc_t& power, pmic_sequence_t sequence)
+    bool read_register(int port, const power_desc_t& power,
+                       std::uint8_t addr, std::uint8_t reg,
+                       std::uint8_t* value, retry_budget_t& retry_budget)
+    {
+      for (;;)
+      {
+        const auto result = lgfx::i2c::readRegister8(port, addr, reg, power.i2c_freq);
+        if (result.has_value())
+        {
+          *value = result.value();
+          return true;
+        }
+        if (retry_budget.exhausted()) { return false; }
+        lgfx::delay(1);
+      }
+    }
+
+    bool read_register(int port, const power_desc_t& power,
+                       std::uint8_t addr, std::uint8_t reg,
+                       std::uint8_t* value)
+    {
+      retry_budget_t retry_budget(power.wake_poll_ms);
+      return read_register(port, power, addr, reg, value, retry_budget);
+    }
+
+    bool write_register(int port, const power_desc_t& power, const pmic_write_t& write,
+                        retry_budget_t& retry_budget)
+    {
+      for (;;)
+      {
+        // writeRegister8 performs the whole read-modify-write for a masked
+        // write. Retry the complete transaction if either half is NACKed.
+        if (lgfx::i2c::writeRegister8(port, write.addr, write.reg,
+                                     write.value, write.mask,
+                                     power.i2c_freq).has_value())
+        {
+          return true;
+        }
+        if (retry_budget.exhausted()) { return false; }
+        lgfx::delay(1);
+      }
+    }
+
+    bool write_sequence(int port, const power_desc_t& power, pmic_sequence_t sequence,
+                        retry_budget_t& retry_budget)
     {
       for (std::size_t i = 0; i < sequence.size; ++i)
       {
         const auto& write = sequence.data[i];
-        if (!lgfx::i2c::writeRegister8(port, write.addr, write.reg,
-                                      write.value, write.mask,
-                                      power.i2c_freq).has_value())
-        {
-          return false;
-        }
+        if (!write_register(port, power, write, retry_budget)) { return false; }
       }
       return true;
     }
 
-    const pmic_variant_t* read_variant(const power_desc_t& power, int port)
+    bool write_sequence(int port, const power_desc_t& power, pmic_sequence_t sequence)
+    {
+      retry_budget_t retry_budget(power.wake_poll_ms);
+      return write_sequence(port, power, sequence, retry_budget);
+    }
+
+    const pmic_variant_t* read_variant(const power_desc_t& power, int port,
+                                       retry_budget_t& retry_budget)
     {
       if (power.variants == nullptr || power.variant_count == 0
        || power.variant_count > 8) { return nullptr; }
@@ -431,13 +505,21 @@ namespace board_detect
         {
           last_addr = power.variants[i].i2c_addr;
           last_reg = power.variants[i].id_reg;
-          const auto id = lgfx::i2c::readRegister8(port, last_addr, last_reg, power.i2c_freq);
-          id_valid = id.has_value();
-          if (id_valid) { id_value = id.value(); }
+          id_valid = read_register(port, power, last_addr, last_reg, &id_value, retry_budget);
         }
-        if (id_valid && power.variants[i].id_value == id_value) { return &power.variants[i]; }
+        const auto mask = power.variants[i].id_mask;
+        if (id_valid && (id_value & mask) == (power.variants[i].id_value & mask))
+        {
+          return &power.variants[i];
+        }
       }
       return nullptr;
+    }
+
+    const pmic_variant_t* read_variant(const power_desc_t& power, int port)
+    {
+      retry_budget_t retry_budget(power.wake_poll_ms);
+      return read_variant(power, port, retry_budget);
     }
 
     void set_sd_spi_mode(const shared_sd_desc_t& sd)
@@ -518,20 +600,24 @@ namespace board_detect
       return true;
     }
 
-    const auto* variant = startup_detail::read_variant(power, i2c_port);
+    // Wake-up polling and every PMIC transaction share one retry window so a
+    // partially responsive controller cannot multiply the configured delay.
+    startup_detail::retry_budget_t retry_budget(power.wake_poll_ms);
+    const auto* variant = startup_detail::read_variant(power, i2c_port, retry_budget);
     if (variant == nullptr) { return false; }
-    const auto power_state = lgfx::i2c::readRegister8(
-      i2c_port, variant->i2c_addr, variant->power_state.reg, power.i2c_freq);
-    if (!power_state.has_value()) { return false; }
-    const auto reset_state = variant->reset_state.reg == variant->power_state.reg
-                           ? power_state
-                           : lgfx::i2c::readRegister8(
-                               i2c_port, variant->i2c_addr, variant->reset_state.reg,
-                               power.i2c_freq);
-    if (!reset_state.has_value()) { return false; }
-    const bool power_was_off = !(power_state.value() & variant->power_state.mask);
-    const bool reset_was_low = !(reset_state.value() & variant->reset_state.mask);
-    if (!startup_detail::write_sequence(i2c_port, power, variant->power_on)) { return false; }
+    std::uint8_t power_state;
+    if (!startup_detail::read_register(i2c_port, power, variant->i2c_addr,
+                                       variant->power_state.reg, &power_state,
+                                       retry_budget)) { return false; }
+    std::uint8_t reset_state = power_state;
+    if (variant->reset_state.reg != variant->power_state.reg
+     && !startup_detail::read_register(i2c_port, power, variant->i2c_addr,
+                                       variant->reset_state.reg, &reset_state,
+                                       retry_budget)) { return false; }
+    const bool power_was_off = !(power_state & variant->power_state.mask);
+    const bool reset_was_low = !(reset_state & variant->reset_state.mask);
+    if (!startup_detail::write_sequence(i2c_port, power, variant->power_on,
+                                        retry_budget)) { return false; }
     if (power_was_off) { result.prepared &= ~prepared_sd_spi; }
     lgfx::delay(power_was_off || reset_was_low ? power.cold_wait_ms : power.warm_wait_ms);
     result.prepared |= prepared_power;
@@ -692,6 +778,52 @@ namespace board_detect
     }
     if (ok) { result.prepared |= prepared_reset; }
     return ok;
+  }
+
+  bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
+                    const spi_id_probe_t* probes, std::size_t probe_count,
+                    board_result_t* result)
+  {
+    if (probes == nullptr || probe_count == 0 || result == nullptr
+     || !startup_detail::description_valid(desc)) { return false; }
+    lgfx::gpio::pin_backup_t pins[] = {
+      desc.display.cs, desc.display.sclk, desc.display.mosi,
+      desc.display.dc, desc.display.rst,
+    };
+    board_result_t candidate;
+    candidate.assign(&desc);
+    prepare_ctx_t prepare_ctx;
+    prepare_ctx.allow_reset = ctx.allow_reset;
+    prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
+    if (!prepare_reset(desc, candidate, prepare_ctx, ctx.i2c_port_probe))
+    {
+      for (auto& pin : pins) { pin.restore(); }
+      return false;
+    }
+    const int read_pin = desc.display.miso >= 0 ? desc.display.miso : desc.display.mosi;
+    std::uint8_t last_cmd = 0;
+    std::uint32_t id = 0;
+    bool have_id = false;
+    for (std::size_t index = 0; index < probe_count; ++index)
+    {
+      const auto& probe = probes[index];
+      if (!have_id || probe.cmd != last_cmd)
+      {
+        id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
+                             desc.display.dc, desc.display.cs, probe.cmd, 1);
+        last_cmd = probe.cmd;
+        have_id = true;
+      }
+      for (std::size_t value = 0; value < probe.value_count; ++value)
+      {
+        if ((id & probe.mask) != probe.values[value]) { continue; }
+        candidate.option = probe.option_bit;
+        *result = candidate;
+        return true;
+      }
+    }
+    for (auto& pin : pins) { pin.restore(); }
+    return false;
   }
 
   bool prepare(const board_desc_t& desc, board_result_t& result, const prepare_ctx_t& ctx)

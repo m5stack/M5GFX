@@ -1,0 +1,18 @@
+{
+  "id": "esp32s3",
+  "soc": "esp32s3",
+  "package": "generic",
+  "gpio_count": 49,
+  "input_only": [],
+  "strapping": [0, 3, 45, 46],
+  "no_internal_pull": [],
+  "reserved": [26, 27, 28, 29, 30, 31, 32],
+  "reserved_conditional": {
+    "opi": [33, 34, 35, 36, 37]
+  },
+  "usb": { "dn": 19, "dp": 20 },
+  "sdmmc": { "gpio_matrix": true },
+  "spi_hosts": 2,
+  "i2c_hosts": 2,
+  "i2s_ports": 2
+}

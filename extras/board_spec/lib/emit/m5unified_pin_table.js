@@ -18,6 +18,15 @@ export const PIN_TABLE_GROUPS = [
   { name: "_pin_table_mbus", pins: PIN_NAMES.slice(20), unknown: Array(30).fill(255) },
 ];
 
+export const PIN_TABLE_TARGETS = {
+  esp32: { soc: "esp32", define: "CONFIG_IDF_TARGET_ESP32", unknown: {} },
+  esp32s3: {
+    soc: "esp32s3",
+    define: "CONFIG_IDF_TARGET_ESP32S3",
+    unknown: { _pin_table_i2c_ex_in: [39, 38, 1, 2] },
+  },
+};
+
 const CPP_BOARD_NAMES = {
   m5stack: "board_M5Stack",
   m5stack_core2: "board_M5StackCore2",
@@ -25,6 +34,8 @@ const CPP_BOARD_NAMES = {
   m5station: "board_M5Station",
   m5paper: "board_M5Paper",
   m5timercam: "board_M5TimerCam",
+  m5atoms3: "board_M5AtomS3",
+  m5sticks3: "board_M5StickS3",
 };
 
 export function stripRoleSource(role) {
@@ -95,20 +106,23 @@ export function renderPinTableJson(entries) {
   return `${JSON.stringify(Object.fromEntries(entries.map(({ board, emitted }) => [board.id, emitted.values])), null, 2)}\n`;
 }
 
-export function renderPinTableInl(entries) {
+export function renderPinTableInl(entries, targetId = "esp32") {
+  const target = PIN_TABLE_TARGETS[targetId];
+  if (!target) throw new Error(`unknown pin-table target ${targetId}`);
   const lines = ["// Generated from extras/board_spec; do not edit."];
   for (const group of PIN_TABLE_GROUPS) {
+    const unknown = target.unknown[group.name] ?? group.unknown;
     lines.push("", `// ${group.name}[][${group.pins.length + 1}]`);
     for (const { board, emitted } of entries) {
       const values = group.pins.map((name) => emitted.values[name]);
-      if (sameValues(values, group.unknown)) continue;
+      if (sameValues(values, unknown)) continue;
       const comments = group.pins
         .filter((name) => emitted.overrides[name])
         .map((name) => `${name}: ${emitted.overrides[name].reason}`);
       const suffix = comments.length ? ` // override: ${comments.join("; ")}` : "";
       lines.push(`{ board_t::${CPP_BOARD_NAMES[board.id]}, ${values.join(", ")} },${suffix}`);
     }
-    lines.push(`{ board_t::board_unknown, ${group.unknown.join(", ")} },`);
+    lines.push(`{ board_t::board_unknown, ${unknown.join(", ")} },`);
   }
   return `${lines.join("\n")}\n`;
 }

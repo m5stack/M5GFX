@@ -36,9 +36,13 @@
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
 #include "lgfx/v1/touch/Touch_GT911.hpp"
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/board_detect.inl"
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 #include "board_detect/m5/esp32_d0wdq6.inl"
+#else
+#include "board_detect/m5/esp32s3.inl"
+#endif
 #endif
 
 #if defined ( CONFIG_IDF_TARGET_ESP32P4 )
@@ -1015,11 +1019,19 @@ namespace m5gfx
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 #include "board_detect/m5/esp32_d0wdq6_setup.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32S3)
+#include "board_detect/m5/esp32s3_setup.inl"
+#endif
 
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
   bool M5GFX::_setup_detected(const board_detect::board_result_t& result)
   {
     board_detect::m5::display_parts_t parts;
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
     if (!board_detect::m5::setup_esp32_d0wdq6(result, &parts)) { return false; }
+#else
+    if (!board_detect::m5::setup_esp32s3(result, &parts)) { return false; }
+#endif
 
     _bus_last.reset(parts.bus);
     _panel_last.reset(parts.panel);
@@ -1081,7 +1093,7 @@ namespace m5gfx
   }
 #endif
 
-#if defined (CONFIG_IDF_TARGET) && !defined (CONFIG_IDF_TARGET_ESP32)
+#if defined (CONFIG_IDF_TARGET) && !defined (CONFIG_IDF_TARGET_ESP32) && !defined (CONFIG_IDF_TARGET_ESP32S3)
   bool M5GFX::_setup_detected(const board_detect::board_result_t&)
   {
     return false;
@@ -2227,72 +2239,31 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5AtomS3)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_15, GPIO_NUM_17, GPIO_NUM_21, GPIO_NUM_33, GPIO_NUM_34 };
-        _pin_reset(GPIO_NUM_34, use_reset); // LCD RST
-        bus_cfg.pin_mosi = GPIO_NUM_21;
-        bus_cfg.pin_miso = (gpio_num_t)-1; //GPIO_NUM_NC;
-        bus_cfg.pin_sclk = GPIO_NUM_17;
-        bus_cfg.pin_dc   = GPIO_NUM_33;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-        id = _read_panel_id(bus_spi, GPIO_NUM_15);
-        bool is_st7735 = ((id & 0xFFFF) == 0x7683 || (id & 0xFFFF) == 0x897C);
-        bool is_gc9107 = (id & 0xFFFFFF) == 0x079100;
-
-        if (is_st7735 || is_gc9107)
+        const bool detector_allow_reset = use_reset;
+        board_detect::probe_ctx_t probe;
+        probe.allow_reset = detector_allow_reset;
+        probe.i2c_port_probe = probe_i2c_port;
+        // [atoms3:register]
+        auto result = board_detect::detect_board(board_detect::m5::esp32s3_detectors_spi_id, static_cast<board_detect::board_id_t>(board), probe);
+        // [/atoms3:register]
+        if (result.status == board_detect::detect_status_t::matched)
         {
-          board = board_t::board_M5AtomS3;
-          bus_spi->release();
-          bus_cfg.spi_host = SPI3_HOST;
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-          bus_spi->init();
-          if (is_st7735) {
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3 (ST7735)");
-            auto p = new lgfx::Panel_ST7735S();
-            p->bus(bus_spi);
-            {
-              auto cfg = p->config();
-              cfg.pin_cs  = GPIO_NUM_15;
-              cfg.pin_rst = GPIO_NUM_34;
-              cfg.panel_width = 128;
-              cfg.panel_height = 128;
-              cfg.memory_height = 132;
-              cfg.offset_x = 2;
-              cfg.offset_y = 1;
-              cfg.offset_rotation = 2;
-              cfg.readable = true;
-              cfg.bus_shared = false;
-              cfg.invert = true;
-              p->config(cfg);
-            }
-            _panel_last.reset(p);
-          } else // if (is_gc9107)
+          board_detect::prepare_ctx_t prepare_ctx;
+          prepare_ctx.allow_reset = detector_allow_reset;
+          prepare_ctx.i2c_port_probe = probe_i2c_port;
+          if (board_detect::m5::prepare(result, prepare_ctx) && _setup_detected(result))
           {
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3 (GC9107)");
-            auto p = new Panel_GC9107();
-            p->bus(bus_spi);
+            board = board_t::board_M5AtomS3;
+            if (result.option & board_detect::m5::option_atoms3_gc9107)
             {
-              auto cfg = p->config();
-              cfg.pin_cs  = GPIO_NUM_15;
-              cfg.pin_rst = GPIO_NUM_34;
-              cfg.panel_width = 128;
-              cfg.panel_height = 128;
-              cfg.offset_y = 32;
-              cfg.readable = false;
-              cfg.bus_shared = false;
-              p->config(cfg);
+              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3 (GC9107)");
             }
-            _panel_last.reset(p);
+            else { ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3 (ST7735)"); }
+            goto init_clear;
           }
-          _set_pwm_backlight(GPIO_NUM_16, 7, 256, false, 48);
-          goto init_clear;
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
+                   static_cast<unsigned>(result.def->id));
         }
-        bus_spi->release();
-        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       if (board == 0 || board == board_t::board_M5DinMeter)
@@ -2645,77 +2616,27 @@ The usage of each pin is as follows.
       
       if (board == 0 || board == board_t::board_M5StickS3)
       {
-        gpio::pin_backup_t backup_pins[] = { GPIO_NUM_21, GPIO_NUM_39, GPIO_NUM_40, GPIO_NUM_41, GPIO_NUM_45, GPIO_NUM_47, GPIO_NUM_48 };
-        auto result = lgfx::gpio::command(
-          (const uint8_t[]) {
-          lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_47,
-          lgfx::gpio::command_mode_input_pulldown, GPIO_NUM_48,
-          lgfx::gpio::command_read               , GPIO_NUM_47,
-          lgfx::gpio::command_read               , GPIO_NUM_48,
-          lgfx::gpio::command_end
-          }
-        );
-        if (result == 0x03) { // scl & sda pull-up
-          probe_i2c_t probe(backup_pins[5], backup_pins[6]); // SDA=G47, SCL=G48。復元先はプルアップ試験の前
-          auto chk_pm1 = lgfx::i2c::readRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x00, m5pm1_i2c_freq); // Try to read M5PM1 device id
-          if (chk_pm1.has_value()) {
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StickS3");
+        const bool detector_allow_reset = use_reset;
+        board_detect::probe_ctx_t probe;
+        probe.allow_reset = detector_allow_reset;
+        probe.i2c_port_probe = probe_i2c_port;
+        // [sticks3:register]
+        auto result = board_detect::detect_board(board_detect::m5::esp32s3_detectors_pmic, static_cast<board_detect::board_id_t>(board), probe);
+        // [/sticks3:register]
+        if (result.status == board_detect::detect_status_t::matched)
+        {
+          board_detect::prepare_ctx_t prepare_ctx;
+          prepare_ctx.allow_reset = detector_allow_reset;
+          prepare_ctx.i2c_port_probe = probe_i2c_port;
+          if (board_detect::m5::prepare(result, prepare_ctx) && _setup_detected(result))
+          {
             board = board_t::board_M5StickS3;
-            // ボードが確定したので常用するハードウェアポートへ引き継ぐ
-            probe.handover(I2C_NUM_1);
-
-            // PM1_G2 -- L3B Enable, LCD Power On (M5Stack PM1 G2)
-            lgfx::i2c::bitOff(I2C_NUM_1, m5pm1_i2c_addr, 0x16, 1 << 2, m5pm1_i2c_freq); // Set pin gpio2 as gpio function
-            lgfx::i2c::bitOn(I2C_NUM_1, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);  // Set pin gpio2 mode: output
-            lgfx::i2c::bitOff(I2C_NUM_1, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq); // Set gpio2 push-pull mode: reg:0x13
-            lgfx::i2c::bitOn(I2C_NUM_1, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // Set gpio2 output high: reg:0x05
-            // reg: 0x09(I2C_CFG) - Set to 0x00 to disable I2C idle sleep mode.
-            // PMIC is always-on powered, and with battery power, shutdown doesn't reset the chip.
-            // This register may have been modified elsewhere, causing PMIC communication issues.
-            // Explicitly set it here during initialization to ensure proper operation.
-            lgfx::i2c::writeRegister8(I2C_NUM_1, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq);
-            lgfx::delay(100);
-
-            // LCD RST
-            _pin_reset(GPIO_NUM_21, use_reset); 
-            bus_cfg.pin_mosi = GPIO_NUM_39;
-            bus_cfg.pin_miso = GPIO_NUM_NC;
-            bus_cfg.pin_sclk = GPIO_NUM_40;
-            bus_cfg.pin_dc   = GPIO_NUM_45;
-            bus_cfg.spi_mode = 0;
-            bus_cfg.spi_3wire = true;
-            bus_spi->config(bus_cfg);
-            bus_spi->init();
-            lgfx::delay(100);
-
-            bus_spi->release();
-            bus_cfg.spi_host = SPI3_HOST;
-            bus_cfg.freq_write = 40000000;
-            bus_cfg.freq_read  = 16000000;
-            bus_spi->config(bus_cfg);
-            auto p = new Panel_ST7789();
-            p->bus(bus_spi);
-            {
-              auto cfg = p->config();
-              cfg.pin_cs = GPIO_NUM_41;
-              cfg.pin_rst = GPIO_NUM_21;
-              cfg.panel_width = 135;
-              cfg.panel_height = 240;
-              cfg.offset_x = 52;
-              cfg.offset_y = 40;
-              cfg.offset_rotation = 0;
-              cfg.readable = true;
-              cfg.invert = true;
-              cfg.bus_shared = false;
-              p->config(cfg);
-            }
-            _panel_last.reset(p);
-            _set_pwm_backlight(GPIO_NUM_38, 7, 256, false, 16);
+            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StickS3");
             goto init_clear;
           }
-          probe.release();
+          ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
+                   static_cast<unsigned>(result.def->id));
         }
-        for (auto pin: backup_pins) { pin.restore(); }
       }
 
       break;

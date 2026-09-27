@@ -142,6 +142,8 @@ namespace board_detect
     std::uint8_t i2c_addr;
     std::uint8_t id_reg;
     std::uint8_t id_value;
+    // A zero mask deliberately reduces identification to an ACK-only match.
+    std::uint8_t id_mask;
     pmic_sequence_t power_on;
     reg_bit_t power_state;
     reg_bit_t reset_state;
@@ -160,6 +162,9 @@ namespace board_detect
     std::uint8_t variant_count;
     std::uint8_t warm_wait_ms;
     std::uint8_t cold_wait_ms;
+    // Some always-on controllers NACK the first access while waking from idle.
+    // Zero preserves the single-attempt behavior for controllers that do not need polling.
+    std::uint8_t wake_poll_ms;
   };
 
   using reset_custom_fn_t = bool (*)(const board_desc_t&, const prepare_ctx_t&,
@@ -256,18 +261,28 @@ namespace board_detect
     pmic_sequence_t reset_assert, pmic_sequence_t reset_release,
     register_list_t restore_registers, std::uint32_t detected_option)
   {
-    return { addr, id_reg, id_value, power_on, power_state, reset_state,
+    return { addr, id_reg, id_value, 0xFF, power_on, power_state, reset_state,
+             reset_assert, reset_release, restore_registers, detected_option };
+  }
+
+  constexpr pmic_variant_t pmic_variant_ack_only(
+    std::uint8_t addr, std::uint8_t id_reg,
+    pmic_sequence_t power_on, reg_bit_t power_state, reg_bit_t reset_state,
+    pmic_sequence_t reset_assert, pmic_sequence_t reset_release,
+    register_list_t restore_registers, std::uint32_t detected_option)
+  {
+    return { addr, id_reg, 0, 0, power_on, power_state, reset_state,
              reset_assert, reset_release, restore_registers, detected_option };
   }
 
   constexpr power_desc_t no_power()
   {
-    return { -1, 0, nullptr, 0, 0, 0 };
+    return { -1, 0, nullptr, 0, 0, 0, 0 };
   }
 
   constexpr power_desc_t gpio_power(int hold_pin)
   {
-    return { static_cast<std::int8_t>(hold_pin), 0, nullptr, 0, 0, 0 };
+    return { static_cast<std::int8_t>(hold_pin), 0, nullptr, 0, 0, 0, 0 };
   }
 
   template <std::size_t N>
@@ -275,7 +290,18 @@ namespace board_detect
                                    const pmic_variant_t (&variants)[N],
                                    std::uint8_t warm_wait_ms, std::uint8_t cold_wait_ms)
   {
-    return { -1, freq, variants, list_size_t<N>::value, warm_wait_ms, cold_wait_ms };
+    return { -1, freq, variants, list_size_t<N>::value, warm_wait_ms, cold_wait_ms, 0 };
+  }
+
+  template <std::size_t N>
+  constexpr power_desc_t i2c_power_polled(std::uint32_t freq,
+                                          const pmic_variant_t (&variants)[N],
+                                          std::uint8_t warm_wait_ms,
+                                          std::uint8_t cold_wait_ms,
+                                          std::uint8_t wake_poll_ms)
+  {
+    return { -1, freq, variants, list_size_t<N>::value,
+             warm_wait_ms, cold_wait_ms, wake_poll_ms };
   }
 
   constexpr std::uint16_t direct_reset_panel_reload_wait(std::uint16_t milliseconds)
@@ -422,6 +448,10 @@ namespace board_detect
 
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr);
 
+  // Recover a slave that retained SDA after the controller was reset during a
+  // transaction. The pins are restored before return; true means both lines released.
+  bool release_held_sda(int pin_sda, int pin_scl);
+
   // Do not include pins that another device may drive (for example MISO), or
   // pins without internal pulls. A PMIC-switched pull-up may indicate whether
   // its rail is powered, but must not be used as a board signature. U is high
@@ -474,6 +504,27 @@ namespace board_detect
   // The first received byte occupies bits 0..7. Bits within each byte arrive MSB first.
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
                                 int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits);
+
+  struct spi_id_probe_t
+  {
+    std::uint8_t cmd;
+    std::uint32_t mask;
+    const std::uint32_t* values;
+    std::uint8_t value_count;
+    std::uint32_t option_bit;
+  };
+
+  template <std::size_t N>
+  constexpr spi_id_probe_t spi_id_probe(std::uint8_t cmd, std::uint32_t mask,
+                                        const std::uint32_t (&values)[N],
+                                        std::uint32_t option_bit)
+  {
+    return { cmd, mask, values, list_size_t<N>::value, option_bit };
+  }
+
+  bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
+                    const spi_id_probe_t* probes, std::size_t probe_count,
+                    board_result_t* result);
 
   // Kept callable by family detectors; validates desc before touching hardware.
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,
