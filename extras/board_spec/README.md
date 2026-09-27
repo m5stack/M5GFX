@@ -46,7 +46,8 @@ The legacy no-op RMW form (`keep=0xFF, value=0`) has a zero change mask and is
 intentionally rejected; add a dedicated operation before relying on its bus side effects.
 
 The IR layout is not a wire format. Its devices map mechanically to M5HAL bus
-configuration plus transfer metadata; full writes, delays, and GPIO operations
+configuration plus transfer metadata; 8-bit writes, one-transfer little-endian
+16-bit writes (`i2c_write16le`), delays, and GPIO operations
 map directly to their M5HAL bytecode counterparts. Masked writes and bounded
 ready waits require dedicated critical operations or orchestration when a
 future lowering layer is added.

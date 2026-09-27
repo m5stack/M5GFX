@@ -26,6 +26,10 @@ namespace pmic_ops
     { pm1_i2c_freq, 0, pm1_i2c_addr, 0, 1, ops::i2c_device_retry_transient_nack },
     { pm1_i2c_freq, 0, ioe1_i2c_addr, 0, 1, ops::i2c_device_retry_transient_nack },
   };
+  static constexpr ops::i2c_device_t tab5_devices[] = {
+    { 100000, 0, 0x43, 0, 1, 0 },
+    { 100000, 0, 0x44, 0, 1, 0 },
+  };
   static constexpr ops::i2c_device_t cores3_devices[] = {
     { 400000, 0, 0x58, 0, 1, 0 },
     { 400000, 0, 0x34, 0, 1, 0 },
@@ -100,6 +104,29 @@ namespace pmic_ops
     ops::i2c_write8(1, 0x23, 0x00), ops::i2c_bit_off(1, 0x13, 0x08),
     ops::i2c_bit_on(1, 0x03, 0x08), ops::i2c_bit_on(1, 0x05, 0x08),
     ops::delay_ms(20),
+  };
+  static constexpr ops::op_t corep4x_power_on[] = {
+    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
+    ops::i2c_bit_on(0, 0x06, 0x08),
+    ops::i2c_write8(1, 0x23, 0x00), ops::i2c_bit_off(1, 0x13, 0x80),
+    ops::i2c_bit_off(1, 0x14, 0x07), ops::i2c_bit_off(1, 0x14, 0x08),
+    ops::i2c_bit_on(1, 0x03, 0x80), ops::i2c_bit_on(1, 0x04, 0x07),
+    ops::i2c_bit_on(1, 0x04, 0x08), ops::i2c_bit_on(1, 0x05, 0x80),
+    ops::i2c_bit_on(1, 0x06, 0x07), ops::i2c_bit_on(1, 0x06, 0x08),
+    ops::i2c_write16le(1, 0x25, 1000), ops::i2c_write16le(1, 0x1B, 0x8000),
+    ops::delay_ms(150),
+  };
+  static constexpr ops::op_t tab5_power_on[] = {
+    ops::gpio_set_mode(23, ops::gpio_mode_t::output), ops::gpio_write_high(23),
+    ops::i2c_write8(0, 0x05, 0x46), ops::i2c_write8(0, 0x03, 0x7F),
+    ops::i2c_write8(0, 0x07, 0x00), ops::i2c_write8(0, 0x0D, 0x7F),
+    ops::i2c_write8(0, 0x0B, 0x7F),
+    ops::i2c_write8(1, 0x03, 0xB9), ops::i2c_write8(1, 0x07, 0x06),
+    ops::i2c_write8(1, 0x0D, 0xB9), ops::i2c_write8(1, 0x0B, 0xF9),
+    ops::i2c_write8(1, 0x09, 0x40), ops::i2c_write8(1, 0x11, 0xBF),
+    ops::i2c_write8(1, 0x05, 0x89), ops::delay_ms(10),
+    ops::i2c_write8(0, 0x03, 0x6F), ops::i2c_write8(0, 0x05, 0x76),
+    ops::gpio_set_mode(23, ops::gpio_mode_t::input), ops::delay_ms(100),
   };
   static constexpr ops::op_t toughc5_reset_assert[] = {
     ops::i2c_bit_off(1, 0x05, 0x08), ops::delay_ms(2),

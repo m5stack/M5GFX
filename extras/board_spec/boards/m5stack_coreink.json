@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_coreink",
+  "name": "M5StackCoreInk",
+  "legacy_board_id": 6,
+  "chip": "esp32_d0wdq6",
+  "spec": {
+    "display": {
+      "resolution": [
+        200,
+        200
+      ],
+      "touch": false
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "dev:epd.rst"
+      ]
+    },
+    "4": {
+      "roles": [
+        "dev:epd.busy"
+      ]
+    },
+    "5": {
+      "roles": [],
+      "note": "External/top button, active low"
+    },
+    "9": {
+      "roles": [
+        "dev:epd.cs"
+      ]
+    },
+    "12": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:epd.dc"
+      ]
+    },
+    "18": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "22": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "23": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "27": {
+      "roles": [],
+      "note": "Power button, active low"
+    },
+    "32": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "34": {
+      "roles": [
+        "bus:main_spi.miso"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "37": {
+      "roles": [],
+      "note": "BtnA, active low"
+    },
+    "38": {
+      "roles": [],
+      "note": "BtnB, active low"
+    },
+    "39": {
+      "roles": [],
+      "note": "BtnC, active low"
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "epd": {
+      "kind": "display",
+      "bus": "main_spi",
+      "selected_by": "runtime",
+      "default": "gdew0154d67",
+      "choices": {
+        "gdew0154d67": {
+          "part": "gdew0154d67",
+          "spec": {
+            "width": 200,
+            "height": 200,
+            "three_wire": true
+          }
+        },
+        "gdew0154m09": {
+          "part": "gdew0154m09",
+          "spec": {
+            "width": 200,
+            "height": 200,
+            "three_wire": true
+          }
+        }
+      }
+    },
+    "power_hold": {
+      "kind": "power_hold"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c"
+    }
+  }
+}

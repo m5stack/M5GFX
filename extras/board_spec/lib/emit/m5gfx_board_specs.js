@@ -67,6 +67,13 @@ function panel(spec, definitions, label) {
     ...(spec.line_padding === undefined && partDefault(definitions, "line_padding") === undefined ? {} : {
       linePadding: optionalInteger(spec.line_padding ?? partDefault(definitions, "line_padding"), `${label}.line_padding`),
     }),
+    ...Object.fromEntries([
+      "dpi_freq_mhz", "hsync_back_porch", "hsync_pulse_width", "hsync_front_porch",
+      "vsync_back_porch", "vsync_pulse_width", "vsync_front_porch",
+    ].flatMap((key) => {
+      const value = spec[key] ?? partDefault(definitions, key);
+      return value === undefined ? [] : [[key, integer(value, `${label}.${key}`)]];
+    })),
   };
   Object.defineProperty(result, "cppTypes", {
     value: Object.fromEntries(Object.entries(definitions ?? {}).map(([key, definition]) => [key, definition["x-cpp-type"] ?? "int"])),
@@ -81,19 +88,26 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
   const backlightDevice = board.devices?.backlight;
   const backlightBus = board.buses?.[backlightDevice?.bus];
   const backlight = backlightBus?.kind === "i2c" ? null : backlightDevice?.spec;
+  const backlightPin = Object.entries(board.pins ?? {}).find(([, row]) =>
+    (row.roles ?? []).includes("dev:backlight.pwm"))?.[0];
   const backlightI2c = backlightBus?.kind === "i2c" ? {
     i2cAddr: hex(backlightDevice?.i2c_addr, `${board.id}.backlight.i2c_addr`),
   } : null;
   if (!bus || !display) throw new Error(`${board.id} specs are incomplete`);
   const panels = {};
   const probes = {};
+  const explicitThreeWire = new Set();
   for (const variant of resolvedVariants) {
     const device = Object.values(variant.devices ?? {}).find((item) => item.kind === "display");
     const name = device?.part;
     if (!name || panels[name]) continue;
     panels[name] = panel(device.spec ?? {}, parts[name]?.spec_keys, `${board.id}.${name}`);
-    if (parts[name]?.id_probe) probes[name] = probe(parts[name], name);
+    if (device.spec?.three_wire !== undefined) explicitThreeWire.add(device.spec.three_wire);
+    if (parts[name]?.id_probe
+     && (mapping.probeParts === null || mapping.probeParts.includes(name)))
+    { probes[name] = probe(parts[name], name); }
   }
+  if (explicitThreeWire.size > 1) throw new Error(`${board.id} display variants disagree on three_wire`);
   const pmicDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "pmic");
   const pmicPart = parts[pmicDevice?.part];
   const pmicBus = board.buses?.[pmicDevice?.bus];
@@ -109,11 +123,14 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
   const touchPart = parts[touchDevice?.part];
   const touchBus = board.buses?.[touchDevice?.bus];
   const touchSpec = touchDevice?.spec ?? {};
+  const touchIntPin = Object.entries(board.pins ?? {}).find(([, row]) =>
+    (row.roles ?? []).includes("dev:touch.int"))?.[0];
   if (touchDevice) assertM5GFXSentinelTypes(touchPart?.spec_keys, `${board.id}.${touchDevice.part}`);
   // A part with several addresses and no board value leaves the address to
   // the touch driver's own default/probe order (i2cAddr === null).
   const touchAddr = touchDevice?.i2c_addr ?? (touchPart?.i2c_addr?.length === 1 ? touchPart.i2c_addr[0] : undefined);
   const touch = touchDevice ? {
+    ...(bus.kind === "dsi" ? { intPin: integer(Number(touchIntPin), `${board.id}.touch.int_pin`) } : {}),
     i2cAddr: touchAddr === undefined ? null : hex(touchAddr, `${board.id}.${touchDevice.part}.i2c_addr`),
     i2cFreq: integer(touchBus?.freq, `${board.id}.${touchDevice.bus}.freq`),
     xMin: integer(touchSpec.x_min ?? partDefault(touchPart?.spec_keys, "x_min"), `${board.id}.${touchDevice.part}.x_min`),
@@ -163,6 +180,13 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       kind: "parallel_epd",
       speed: integer(bus.freq, `${board.id}.${display.bus}.freq`),
       width: (bus.signals ?? []).filter((signal) => /^data\d+$/.test(signal)).length,
+    } : bus.kind === "dsi" ? {
+      kind: "dsi",
+      busId: integer(bus.preferred_host, `${board.id}.${display.bus}.preferred_host`),
+      laneNum: integer(bus.lane_num, `${board.id}.${display.bus}.lane_num`),
+      laneMbps: integer(bus.freq, `${board.id}.${display.bus}.freq`),
+      ldoChanId: integer(bus.ldo_chan_id, `${board.id}.${display.bus}.ldo_chan_id`),
+      ldoVoltageMv: integer(bus.ldo_voltage_mv, `${board.id}.${display.bus}.ldo_voltage_mv`),
     } : bus.kind === "i2c" ? {
       kind: "i2c",
       port: integer(bus.preferred_host, `${board.id}.${display.bus}.preferred_host`),
@@ -175,7 +199,9 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       hostSymbol: typeof bus.preferred_host === "string" ? bus.preferred_host : null,
       freqWrite: integer(bus.freq, `${board.id}.${display.bus}.freq`),
       freqRead: integer(bus.freq_read, `${board.id}.${display.bus}.freq_read`),
-      threeWire: display.spec?.three_wire ?? !(bus.signals ?? []).includes("miso"),
+      threeWire: explicitThreeWire.values().next().value
+              ?? display.spec?.three_wire
+              ?? !(bus.signals ?? []).includes("miso"),
     },
     // Emitted only when the board states the level; boards without it keep
     // the active-high default and their generated header unchanged.
@@ -185,6 +211,7 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
     panels,
     probes,
     backlight: backlight ? {
+      ...(bus.kind === "dsi" ? { pin: integer(Number(backlightPin), `${board.id}.backlight.pin`) } : {}),
       freq: integer(backlight.freq, `${board.id}.backlight.freq`),
       channel: integer(backlight.channel, `${board.id}.backlight.channel`),
       invert: optionalBoolean(backlight.invert ?? partDefault(DEVICE_KIND_SPEC_KEYS.backlight, "invert"), `${board.id}.backlight.invert`),
@@ -218,6 +245,12 @@ export function renderM5GFXSpecsHeader(specs) {
     if (entry.bus.kind === "parallel_epd") {
       lines.push(`constexpr std::uint32_t bus_speed = ${entry.bus.speed};`,
         `constexpr std::uint8_t bus_width = ${entry.bus.width};`);
+    } else if (entry.bus.kind === "dsi") {
+      lines.push(`constexpr int bus_id = ${entry.bus.busId};`,
+        `constexpr std::uint8_t bus_lane_num = ${entry.bus.laneNum};`,
+        `constexpr std::uint16_t bus_lane_mbps = ${entry.bus.laneMbps};`,
+        `constexpr std::uint8_t bus_ldo_chan_id = ${entry.bus.ldoChanId};`,
+        `constexpr std::uint16_t bus_ldo_voltage_mv = ${entry.bus.ldoVoltageMv};`);
     } else if (entry.bus.kind === "i2c") {
       lines.push(`constexpr int bus_port = ${entry.bus.port};`,
         `constexpr std::uint32_t bus_freq_write = ${entry.bus.freqWrite};`,
@@ -246,6 +279,11 @@ export function renderM5GFXSpecsHeader(specs) {
         [`  constexpr ${cpp("rgb_order")} rgb_order = ${optionalFlag(value.rgbOrder)};`]),
       ...(value.linePadding === undefined || value.linePadding === null ? [] :
         [`  constexpr ${cpp("line_padding")} line_padding = ${value.linePadding};`]),
+      ...[
+        "dpi_freq_mhz", "hsync_back_porch", "hsync_pulse_width", "hsync_front_porch",
+        "vsync_back_porch", "vsync_pulse_width", "vsync_front_porch",
+      ].flatMap((key) => value[key] === undefined ? [] :
+        [`  constexpr ${cpp(key)} ${key} = ${value[key]};`]),
         `} // namespace panel_${name}`);
     }
     for (const [name, value] of Object.entries(entry.probes)) {
@@ -259,6 +297,7 @@ export function renderM5GFXSpecsHeader(specs) {
     }
     if (entry.backlight) {
       lines.push("", "namespace backlight {",
+        ...(entry.backlight.pin === undefined ? [] : [`  constexpr int pin = ${entry.backlight.pin};`]),
         `  constexpr std::uint32_t freq = ${entry.backlight.freq};`,
         `  constexpr std::uint8_t channel = ${entry.backlight.channel};`,
         `  constexpr bool invert = ${boolean(entry.backlight.invert)};`,
@@ -286,6 +325,8 @@ export function renderM5GFXSpecsHeader(specs) {
     }
     if (entry.touch) {
       lines.push("", "namespace touch {",
+        ...(entry.touch.intPin === undefined ? [] :
+          [`  constexpr int int_pin = ${entry.touch.intPin};`]),
         ...(entry.touch.i2cAddr === null ? [] :
           [`  constexpr std::uint8_t i2c_addr = ${uint(entry.touch.i2cAddr)};`]),
         `  constexpr std::uint32_t i2c_freq = ${entry.touch.i2cFreq};`,

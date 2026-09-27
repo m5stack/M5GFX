@@ -32,7 +32,7 @@
                  wiring::toughc5::display_busy),
     pins(toughc5_hold),
     internal_i2c(toughc5_detail::sda, toughc5_detail::scl, toughc5_detail::i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(toughc5_hold),
   };
   static const board_def_t& board_toughc5 = desc_toughc5.def;
 

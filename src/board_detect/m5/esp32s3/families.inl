@@ -30,7 +30,7 @@ namespace m5
                  wiring::atoms3::display_cs, wiring::atoms3::display_rst,
                  wiring::atoms3::display_busy),
     pins(wiring::atoms3::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::atoms3::names),
+    options(generated_options::atoms3::names), pins(wiring::atoms3::hold),
   };
   static const board_def_t& board_atoms3 = desc_atoms3.def;
 
@@ -42,7 +42,7 @@ namespace m5
                  wiring::atoms3r::display_cs, wiring::atoms3r::display_rst,
                  wiring::atoms3r::display_busy),
     pins(wiring::atoms3r::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::atoms3r::names),
+    options(generated_options::atoms3r::names), pins(wiring::atoms3r::hold),
   };
   static const board_def_t& board_atoms3r = desc_atoms3r.def;
 
@@ -54,7 +54,7 @@ namespace m5
                  wiring::dinmeter::display_cs, wiring::dinmeter::display_rst,
                  wiring::dinmeter::display_busy),
     pins(wiring::dinmeter::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    no_options(),
+    no_options(), pins(wiring::dinmeter::hold),
   };
   static const board_def_t& board_dinmeter = desc_dinmeter.def;
 
@@ -67,7 +67,7 @@ namespace m5
                  wiring::airq::display_cs, wiring::airq::display_rst,
                  wiring::airq::display_busy),
     pins(wiring::airq::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::airq::names),
+    options(generated_options::airq::names), pins(wiring::airq::hold),
   };
   static const board_def_t& board_airq = desc_airq.def;
   // gpio_power() keeps its active-high meaning; only gpio_power_low() holds low.
@@ -84,7 +84,7 @@ namespace m5
                  wiring::stamplc::display_cs, wiring::stamplc::display_rst,
                  wiring::stamplc::display_busy),
     pins(wiring::stamplc::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    no_options(),
+    no_options(), pins(wiring::stamplc::hold),
   };
   static const board_def_t& board_stamplc = desc_stamplc.def;
 
@@ -98,7 +98,7 @@ namespace m5
     pins(wiring::dial::hold),
     internal_i2c(wiring::dial::internal_i2c_sda, wiring::dial::internal_i2c_scl,
                  wiring::dial::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::dial::hold),
   };
   static const board_def_t& board_dial = desc_dial.def;
 
@@ -110,7 +110,7 @@ namespace m5
                  wiring::cardputer::display_cs, wiring::cardputer::display_rst,
                  wiring::cardputer::display_busy),
     pins(wiring::cardputer::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    no_options(),
+    no_options(), pins(wiring::cardputer::hold),
   };
   static const board_def_t& board_cardputer = desc_cardputer.def;
 
@@ -122,7 +122,7 @@ namespace m5
                  wiring::cardputer_adv::display_cs, wiring::cardputer_adv::display_rst,
                  wiring::cardputer_adv::display_busy),
     pins(wiring::cardputer_adv::hold), no_internal_i2c(),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::cardputer_adv::hold),
   };
   static const board_def_t& board_cardputer_adv = desc_cardputer_adv.def;
 
@@ -134,7 +134,7 @@ namespace m5
                  wiring::vameter::display_cs, wiring::vameter::display_rst,
                  wiring::vameter::display_busy),
     pins(wiring::vameter::hold), no_internal_i2c(),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::vameter::hold),
   };
   static const board_def_t& board_vameter = desc_vameter.def;
 
@@ -159,7 +159,7 @@ namespace m5
     pins(wiring::sticks3::hold),
     internal_i2c(wiring::sticks3::internal_i2c_sda, wiring::sticks3::internal_i2c_scl,
                  wiring::sticks3::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::sticks3::hold),
   };
   static const board_def_t& board_sticks3 = desc_sticks3.def;
 
@@ -194,7 +194,7 @@ namespace m5
     pins(wiring::stopwatch::hold),
     internal_i2c(wiring::stopwatch::internal_i2c_sda, wiring::stopwatch::internal_i2c_scl,
                  wiring::stopwatch::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::stopwatch::hold),
   };
   static const board_def_t& board_stopwatch = desc_stopwatch.def;
   static constexpr board_desc_t desc_papermono = {
@@ -209,7 +209,7 @@ namespace m5
     pins(wiring::papermono::hold),
     internal_i2c(wiring::papermono::internal_i2c_sda, wiring::papermono::internal_i2c_scl,
                  wiring::papermono::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::papermono::hold),
   };
   static const board_def_t& board_papermono = desc_papermono.def;
 
@@ -255,7 +255,7 @@ namespace m5
     internal_i2c(wiring::chaincaptain::internal_i2c_sda,
                  wiring::chaincaptain::internal_i2c_scl,
                  wiring::chaincaptain::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::chaincaptain::hold),
   };
   static const board_def_t& board_chaincaptain = desc_chaincaptain.def;
   static constexpr board_desc_t desc_papercolor = {
@@ -278,7 +278,7 @@ namespace m5
     internal_i2c(wiring::papercolor::internal_i2c_sda,
                  wiring::papercolor::internal_i2c_scl,
                  wiring::papercolor::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::papercolor::hold),
   };
   static const board_def_t& board_papercolor = desc_papercolor.def;
 
@@ -294,7 +294,7 @@ namespace m5
     no_display_pins(), no_pins(),
     internal_i2c(wiring::papers3::internal_i2c_sda, wiring::papers3::internal_i2c_scl,
                  wiring::papers3::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
   };
   static const board_def_t& board_papers3 = desc_papers3.def;
   static const pmic_variant_t paperdiy_pmic_variants[] = {
@@ -311,7 +311,7 @@ namespace m5
     // hw_port = -1: the legacy path released the probe port after the PM1
     // writes and never opened the hardware port (no touch on PaperDIY).
     internal_i2c(wiring::paperdiy::internal_i2c_sda, wiring::paperdiy::internal_i2c_scl, -1),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
   };
   static const board_def_t& board_paperdiy = desc_paperdiy.def;
   static_assert(wiring::papers3::internal_i2c_sda == wiring::paperdiy::internal_i2c_sda
@@ -358,61 +358,6 @@ namespace m5
     spi_id_probe(specs::stamplc::probe_st7789v2::cmd,
                  specs::stamplc::probe_st7789v2::mask,
                  specs::stamplc::probe_st7789v2::values, 0),
-  };
-
-  struct spi_id_member_t
-  {
-    const board_desc_t* desc;
-    const spi_id_probe_t* probes;
-    std::uint8_t probe_count;
-    bool three_wire;
-    bool touches_conditional_pins;
-    std::uint8_t slow_retry_half_us;
-  };
-
-  class spi_id_detector_t final : public board_detector_t
-  {
-  public:
-    spi_id_detector_t(const board_def_t* const* members, const spi_id_member_t* members_desc,
-                      std::uint8_t member_count)
-    : board_detector_t(members),
-      members_desc_(members_desc), member_count_(member_count) {}
-    bool signature(probe_ctx_t&) const override { return true; }
-    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
-    {
-      if (ctx.hint != board_id_unknown)
-      {
-        for (std::uint8_t index = 0; index < member_count_; ++index)
-        {
-          const auto& member = members_desc_[index];
-          if (member.desc->def.id != ctx.hint) { continue; }
-          return probe_member(ctx, member, result);
-        }
-      }
-      for (std::uint8_t index = 0; index < member_count_; ++index)
-      {
-        const auto& member = members_desc_[index];
-        if (probe_member(ctx, member, result)) { return true; }
-      }
-      return false;
-    }
-
-  private:
-    static bool probe_member(probe_ctx_t& ctx, const spi_id_member_t& member,
-                             board_result_t* result)
-    {
-      if (ctx.conditional_pins_unavailable && member.touches_conditional_pins)
-      {
-        // OPI PSRAM owns GPIO33..37. Skip only the candidate that touches
-        // those pins; another member of the same family may remain safe.
-        return false;
-      }
-      return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result,
-                          member.three_wire, member.slow_retry_half_us);
-    }
-
-    const spi_id_member_t* members_desc_;
-    std::uint8_t member_count_;
   };
 
   class pmic_id_detector_t final : public board_detector_t
@@ -693,9 +638,9 @@ namespace m5
   static const board_def_t* const spi_id_members[] = { &board_atoms3, &board_dinmeter, nullptr };
   static constexpr spi_id_member_t spi_id_member_descs[] = {
     { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]),
-      specs::atoms3::bus_three_wire, wiring::atoms3::touches_opi_pins, 0 },
+      specs::atoms3::bus_three_wire, wiring::atoms3::touches_opi_pins, 0, false, false },
     { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
-      specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0 },
+      specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false, false },
   };
   static const spi_id_detector_t spi_id_detector(
     spi_id_members, spi_id_member_descs,
@@ -704,7 +649,7 @@ namespace m5
   static const board_def_t* const dial_members[] = { &board_dial, nullptr };
   static constexpr spi_id_member_t dial_member_descs[] = {
     { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]),
-      specs::dial::bus_three_wire, wiring::dial::touches_opi_pins, 0 },
+      specs::dial::bus_three_wire, wiring::dial::touches_opi_pins, 0, false, false },
   };
   static const spi_id_detector_t dial_detector(
     dial_members, dial_member_descs,
@@ -713,7 +658,7 @@ namespace m5
   static const board_def_t* const atoms3r_members[] = { &board_atoms3r, nullptr };
   static constexpr spi_id_member_t atoms3r_member_descs[] = {
     { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
-      specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5 },
+      specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false, false },
   };
   static const spi_id_detector_t atoms3r_detector(
     atoms3r_members, atoms3r_member_descs,
@@ -723,7 +668,7 @@ namespace m5
   static const board_def_t* const airq_members[] = { &board_airq, nullptr };
   static constexpr spi_id_member_t airq_member_descs[] = {
     { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
-      specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0 },
+      specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0, false, false },
   };
   static const spi_id_detector_t airq_detector(
     airq_members, airq_member_descs,
@@ -735,7 +680,7 @@ namespace m5
   static const board_def_t* const stamplc_members[] = { &board_stamplc, nullptr };
   static constexpr spi_id_member_t stamplc_member_descs[] = {
     { &desc_stamplc, stamplc_probes, sizeof(stamplc_probes) / sizeof(stamplc_probes[0]),
-      specs::stamplc::bus_three_wire, wiring::stamplc::touches_opi_pins, 0 },
+      specs::stamplc::bus_three_wire, wiring::stamplc::touches_opi_pins, 0, false, false },
   };
   static const spi_id_detector_t stamplc_detector(
     stamplc_members, stamplc_member_descs,

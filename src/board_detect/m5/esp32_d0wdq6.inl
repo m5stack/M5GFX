@@ -4,6 +4,7 @@
 
 #include "../board_detect.hpp"
 #include "board_registry.inl"
+#include "generated/esp32_d0wdq6_specs.hpp"
 #include "generated/esp32_d0wdq6_wiring.hpp"
 #include "pmic_ops.hpp"
 
@@ -60,7 +61,7 @@ namespace m5
     pins(wiring::station::hold),
     internal_i2c(wiring::station::internal_i2c_sda, wiring::station::internal_i2c_scl,
                  wiring::station::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::station::hold),
   };
   static constexpr board_desc_t desc_core2 = {
     { id(lgfx::board_M5StackCore2), "M5StackCore2", 0 },
@@ -76,7 +77,7 @@ namespace m5
     internal_i2c(wiring::core2::internal_i2c_sda, wiring::core2::internal_i2c_scl,
                  wiring::core2::internal_i2c_port),
     direct_reset_panel_reload_wait(110),
-    options(generated_options::core2::names),
+    options(generated_options::core2::names), pins(wiring::core2::hold),
   };
   static constexpr board_desc_t desc_tough = {
     { id(lgfx::board_M5Tough), "M5Tough", 0 },
@@ -92,7 +93,7 @@ namespace m5
     internal_i2c(wiring::tough::internal_i2c_sda, wiring::tough::internal_i2c_scl,
                  wiring::tough::internal_i2c_port),
     direct_reset_panel_reload_wait(110),
-    options(generated_options::tough::names),
+    options(generated_options::tough::names), pins(wiring::tough::hold),
   };
   static constexpr board_desc_t desc_stack = {
     { id(lgfx::board_M5Stack), "M5Stack", 0 },
@@ -105,7 +106,7 @@ namespace m5
                  wiring::stack::display_cs, wiring::stack::display_rst,
                  wiring::stack::display_busy),
     pins(wiring::stack::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::stack::names),
+    options(generated_options::stack::names), pins(wiring::stack::hold),
   };
   static constexpr board_desc_t desc_paper = {
     { id(lgfx::board_M5Paper), "M5Paper", 0 },
@@ -118,6 +119,7 @@ namespace m5
                  wiring::paper::display_cs, wiring::paper::display_rst,
                  wiring::paper::display_busy),
     pins(wiring::paper::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(), no_options(),
+    pins(wiring::paper::hold),
   };
 
   static const board_def_t& board_station = desc_station.def;
@@ -415,6 +417,8 @@ namespace m5
     }
   }
 
+  #include "esp32_pico.inl"
+
   construct_status_t construct_station(const board_result_t& result, display_parts_t* parts);
   construct_status_t construct_core2(const board_result_t& result, display_parts_t* parts);
   construct_status_t construct_tough(const board_result_t& result, display_parts_t* parts);
@@ -426,6 +430,11 @@ namespace m5
     { &desc_tough, construct_tough, nullptr, nullptr },
     { &desc_stack, construct_stack, nullptr, nullptr },
     { &desc_paper, construct_paper, nullptr, nullptr },
+    { &desc_stickcplus, construct_stickcplus, "M5StickCPlus", nullptr },
+    { &desc_stickc, construct_stickc, "M5StickC", nullptr },
+    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr },
+    { &desc_stickcplus2, construct_stickcplus2, "M5StickCPlus2", nullptr },
+    { &desc_atompsram, construct_atompsram, "", nullptr },
   };
 
   const board_desc_t* find_board_desc(board_id_t board)

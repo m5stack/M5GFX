@@ -1,0 +1,21 @@
+{
+  "id": "ili9881c", "name": "ILI9881C", "kind": "display",
+  "bus": { "kind": "dsi" },
+  "signals": { "required": [], "optional": [] },
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "memory_width": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
+    "memory_height": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
+    "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
+    "readable": { "type": "boolean" },
+    "rgb_order": { "type": "boolean" },
+    "dpi_freq_mhz": { "type": "integer", "minimum": 1, "maximum": 255, "required": true, "x-cpp-type": "std::uint8_t" },
+    "hsync_back_porch": { "type": "integer", "minimum": 0, "maximum": 65535, "required": true, "x-cpp-type": "std::uint16_t" },
+    "hsync_pulse_width": { "type": "integer", "minimum": 0, "maximum": 65535, "required": true, "x-cpp-type": "std::uint16_t" },
+    "hsync_front_porch": { "type": "integer", "minimum": 0, "maximum": 65535, "required": true, "x-cpp-type": "std::uint16_t" },
+    "vsync_back_porch": { "type": "integer", "minimum": 0, "maximum": 65535, "required": true, "x-cpp-type": "std::uint16_t" },
+    "vsync_pulse_width": { "type": "integer", "minimum": 0, "maximum": 65535, "required": true, "x-cpp-type": "std::uint16_t" },
+    "vsync_front_porch": { "type": "integer", "minimum": 0, "maximum": 65535, "required": true, "x-cpp-type": "std::uint16_t" }
+  }
+}

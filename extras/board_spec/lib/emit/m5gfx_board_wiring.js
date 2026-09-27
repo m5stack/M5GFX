@@ -11,6 +11,7 @@ export function m5gfxBoardMapping(target, boardId) {
     reset: source.reset,
     wiringOutput: source.wiring_output,
     specsOutput: source.specs_output,
+    probeParts: source.probe_parts ?? null,
     options: source.options ?? [],
     descInternalI2c: source.desc_internal_i2c ?? false,
     cardputerSubdivision: source.cardputer_subdivision ?? null,

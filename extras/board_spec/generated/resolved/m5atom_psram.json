@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "id": "m5atom_psram",
+  "name": "M5AtomPsram",
+  "legacy_board_id": 129,
+  "chip": "esp32_d0wdq6",
+  "pins": {
+    "21": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "25": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "26": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "27": {
+      "roles": [
+        "dev:rgb_led.data"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "32": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [],
+      "note": "BtnA, active low"
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "rgb_led": {
+      "kind": "led_strip",
+      "signals": {
+        "data": "gpio:27"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:32",
+        "2": "gpio:26",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

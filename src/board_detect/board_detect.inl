@@ -937,13 +937,27 @@ namespace board_detect
 
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
                                 int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits,
-                                std::uint32_t half_us)
+                                std::uint32_t half_us, bool legacy_zero_preamble)
   {
-    lgfx::gpio_hi(pin_cs);
-    lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
     soft_spi_t bus(pin_sclk, pin_mosi, pin_miso, pin_dc, half_us);
-    bus.init();
-    bus.beginTransaction();
+    if (legacy_zero_preamble)
+    {
+      // Legacy _read_panel_id clocked a zero command while CS was high before
+      // selecting the panel. ESP32 PICO display probes retain that exact read.
+      bus.init();
+      bus.beginTransaction();
+      lgfx::gpio_hi(pin_cs);
+      lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
+      bus.writeCommand(0, 8);
+      bus.wait();
+    }
+    else
+    {
+      lgfx::gpio_hi(pin_cs);
+      lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
+      bus.init();
+      bus.beginTransaction();
+    }
     lgfx::gpio_lo(pin_cs);
     bus.writeCommand(cmd, 8);
     bus.beginRead(dummy_bits);
@@ -1169,7 +1183,7 @@ namespace board_detect
     const ops::retry_policy_t retry_policy { retry_budget.deadline_ms(), 1 };
     const auto power_result = startup_detail::run_sequence(i2c_port, power,
                                                             variant->power_on,
-                                                            desc.hold_high_pins,
+                                                            desc.op_gpio_pins,
                                                             &retry_policy);
     if (power_result.status != ops::op_status_t::ok)
     {
@@ -1277,7 +1291,8 @@ namespace board_detect
                      && (desc.internal_i2c.sda < 0 || desc.internal_i2c.scl < 0))
                 && !(desc.reset.kind == reset_kind_t::custom && desc.reset.custom == nullptr)
                 && pin_list_valid(desc.hold_high_pins)
-                && list_valid(desc.option_names);
+                && list_valid(desc.option_names)
+                && pin_list_valid(desc.op_gpio_pins);
       // no_display_pins(): every display pin is absent and nothing below may
       // refer to one. Any other description needs the SPI display signals and
       // holds its chip select high during detection.
@@ -1318,6 +1333,9 @@ namespace board_detect
       for (std::uint_fast8_t i = 0; valid && i < desc.power.variant_count; ++i)
       {
         const auto& variant = desc.power.variants[i];
+        const ops::gpio_scope_t gpio_scope {
+          GPIO_NUM_MAX, desc.op_gpio_pins.data, desc.op_gpio_pins.size
+        };
         valid = list_valid(variant.power_on)
              && list_valid(variant.reset_assert)
              && list_valid(variant.reset_release)
@@ -1326,7 +1344,18 @@ namespace board_detect
              && variant.restore_registers.size <= max_pmic_restore_registers
              && (variant.option_select_value & ~variant.option_select_mask) == 0
              && (desc.reset.kind != reset_kind_t::i2c_regs
-                 || (variant.reset_assert.size != 0 && variant.reset_release.size != 0));
+                 || (variant.reset_assert.size != 0 && variant.reset_release.size != 0))
+             // GPIO operations are only safe on pins captured by the detection
+             // transaction and passed as the execution scope.
+             && ops::validate_ops(desc.power.devices, desc.power.device_count,
+                                  variant.power_on.data, variant.power_on.size,
+                                  gpio_scope).status == ops::op_status_t::ok
+             && ops::validate_ops(desc.power.devices, desc.power.device_count,
+                                  variant.reset_assert.data, variant.reset_assert.size,
+                                  gpio_scope).status == ops::op_status_t::ok
+             && ops::validate_ops(desc.power.devices, desc.power.device_count,
+                                  variant.reset_release.data, variant.reset_release.size,
+                                  gpio_scope).status == ops::op_status_t::ok;
       }
       if (!valid)
       {
@@ -1369,7 +1398,8 @@ namespace board_detect
           startup_detail::retry_budget_t release_budget(desc.power.wake_poll_ms);
           const ops::retry_policy_t release_policy { release_budget.deadline_ms(), 1 };
           const auto release_result = startup_detail::run_sequence(
-            i2c_port, desc.power, variant->reset_release, no_pins(), &release_policy);
+            i2c_port, desc.power, variant->reset_release, desc.op_gpio_pins,
+            &release_policy);
           if (release_result.status != ops::op_status_t::ok)
           {
             if (!retain_confirmed_board) { return false; }
@@ -1408,7 +1438,8 @@ namespace board_detect
       startup_detail::retry_budget_t assert_budget(desc.power.wake_poll_ms);
       const ops::retry_policy_t assert_policy { assert_budget.deadline_ms(), 1 };
       const auto assert_result = startup_detail::run_sequence(
-        i2c_port, desc.power, variant->reset_assert, no_pins(), &assert_policy);
+        i2c_port, desc.power, variant->reset_assert, desc.op_gpio_pins,
+        &assert_policy);
       ok = assert_result.status == ops::op_status_t::ok;
       if (!ok && retain_confirmed_board)
       {
@@ -1423,7 +1454,8 @@ namespace board_detect
         startup_detail::retry_budget_t release_budget(desc.power.wake_poll_ms);
         const ops::retry_policy_t release_policy { release_budget.deadline_ms(), 1 };
         const auto release_result = startup_detail::run_sequence(
-          i2c_port, desc.power, variant->reset_release, no_pins(), &release_policy);
+          i2c_port, desc.power, variant->reset_release, desc.op_gpio_pins,
+          &release_policy);
         ok = release_result.status == ops::op_status_t::ok;
         if (!ok && retain_confirmed_board)
         {
@@ -1452,7 +1484,9 @@ namespace board_detect
   bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
-                    std::uint8_t slow_retry_half_us)
+                    std::uint8_t slow_retry_half_us,
+                    bool legacy_zero_preamble,
+                    bool power_before_probe)
   {
     if (probes == nullptr || probe_count == 0 || result == nullptr
      || !startup_detail::description_valid(desc)
@@ -1477,6 +1511,12 @@ namespace board_detect
     prepare_ctx.allow_reset = ctx.allow_reset;
     prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
     prepare_ctx.transaction = ctx.transaction;
+    if (power_before_probe
+     && !startup_detail::prepare_power(desc, candidate, ctx.i2c_port_probe))
+    {
+      restore_probe_pins();
+      return false;
+    }
     if (desc.sd.sd_cs >= 0)
     {
       // Keep both devices deselected while the shared SD bus is switched to
@@ -1506,7 +1546,8 @@ namespace board_detect
       if (!have_id || probe.cmd != last_cmd || probe.dummy_bits != last_dummy_bits)
       {
         id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
-                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits);
+                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits,
+                             1, legacy_zero_preamble);
         last_cmd = probe.cmd;
         last_dummy_bits = probe.dummy_bits;
         have_id = true;
@@ -1528,7 +1569,7 @@ namespace board_detect
       id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
                            desc.display.dc, desc.display.cs, retry_cmd,
                            probes[0].dummy_bits,
-                           slow_retry_half_us);
+                           slow_retry_half_us, legacy_zero_preamble);
       for (std::size_t index = 0; index < probe_count; ++index)
       {
         const auto& probe = probes[index];
@@ -1545,6 +1586,133 @@ namespace board_detect
     restore_probe_pins();
     return false;
   }
+
+  struct spi_id_member_t
+  {
+    const board_desc_t* desc;
+    const spi_id_probe_t* probes;
+    std::uint8_t probe_count;
+    bool three_wire;
+    bool touches_conditional_pins;
+    std::uint8_t slow_retry_half_us;
+    bool legacy_zero_preamble;
+    bool power_before_probe;
+  };
+
+  class spi_id_detector_t final : public board_detector_t
+  {
+  public:
+    spi_id_detector_t(const board_def_t* const* members, const spi_id_member_t* members_desc,
+                      std::uint8_t member_count, bool try_others_after_hint = false,
+                      bool shared_id_read = false)
+    : board_detector_t(members),
+      members_desc_(members_desc), member_count_(member_count),
+      try_others_after_hint_(try_others_after_hint), shared_id_read_(shared_id_read) {}
+    bool signature(probe_ctx_t&) const override { return true; }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (shared_id_read_) { return probe_family(ctx, result); }
+      if (ctx.hint != board_id_unknown)
+      {
+        for (std::uint8_t index = 0; index < member_count_; ++index)
+        {
+          const auto& member = members_desc_[index];
+          if (member.desc->def.id != ctx.hint) { continue; }
+          if (probe_member(ctx, member, result)) { return true; }
+          if (!try_others_after_hint_) { return false; }
+          break;
+        }
+      }
+      for (std::uint8_t index = 0; index < member_count_; ++index)
+      {
+        const auto& member = members_desc_[index];
+        if (try_others_after_hint_ && member.desc->def.id == ctx.hint) { continue; }
+        if (probe_member(ctx, member, result)) { return true; }
+      }
+      return false;
+    }
+
+  private:
+    bool probe_family(probe_ctx_t& ctx, board_result_t* result) const
+    {
+      if (member_count_ == 0 || result == nullptr) { return false; }
+      const auto& first = members_desc_[0];
+      if (first.desc == nullptr || first.probes == nullptr || first.probe_count == 0
+       || !startup_detail::description_valid(*first.desc)
+       || first.desc->display.cs < 0) { return false; }
+
+      const auto& desc = *first.desc;
+      const std::int8_t pins[] = {
+        desc.display.cs, desc.display.sclk, desc.display.mosi,
+        desc.display.dc, desc.display.rst,
+      };
+      board_result_t candidate;
+      candidate.assign(&desc);
+      prepare_ctx_t prepare_ctx;
+      prepare_ctx.allow_reset = ctx.allow_reset;
+      prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
+      prepare_ctx.transaction = ctx.transaction;
+      if (!prepare_reset(desc, candidate, prepare_ctx, ctx.i2c_port_probe))
+      {
+        ctx.transaction->restore_start(pins);
+        return false;
+      }
+
+      const auto& read_probe = first.probes[0];
+      const int read_pin = first.three_wire || desc.display.miso < 0
+                         ? desc.display.mosi : desc.display.miso;
+      const std::uint32_t panel_id = soft_spi_read32(
+        ctx, desc.display.sclk, desc.display.mosi, read_pin,
+        desc.display.dc, desc.display.cs, read_probe.cmd, read_probe.dummy_bits,
+        1, first.legacy_zero_preamble);
+
+      // Members of a legacy family share the physical read. Compare the one
+      // captured value in legacy priority order instead of resetting the same
+      // panel again for each possible member.
+      for (std::uint8_t member_index = 0; member_index < member_count_; ++member_index)
+      {
+        const auto& member = members_desc_[member_index];
+        for (std::uint8_t probe_index = 0; probe_index < member.probe_count; ++probe_index)
+        {
+          const auto& probe = member.probes[probe_index];
+          if (probe.cmd != read_probe.cmd || probe.dummy_bits != read_probe.dummy_bits)
+          {
+            ctx.transaction->restore_start(pins);
+            return false;
+          }
+          for (std::size_t value = 0; value < probe.value_count; ++value)
+          {
+            if ((panel_id & probe.mask) != probe.values[value]) { continue; }
+            candidate.assign(member.desc);
+            candidate.option = probe.option_bit;
+            *result = candidate;
+            return true;
+          }
+        }
+      }
+      ctx.transaction->restore_start(pins);
+      return false;
+    }
+
+    static bool probe_member(probe_ctx_t& ctx, const spi_id_member_t& member,
+                             board_result_t* result)
+    {
+      if (ctx.conditional_pins_unavailable && member.touches_conditional_pins)
+      {
+        // OPI PSRAM owns GPIO33..37. Skip only the candidate that touches
+        // those pins; another member of the same family may remain safe.
+        return false;
+      }
+      return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result,
+                          member.three_wire, member.slow_retry_half_us,
+                          member.legacy_zero_preamble, member.power_before_probe);
+    }
+
+    const spi_id_member_t* members_desc_;
+    std::uint8_t member_count_;
+    bool try_others_after_hint_;
+    bool shared_id_read_;
+  };
 
   bool prepare(const board_desc_t& desc, board_result_t& result, const prepare_ctx_t& ctx)
   {

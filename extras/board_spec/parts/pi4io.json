@@ -1,0 +1,6 @@
+{
+  "id": "pi4io", "name": "PI4IOE5V6408", "kind": "io_expander",
+  "bus": { "kind": "i2c" }, "i2c_addr": ["0x43", "0x44"],
+  "id_probe": { "reg": "0x01", "value": "0x00", "match": "ack_only" },
+  "pins": {}
+}

@@ -331,6 +331,9 @@ namespace board_detect
     // Remaining settle time after a direct reset before panel settings are reread.
     std::uint16_t direct_reset_panel_reload_wait_ms;
     option_list_t option_names;
+    // GPIOs that typed operation lists may access. This is intentionally
+    // separate from hold_high_pins: an operation may restore a pin to input.
+    pin_list_t op_gpio_pins;
   };
 
   inline void board_result_t::assign(const board_desc_t* value)
@@ -656,7 +659,8 @@ namespace board_detect
   // The first received byte occupies bits 0..7. Bits within each byte arrive MSB first.
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
                                 int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits,
-                                std::uint32_t half_us = 1);
+                                std::uint32_t half_us = 1,
+                                bool legacy_zero_preamble = false);
 
   struct spi_id_probe_t
   {
@@ -680,7 +684,9 @@ namespace board_detect
   bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
-                    std::uint8_t slow_retry_half_us = 0);
+                    std::uint8_t slow_retry_half_us = 0,
+                    bool legacy_zero_preamble = false,
+                    bool power_before_probe = false);
 
   // Kept callable by family detectors; validates desc before touching hardware.
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,

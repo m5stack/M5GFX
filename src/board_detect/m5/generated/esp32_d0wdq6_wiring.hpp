@@ -95,8 +95,65 @@ namespace paper {
   constexpr std::int8_t hold[] = { 4, 15 };
 } // namespace paper
 
+namespace stickc {
+  constexpr std::int8_t display_sclk = 13;
+  constexpr std::int8_t display_mosi = 15;
+  constexpr std::int8_t display_miso = 14;
+  constexpr std::int8_t display_dc = 23;
+  constexpr std::int8_t display_cs = 5;
+  constexpr std::int8_t display_rst = 18;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t internal_i2c_sda = 21;
+  constexpr std::int8_t internal_i2c_scl = 22;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t reset_gpio = 18;
+  constexpr std::int8_t hold[] = { 5 };
+} // namespace stickc
+
+namespace stickcplus {
+  constexpr std::int8_t display_sclk = 13;
+  constexpr std::int8_t display_mosi = 15;
+  constexpr std::int8_t display_miso = 14;
+  constexpr std::int8_t display_dc = 23;
+  constexpr std::int8_t display_cs = 5;
+  constexpr std::int8_t display_rst = 18;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t internal_i2c_sda = 21;
+  constexpr std::int8_t internal_i2c_scl = 22;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t reset_gpio = 18;
+  constexpr std::int8_t hold[] = { 5 };
+} // namespace stickcplus
+
+namespace coreink {
+  constexpr std::int8_t display_sclk = 18;
+  constexpr std::int8_t display_mosi = 23;
+  constexpr std::int8_t display_miso = 34;
+  constexpr std::int8_t display_dc = 15;
+  constexpr std::int8_t display_cs = 9;
+  constexpr std::int8_t display_rst = 0;
+  constexpr std::int8_t display_busy = 4;
+  constexpr std::int8_t reset_gpio = 0;
+  constexpr std::int8_t power_gpio = 12;
+  constexpr std::int8_t hold[] = { 9 };
+} // namespace coreink
+
+namespace stickcplus2 {
+  constexpr std::int8_t display_sclk = 13;
+  constexpr std::int8_t display_mosi = 15;
+  constexpr std::int8_t display_miso = -1;
+  constexpr std::int8_t display_dc = 14;
+  constexpr std::int8_t display_cs = 5;
+  constexpr std::int8_t display_rst = 12;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t reset_gpio = 12;
+  constexpr std::int8_t power_gpio = 4;
+  constexpr std::int8_t backlight_gpio = 27;
+  constexpr std::int8_t hold[] = { 5 };
+} // namespace stickcplus2
+
 namespace detection {
-  constexpr std::int8_t unconditional_pins[] = { 2, 4, 5, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 33, 38 };
+  constexpr std::int8_t unconditional_pins[] = { 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 33, 34, 38 };
 } // namespace detection
 
 } // namespace wiring
@@ -116,6 +173,10 @@ namespace stack {
   constexpr std::uint32_t ips = 1u << 0;
   static const char* const names[] = { "ips" };
 } // namespace stack
+namespace coreink {
+  constexpr std::uint32_t m09 = 1u << 0;
+  static const char* const names[] = { "m09" };
+} // namespace coreink
 } // namespace generated_options
 
 } } } // namespace m5gfx::board_detect::m5

@@ -38,18 +38,21 @@
     pins(wiring::cores3::hold),
     internal_i2c(cores3_detail::sda, cores3_detail::scl, wiring::cores3::internal_i2c_port),
     no_direct_reset_panel_reload_wait(), options(generated_options::cores3::names),
+    pins(wiring::cores3::hold),
   };
   static constexpr board_desc_t desc_cores3se = {
     { id(lgfx::board_M5StackCoreS3SE), "M5StackCoreS3SE", 0 },
     desc_cores3.power, desc_cores3.reset, desc_cores3.sd, desc_cores3.display,
     desc_cores3.hold_high_pins, desc_cores3.internal_i2c,
     desc_cores3.direct_reset_panel_reload_wait_ms, desc_cores3.option_names,
+    desc_cores3.op_gpio_pins,
   };
   static constexpr board_desc_t desc_stackchan = {
     { id(lgfx::board_M5StackChan), "M5StackChan", 0 },
     desc_cores3.power, desc_cores3.reset, desc_cores3.sd, desc_cores3.display,
     desc_cores3.hold_high_pins, desc_cores3.internal_i2c,
     desc_cores3.direct_reset_panel_reload_wait_ms, desc_cores3.option_names,
+    desc_cores3.op_gpio_pins,
   };
   static const board_def_t& board_cores3 = desc_cores3.def;
   static const board_def_t& board_cores3se = desc_cores3se.def;

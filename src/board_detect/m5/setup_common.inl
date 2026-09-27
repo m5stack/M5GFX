@@ -166,6 +166,46 @@ namespace m5
              addr, prefix_len };
   }
 
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+  struct dsi_bus_desc_t
+  {
+    std::uint8_t bus_id;
+    std::uint8_t lane_num;
+    std::uint16_t lane_mbps;
+    std::uint8_t ldo_chan_id;
+    std::uint16_t ldo_voltage_mv;
+  };
+
+  constexpr dsi_bus_desc_t dsi_bus(std::uint8_t bus_id, std::uint8_t lane_num,
+                                   std::uint16_t lane_mbps, std::uint8_t ldo_chan_id,
+                                   std::uint16_t ldo_voltage_mv)
+  { return { bus_id, lane_num, lane_mbps, ldo_chan_id, ldo_voltage_mv }; }
+
+  struct dsi_panel_desc_t
+  {
+    panel_desc_t panel;
+    std::uint8_t dpi_freq_mhz;
+    std::uint16_t hsync_back_porch;
+    std::uint16_t hsync_pulse_width;
+    std::uint16_t hsync_front_porch;
+    std::uint16_t vsync_back_porch;
+    std::uint16_t vsync_pulse_width;
+    std::uint16_t vsync_front_porch;
+  };
+
+  constexpr dsi_panel_desc_t dsi_panel(
+    const panel_desc_t& panel_, std::uint8_t dpi_freq_mhz,
+    std::uint16_t hsync_back_porch, std::uint16_t hsync_pulse_width,
+    std::uint16_t hsync_front_porch, std::uint16_t vsync_back_porch,
+    std::uint16_t vsync_pulse_width, std::uint16_t vsync_front_porch)
+  {
+    return { panel_, dpi_freq_mhz, hsync_back_porch, hsync_pulse_width,
+             hsync_front_porch, vsync_back_porch, vsync_pulse_width,
+             vsync_front_porch };
+  }
+
+#endif
+
   // Parallel EPD bus (Bus_EPD). Pins follow the Bus_EPD::config_t names;
   // unused data lines stay at no_pin.
   struct epd_bus_desc_t
@@ -305,6 +345,21 @@ namespace m5
     return bus;
   }
 
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+  lgfx::Bus_DSI* make_dsi_bus(const dsi_bus_desc_t& desc)
+  {
+    auto bus = new lgfx::Bus_DSI();
+    auto cfg = bus->config();
+    cfg.bus_id = desc.bus_id;
+    cfg.lane_num = desc.lane_num;
+    cfg.lane_mbps = desc.lane_mbps;
+    cfg.ldo_chan_id = desc.ldo_chan_id;
+    cfg.ldo_voltage_mv = desc.ldo_voltage_mv;
+    bus->config(cfg);
+    return bus;
+  }
+#endif
+
   lgfx::Panel_Device* apply_panel_desc(lgfx::Panel_Device* target,
                                        const panel_desc_t& desc, lgfx::IBus* bus)
   {
@@ -349,6 +404,24 @@ namespace m5
   template <class PanelT>
   lgfx::Panel_Device* make_panel(const panel_desc_t& desc, lgfx::IBus* bus)
   { return apply_panel_desc(new PanelT(), desc, bus); }
+
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+  template <class PanelT>
+  lgfx::Panel_Device* make_dsi_panel(const dsi_panel_desc_t& desc, lgfx::IBus* bus)
+  {
+    auto target = new PanelT();
+    auto detail = target->config_detail();
+    detail.dpi_freq_mhz = desc.dpi_freq_mhz;
+    detail.hsync_back_porch = desc.hsync_back_porch;
+    detail.hsync_pulse_width = desc.hsync_pulse_width;
+    detail.hsync_front_porch = desc.hsync_front_porch;
+    detail.vsync_back_porch = desc.vsync_back_porch;
+    detail.vsync_pulse_width = desc.vsync_pulse_width;
+    detail.vsync_front_porch = desc.vsync_front_porch;
+    target->config_detail(detail);
+    return apply_panel_desc(target, desc.panel, bus);
+  }
+#endif
 
   lgfx::ITouch* apply_i2c_touch_desc(lgfx::ITouch* target, const i2c_touch_desc_t& desc)
   {

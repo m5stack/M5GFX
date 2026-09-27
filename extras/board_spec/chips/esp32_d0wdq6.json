@@ -6,7 +6,7 @@
   "input_only": [34, 35, 36, 37, 38, 39],
   "strapping": [0, 2, 5, 12, 15],
   "no_internal_pull": [34, 35, 36, 37, 38, 39],
-  "reserved": [6, 7, 8, 9, 10, 11],
+  "reserved": [6, 7, 8, 10, 11],
   "sdmmc": {
     "gpio_matrix": false,
     "slots": [

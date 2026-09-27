@@ -1,0 +1,17 @@
+{
+  "id": "esp32p4",
+  "soc": "esp32p4",
+  "package": "generic",
+  "gpio_count": 55,
+  "input_only": [],
+  "strapping": [34, 35, 36, 37],
+  "no_internal_pull": [],
+  "reserved": [24, 25],
+  "reserved_conditional": {},
+  "usb": { "dn": 24, "dp": 25 },
+  "sdmmc": { "gpio_matrix": true },
+  "spi_hosts": 3,
+  "i2c_hosts": 3,
+  "i2s_ports": 3,
+  "lp_gpio": { "first": 0, "last": 15 }
+}

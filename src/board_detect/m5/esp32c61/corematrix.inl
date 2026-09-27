@@ -19,7 +19,7 @@
     no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
     internal_i2c(corematrix_detail::sda, corematrix_detail::scl,
                  corematrix_detail::i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(),
+    no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
   };
   static const board_def_t& board_corematrix = desc_corematrix.def;
 

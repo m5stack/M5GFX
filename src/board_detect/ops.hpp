@@ -51,6 +51,7 @@ namespace ops
     gpio_write_high,
     gpio_write_low,
     i2c_write8,
+    i2c_write16le,
     i2c_masked8,
     i2c_wait_ready,
     i2c_transfer,
@@ -74,6 +75,12 @@ namespace ops
       std::uint16_t pin;
       std::uint8_t mode;
     };
+    struct reg16_t
+    {
+      std::uint16_t reg;
+      std::uint16_t value;
+      std::uint8_t dev;
+    };
     struct delay_t { std::uint32_t ms; };
     struct wait_t
     {
@@ -90,12 +97,14 @@ namespace ops
     union payload_t
     {
       reg8_t reg8;
+      reg16_t reg16;
       gpio_t gpio;
       delay_t delay;
       wait_t wait;
       transfer_t transfer;
 
       constexpr payload_t(reg8_t value) : reg8(value) {}
+      constexpr payload_t(reg16_t value) : reg16(value) {}
       constexpr payload_t(gpio_t value) : gpio(value) {}
       constexpr payload_t(delay_t value) : delay(value) {}
       constexpr payload_t(wait_t value) : wait(value) {}
@@ -112,6 +121,7 @@ namespace ops
     friend constexpr op_t gpio_write_high(std::uint16_t);
     friend constexpr op_t gpio_write_low(std::uint16_t);
     friend constexpr op_t i2c_write8(std::uint8_t, std::uint16_t, std::uint8_t);
+    friend constexpr op_t i2c_write16le(std::uint8_t, std::uint16_t, std::uint16_t);
     friend constexpr op_t i2c_masked8(std::uint8_t, std::uint16_t, std::uint8_t, std::uint8_t);
     friend constexpr op_t i2c_bit_on(std::uint8_t, std::uint16_t, std::uint8_t);
     friend constexpr op_t i2c_bit_off(std::uint8_t, std::uint16_t, std::uint8_t);
@@ -148,6 +158,12 @@ namespace ops
   {
     return op_t(op_kind_t::i2c_write8,
                 op_t::payload_t(op_t::reg8_t { reg, dev, value, 0xFF }));
+  }
+
+  constexpr op_t i2c_write16le(std::uint8_t dev, std::uint16_t reg, std::uint16_t value)
+  {
+    return op_t(op_kind_t::i2c_write16le,
+                op_t::payload_t(op_t::reg16_t { reg, value, dev }));
   }
 
   constexpr op_t i2c_masked8(std::uint8_t dev, std::uint16_t reg,
@@ -237,6 +253,7 @@ namespace ops
   {
     bool (*i2c_read8)(void*, const i2c_device_t&, std::uint16_t, std::uint8_t*);
     bool (*i2c_write8)(void*, const i2c_device_t&, std::uint16_t, std::uint8_t);
+    bool (*i2c_write16le)(void*, const i2c_device_t&, std::uint16_t, std::uint16_t);
     bool (*i2c_ready)(void*, const i2c_device_t&, std::uint32_t);
     bool (*gpio_set_mode)(void*, std::uint16_t, gpio_mode_t);
     bool (*gpio_write)(void*, std::uint16_t, bool);
@@ -253,11 +270,19 @@ namespace ops
     std::uint8_t mask;
   };
 
+  struct decoded_register_write16_t
+  {
+    std::uint8_t dev;
+    std::uint16_t reg;
+    std::uint16_t value;
+  };
+
   struct op_access_t
   {
     static std::uint8_t dev(const op_t& op)
     {
       return op.kind_ == op_kind_t::i2c_wait_ready ? op.payload_.wait.dev
+           : op.kind_ == op_kind_t::i2c_write16le ? op.payload_.reg16.dev
                                                    : op.payload_.reg8.dev;
     }
     static std::uint16_t pin(const op_t& op) { return op.payload_.gpio.pin; }
@@ -272,6 +297,10 @@ namespace ops
     {
       return { op.payload_.reg8.dev, op.payload_.reg8.reg,
                op.payload_.reg8.value, op.payload_.reg8.mask };
+    }
+    static decoded_register_write16_t reg16(const op_t& op)
+    {
+      return { op.payload_.reg16.dev, op.payload_.reg16.reg, op.payload_.reg16.value };
     }
   };
 
@@ -312,7 +341,8 @@ namespace ops
     {
       const auto kind = operations[i].kind();
       if (kind == op_kind_t::i2c_transfer) { return result(op_status_t::unsupported, i); }
-      if (kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_masked8
+      if (kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_write16le
+       || kind == op_kind_t::i2c_masked8
        || kind == op_kind_t::i2c_wait_ready)
       {
         const auto dev = op_access_t::dev(operations[i]);
@@ -324,8 +354,10 @@ namespace ops
         {
           return result(op_status_t::invalid_device, i);
         }
-        if ((kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_masked8)
-         && op_access_t::reg8(operations[i]).reg > 0xFF)
+        if (((kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_masked8)
+          && op_access_t::reg8(operations[i]).reg > 0xFF)
+         || (kind == op_kind_t::i2c_write16le
+          && op_access_t::reg16(operations[i]).reg > 0xFF))
         {
           return result(op_status_t::invalid_op, i);
         }
@@ -413,8 +445,10 @@ namespace ops
       {
         return result(op_status_t::unsupported, i);
       }
-      if ((kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_masked8)
-       && (backend.i2c_write8 == nullptr
+      if ((kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_write16le
+        || kind == op_kind_t::i2c_masked8)
+       && ((kind == op_kind_t::i2c_write16le ? backend.i2c_write16le == nullptr
+                                             : backend.i2c_write8 == nullptr)
         || (kind == op_kind_t::i2c_masked8
          && op_access_t::reg8(operations[i]).mask != 0xFF
          && backend.i2c_read8 == nullptr)
@@ -483,6 +517,43 @@ namespace ops
       }
       else
       {
+        if (kind == op_kind_t::i2c_write16le)
+        {
+          const auto write = op_access_t::reg16(operation);
+          const auto& device = devices[write.dev];
+          retry_policy_t device_retry_policy {};
+          const retry_policy_t* operation_policy = policy;
+          if ((device.flags & i2c_device_retry_transient_nack) != 0)
+          {
+            device_retry_policy = {
+              backend.millis(backend.ctx) + transient_nack_retry_ms,
+              transient_nack_retry_interval_ms,
+            };
+            if (policy != nullptr)
+            {
+              if (static_cast<std::int32_t>(policy->deadline_ms
+                                           - device_retry_policy.deadline_ms) > 0)
+              {
+                device_retry_policy.deadline_ms = policy->deadline_ms;
+              }
+              if (policy->interval_ms < device_retry_policy.interval_ms)
+              {
+                device_retry_policy.interval_ms = policy->interval_ms;
+              }
+            }
+            operation_policy = &device_retry_policy;
+          }
+          while (!backend.i2c_write16le(backend.ctx, device, write.reg, write.value))
+          {
+            if (!retry_available(backend, operation_policy))
+            {
+              return result(operation_policy == nullptr ? op_status_t::i2c_nack
+                                                         : op_status_t::timeout, i);
+            }
+            retry_delay(backend, *operation_policy);
+          }
+          continue;
+        }
         if (backend.i2c_write8 == nullptr) { return result(op_status_t::unsupported, i); }
         const auto write = op_access_t::reg8(operation);
         const auto& device = devices[write.dev];

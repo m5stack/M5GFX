@@ -12,6 +12,7 @@
     "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
     "invert": { "type": "boolean", "x-cpp-type": "int" },
     "readable": { "type": "boolean", "x-cpp-type": "int" },
+    "three_wire": { "type": "boolean", "x-cpp-type": "int" },
     "panel_type": { "type": "string", "const": "st7735s" }
   },
   "id_probe": { "reg": "0x04", "mask": "0xFFFF", "values": ["0x7683", "0x897C"] },

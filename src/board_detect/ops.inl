@@ -41,6 +41,17 @@ namespace ops
                                      device.freq_hz).has_value();
   }
 
+  inline bool lgfx_i2c_write16le(void* context, const i2c_device_t& device,
+                                 std::uint16_t reg, std::uint16_t value)
+  {
+    const std::uint8_t data[] = {
+      static_cast<std::uint8_t>(reg), static_cast<std::uint8_t>(value),
+      static_cast<std::uint8_t>(value >> 8),
+    };
+    return lgfx::i2c::transactionWrite(lgfx_port(context, device), device.addr,
+                                        data, sizeof(data), device.freq_hz).has_value();
+  }
+
   inline bool lgfx_i2c_ready(void* context, const i2c_device_t& device,
                              std::uint32_t timeout_ms)
   {
@@ -82,7 +93,7 @@ namespace ops
 
   inline backend_t lgfx_backend(lgfx_backend_context_t* context)
   {
-    return { lgfx_i2c_read8, lgfx_i2c_write8, lgfx_i2c_ready,
+    return { lgfx_i2c_read8, lgfx_i2c_write8, lgfx_i2c_write16le, lgfx_i2c_ready,
              lgfx_gpio_set_mode, lgfx_gpio_write, lgfx_delay_ms, lgfx_millis, context };
   }
 }

@@ -28,11 +28,19 @@ struct fake_gpio_t
   int value;
 };
 
+struct fake_write16_t
+{
+  std::uint16_t addr;
+  std::uint16_t reg;
+  std::uint16_t value;
+};
+
 struct fake_t
 {
   std::map<std::pair<std::uint16_t, std::uint16_t>, std::uint8_t> registers;
   std::vector<fake_write_t> writes;
   std::vector<fake_gpio_t> gpios;
+  std::vector<fake_write16_t> writes16;
   std::uint32_t now = 0;
   int reads = 0;
   int writes_attempted = 0;
@@ -71,6 +79,16 @@ static bool write8(void* context, const bdops::i2c_device_t& device,
   return true;
 }
 
+static bool write16le(void* context, const bdops::i2c_device_t& device,
+                      std::uint16_t reg, std::uint16_t value)
+{
+  auto& fake = *static_cast<fake_t*>(context);
+  ++fake.writes_attempted;
+  if (fake.write_failures-- > 0) { return false; }
+  fake.writes16.push_back({ device.addr, reg, value });
+  return true;
+}
+
 static bool ready(void* context, const bdops::i2c_device_t&, std::uint32_t remaining_ms)
 {
   auto& fake = *static_cast<fake_t*>(context);
@@ -97,7 +115,7 @@ static std::uint32_t millis(void* context) { return static_cast<fake_t*>(context
 
 static bdops::backend_t backend(fake_t& fake)
 {
-  return { read8, write8, ready, gpio_mode, gpio_write, delay, millis, &fake };
+  return { read8, write8, write16le, ready, gpio_mode, gpio_write, delay, millis, &fake };
 }
 
 static const bdops::i2c_device_t devices[] = {
@@ -189,6 +207,14 @@ static void test_validation()
 
 static void test_i2c_execution()
 {
+  {
+    fake_t fake;
+    const bdops::op_t operations[] = { bdops::i2c_write16le(0, 0x25, 1000) };
+    assert(bdops::run_ops(backend(fake), devices, 1, operations, 1, gpio_scope).status
+           == bdops::op_status_t::ok);
+    assert(fake.writes16.size() == 1 && fake.writes16[0].addr == 0x34);
+    assert(fake.writes16[0].reg == 0x25 && fake.writes16[0].value == 1000);
+  }
   {
     fake_t fake;
     fake.registers[std::make_pair(0x34, 0x10)] = 0xA0;
@@ -596,6 +622,94 @@ static void test_corematrix_sequence()
   assert(fake.writes[5].addr == 0x4F && fake.writes[5].reg == 0x05 && fake.writes[5].new_value == 0x88);
 }
 
+static void test_corep4x_sequence()
+{
+  const bdops::gpio_scope_t scope = { 55, nullptr, 0 };
+  fake_t fake;
+  assert(bdops::run_ops(
+    backend(fake), pmicops::pm1_family_devices, 2,
+    pmicops::corep4x_power_on,
+    sizeof(pmicops::corep4x_power_on) / sizeof(pmicops::corep4x_power_on[0]),
+    scope).status == bdops::op_status_t::ok);
+  assert(fake.writes.size() == 13 && fake.writes16.size() == 2 && fake.now == 150);
+  assert(fake.writes[0].addr == 0x6E && fake.writes[0].reg == 0x09);
+  assert(fake.writes[2].addr == 0x6E && fake.writes[2].reg == 0x06);
+  assert(fake.writes[3].addr == 0x4F && fake.writes[3].reg == 0x23);
+  assert(fake.writes16[0].addr == 0x4F && fake.writes16[0].reg == 0x25
+      && fake.writes16[0].value == 1000);
+  assert(fake.writes16[1].reg == 0x1B && fake.writes16[1].value == 0x8000);
+}
+
+static void test_tab5_sequence()
+{
+  const std::int8_t pins[] = { 23 };
+  const bdops::gpio_scope_t scope = { 55, pins, 1 };
+  fake_t fake;
+  assert(bdops::run_ops(
+    backend(fake), pmicops::tab5_devices, 2,
+    pmicops::tab5_power_on,
+    sizeof(pmicops::tab5_power_on) / sizeof(pmicops::tab5_power_on[0]),
+    scope).status == bdops::op_status_t::ok);
+  assert(fake.writes.size() == 14 && fake.writes16.empty() && fake.now == 110);
+  assert(fake.gpios.size() == 3);
+  assert(fake.gpios[0].pin == 23 && fake.gpios[0].value == 100);
+  assert(fake.gpios[1].pin == 23 && fake.gpios[1].value == 1);
+  assert(fake.gpios[2].pin == 23 && fake.gpios[2].value == 101);
+  assert(fake.writes[0].addr == 0x43 && fake.writes[0].reg == 0x05
+      && fake.writes[0].new_value == 0x46);
+  assert(fake.writes[5].addr == 0x44 && fake.writes[5].reg == 0x03
+      && fake.writes[5].new_value == 0xB9);
+  assert(fake.writes[12].addr == 0x43 && fake.writes[12].reg == 0x03
+      && fake.writes[12].new_value == 0x6F);
+  assert(fake.writes[13].addr == 0x43 && fake.writes[13].reg == 0x05
+      && fake.writes[13].new_value == 0x76);
+}
+
+static void test_all_descriptor_gpio_scopes()
+{
+  // Exhaustive list of descriptors whose operation lists touch SoC GPIOs.
+  // These scopes mirror each descriptor's op_gpio_pins list.
+  static const std::int8_t stopwatch_pins[] = { 39 };
+  static const std::int8_t papermono_pins[] = { 16 };
+  static const std::int8_t papercolor_pins[] = { 47, 44 };
+  static const std::int8_t tab5_pins[] = { 23 };
+  struct case_t
+  {
+    const bdops::i2c_device_t* devices;
+    std::size_t device_count;
+    const bdops::op_t* operations;
+    std::size_t operation_count;
+    bdops::gpio_scope_t scope;
+  };
+  const case_t cases[] = {
+    { pmicops::pm1_family_devices, 2, pmicops::stopwatch_power_on,
+      sizeof(pmicops::stopwatch_power_on) / sizeof(pmicops::stopwatch_power_on[0]),
+      { 49, stopwatch_pins, 1 } },
+    { pmicops::pm1_family_devices, 2, pmicops::papermono_power_on,
+      sizeof(pmicops::papermono_power_on) / sizeof(pmicops::papermono_power_on[0]),
+      { 49, papermono_pins, 1 } },
+    { pmicops::pm1_devices, 1, pmicops::papercolor_power_on,
+      sizeof(pmicops::papercolor_power_on) / sizeof(pmicops::papercolor_power_on[0]),
+      { 49, papercolor_pins, 2 } },
+    { pmicops::tab5_devices, 2, pmicops::tab5_power_on,
+      sizeof(pmicops::tab5_power_on) / sizeof(pmicops::tab5_power_on[0]),
+      { 55, tab5_pins, 1 } },
+  };
+  for (const auto& item : cases)
+  {
+    assert(bdops::validate_ops(item.devices, item.device_count,
+                               item.operations, item.operation_count,
+                               item.scope).status == bdops::op_status_t::ok);
+  }
+
+  const bdops::gpio_scope_t missing_tab5_scope = { 55, nullptr, 0 };
+  const auto missing = bdops::validate_ops(
+    pmicops::tab5_devices, 2, pmicops::tab5_power_on,
+    sizeof(pmicops::tab5_power_on) / sizeof(pmicops::tab5_power_on[0]),
+    missing_tab5_scope);
+  assert(missing.status == bdops::op_status_t::invalid_gpio && missing.failed_index == 0);
+}
+
 static void test_dedicated_release_summary()
 {
   const std::uint16_t samples[] = { 3, 4, 0, 3, bdetect::dedicated_release_no_high };
@@ -699,6 +813,9 @@ int main()
   test_paper_family_sequences();
   test_toughc5_sequences();
   test_corematrix_sequence();
+  test_corep4x_sequence();
+  test_tab5_sequence();
+  test_all_descriptor_gpio_scopes();
   test_dedicated_release_summary();
   test_i2c_bus_held_sda_recovery();
   return 0;

@@ -31,6 +31,26 @@
         "chip": "esp32_d0wdq6", "legacy_board_id": 7, "cpp_namespace": "paper", "board_enum": "board_M5Paper", "desc_name": "desc_paper",
         "wiring_fields": ["display", "shared_sd", "power", "hold"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp"
       },
+      "m5stickc": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 3, "cpp_namespace": "stickc", "board_enum": "board_M5StickC", "desc_name": "desc_stickc",
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp", "probe_parts": []
+      },
+      "m5stickcplus": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 4, "cpp_namespace": "stickcplus", "board_enum": "board_M5StickCPlus", "desc_name": "desc_stickcplus",
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp"
+      },
+      "m5stack_coreink": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 6, "cpp_namespace": "coreink", "board_enum": "board_M5StackCoreInk", "desc_name": "desc_coreink",
+        "wiring_fields": ["display", "power", "hold"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp",
+        "options": [{ "name": "m09", "bit": 0, "select": { "epd": "gdew0154m09" } }]
+      },
+      "m5stickcplus2": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 5, "cpp_namespace": "stickcplus2", "board_enum": "board_M5StickCPlus2", "desc_name": "desc_stickcplus2",
+        "wiring_fields": ["display", "power", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp"
+      },
+      "m5atom_psram": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 129, "board_enum": "board_M5AtomPsram"
+      },
       "m5timercam": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 132, "board_enum": "board_M5TimerCam"
       },
@@ -148,6 +168,28 @@
         "chip": "esp32c61", "legacy_board_id": 152, "cpp_namespace": "corematrix", "board_enum": "board_M5CoreMatrix", "desc_name": "desc_corematrix",
         "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32c61_wiring.hpp",
         "specs_output": "esp32c61_specs.hpp"
+      },
+      "m5stack_corep4x": {
+        "chip": "esp32p4", "legacy_board_id": 31, "cpp_namespace": "corep4x", "board_enum": "board_M5CoreP4X", "desc_name": "desc_corep4x",
+        "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
+        "specs_output": "esp32p4_specs.hpp"
+      },
+      "m5stack_tab5": {
+        "chip": "esp32p4", "legacy_board_id": 22, "cpp_namespace": "tab5", "board_enum": "board_M5Tab5", "desc_name": "desc_tab5",
+        "wiring_fields": ["i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
+        "specs_output": "esp32p4_specs.hpp",
+        "options": [
+          { "name": "st7121", "bit": 0, "select": { "lcd": "st7121" } },
+          { "name": "st7123", "bit": 1, "select": { "lcd": "st7123" } }
+        ]
+      },
+      "m5stack_tab5x": {
+        "chip": "esp32p4", "legacy_board_id": 35, "cpp_namespace": "tab5x", "board_enum": "board_M5Tab5X", "desc_name": "desc_tab5x",
+        "wiring_fields": ["i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
+        "options": [
+          { "name": "st7121", "bit": 0, "select": { "lcd": "st7121" } },
+          { "name": "st7123", "bit": 1, "select": { "lcd": "st7123" } }
+        ]
       }
     }
   },

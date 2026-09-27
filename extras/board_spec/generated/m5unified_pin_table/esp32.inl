@@ -3,6 +3,7 @@
 // Precedence: board value > part default > panel-class default.
 
 // _pin_table_i2c_ex_in[][5]
+{ board_t::board_M5AtomPsram, 21, 25, 32, 26 },
 { board_t::board_M5Paper, 22, 21, 32, 25 },
 { board_t::board_M5Stack, 22, 21, 22, 21 },
 { board_t::board_M5TimerCam, 14, 12, 13, 4 },
@@ -30,6 +31,7 @@
 { board_t::board_unknown, 255, 255, 255, 255, 255, 255 },
 
 // _pin_table_other0[][2]
+{ board_t::board_M5AtomPsram, 27 },
 { board_t::board_M5Stack, 15 },
 { board_t::board_M5StackCore2, 25 },
 { board_t::board_M5Station, 4 },
@@ -37,6 +39,8 @@
 
 // _pin_table_other1[][2]
 { board_t::board_M5Paper, 2 },
+{ board_t::board_M5StackCoreInk, 12 },
+{ board_t::board_M5StickCPlus2, 4 },
 { board_t::board_M5TimerCam, 33 },
 { board_t::board_unknown, 255 },
 

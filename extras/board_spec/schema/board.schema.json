@@ -71,6 +71,9 @@
         "fixed": { "type": "boolean" },
         "freq": { "type": "integer" },
         "freq_read": { "type": "integer" },
+        "lane_num": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "ldo_chan_id": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "ldo_voltage_mv": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "note": { "type": "string" },
         "verified": { "$ref": "#/definitions/verified" },
         "measured_by": { "$ref": "#/definitions/measuredBy" },
@@ -141,7 +144,7 @@
       },
       "x-output-signals": ["cs", "dc", "rst", "power", "data", "data_out", "enable", "pwm"],
       "x-spec-properties": {
-        "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "rgb_order", "three_wire", "panel_type", "line_padding"],
+        "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "rgb_order", "three_wire", "panel_type", "line_padding", "dpi_freq_mhz", "hsync_back_porch", "hsync_pulse_width", "hsync_front_porch", "vsync_back_porch", "vsync_pulse_width", "vsync_front_porch"],
         "sd": [],
         "touch": ["x_min", "x_max", "y_min", "y_max", "rotation_offset"],
         "pmic": [],
