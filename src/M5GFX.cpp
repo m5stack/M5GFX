@@ -18,7 +18,6 @@
 #include <soc/efuse_reg.h>
 #include <soc/gpio_reg.h>
 
-#include "lgfx/v1/panel/Panel_AMOLED.hpp"
 #include "lgfx/v1/panel/Panel_CO5300.hpp"
 #include "lgfx/v1/panel/Panel_ILI9342.hpp"
 #include "lgfx/v1/panel/Panel_SSD1306.hpp"
@@ -65,8 +64,6 @@
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7123.hpp"
 #include "lgfx/v1/platforms/esp32p4/Touch_ST7123.hpp"
 
-static constexpr int_fast16_t in_i2c_port = I2C_NUM_1;
-
 #elif defined ( CONFIG_IDF_TARGET_ESP32S3 )
 
 #include "lgfx/v1/panel/Panel_ED2208.hpp"
@@ -112,123 +109,8 @@ namespace m5gfx
 
 #if defined ( ESP_PLATFORM )
 
-  // ボード未確定段階の I2C プローブに使うソフトウェア I2C ポート (GPIO ビットバン)。
-  // ハードウェアのペリフェラルを一切確保・設定しないため、候補ボードの試行が
-  // ペリフェラルやピンの状態を汚さない。ボード確定後の常用バスは従来どおり
-  // ハードウェアポートを使う。
-  __attribute__ ((unused))
+  // 判別 transaction の候補機種 I2C プローブはソフトウェアポートを使う。
   static constexpr int_fast16_t probe_i2c_port = -1;
-
-  // ボード未確定段階の探索をソフト I2C で行い、確定時に常用のハードウェアポートへ引き継ぐ。
-  // probe が変えたパッドの配線 (pinMode による GPIO 出力への付け替え) は引き継ぎ前に戻す:
-  // アプリが先に同じポートを開いていた共有バスでは init() がピンに触らないため、
-  // 戻さないと以後の HW I2C が通らない。
-  struct __attribute__ ((unused)) probe_i2c_t
-  {
-    probe_i2c_t(int sda, int scl) : _pins { sda, scl }, _sda { sda }, _scl { scl }
-    {
-      lgfx::i2c::init(probe_i2c_port, _sda, _scl);
-    }
-    // パッドが probe の前に既に触られている (プルアップ試験など) ブロックでは、
-    // その前に取ったバックアップを渡して復元先にする
-    probe_i2c_t(const gpio::pin_backup_t& sda_backup, const gpio::pin_backup_t& scl_backup)
-    : _pins { sda_backup, scl_backup }, _sda { sda_backup.getPin() }, _scl { scl_backup.getPin() }
-    {
-      lgfx::i2c::init(probe_i2c_port, _sda, _scl);
-    }
-    // ボードが確定した: probe を閉じ、パッドを戻してから常用ポートを開く。
-    // 開けなくてもボードの判定は取り消さない (表示まで失うため)。バックライトやタッチなど
-    // このポートの利用者が通信できなくなるので、原因が追えるよう警告だけ残す
-    void handover(int hw_port)
-    {
-      release();
-      if (!lgfx::i2c::init(hw_port, _sda, _scl).has_value())
-      {
-        ESP_LOGW(LIBRARY_NAME, "[Autodetect] I2C port %d could not be opened for SDA=%d SCL=%d", hw_port, _sda, _scl);
-      }
-    }
-    // ボードが一致しなかった: probe を閉じ、パッドを探索前の状態に戻す
-    void release(void)
-    {
-      lgfx::i2c::release(probe_i2c_port);
-      for (auto &pin : _pins) { pin.restore(); }
-    }
-  private:
-    gpio::pin_backup_t _pins[2];
-    int _sda, _scl;
-  };
-
-  // I2Cデバイスの存在をチェックする。
-  // SDA,SCLのプルアップが確認できない場合は0を返す。
-  // 内部でパッドを backup/restore するので、呼び出し側はこの後に probe_i2c_t を作れば
-  // 探索前の状態を復元先にできる (プルアップ試験を自前で行うブロックは試験前の backup を渡す)。
-  // プルアップが確認できた場合は ~0u を返すが、存在しないデバイスに対応するビットは 0 となる。
-  // つまり、引数のアドレスリストにある全てのデバイスが存在する場合は ~0u となる。
-  __attribute__ ((unused))
-  static uint32_t _detect_i2c_device(uint8_t pin_sda, uint8_t pin_scl, const uint8_t* addr_list) {
-    gpio::pin_backup_t backup_pins[] = { pin_sda, pin_scl };
-
-    const uint8_t cmd_i2c_stop_list[] = {
-    lgfx::gpio::command_write_low  , pin_scl,
-    lgfx::gpio::command_delay_usec , 3,
-    lgfx::gpio::command_write_low  , pin_sda,
-    lgfx::gpio::command_delay_usec , 3,
-    lgfx::gpio::command_write_high , pin_scl, // SCL high
-    lgfx::gpio::command_delay_usec , 5,
-    lgfx::gpio::command_write_high , pin_sda, // SDA high (I2C STOP)
-    lgfx::gpio::command_delay_usec , 5,
-    lgfx::gpio::command_end
-    };
-
-    {
-      lgfx::pinMode(pin_scl, lgfx::pin_mode_t::output);
-      lgfx::pinMode(pin_sda, lgfx::pin_mode_t::output);
-      // force I2C stop
-      for (size_t i = 0; i < 8; ++i) {
-        lgfx::gpio::command(cmd_i2c_stop_list);
-      }
-    }
-
-    const uint8_t cmd_list[] = {
-    lgfx::gpio::command_write_low          , pin_scl,
-    lgfx::gpio::command_read               , pin_scl,  // low チェック
-    lgfx::gpio::command_write_low          , pin_sda,
-    lgfx::gpio::command_read               , pin_sda,  // low チェック
-    lgfx::gpio::command_mode_input_pulldown, pin_scl,
-    lgfx::gpio::command_delay_usec         , 10,
-    lgfx::gpio::command_read               , pin_scl, // pulldownチェック (外部プルアップがあるならここでHIGHになる)
-    lgfx::gpio::command_mode_input_pullup  , pin_scl,
-    lgfx::gpio::command_mode_input_pulldown, pin_sda,
-    lgfx::gpio::command_delay_usec         , 10,
-    lgfx::gpio::command_read               , pin_sda, // pulldownチェック (外部プルアップがあるならここでHIGHになる)
-    lgfx::gpio::command_mode_input_pullup  , pin_sda,
-    lgfx::gpio::command_end
-    };
-
-    // ここでSDA,SCL各2回,合計4回のreadチェックが行われる。
-    uint32_t result = lgfx::gpio::command(cmd_list);
-    // I2Cピンであれば0x03になっているはず
-    if (result == 0x03) {
-      // 全ビットを立てる
-      result = ~0u;
-
-      // アドレスの存在確認はソフトウェア I2C ポートで行う (オープンドレイン駆動で
-      // ACK 競合が起きず、ハードウェアのペリフェラルにも触れない)
-      lgfx::i2c::init(probe_i2c_port, pin_sda, pin_scl);
-      for (; addr_list[0] != 0; ++addr_list) {
-        uint_fast8_t addr7bit = addr_list[0];
-        bool hit = lgfx::i2c::beginTransaction(probe_i2c_port, addr7bit, 100000, false).has_value()
-                && lgfx::i2c::endTransaction(probe_i2c_port).has_value();
-        result = (result << 1) + hit;
-        ESP_LOGV(LIBRARY_NAME, "[Autodetect] i2c addr:%02x = %s", (int)addr7bit, hit ? "hit" : "--");
-      }
-      lgfx::i2c::release(probe_i2c_port);
-    } else {
-      result = 0;
-    }
-    for (auto pin: backup_pins) { pin.restore(); }
-    return result;
-  }
 
   static constexpr std::uint32_t m5pm1_i2c_freq = 100000;
   static constexpr std::uint8_t m5pm1_i2c_addr = 0x6E; // M5PM1 device i2c address
@@ -863,49 +745,6 @@ namespace m5gfx
   }
 
   __attribute__ ((unused))
-  static void _pin_reset(std::int_fast16_t pin, bool use_reset)
-  {
-    lgfx::gpio_hi(pin);
-    lgfx::pinMode(pin, lgfx::pin_mode_t::output);
-    lgfx::delay(1);
-    if (!use_reset) return;
-    lgfx::gpio_lo(pin);
-    lgfx::delay(2);
-    lgfx::gpio_hi(pin);
-    lgfx::delay(10);
-  }
-
-  /// TF card dummy clock送信 ;
-  static void _send_sd_dummy_clock(int spi_host, int_fast16_t pin_cs)
-  {
-    static constexpr uint32_t dummy_clock[] = { ~0u, ~0u, ~0u, ~0u };
-    _pin_level(pin_cs, true);
-    m5gfx::spi::writeBytes(spi_host, (const uint8_t*)dummy_clock, sizeof(dummy_clock));
-    _pin_level(pin_cs, false);
-  }
-
-  /// TF card をSPIモードに移行する ;
-  __attribute__ ((unused))
-  static void _set_sd_spimode(int spi_host, int_fast16_t pin_cs)
-  {
-    m5gfx::spi::beginTransaction(spi_host, 400000, 0);
-    _send_sd_dummy_clock(spi_host, pin_cs);
-
-    uint8_t sd_cmd58[] = { 0x7A, 0, 0, 0, 0, 0xFD, 0xFF, 0xFF }; // READ_OCR command.
-    m5gfx::spi::readBytes(spi_host, sd_cmd58, sizeof(sd_cmd58));
-
-    if (sd_cmd58[6] == sd_cmd58[7])  // not SPI mode
-    {
-      _send_sd_dummy_clock(spi_host, pin_cs);
-
-      static constexpr uint8_t sd_cmd0[] = { 0x40, 0, 0, 0, 0, 0x95, 0xFF, 0xFF }; // GO_IDLE_STATE command.
-      m5gfx::spi::writeBytes(spi_host, sd_cmd0, sizeof(sd_cmd0));
-    }
-    _pin_level(pin_cs, true);
-    m5gfx::spi::endTransaction(spi_host);
-  }
-
-  __attribute__ ((unused))
   static std::uint32_t _read_panel_id(lgfx::Bus_SPI* bus, std::int32_t pin_cs, std::uint32_t cmd = 0x04, std::uint8_t dummy_read_bit = 1) // 0x04 = RDDID command
   {
     bus->beginTransaction();
@@ -1380,27 +1219,9 @@ namespace m5gfx
 
   board_t M5GFX::autodetect(bool use_reset, board_t board)
   {
-    auto bus_spi = new Bus_SPI();
-    _bus_last.reset(bus_spi);
-
     panel(nullptr);
 
-    auto bus_cfg = bus_spi->config();
-    (void)bus_cfg; // prevent compiler warning.
-    bus_cfg.freq_write = 8000000;
-    bus_cfg.freq_read  = 8000000;
-    bus_cfg.spi_mode = 0;
-    bus_cfg.use_lock = true;
-
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-
-    bus_cfg.spi_host = SPI3_HOST;
-    bus_cfg.dma_channel = 1;
-
-#elif defined (CONFIG_IDF_TARGET_ESP32S3)
-
-    bus_cfg.spi_host = SPI2_HOST;
-    bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
 
     const board_detect::board_detector_t* const* detectors = nullptr;
     switch (m5gfx::get_pkg_ver())
@@ -1522,9 +1343,6 @@ namespace m5gfx
     }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
-
-    bus_cfg.spi_host = SPI2_HOST;
-    bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
 
     if (board == 0 || board == board_t::board_M5ToughC5)
     {
