@@ -1,0 +1,262 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://m5stack.example/schema/board-spec-v1.json",
+  "title": "M5 board specification v1",
+  "type": "object",
+  "x-editor": {
+    "pinColumns": [
+      { "id": "gpio", "label": "GPIO" },
+      { "id": "roles", "label": "roles" },
+      { "id": "pull", "label": "pull" },
+      { "id": "note", "label": "note" },
+      { "id": "verified", "label": "verified" },
+      { "id": "validation", "label": "検証" }
+    ]
+  },
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "official_name", "legacy_board_id", "chip", "pins", "buses", "devices"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/id" },
+    "name": { "type": "string", "minLength": 1 },
+    "official_name": { "type": "string", "minLength": 1 },
+    "official_name_verified": {
+      "type": "boolean",
+      "description": "True when the product-name portion matches the official documentation page title. For M5Stack products, the leading 'M5Stack ' is a catalog naming-rule prefix rather than part of the verified page title. Absence means unverified."
+    },
+    "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "legacy_board_id": { "type": "integer", "minimum": 0 },
+    "chip": { "$ref": "#/definitions/id" },
+    "chip_package": { "$ref": "#/definitions/id" },
+    "spec": { "$ref": "#/definitions/catalogSpec" },
+    "pins": { "type": "object", "propertyNames": { "pattern": "^[0-9]+$" }, "additionalProperties": { "$ref": "#/definitions/pin" } },
+    "buses": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/bus" } },
+    "devices": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/device" } },
+    "connectors": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/connector" } },
+    "revisions": { "type": "array", "items": { "$ref": "#/definitions/revision" } }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "hexByte": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{1,2}$" },
+    "endpoint": { "type": "string", "pattern": "^(gpio:\\d{1,2}|pin:[a-z][a-z0-9_]*\\.[a-z0-9_]+|fixed:[a-z0-9_]+\\.[a-z0-9_]+|pwr:[a-z0-9_]+|chip:[a-z0-9_]+|nc|none)$" },
+    "role": { "type": "string", "pattern": "^([a-z][a-z0-9_]*/)?((bus|dev|conn):[a-z][a-z0-9_]*\\.[a-z0-9_]+|pwr:[a-z0-9_]+)$" },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["accessory", "origin", "bundled"],
+      "properties": {
+        "accessory": { "$ref": "#/definitions/id" },
+        "origin": { "enum": ["official", "third_party", "virtual"] },
+        "bundled": { "type": "boolean" }
+      }
+    },
+    "verified": {
+      "type": "object",
+      "additionalProperties": { "enum": ["generated", "measured", "datasheet", null] }
+    },
+    "measuredBy": { "type": "object", "additionalProperties": { "type": "string" } },
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles"],
+      "properties": {
+        "roles": { "type": "array", "items": { "$ref": "#/definitions/role" }, "uniqueItems": true },
+        "pull": { "enum": ["up", "down", "none"] },
+        "pull_reliable": { "type": "boolean" },
+        "note": { "type": "string" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" },
+        "source": { "$ref": "#/definitions/source" }
+      }
+    },
+    "bus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "signals", "fixed"],
+      "properties": {
+        "kind": { "$ref": "#/definitions/busKind" },
+        "signals": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "preferred_host": { "type": ["string", "integer"] },
+        "fixed": { "type": "boolean" },
+        "freq": { "type": "integer" },
+        "freq_read": { "type": "integer" },
+        "lane_num": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "ldo_chan_id": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "ldo_voltage_mv": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "note": { "type": "string" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" },
+        "source": { "$ref": "#/definitions/source" }
+      }
+    },
+    "busKind": {
+      "type": "string",
+      "enum": ["spi", "i2c", "i2s", "sdmmc", "uart", "pdm", "dsi", "parallel_epd"],
+      "x-signals": {
+        "spi": ["sclk", "mosi", "miso", "io0", "io1", "io2", "io3"],
+        "i2c": ["sda", "scl"],
+        "i2s": ["mck", "bck", "ws", "data_out", "data_in"],
+        "sdmmc": ["clk", "cmd", "d0", "d1", "d2", "d3"],
+        "uart": ["tx", "rx", "rts", "cts"],
+        "pdm": ["ws", "data_in"],
+        "dsi": ["clk", "d0", "d1", "d2", "d3"],
+        "parallel_epd": ["data0", "data1", "data2", "data3", "data4", "data5", "data6", "data7", "pwr", "spv", "ckv", "sph", "oe", "le", "cl"]
+      },
+      "x-output-signals": ["sclk", "mosi", "mck", "bck", "ws", "data_out", "clk", "cmd", "tx", "rts", "data0", "data1", "data2", "data3", "data4", "data5", "data6", "data7", "pwr", "spv", "ckv", "sph", "oe", "le", "cl"]
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "$ref": "#/definitions/deviceKind" },
+        "part": { "$ref": "#/definitions/id" },
+        "bus": { "$ref": "#/definitions/id" },
+        "i2c_addr": { "$ref": "#/definitions/hexByte" },
+        "selected_by": { "enum": ["revision", "runtime", "user"] },
+        "default": { "$ref": "#/definitions/id" },
+        "choices": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/choice" } },
+        "pins": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/ownerPin" } },
+        "rails": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+        "signals": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/endpoint" } },
+        "enable": { "$ref": "#/definitions/endpoint" },
+        "derived": { "$ref": "#/definitions/sdDerived" },
+        "spec": { "type": "object" },
+        "note": { "type": "string" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" },
+        "source": { "$ref": "#/definitions/source" }
+      }
+    },
+    "deviceKind": {
+      "type": "string",
+      "enum": ["display", "sd", "touch", "pmic", "io_expander", "sensor", "speaker", "mic", "imu", "rtc", "led_strip", "led", "vibration", "power_hold", "backlight", "camera", "transceiver", "regulator", "button", "usb_uart", "psram"],
+      "x-signals": {
+        "display": ["cs", "dc", "rst", "busy", "backlight", "power"],
+        "sd": ["clk", "cmd", "d0", "d1", "d2", "d3", "cd", "wp"],
+        "touch": ["int", "rst"],
+        "pmic": [],
+        "io_expander": [],
+        "sensor": [],
+        "speaker": ["data_out", "enable"],
+        "mic": ["data_in"],
+        "imu": ["int"],
+        "rtc": ["int"],
+        "led_strip": ["data"],
+        "power_hold": ["enable"],
+        "backlight": ["pwm"],
+        "led": ["on", "pwm"],
+        "vibration": ["enable"],
+        "camera": ["pwdn", "reset", "xclk", "vsync", "href", "pclk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"],
+        "transceiver": ["de", "re"],
+        "regulator": ["en"],
+        "button": ["in"],
+        "usb_uart": ["boot"],
+        "psram": ["cs", "clk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "dqs"]
+      },
+      "x-output-signals": ["cs", "dc", "rst", "power", "data", "data_out", "enable", "pwm", "boot"],
+      "x-spec-properties": {
+        "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "rgb_order", "three_wire", "panel_type", "line_padding", "dpi_freq_mhz", "hsync_back_porch", "hsync_pulse_width", "hsync_front_porch", "vsync_back_porch", "vsync_pulse_width", "vsync_front_porch"],
+        "sd": [],
+        "touch": ["x_min", "x_max", "y_min", "y_max", "rotation_offset"],
+        "pmic": [],
+        "io_expander": ["probe_freq", "firmware_reg", "firmware_min"],
+        "sensor": [],
+        "speaker": [],
+        "mic": [],
+        "imu": [],
+        "rtc": [],
+        "led_strip": ["count"],
+        "power_hold": ["active_low"],
+        "backlight": ["freq", "channel", "invert", "offset", "i2c_freq"],
+        "led": [],
+        "vibration": [],
+        "camera": [],
+        "transceiver": [],
+        "regulator": [],
+        "button": ["active_low", "pull"],
+        "usb_uart": ["auto_reset"],
+        "psram": []
+      }
+    },
+    "ownerPin": {
+      "type": "object", "additionalProperties": false, "required": ["roles"],
+      "properties": {
+        "roles": { "type": "array", "items": { "$ref": "#/definitions/role" }, "uniqueItems": true },
+        "note": { "type": "string" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" },
+        "source": { "$ref": "#/definitions/source" }
+      }
+    },
+    "sdDerived": {
+      "type": "object", "additionalProperties": false, "required": ["modes"],
+      "properties": {
+        "modes": { "type": "array", "items": { "enum": ["spi", "sdio1", "sdio4"] }, "uniqueItems": true },
+        "bus": { "$ref": "#/definitions/id" },
+        "cs": { "$ref": "#/definitions/endpoint" }
+      }
+    },
+    "choice": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "present": { "type": "boolean" },
+        "soc_pins": { "type": "object", "propertyNames": { "pattern": "^[0-9]+$" }, "additionalProperties": { "$ref": "#/definitions/pin" } },
+        "catalog_spec": { "$ref": "#/definitions/catalogSpec" },
+        "kind": { "$ref": "#/definitions/deviceKind" },
+        "part": { "$ref": "#/definitions/id" },
+        "bus": { "$ref": "#/definitions/id" },
+        "i2c_addr": { "$ref": "#/definitions/hexByte" },
+        "pins": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/ownerPin" } },
+        "rails": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+        "spec": { "type": "object" },
+        "note": { "type": "string" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" }
+      }
+    },
+    "connector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "$ref": "#/definitions/id" },
+        "standard": { "type": "string" },
+        "positions": { "type": "object", "additionalProperties": { "$ref": "#/definitions/endpoint" } },
+        "multi_gpio": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }, "uniqueItems": true },
+        "shared_gpio": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }, "uniqueItems": true },
+        "note": { "type": "string" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" },
+        "source": { "$ref": "#/definitions/source" }
+      }
+    },
+    "catalogSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display": { "$ref": "#/definitions/displaySpec" },
+        "power": { "$ref": "#/definitions/powerSpec" },
+        "audio": { "$ref": "#/definitions/audioSpec" },
+        "sensors": { "type": "array", "items": { "$ref": "#/definitions/sensorSpec" } },
+        "storage": { "$ref": "#/definitions/storageSpec" },
+        "links": { "$ref": "#/definitions/linkSpec" },
+        "verified": { "$ref": "#/definitions/verified" },
+        "measured_by": { "$ref": "#/definitions/measuredBy" }
+      }
+    },
+    "displaySpec": { "type": "object", "additionalProperties": false, "properties": { "size_inch": { "type": "number" }, "resolution": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }, "panel_part": { "type": "string" }, "touch": { "type": "boolean" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "powerSpec": { "type": "object", "additionalProperties": false, "properties": { "pmic_part": { "type": "string" }, "battery_mah": { "type": "integer" }, "usb": { "enum": ["type-c", "micro"] }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "audioSpec": { "type": "object", "additionalProperties": false, "properties": { "speaker_part": { "type": "string" }, "mic_part": { "type": "string" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "sensorSpec": { "type": "object", "additionalProperties": false, "properties": { "kind": { "$ref": "#/definitions/id" }, "part": { "type": "string" }, "i2c_addr": { "$ref": "#/definitions/hexByte" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "storageSpec": { "type": "object", "additionalProperties": false, "properties": { "psram_mb": { "type": "integer" }, "psram_mode": { "enum": ["quad", "opi"] }, "flash_mb": { "type": "integer" }, "sd": { "type": "boolean" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "linkSpec": { "type": "object", "additionalProperties": false, "properties": { "schematic": { "type": "string", "format": "uri" }, "product": { "type": "string", "format": "uri" }, "verified": { "$ref": "#/definitions/verified" }, "measured_by": { "$ref": "#/definitions/measuredBy" } } },
+    "revision": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "select"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "name": { "type": "string" },
+        "select": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/id" } },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

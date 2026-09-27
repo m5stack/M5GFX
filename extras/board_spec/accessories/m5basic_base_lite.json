@@ -1,0 +1,19 @@
+{
+  "schema_version": 1, "id": "m5basic_base_lite", "name": "M5BasicBaseLite", "origin": "third_party", "vendor": "Akita",
+  "source_url": "https://github.com/akita11/M5BasicBaseLite", "attaches": { "connector_type": "mbus", "occupies": "stack" }, "compatible_with": ["m5stack"],
+  "host_pins": {
+    "mbus.18": { "roles": ["conn:port_a.1"] }, "mbus.17": { "roles": ["conn:port_a.2"] },
+    "mbus.4": { "roles": ["conn:port_b.1"] }, "mbus.10": { "roles": ["conn:port_b.2"] },
+    "mbus.15": { "roles": ["conn:port_c.1"] }, "mbus.16": { "roles": ["conn:port_c.2"] },
+    "mbus.26": { "roles": ["conn:port_d.1"] }, "mbus.2": { "roles": ["conn:port_d.2"] },
+    "mbus.20": { "roles": ["conn:port_e.1"] }, "mbus.22": { "roles": ["conn:port_e.2"] },
+    "mbus.23": { "roles": ["dev:rgb_led.data"] }
+  },
+  "connectors": {
+    "port_a": { "type": "hy2_4p", "standard": "port_i2c" }, "port_b": { "type": "hy2_4p", "standard": "port_io" },
+    "port_c": { "type": "hy2_4p", "standard": "port_uart" }, "port_d": { "type": "hy2_4p", "standard": "port_io" },
+    "port_e": { "type": "hy2_4p", "standard": "port_uart" }
+  },
+  "devices": { "rgb_led": { "kind": "led_strip", "part": "sk6812", "spec": { "count": 10 } } },
+  "note": "Port D/E pin order follows the current M5Unified table (D 34/35, E 5/13); the README lists 35/34 and 13/5."
+}

@@ -1,0 +1,569 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_cores3",
+  "name": "M5StackCoreS3",
+  "official_name": "M5Stack CoreS3",
+  "official_name_verified": true,
+  "aliases": [
+    "cores3",
+    "core s3"
+  ],
+  "legacy_board_id": 10,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        320,
+        240
+      ],
+      "touch": true
+    },
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "quad",
+      "flash_mb": 16,
+      "sd": true
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "conn:mbus.24"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1",
+        "conn:mbus.20"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2",
+        "conn:mbus.19"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "4": {
+      "roles": [
+        "dev:sd.d3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:mbus.8"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:mbus.21"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:mbus.22"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:port_b.1",
+        "conn:mbus.4"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:port_b.2",
+        "conn:mbus.10"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:port_d.2",
+        "conn:mbus.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "11": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "conn:mbus.18"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "12": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "conn:mbus.17"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "13": {
+      "roles": [
+        "conn:mbus.23"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "conn:port_d.1",
+        "conn:mbus.26"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:camera.d4"
+      ]
+    },
+    "16": {
+      "roles": [
+        "dev:camera.d5"
+      ]
+    },
+    "17": {
+      "roles": [
+        "conn:port_c.2",
+        "conn:port_e.2",
+        "conn:mbus.16"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "18": {
+      "roles": [
+        "conn:port_c.1",
+        "conn:port_e.1",
+        "conn:mbus.15"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "dev:touch.int"
+      ]
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "35": {
+      "roles": [
+        "bus:main_spi.miso",
+        "dev:lcd.dc",
+        "dev:sd.d0",
+        "conn:mbus.9"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "36": {
+      "roles": [
+        "bus:main_spi.sclk",
+        "dev:sd.clk",
+        "conn:mbus.11"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "37": {
+      "roles": [
+        "bus:main_spi.mosi",
+        "dev:sd.cmd",
+        "conn:mbus.7"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "38": {
+      "roles": [
+        "dev:camera.href"
+      ]
+    },
+    "39": {
+      "roles": [
+        "dev:camera.d0"
+      ]
+    },
+    "40": {
+      "roles": [
+        "dev:camera.d1"
+      ]
+    },
+    "41": {
+      "roles": [
+        "dev:camera.d2"
+      ]
+    },
+    "42": {
+      "roles": [
+        "dev:camera.d3"
+      ]
+    },
+    "43": {
+      "roles": [
+        "conn:mbus.14"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:mbus.13"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "45": {
+      "roles": [
+        "dev:camera.pclk"
+      ]
+    },
+    "46": {
+      "roles": [
+        "dev:camera.vsync"
+      ]
+    },
+    "47": {
+      "roles": [
+        "dev:camera.d7"
+      ]
+    },
+    "48": {
+      "roles": [
+        "dev:camera.d6"
+      ]
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI2_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "freq": 400000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "ili9342c",
+      "bus": "main_spi",
+      "spec": {
+        "width": 320,
+        "height": 240,
+        "three_wire": true
+      },
+      "signals": {
+        "cs": "gpio:3",
+        "dc": "gpio:35"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "main_spi",
+      "verified": {
+        "bus": "generated",
+        "signals": "generated",
+        "derived": "generated"
+      },
+      "signals": {
+        "d3": "gpio:4",
+        "d0": "gpio:35",
+        "clk": "gpio:36",
+        "cmd": "gpio:37"
+      },
+      "derived": {
+        "modes": [
+          "spi",
+          "sdio1"
+        ],
+        "bus": "main_spi",
+        "cs": "gpio:4"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "ft5x06",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x38",
+      "spec": {
+        "x_max": 319,
+        "y_max": 239
+      },
+      "signals": {
+        "int": "gpio:21"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "axp2101",
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "io_expander": {
+      "kind": "io_expander",
+      "part": "aw9523",
+      "bus": "internal_i2c"
+    },
+    "camera": {
+      "kind": "camera",
+      "part": "gc0308",
+      "bus": "internal_i2c",
+      "signals": {
+        "d4": "gpio:15",
+        "d5": "gpio:16",
+        "href": "gpio:38",
+        "d0": "gpio:39",
+        "d1": "gpio:40",
+        "d2": "gpio:41",
+        "d3": "gpio:42",
+        "pclk": "gpio:45",
+        "vsync": "gpio:46",
+        "d7": "gpio:47",
+        "d6": "gpio:48"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:26",
+        "d3": "gpio:27",
+        "d2": "gpio:28",
+        "clk": "gpio:30",
+        "d1": "gpio:31",
+        "d0": "gpio:32"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:2",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_b": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "positions": {
+        "1": "gpio:8",
+        "2": "gpio:9",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_c": {
+      "type": "hy2_4p",
+      "standard": "port_uart",
+      "positions": {
+        "1": "gpio:18",
+        "2": "gpio:17",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_d": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "positions": {
+        "1": "gpio:14",
+        "2": "gpio:10",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_e": {
+      "type": "hy2_4p",
+      "standard": "port_uart",
+      "positions": {
+        "1": "gpio:18",
+        "2": "gpio:17",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "mbus": {
+      "type": "mbus",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "gpio:10",
+        "3": "pwr:gnd",
+        "4": "gpio:8",
+        "5": "pwr:gnd",
+        "6": "chip:en",
+        "7": "gpio:37",
+        "8": "gpio:5",
+        "9": "gpio:35",
+        "10": "gpio:9",
+        "11": "gpio:36",
+        "12": "pwr:3v3",
+        "13": "gpio:44",
+        "14": "gpio:43",
+        "15": "gpio:18",
+        "16": "gpio:17",
+        "17": "gpio:12",
+        "18": "gpio:11",
+        "19": "gpio:2",
+        "20": "gpio:1",
+        "21": "gpio:6",
+        "22": "gpio:7",
+        "23": "gpio:13",
+        "24": "gpio:0",
+        "25": "nc",
+        "26": "gpio:14",
+        "27": "nc",
+        "28": "pwr:5v",
+        "29": "nc",
+        "30": "pwr:bat"
+      }
+    }
+  }
+}

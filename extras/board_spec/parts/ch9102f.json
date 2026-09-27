@@ -1,0 +1,6 @@
+{
+  "id": "ch9102f", "name": "CH9102F", "kind": "usb_uart", "vendor": "WCH",
+  "bus": { "kind": "uart" },
+  "signals": { "required": ["boot"], "optional": [] },
+  "spec_keys": { "auto_reset": { "type": "boolean", "required": true } }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "m5pm1",
+  "name": "M5 PM1",
+  "kind": "pmic",
+  "bus": { "kind": "i2c" },
+  "i2c_addr": ["0x6E"],
+  "id_probe": {
+    "reg": "0x00",
+    "value": "0x50",
+    "match": "ack_only",
+    "note": "device id 0x2050 (reg 0x00-0x01 LE) の下位バイト"
+  },
+  "pins": {
+    "gpio0": { "cap": ["input", "output"] },
+    "gpio1": { "cap": ["input", "output"] },
+    "gpio2": { "cap": ["input", "output"] },
+    "gpio3": { "cap": ["input", "output", "pwm"] },
+    "gpio4": { "cap": ["input", "output", "pwm"] },
+    "boost": { "cap": ["rail"] },
+    "ldo": { "cap": ["rail"] },
+    "dcdc_3v3": { "cap": ["rail"] },
+    "led_en": { "cap": ["output"] },
+    "pwrkey": { "cap": ["output"] }
+  }
+}

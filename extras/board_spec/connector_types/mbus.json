@@ -1,0 +1,59 @@
+{
+  "id": "mbus",
+  "name": "M-Bus (2x15, 2.54 mm)",
+  "layout": {
+    "rows": 15,
+    "cols": 2,
+    "pitch_mm": 2.54,
+    "numbering": "custom",
+    "key": "none",
+    "view": "component_side"
+  },
+  "positions": [
+    { "id": "1", "row": 0, "col": 0, "name": "gnd" },
+    { "id": "2", "row": 0, "col": 1 },
+    { "id": "3", "row": 1, "col": 0, "name": "gnd" },
+    { "id": "4", "row": 1, "col": 1 },
+    { "id": "5", "row": 2, "col": 0, "name": "gnd" },
+    { "id": "6", "row": 2, "col": 1, "name": "en" },
+    { "id": "7", "row": 3, "col": 0 },
+    { "id": "8", "row": 3, "col": 1 },
+    { "id": "9", "row": 4, "col": 0 },
+    { "id": "10", "row": 4, "col": 1 },
+    { "id": "11", "row": 5, "col": 0 },
+    { "id": "12", "row": 5, "col": 1, "name": "3v3" },
+    { "id": "13", "row": 6, "col": 0 },
+    { "id": "14", "row": 6, "col": 1 },
+    { "id": "15", "row": 7, "col": 0 },
+    { "id": "16", "row": 7, "col": 1 },
+    { "id": "17", "row": 8, "col": 0 },
+    { "id": "18", "row": 8, "col": 1 },
+    { "id": "19", "row": 9, "col": 0 },
+    { "id": "20", "row": 9, "col": 1 },
+    { "id": "21", "row": 10, "col": 0 },
+    { "id": "22", "row": 10, "col": 1 },
+    { "id": "23", "row": 11, "col": 0 },
+    { "id": "24", "row": 11, "col": 1 },
+    { "id": "25", "row": 12, "col": 0, "name": "hpwr" },
+    { "id": "26", "row": 12, "col": 1 },
+    { "id": "27", "row": 13, "col": 0, "name": "hpwr" },
+    { "id": "28", "row": 13, "col": 1, "name": "5v" },
+    { "id": "29", "row": 14, "col": 0, "name": "hpwr" },
+    { "id": "30", "row": 14, "col": 1, "name": "bat" }
+  ],
+  "fixed_positions": {
+    "1": "pwr:gnd",
+    "3": "pwr:gnd",
+    "5": "pwr:gnd"
+  },
+  "default_positions": {
+    "6": "chip:en",
+    "12": "pwr:3v3",
+    "25": "nc",
+    "27": "nc",
+    "28": "pwr:5v",
+    "29": "nc",
+    "30": "pwr:bat"
+  },
+  "rails": ["hpwr"]
+}

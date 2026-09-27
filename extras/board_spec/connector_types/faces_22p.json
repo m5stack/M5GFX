@@ -1,0 +1,18 @@
+{
+  "id": "faces_22p",
+  "name": "FACES 22-pin panel bus",
+  "layout": { "rows": 2, "cols": 11, "pitch_mm": 2.54, "numbering": "custom", "key": "none", "view": "component_side" },
+  "positions": [
+    { "id": "1", "row": 0, "col": 0 }, { "id": "2", "row": 1, "col": 0 },
+    { "id": "3", "row": 0, "col": 1 }, { "id": "4", "row": 1, "col": 1 },
+    { "id": "5", "row": 0, "col": 2 }, { "id": "6", "row": 1, "col": 2 },
+    { "id": "7", "row": 0, "col": 3 }, { "id": "8", "row": 1, "col": 3 },
+    { "id": "9", "row": 0, "col": 4 }, { "id": "10", "row": 1, "col": 4 },
+    { "id": "11", "row": 0, "col": 5 }, { "id": "12", "row": 1, "col": 5 },
+    { "id": "13", "row": 0, "col": 6 }, { "id": "14", "row": 1, "col": 6 },
+    { "id": "15", "row": 0, "col": 7 }, { "id": "16", "row": 1, "col": 7 },
+    { "id": "17", "row": 0, "col": 8 }, { "id": "18", "row": 1, "col": 8 },
+    { "id": "19", "row": 0, "col": 9 }, { "id": "20", "row": 1, "col": 9 },
+    { "id": "21", "row": 0, "col": 10 }, { "id": "22", "row": 1, "col": 10 }
+  ]
+}

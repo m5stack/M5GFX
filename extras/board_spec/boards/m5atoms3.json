@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "id": "m5atoms3",
+  "name": "M5AtomS3",
+  "official_name": "M5Stack AtomS3",
+  "official_name_verified": true,
+  "aliases": [
+    "atoms3",
+    "atom s3"
+  ],
+  "legacy_board_id": 11,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        128,
+        128
+      ],
+      "touch": false
+    },
+    "storage": {
+      "psram_mb": 0
+    }
+  },
+  "pins": {
+    "1": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "16": {
+      "roles": [
+        "dev:backlight.pwm"
+      ]
+    },
+    "17": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "dev:lcd.dc"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:lcd.rst"
+      ]
+    },
+    "38": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "bus": "main_spi",
+      "selected_by": "runtime",
+      "default": "st7735s",
+      "choices": {
+        "st7735s": {
+          "part": "st7735s",
+          "spec": {
+            "width": 128,
+            "height": 128,
+            "memory_height": 132,
+            "offset_x": 2,
+            "offset_y": 1,
+            "rotation_offset": 2,
+            "invert": true,
+            "readable": true,
+            "panel_type": "st7735s"
+          }
+        },
+        "gc9107": {
+          "part": "gc9107",
+          "spec": {
+            "width": 128,
+            "height": 128,
+            "offset_x": 0,
+            "offset_y": 32,
+            "rotation_offset": 0,
+            "invert": false,
+            "readable": false,
+            "panel_type": "gc9107"
+          }
+        }
+      }
+    },
+    "backlight": {
+      "kind": "backlight",
+      "spec": {
+        "freq": 256,
+        "channel": 7,
+        "invert": false,
+        "offset": 48
+      },
+      "verified": {
+        "spec": "generated"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c"
+    }
+  }
+}

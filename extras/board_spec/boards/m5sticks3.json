@@ -1,0 +1,351 @@
+{
+  "schema_version": 1,
+  "id": "m5sticks3",
+  "name": "M5StickS3",
+  "official_name": "M5Stack StickS3",
+  "official_name_verified": true,
+  "aliases": [
+    "sticks3",
+    "m5sticks3",
+    "stick s3"
+  ],
+  "legacy_board_id": 26,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        135,
+        240
+      ],
+      "touch": false
+    },
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "opi"
+    }
+  },
+  "pins": {
+    "9": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "11": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
+    "12": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "14": {
+      "roles": [
+        "bus:i2s_audio.data_out"
+      ]
+    },
+    "15": {
+      "roles": [
+        "bus:i2s_audio.ws"
+      ]
+    },
+    "16": {
+      "roles": [
+        "bus:i2s_audio.data_in"
+      ]
+    },
+    "17": {
+      "roles": [
+        "bus:i2s_audio.bck"
+      ]
+    },
+    "18": {
+      "roles": [
+        "bus:i2s_audio.mck"
+      ]
+    },
+    "21": {
+      "roles": [
+        "dev:lcd.rst"
+      ]
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:backlight.pwm"
+      ]
+    },
+    "39": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "40": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "45": {
+      "roles": [
+        "dev:lcd.dc"
+      ]
+    },
+    "47": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "pull": "up",
+      "pull_reliable": true,
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "48": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "pull": "up",
+      "pull_reliable": true,
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "freq": 100000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "i2s_audio": {
+      "kind": "i2s",
+      "signals": [
+        "mck",
+        "bck",
+        "ws",
+        "data_out",
+        "data_in"
+      ],
+      "fixed": false,
+      "freq": 22050,
+      "note": "Speaker uses I2S0 and microphone uses I2S1; magnification is 1."
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "st7789v2",
+      "bus": "main_spi",
+      "spec": {
+        "width": 135,
+        "height": 240,
+        "offset_x": 52,
+        "offset_y": 40,
+        "rotation_offset": 0,
+        "invert": true,
+        "readable": true
+      }
+    },
+    "backlight": {
+      "kind": "backlight",
+      "spec": {
+        "freq": 256,
+        "channel": 7,
+        "invert": false,
+        "offset": 16
+      },
+      "verified": {
+        "spec": "generated"
+      }
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c",
+      "pins": {
+        "gpio2": {
+          "roles": [
+            "dev:lcd.power"
+          ]
+        },
+        "gpio3": {
+          "roles": [
+            "dev:speaker.enable"
+          ]
+        },
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "speaker": {
+      "kind": "speaker",
+      "bus": "i2s_audio",
+      "verified": {
+        "bus": "datasheet"
+      }
+    },
+    "mic": {
+      "kind": "mic",
+      "bus": "i2s_audio",
+      "verified": {
+        "bus": "datasheet"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c"
+    }
+  }
+}

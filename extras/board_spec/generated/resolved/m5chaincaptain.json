@@ -1,0 +1,381 @@
+{
+  "schema_version": 1,
+  "id": "m5chaincaptain",
+  "name": "M5ChainCaptain",
+  "official_name": "M5Stack Chain Captain",
+  "official_name_verified": true,
+  "aliases": [
+    "chaincaptain",
+    "chain captain",
+    "captain"
+  ],
+  "legacy_board_id": 32,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        240,
+        240
+      ],
+      "touch": false
+    },
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "opi"
+    }
+  },
+  "pins": {
+    "1": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
+    "2": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "5": {
+      "roles": [
+        "dev:btn_c.in"
+      ]
+    },
+    "6": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "7": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "16": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "17": {
+      "roles": [
+        "conn:port_b.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "18": {
+      "roles": [
+        "conn:port_b.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [],
+      "note": "Audio PA control"
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
+      ]
+    },
+    "45": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "46": {
+      "roles": [
+        "dev:lcd.dc"
+      ]
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi"
+      ],
+      "preferred_host": "SPI2_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 100000,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "jd9853",
+      "bus": "main_spi",
+      "spec": {
+        "width": 240,
+        "height": 240,
+        "memory_width": 240,
+        "memory_height": 320,
+        "offset_x": 0,
+        "offset_y": 0,
+        "rotation_offset": 2,
+        "invert": false,
+        "readable": false,
+        "rgb_order": true,
+        "three_wire": true
+      },
+      "signals": {
+        "cs": "gpio:45",
+        "dc": "gpio:46"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "backlight": {
+      "kind": "backlight",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x4F"
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "ioe": {
+      "kind": "io_expander",
+      "part": "m5ioe1",
+      "bus": "internal_i2c"
+    },
+    "rtc": {
+      "kind": "rtc",
+      "part": "rx8130",
+      "bus": "internal_i2c"
+    },
+    "imu": {
+      "kind": "imu",
+      "part": "bmi270",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x68"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:1"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:4"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:5"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:26",
+        "d3": "gpio:27",
+        "d2": "gpio:28",
+        "clk": "gpio:30",
+        "d1": "gpio:31",
+        "d0": "gpio:32",
+        "d4": "gpio:33",
+        "d5": "gpio:34",
+        "d6": "gpio:35",
+        "d7": "gpio:36",
+        "dqs": "gpio:37"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:6",
+        "2": "gpio:7",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_b": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "positions": {
+        "1": "gpio:17",
+        "2": "gpio:18",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

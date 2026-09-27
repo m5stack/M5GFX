@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://m5stack.example/schema/connector-type-v1.json",
+  "title": "M5 connector type v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "layout", "positions"],
+  "properties": {
+    "id": { "$ref": "#/definitions/id" },
+    "name": { "type": "string" },
+    "extends": { "$ref": "#/definitions/id" },
+    "layout": { "$ref": "#/definitions/layout" },
+    "positions": { "type": "array", "items": { "$ref": "#/definitions/position" }, "minItems": 1 },
+    "fixed_positions": { "$ref": "#/definitions/endpointMap" },
+    "default_positions": { "$ref": "#/definitions/endpointMap" },
+    "standards": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+    "rails": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "positionId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "endpoint": { "type": "string", "pattern": "^(pin:[a-z][a-z0-9_]*\\.[a-z0-9_]+|fixed:[a-z0-9_]+\\.[a-z0-9_]+|pwr:[a-z0-9_]+|chip:[a-z0-9_]+|nc)$" },
+    "endpointMap": { "type": "object", "additionalProperties": { "$ref": "#/definitions/endpoint" } },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "cols", "pitch_mm", "numbering", "key", "view"],
+      "properties": {
+        "rows": { "type": "integer", "minimum": 1 },
+        "cols": { "type": "integer", "minimum": 1 },
+        "pitch_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "numbering": { "enum": ["row_major", "col_major", "custom"] },
+        "key": { "enum": ["top", "bottom", "left", "right", "none"] },
+        "view": { "enum": ["component_side", "mating_face"] },
+        "mirror": { "type": "boolean" }
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "row", "col"],
+      "properties": {
+        "id": { "$ref": "#/definitions/positionId" },
+        "label": { "type": "string" },
+        "name": { "$ref": "#/definitions/id" },
+        "row": { "type": "integer", "minimum": 0 },
+        "col": { "type": "integer", "minimum": 0 },
+        "color": { "type": "string" }
+      }
+    }
+  }
+}

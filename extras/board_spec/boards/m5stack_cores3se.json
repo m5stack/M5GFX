@@ -1,0 +1,392 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_cores3se",
+  "name": "M5StackCoreS3SE",
+  "official_name": "M5Stack CoreS3-SE",
+  "official_name_verified": true,
+  "aliases": [
+    "cores3 se",
+    "cores3se",
+    "se"
+  ],
+  "legacy_board_id": 17,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        320,
+        240
+      ],
+      "touch": true
+    },
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "quad",
+      "flash_mb": 16,
+      "sd": true
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "conn:mbus.24"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1",
+        "conn:mbus.20"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2",
+        "conn:mbus.19"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "dev:lcd.cs"
+      ]
+    },
+    "4": {
+      "roles": [
+        "dev:sd.d3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:mbus.8"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:mbus.21"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:mbus.22"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:port_b.1",
+        "conn:mbus.4"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:port_b.2",
+        "conn:mbus.10"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:port_d.2",
+        "conn:mbus.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "11": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "conn:mbus.18"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "12": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "conn:mbus.17"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "13": {
+      "roles": [
+        "conn:mbus.23"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "conn:port_d.1",
+        "conn:mbus.26"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "17": {
+      "roles": [
+        "conn:port_c.2",
+        "conn:port_e.2",
+        "conn:mbus.16"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "18": {
+      "roles": [
+        "conn:port_c.1",
+        "conn:port_e.1",
+        "conn:mbus.15"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "dev:touch.int"
+      ]
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "35": {
+      "roles": [
+        "bus:main_spi.miso",
+        "dev:lcd.dc",
+        "dev:sd.d0",
+        "conn:mbus.9"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "36": {
+      "roles": [
+        "bus:main_spi.sclk",
+        "dev:sd.clk",
+        "conn:mbus.11"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "37": {
+      "roles": [
+        "bus:main_spi.mosi",
+        "dev:sd.cmd",
+        "conn:mbus.7"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "43": {
+      "roles": [
+        "conn:mbus.14"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:mbus.13"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI2_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "freq": 400000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "part": "ili9342c",
+      "bus": "main_spi",
+      "spec": {
+        "width": 320,
+        "height": 240,
+        "three_wire": true
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "main_spi",
+      "verified": {
+        "bus": "generated"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "ft5x06",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x38",
+      "spec": {
+        "x_max": 319,
+        "y_max": 239
+      }
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "axp2101",
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "io_expander": {
+      "kind": "io_expander",
+      "part": "aw9523",
+      "bus": "internal_i2c"
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c"
+    },
+    "port_b": {
+      "type": "hy2_4p",
+      "standard": "port_io"
+    },
+    "port_c": {
+      "type": "hy2_4p",
+      "standard": "port_uart"
+    },
+    "port_d": {
+      "type": "hy2_4p",
+      "standard": "port_io"
+    },
+    "port_e": {
+      "type": "hy2_4p",
+      "standard": "port_uart"
+    },
+    "mbus": {
+      "type": "mbus"
+    }
+  }
+}

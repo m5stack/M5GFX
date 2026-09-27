@@ -1,0 +1,9 @@
+{
+  "id": "me3116", "name": "ME3116AM6G", "kind": "regulator", "bus": { "kind": "none" },
+  "pins": {
+    "vin": { "cap": ["input", "rail"] }, "vout": { "cap": ["rail"] }, "en": { "cap": ["input"] }
+  },
+  "signals": { "required": [], "optional": ["en"] },
+  "note": "Tough subboard buck regulator from the J4/M-Bus HPWR input rail to 5V.",
+  "verified": { "pins": "datasheet", "note": "datasheet" }
+}

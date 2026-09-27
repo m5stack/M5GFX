@@ -1,0 +1,27 @@
+{
+  "schema_version": 1, "id": "extport_core2", "name": "Module ExtPort for Core2", "origin": "official",
+  "attaches": { "connector_type": "mbus", "occupies": "stack" }, "compatible_with": ["m5stack_core2"],
+  "host_pins": {
+    "mbus.4": { "roles": ["conn:port_b.1"] }, "mbus.10": { "roles": ["conn:port_b.2"] },
+    "mbus.15": { "roles": ["conn:port_c.1"] }, "mbus.16": { "roles": ["conn:port_c.2"] }
+  },
+  "connectors": {
+    "port_b": { "type": "hy2_4p", "standard": "port_io" }, "port_c": { "type": "hy2_4p", "standard": "port_uart" },
+    "port_d": { "type": "hy2_4p", "standard": "port_io" }, "port_e": { "type": "hy2_4p", "standard": "port_uart" }
+  },
+  "settings": {
+    "port_d_1": { "name": "PORT.D-1 DIP", "selected_by": "user", "default": "g34", "choices": {
+      "g34": { "host_pins": { "mbus.26": { "roles": ["conn:port_d.1"] } } }, "g22": { "host_pins": { "mbus.18": { "roles": ["conn:port_d.1"] } } }, "g1": { "host_pins": { "mbus.14": { "roles": ["conn:port_d.1"] } } }
+    } },
+    "port_d_2": { "name": "PORT.D-2 DIP", "selected_by": "user", "default": "g35", "choices": {
+      "g35": { "host_pins": { "mbus.2": { "roles": ["conn:port_d.2"] } } }, "g21": { "host_pins": { "mbus.17": { "roles": ["conn:port_d.2"] } } }, "g3": { "host_pins": { "mbus.13": { "roles": ["conn:port_d.2"] } } }
+    } },
+    "port_e_1": { "name": "PORT.E-1 DIP", "selected_by": "user", "default": "g27", "choices": {
+      "g27": { "host_pins": { "mbus.21": { "roles": ["conn:port_e.1"] } } }, "g2": { "host_pins": { "mbus.23": { "roles": ["conn:port_e.1"] } } }, "g0": { "host_pins": { "mbus.24": { "roles": ["conn:port_e.1"] } } }
+    } },
+    "port_e_2": { "name": "PORT.E-2 DIP", "selected_by": "user", "default": "g19", "choices": {
+      "g19": { "host_pins": { "mbus.22": { "roles": ["conn:port_e.2"] } } }, "g25": { "host_pins": { "mbus.8": { "roles": ["conn:port_e.2"] } } }, "g2": { "host_pins": { "mbus.23": { "roles": ["conn:port_e.2"] } } }
+    } }
+  },
+  "note": "Only one position of each DIP selector may be ON."
+}

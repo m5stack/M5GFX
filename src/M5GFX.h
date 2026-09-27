@@ -51,6 +51,7 @@
 #include "lgfx/v1/LGFX_Sprite.hpp"
 #include "lgfx/v1/LGFX_Button.hpp"
 
+#include <cstdint>
 #include <vector>
 #include <memory>
 
@@ -194,6 +195,8 @@ namespace m5gfx
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
+    bool _adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
+                               lgfx::ILight* light, lgfx::ITouch* touch);
     void _set_backlight(lgfx::ILight* bl);
     void _set_pwm_backlight(int16_t pin, uint8_t ch, uint32_t freq = 12000, bool invert = false, uint8_t offset = 0);
 
@@ -265,6 +268,9 @@ namespace m5gfx
     }
 
     using lgfx::LGFX_Device::init;
+
+    // init_without_reset() skips the initial reset. Board detection may still
+    // promote its final retry to reset after repeated identification failures.
 
     bool init(lgfx::Panel_Device* panel)
     {

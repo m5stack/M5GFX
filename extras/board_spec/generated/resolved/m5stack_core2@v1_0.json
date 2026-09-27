@@ -1,0 +1,680 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_core2",
+  "name": "M5StackCore2",
+  "official_name": "M5Stack Core2",
+  "official_name_verified": true,
+  "aliases": [
+    "core2",
+    "core2 v1.1",
+    "core2 v1.3",
+    "core2 for aws",
+    "aws"
+  ],
+  "legacy_board_id": 2,
+  "chip": "esp32_d0wdq6",
+  "spec": {
+    "display": {
+      "size_inch": 2,
+      "resolution": [
+        320,
+        240
+      ]
+    },
+    "power": {
+      "battery_mah": 390,
+      "usb": "type-c"
+    },
+    "storage": {
+      "psram_mb": 8,
+      "flash_mb": 16,
+      "sd": true,
+      "psram_mode": "quad"
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "bus:i2s_spk.ws",
+        "bus:pdm_mic.ws",
+        "conn:mbus.24",
+        "dev:usb_serial.boot"
+      ],
+      "pull": "none",
+      "note": "I2S WS shared by the speaker and PDM microphone",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:mbus.14",
+        "bus:console_uart.tx"
+      ],
+      "pull": "none",
+      "note": "TXD0",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:i2s_spk.data_out",
+        "conn:mbus.23"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:mbus.13",
+        "bus:console_uart.rx"
+      ],
+      "pull": "none",
+      "note": "RXD0",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "dev:sd.d3"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "dev:lcd.cs"
+      ],
+      "pull": "up"
+    },
+    "12": {
+      "roles": [
+        "bus:i2s_spk.bck"
+      ],
+      "pull": "none"
+    },
+    "13": {
+      "roles": [
+        "conn:mbus.15",
+        "m5go_bottom2/conn:port_c.1"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "conn:mbus.16",
+        "m5go_bottom2/conn:port_c.2"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:lcd.dc"
+      ],
+      "pull": "none"
+    },
+    "16": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "17": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "18": {
+      "roles": [
+        "bus:main_spi.sclk",
+        "dev:sd.clk",
+        "conn:mbus.11"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "19": {
+      "roles": [
+        "conn:mbus.22",
+        "extport_core2/conn:port_e.2"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "conn:mbus.17"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "22": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "conn:mbus.18"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "23": {
+      "roles": [
+        "bus:main_spi.mosi",
+        "dev:sd.cmd",
+        "conn:mbus.7"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "25": {
+      "roles": [
+        "conn:mbus.8",
+        "m5go_bottom2/dev:rgb_led.data"
+      ],
+      "pull": "none",
+      "note": "Optional M5GO Bottom2 LED bar (M5Unified RGBLED column)",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "26": {
+      "roles": [
+        "conn:mbus.10",
+        "m5go_bottom2/conn:port_b.2"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "27": {
+      "roles": [
+        "conn:mbus.21",
+        "extport_core2/conn:port_e.1"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "32": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2",
+        "conn:mbus.19"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1",
+        "conn:mbus.20"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "34": {
+      "roles": [
+        "bus:pdm_mic.data_in",
+        "conn:mbus.26",
+        "extport_core2/conn:port_d.1"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "35": {
+      "roles": [
+        "conn:mbus.2",
+        "extport_core2/conn:port_d.2"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "36": {
+      "roles": [
+        "conn:mbus.4",
+        "m5go_bottom2/conn:port_b.1"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "38": {
+      "roles": [
+        "bus:main_spi.miso",
+        "dev:sd.d0",
+        "conn:mbus.9"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "dev:touch.int"
+      ],
+      "pull": "up"
+    }
+  },
+  "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "freq": 400000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "i2s_spk": {
+      "kind": "i2s",
+      "signals": [
+        "bck",
+        "ws",
+        "data_out"
+      ],
+      "fixed": false
+    },
+    "pdm_mic": {
+      "kind": "pdm",
+      "signals": [
+        "ws",
+        "data_in"
+      ],
+      "fixed": false
+    }
+  },
+  "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "part": "cp2104",
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
+    "lcd": {
+      "kind": "display",
+      "bus": "main_spi",
+      "spec": {
+        "width": 320,
+        "height": 240,
+        "rotation_offset": 0
+      },
+      "part": "ili9342c",
+      "signals": {
+        "cs": "gpio:5",
+        "dc": "gpio:15",
+        "rst": "pin:pmic.gpio3",
+        "backlight": "pin:pmic.dcdc3"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "main_spi",
+      "verified": {
+        "bus": "generated",
+        "derived": "generated",
+        "signals": "generated"
+      },
+      "derived": {
+        "modes": [
+          "spi"
+        ],
+        "bus": "main_spi",
+        "cs": "gpio:4"
+      },
+      "signals": {
+        "d3": "gpio:4",
+        "clk": "gpio:18",
+        "cmd": "gpio:23",
+        "d0": "gpio:38"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "ft5x06",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x38",
+      "spec": {
+        "x_max": 319,
+        "y_max": 279
+      },
+      "signals": {
+        "int": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "speaker": {
+      "kind": "speaker",
+      "part": "ns4168",
+      "bus": "i2s_spk",
+      "enable": "pin:pmic.gpio2",
+      "verified": {
+        "enable": "generated"
+      }
+    },
+    "mic": {
+      "kind": "mic",
+      "part": "spm1423",
+      "bus": "pdm_mic"
+    },
+    "imu": {
+      "kind": "imu",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x68",
+      "part": "mpu6886"
+    },
+    "rtc": {
+      "kind": "rtc",
+      "part": "bm8563",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x51"
+    },
+    "pmic": {
+      "kind": "pmic",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x34",
+      "part": "axp192",
+      "pins": {
+        "gpio3": {
+          "roles": [
+            "dev:lcd.rst"
+          ]
+        },
+        "gpio2": {
+          "roles": [
+            "dev:speaker.enable"
+          ]
+        },
+        "dcdc3": {
+          "roles": [
+            "dev:lcd.backlight"
+          ]
+        },
+        "ldo2": {
+          "roles": [
+            "pwr:lcd_sd_3v3"
+          ]
+        },
+        "ldo3": {
+          "roles": [
+            "dev:vibration.enable"
+          ]
+        },
+        "gpio1": {
+          "roles": [
+            "dev:power_led.pwm"
+          ]
+        },
+        "dcdc1": {
+          "roles": [
+            "pwr:esp_3v3"
+          ]
+        },
+        "gpio0": {
+          "roles": [
+            "pwr:ext_ldo"
+          ]
+        },
+        "exten": {
+          "roles": [
+            "pwr:ext_5v"
+          ]
+        },
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "vibration": {
+      "kind": "vibration",
+      "signals": {
+        "enable": "pin:pmic.ldo3"
+      }
+    },
+    "power_led": {
+      "kind": "led",
+      "signals": {
+        "pwm": "pin:pmic.gpio1"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:16",
+        "clk": "gpio:17"
+      }
+    },
+    "rgb_led": {
+      "kind": "led_strip",
+      "part": "sk6812",
+      "spec": {
+        "count": 10
+      },
+      "source": {
+        "accessory": "m5go_bottom2",
+        "origin": "official",
+        "bundled": false
+      },
+      "signals": {
+        "data": "gpio:25"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:33",
+        "2": "gpio:32",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "mbus": {
+      "type": "mbus",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "gpio:35",
+        "3": "pwr:gnd",
+        "4": "gpio:36",
+        "5": "pwr:gnd",
+        "6": "chip:en",
+        "7": "gpio:23",
+        "8": "gpio:25",
+        "9": "gpio:38",
+        "10": "gpio:26",
+        "11": "gpio:18",
+        "12": "pwr:3v3",
+        "13": "gpio:3",
+        "14": "gpio:1",
+        "15": "gpio:13",
+        "16": "gpio:14",
+        "17": "gpio:21",
+        "18": "gpio:22",
+        "19": "gpio:32",
+        "20": "gpio:33",
+        "21": "gpio:27",
+        "22": "gpio:19",
+        "23": "gpio:2",
+        "24": "gpio:0",
+        "25": "nc",
+        "26": "gpio:34",
+        "27": "nc",
+        "28": "pwr:5v",
+        "29": "nc",
+        "30": "pwr:bat"
+      }
+    },
+    "port_b": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "source": {
+        "accessory": "m5go_bottom2",
+        "origin": "official",
+        "bundled": false
+      },
+      "positions": {
+        "1": "gpio:36",
+        "2": "gpio:26",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_c": {
+      "type": "hy2_4p",
+      "standard": "port_uart",
+      "source": {
+        "accessory": "m5go_bottom2",
+        "origin": "official",
+        "bundled": false
+      },
+      "positions": {
+        "1": "gpio:13",
+        "2": "gpio:14",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_d": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "source": {
+        "accessory": "extport_core2",
+        "origin": "official",
+        "bundled": false
+      },
+      "positions": {
+        "1": "gpio:34",
+        "2": "gpio:35",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "port_e": {
+      "type": "hy2_4p",
+      "standard": "port_uart",
+      "source": {
+        "accessory": "extport_core2",
+        "origin": "official",
+        "bundled": false
+      },
+      "positions": {
+        "1": "gpio:27",
+        "2": "gpio:19",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

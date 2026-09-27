@@ -1,0 +1,15 @@
+{
+  "id": "ed2208", "name": "ED2208", "kind": "display",
+  "bus": { "kind": "spi", "modes": ["3wire"] },
+  "signals": { "required": ["cs", "dc"], "optional": ["rst", "busy"] },
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "offset_x": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
+    "offset_y": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
+    "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
+    "invert": { "type": "boolean", "x-cpp-type": "int" },
+    "readable": { "type": "boolean", "x-cpp-type": "int" },
+    "three_wire": { "type": "boolean" }
+  }
+}

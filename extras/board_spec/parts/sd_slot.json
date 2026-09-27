@@ -1,0 +1,5 @@
+{
+  "id": "sd_slot", "name": "SD card slot", "kind": "sd", "bus": { "kind": "any" },
+  "signals": { "required": ["clk", "cmd", "d0"], "optional": ["d1", "d2", "d3", "cd", "wp"] },
+  "spi_alias": { "clk": "sclk", "cmd": "mosi", "d0": "miso", "d3": "cs" }, "verified": { "signals": null }
+}

@@ -1,0 +1,4 @@
+{
+  "id": "bmi270", "name": "BMI270", "kind": "imu", "bus": { "kind": "i2c" },
+  "i2c_addr": ["0x68", "0x69"], "signals": { "required": [], "optional": ["int"] }, "verified": { "i2c_addr": null }
+}

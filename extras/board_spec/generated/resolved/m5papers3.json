@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "id": "m5papers3",
+  "name": "M5PaperS3",
+  "official_name": "M5Stack PaperS3",
+  "official_name_verified": true,
+  "aliases": [
+    "papers3",
+    "m5papers3",
+    "paper s3"
+  ],
+  "legacy_board_id": 19,
+  "chip": "esp32s3",
+  "spec": {
+    "display": {
+      "resolution": [
+        960,
+        540
+      ],
+      "touch": true
+    },
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "opi",
+      "flash_mb": 16,
+      "sd": true
+    }
+  },
+  "pins": {
+    "1": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "bus:epd_bus.data0"
+      ]
+    },
+    "7": {
+      "roles": [
+        "bus:epd_bus.data2"
+      ]
+    },
+    "8": {
+      "roles": [
+        "bus:epd_bus.data6"
+      ]
+    },
+    "9": {
+      "roles": [
+        "bus:epd_bus.data4"
+      ]
+    },
+    "10": {
+      "roles": [
+        "bus:epd_bus.data7"
+      ]
+    },
+    "11": {
+      "roles": [
+        "bus:epd_bus.data5"
+      ]
+    },
+    "12": {
+      "roles": [
+        "bus:epd_bus.data3"
+      ]
+    },
+    "13": {
+      "roles": [
+        "bus:epd_bus.sph"
+      ]
+    },
+    "14": {
+      "roles": [
+        "bus:epd_bus.data1"
+      ]
+    },
+    "15": {
+      "roles": [
+        "bus:epd_bus.le"
+      ]
+    },
+    "16": {
+      "roles": [
+        "bus:epd_bus.cl"
+      ]
+    },
+    "17": {
+      "roles": [
+        "bus:epd_bus.spv"
+      ]
+    },
+    "18": {
+      "roles": [
+        "bus:epd_bus.ckv"
+      ]
+    },
+    "21": {
+      "roles": [],
+      "note": "buzzer"
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
+      ]
+    },
+    "38": {
+      "roles": [
+        "bus:sd_spi.mosi",
+        "dev:sd.cmd"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "bus:sd_spi.sclk",
+        "dev:sd.clk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "40": {
+      "roles": [
+        "bus:sd_spi.miso",
+        "dev:sd.d0"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "42": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "44": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "note": "PWROFF_PULSE (also U0RXD)",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "45": {
+      "roles": [
+        "bus:epd_bus.oe"
+      ]
+    },
+    "46": {
+      "roles": [
+        "bus:epd_bus.pwr"
+      ]
+    },
+    "47": {
+      "roles": [
+        "dev:sd.d3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "48": {
+      "roles": [
+        "dev:touch.int"
+      ]
+    }
+  },
+  "buses": {
+    "epd_bus": {
+      "kind": "parallel_epd",
+      "signals": [
+        "data0",
+        "data1",
+        "data2",
+        "data3",
+        "data4",
+        "data5",
+        "data6",
+        "data7",
+        "pwr",
+        "spv",
+        "ckv",
+        "sph",
+        "oe",
+        "le",
+        "cl"
+      ],
+      "fixed": false,
+      "freq": 16000000
+    },
+    "sd_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "fixed": false,
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 400000,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "epd": {
+      "kind": "display",
+      "part": "ed047tc1",
+      "bus": "epd_bus",
+      "spec": {
+        "width": 960,
+        "height": 540,
+        "memory_width": 960,
+        "memory_height": 540,
+        "offset_x": 0,
+        "offset_y": 0,
+        "rotation_offset": 3,
+        "line_padding": 8
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "sd_spi",
+      "verified": {
+        "bus": "generated",
+        "signals": "generated",
+        "derived": "generated"
+      },
+      "signals": {
+        "cmd": "gpio:38",
+        "clk": "gpio:39",
+        "d0": "gpio:40",
+        "d3": "gpio:47"
+      },
+      "derived": {
+        "modes": [
+          "spi",
+          "sdio1"
+        ],
+        "bus": "sd_spi",
+        "cs": "gpio:47"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "gt911",
+      "bus": "internal_i2c",
+      "spec": {
+        "x_min": 0,
+        "x_max": 539,
+        "y_min": 0,
+        "y_max": 959,
+        "rotation_offset": 1
+      },
+      "signals": {
+        "int": "gpio:48"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "power_hold": {
+      "kind": "power_hold",
+      "spec": {
+        "active_low": true
+      },
+      "signals": {
+        "enable": "gpio:44"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:26",
+        "d3": "gpio:27",
+        "d2": "gpio:28",
+        "clk": "gpio:30",
+        "d1": "gpio:31",
+        "d0": "gpio:32",
+        "d4": "gpio:33",
+        "d5": "gpio:34",
+        "d6": "gpio:35",
+        "d7": "gpio:36",
+        "dqs": "gpio:37"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:2",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

@@ -1,0 +1,410 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_corematrix",
+  "name": "M5CoreMatrix",
+  "official_name": "M5Stack CoreMatrix",
+  "aliases": [
+    "corematrix",
+    "core matrix"
+  ],
+  "legacy_board_id": 152,
+  "chip": "esp32c61",
+  "spec": {
+    "display": {
+      "resolution": [
+        16,
+        16
+      ],
+      "touch": false
+    },
+    "storage": {
+      "sd": true
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "bus:display_i2c.sda",
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2",
+        "conn:mbus.17",
+        "conn:mbus.19"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "bus:display_i2c.scl",
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1",
+        "conn:mbus.18",
+        "conn:mbus.20"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:mbus.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:mbus.4"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:mbus.15"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:mbus.16"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:mbus.24"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:mbus.13"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "11": {
+      "roles": [
+        "conn:mbus.14"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "22": {
+      "roles": [
+        "conn:mbus.22"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "23": {
+      "roles": [
+        "conn:mbus.21"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "24": {
+      "roles": [
+        "conn:mbus.23"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "25": {
+      "roles": [
+        "bus:sdmmc.clk",
+        "dev:sd.clk",
+        "conn:mbus.12"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "26": {
+      "roles": [
+        "bus:sdmmc.d0",
+        "dev:sd.d0",
+        "conn:mbus.10"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "27": {
+      "roles": [
+        "bus:sdmmc.cmd",
+        "dev:sd.cmd",
+        "conn:mbus.8"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "28": {
+      "roles": [
+        "bus:sdmmc.d3",
+        "dev:sd.d3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "29": {
+      "roles": [
+        "conn:mbus.26"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "freq": 100000,
+      "freq_read": 100000,
+      "fixed": true,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "display_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "freq": 400000,
+      "freq_read": 400000,
+      "fixed": true,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": true,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "sdmmc": {
+      "kind": "sdmmc",
+      "signals": [
+        "clk",
+        "cmd",
+        "d0",
+        "d3"
+      ],
+      "preferred_host": 0,
+      "fixed": false
+    }
+  },
+  "devices": {
+    "led_matrix": {
+      "kind": "display",
+      "part": "tm1680",
+      "bus": "display_i2c",
+      "i2c_addr": "0x72",
+      "spec": {
+        "width": 16,
+        "height": 16,
+        "rotation_offset": 0
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "sdmmc",
+      "verified": {
+        "bus": "generated",
+        "signals": "generated",
+        "derived": "generated"
+      },
+      "signals": {
+        "clk": "gpio:25",
+        "d0": "gpio:26",
+        "cmd": "gpio:27",
+        "d3": "gpio:28"
+      },
+      "derived": {
+        "modes": [
+          "sdio1"
+        ]
+      }
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c",
+      "pins": {
+        "gpio0": {
+          "roles": [
+            "dev:btn_a.in"
+          ]
+        },
+        "gpio1": {
+          "roles": [
+            "dev:btn_b.in"
+          ]
+        },
+        "gpio2": {
+          "roles": [
+            "dev:btn_c.in"
+          ]
+        },
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "ioe": {
+      "kind": "io_expander",
+      "part": "m5ioe1",
+      "bus": "internal_i2c"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.gpio0"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.gpio1"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.gpio2"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:0",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    },
+    "mbus": {
+      "type": "mbus",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "gpio:3",
+        "3": "pwr:gnd",
+        "4": "gpio:4",
+        "5": "pwr:gnd",
+        "6": "chip:en",
+        "7": "nc",
+        "8": "gpio:27",
+        "9": "nc",
+        "10": "gpio:26",
+        "11": "nc",
+        "12": "gpio:25",
+        "13": "gpio:10",
+        "14": "gpio:11",
+        "15": "gpio:7",
+        "16": "gpio:8",
+        "17": "gpio:0",
+        "18": "gpio:1",
+        "19": "gpio:0",
+        "20": "gpio:1",
+        "21": "gpio:23",
+        "22": "gpio:22",
+        "23": "gpio:24",
+        "24": "gpio:9",
+        "25": "nc",
+        "26": "gpio:29",
+        "27": "nc",
+        "28": "pwr:5v",
+        "29": "nc",
+        "30": "pwr:bat"
+      },
+      "shared_gpio": [
+        "19",
+        "20"
+      ]
+    }
+  }
+}

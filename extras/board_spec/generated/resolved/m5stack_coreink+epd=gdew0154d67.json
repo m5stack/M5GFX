@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_coreink",
+  "name": "M5StackCoreInk",
+  "official_name": "M5Stack CoreInk",
+  "official_name_verified": true,
+  "aliases": [
+    "coreink",
+    "core ink"
+  ],
+  "legacy_board_id": 6,
+  "chip": "esp32_d0wdq6",
+  "spec": {
+    "display": {
+      "resolution": [
+        200,
+        200
+      ],
+      "touch": false
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "dev:epd.rst",
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
+    "4": {
+      "roles": [
+        "dev:epd.busy"
+      ]
+    },
+    "5": {
+      "roles": [
+        "dev:btn_ext.in"
+      ]
+    },
+    "9": {
+      "roles": [
+        "dev:epd.cs"
+      ]
+    },
+    "12": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:epd.dc"
+      ]
+    },
+    "18": {
+      "roles": [
+        "bus:main_spi.sclk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "22": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "23": {
+      "roles": [
+        "bus:main_spi.mosi"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "27": {
+      "roles": [
+        "dev:btn_pwr.in"
+      ]
+    },
+    "32": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "34": {
+      "roles": [
+        "bus:main_spi.miso"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "37": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "39": {
+      "roles": [
+        "dev:btn_c.in"
+      ]
+    }
+  },
+  "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "cp2104",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
+    "epd": {
+      "kind": "display",
+      "bus": "main_spi",
+      "part": "gdew0154d67",
+      "spec": {
+        "width": 200,
+        "height": 200,
+        "three_wire": true
+      },
+      "signals": {
+        "rst": "gpio:0",
+        "busy": "gpio:4",
+        "cs": "gpio:9",
+        "dc": "gpio:15"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "power_hold": {
+      "kind": "power_hold",
+      "signals": {
+        "enable": "gpio:12"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:37"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:38"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_ext": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:5"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:27"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:33",
+        "2": "gpio:32",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

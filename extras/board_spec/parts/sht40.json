@@ -1,0 +1,5 @@
+{
+  "id": "sht40", "name": "SHT40", "kind": "sensor",
+  "bus": { "kind": "i2c" }, "i2c_addr": ["0x44"],
+  "signals": { "required": [], "optional": [] }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "hy2_4p",
+  "name": "4-pin port (HY2.0-4P)",
+  "layout": {
+    "rows": 1,
+    "cols": 4,
+    "pitch_mm": 2,
+    "numbering": "custom",
+    "key": "none",
+    "view": "component_side"
+  },
+  "positions": [
+    { "id": "1", "row": 0, "col": 0, "color": "white" },
+    { "id": "2", "row": 0, "col": 1, "color": "yellow" },
+    { "id": "3", "row": 0, "col": 2, "name": "5v", "color": "red" },
+    { "id": "4", "row": 0, "col": 3, "name": "gnd", "color": "black" }
+  ],
+  "fixed_positions": {
+    "4": "pwr:gnd"
+  },
+  "default_positions": {
+    "3": "pwr:5v"
+  },
+  "standards": {
+    "port_i2c": { "1": "scl", "2": "sda" },
+    "port_uart": { "1": "rx", "2": "tx" },
+    "port_io": { "1": "in", "2": "out" },
+    "port_rs485": { "1": "b", "2": "a" },
+    "port_reset": { "1": "en", "2": "reset_io" }
+  }
+}
