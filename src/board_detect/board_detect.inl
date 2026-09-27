@@ -3,6 +3,7 @@
 #pragma once
 
 #include "board_detect.hpp"
+#include "ops.inl"
 
 #include <cstdio>
 #include <cstring>
@@ -566,6 +567,7 @@ namespace board_detect
       : started_(lgfx::millis()), milliseconds_(milliseconds) {}
 
       bool exhausted() const { return lgfx::millis() - started_ >= milliseconds_; }
+      std::uint32_t deadline_ms() const { return started_ + milliseconds_; }
 
     private:
       std::uint32_t started_;
@@ -604,39 +606,16 @@ namespace board_detect
       return read_register(port, power, addr, reg, value, retry_budget);
     }
 
-    bool write_register(int port, const power_desc_t& power, const pmic_write_t& write,
-                        retry_budget_t& retry_budget)
+    bool run_sequence(int port, const power_desc_t& power, ops::op_list_t sequence,
+                      const ops::retry_policy_t* policy = nullptr)
     {
-      for (;;)
-      {
-        // writeRegister8 performs the whole read-modify-write for a masked
-        // write. Retry the complete transaction if either half is NACKed.
-        if (lgfx::i2c::writeRegister8(port, write.addr, write.reg,
-                                     write.value, write.mask,
-                                     power.i2c_freq).has_value())
-        {
-          return true;
-        }
-        if (retry_budget.exhausted()) { return false; }
-        lgfx::delay(1);
-      }
-    }
-
-    bool write_sequence(int port, const power_desc_t& power, pmic_sequence_t sequence,
-                        retry_budget_t& retry_budget)
-    {
-      for (std::size_t i = 0; i < sequence.size; ++i)
-      {
-        const auto& write = sequence.data[i];
-        if (!write_register(port, power, write, retry_budget)) { return false; }
-      }
-      return true;
-    }
-
-    bool write_sequence(int port, const power_desc_t& power, pmic_sequence_t sequence)
-    {
-      retry_budget_t retry_budget(power.wake_poll_ms);
-      return write_sequence(port, power, sequence, retry_budget);
+      const int ports[] = { port };
+      ops::lgfx_backend_context_t backend_context { ports, 1 };
+      const ops::gpio_scope_t no_gpio { GPIO_NUM_MAX, nullptr, 0 };
+      return ops::run_ops(ops::lgfx_backend(&backend_context),
+                          power.devices, power.device_count,
+                          sequence.data, sequence.size, no_gpio, policy).status
+          == ops::op_status_t::ok;
     }
 
     const pmic_variant_t* read_variant(const power_desc_t& power, int port,
@@ -766,8 +745,10 @@ namespace board_detect
                                        retry_budget)) { return false; }
     const bool power_was_off = !(power_state & variant->power_state.mask);
     const bool reset_was_low = !(reset_state & variant->reset_state.mask);
-    if (!startup_detail::write_sequence(i2c_port, power, variant->power_on,
-                                        retry_budget)) { return false; }
+    const ops::retry_policy_t retry_policy { retry_budget.deadline_ms(), 1 };
+    const bool wrote_power = startup_detail::run_sequence(i2c_port, power,
+                                                           variant->power_on, &retry_policy);
+    if (!wrote_power) { return false; }
     if (power_was_off) { result.prepared &= ~prepared_sd_spi; }
     lgfx::delay(power_was_off || reset_was_low ? power.cold_wait_ms : power.warm_wait_ms);
     result.prepared |= prepared_power;
@@ -791,6 +772,11 @@ namespace board_detect
   {
     template <typename T>
     bool list_valid(const list_desc_t<T>& list)
+    {
+      return list.data != nullptr || list.size == 0;
+    }
+
+    bool list_valid(ops::op_list_t list)
     {
       return list.data != nullptr || list.size == 0;
     }
@@ -821,8 +807,21 @@ namespace board_detect
       return true;
     }
 
+    bool variant_device_valid(const power_desc_t& power, const pmic_variant_t& variant)
+    {
+      for (std::size_t i = 0; i < power.device_count; ++i)
+      {
+        const auto& device = power.devices[i];
+        if (device.bus_id == 0 && device.addr == variant.i2c_addr)
+        {
+          return device.freq_hz == power.i2c_freq;
+        }
+      }
+      return false;
+    }
+
     // Checked before any pin or register is touched, on every public entry
-    // that acts on a description. Lists are expected to come from sequence(),
+    // that acts on a description. Lists are expected to come from ops::list(),
     // registers(), pins() and options(); a hand-written size cannot be checked
     // against its array, but a missing array with a non-zero size is rejected here.
     bool description_valid(const board_desc_t& desc)
@@ -830,6 +829,8 @@ namespace board_detect
       const bool has_variants = desc.power.variants != nullptr;
       bool valid = has_variants == (desc.power.variant_count != 0)
                 && desc.power.variant_count <= 8
+                && (!has_variants
+                 || (desc.power.devices != nullptr && desc.power.device_count != 0))
                 && !(has_variants && desc.power.hold_pin >= 0)
                 && !(desc.reset.kind == reset_kind_t::i2c_regs && !has_variants)
                 && !((has_variants || desc.reset.kind == reset_kind_t::i2c_regs)
@@ -871,6 +872,7 @@ namespace board_detect
              && list_valid(variant.reset_assert)
              && list_valid(variant.reset_release)
              && list_valid(variant.restore_registers)
+             && variant_device_valid(desc.power, variant)
              && variant.restore_registers.size <= max_pmic_restore_registers
              && (desc.reset.kind != reset_kind_t::i2c_regs
                  || (variant.reset_assert.size != 0 && variant.reset_release.size != 0));
@@ -915,11 +917,19 @@ namespace board_detect
     {
       const auto* variant = startup_detail::read_variant(desc.power, i2c_port);
       if (variant == nullptr) { return false; }
-      ok = startup_detail::write_sequence(i2c_port, desc.power, variant->reset_assert);
+      // The legacy path gave assert and release independent wake-poll budgets;
+      // preserve that retry meaning when executing their typed operation lists.
+      startup_detail::retry_budget_t assert_budget(desc.power.wake_poll_ms);
+      const ops::retry_policy_t assert_policy { assert_budget.deadline_ms(), 1 };
+      ok = startup_detail::run_sequence(i2c_port, desc.power, variant->reset_assert,
+                                        &assert_policy);
       if (ok)
       {
         lgfx::delay(reset.low_ms);
-        ok = startup_detail::write_sequence(i2c_port, desc.power, variant->reset_release);
+        startup_detail::retry_budget_t release_budget(desc.power.wake_poll_ms);
+        const ops::retry_policy_t release_policy { release_budget.deadline_ms(), 1 };
+        ok = startup_detail::run_sequence(i2c_port, desc.power, variant->reset_release,
+                                          &release_policy);
         if (ok) { lgfx::delay(reset.post_ms); }
       }
     }

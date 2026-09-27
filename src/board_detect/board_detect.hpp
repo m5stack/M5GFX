@@ -7,6 +7,7 @@
 #include <initializer_list>
 
 #include "../lgfx/v1/platforms/esp32/common.hpp"
+#include "ops.hpp"
 
 namespace m5gfx
 {
@@ -83,21 +84,13 @@ namespace board_detect
     detection_transaction_t* transaction = nullptr;
   };
 
-  struct pmic_write_t
-  {
-    std::uint8_t addr;
-    std::uint8_t reg;
-    std::uint8_t value;
-    std::uint8_t mask;
-  };
-
   struct reg_bit_t
   {
     std::uint8_t reg;
     std::uint8_t mask;
   };
 
-  // Build lists only with sequence(), registers(), pins() and options(), which
+  // Build lists only with registers(), pins() and options(), which
   // take the size from the array itself. A hand-written size cannot be verified.
   template <typename T>
   struct list_desc_t
@@ -106,7 +99,6 @@ namespace board_detect
     std::uint8_t size;
   };
 
-  using pmic_sequence_t = list_desc_t<pmic_write_t>;
   using register_list_t = list_desc_t<std::uint8_t>;
   using pin_list_t = list_desc_t<std::int8_t>;
   using option_list_t = list_desc_t<const char*>;
@@ -118,14 +110,6 @@ namespace board_detect
     static_assert(N <= 255, "description list is too large");
     static constexpr std::uint8_t value = static_cast<std::uint8_t>(N);
   };
-
-  template <std::size_t N>
-  constexpr pmic_sequence_t sequence(const pmic_write_t (&data)[N])
-  {
-    return { data, list_size_t<N>::value };
-  }
-
-  constexpr pmic_sequence_t no_sequence() { return { nullptr, 0 }; }
 
   template <std::size_t N>
   constexpr register_list_t registers(const std::uint8_t (&data)[N])
@@ -232,11 +216,11 @@ namespace board_detect
     std::uint8_t id_value;
     // A zero mask deliberately reduces identification to an ACK-only match.
     std::uint8_t id_mask;
-    pmic_sequence_t power_on;
+    ops::op_list_t power_on;
     reg_bit_t power_state;
     reg_bit_t reset_state;
-    pmic_sequence_t reset_assert;
-    pmic_sequence_t reset_release;
+    ops::op_list_t reset_assert;
+    ops::op_list_t reset_release;
     register_list_t restore_registers;
     std::uint32_t detected_option;
   };
@@ -246,6 +230,8 @@ namespace board_detect
     // GPIO-held and I2C-controlled power are mutually exclusive.
     std::int8_t hold_pin;
     std::uint32_t i2c_freq;
+    const ops::i2c_device_t* devices;
+    std::uint8_t device_count;
     const pmic_variant_t* variants;
     std::uint8_t variant_count;
     std::uint8_t warm_wait_ms;
@@ -332,12 +318,6 @@ namespace board_detect
     def = value ? &value->def : &board_def_unknown;
   }
 
-  constexpr pmic_write_t pmic_write(std::uint8_t addr, std::uint8_t reg,
-                                    std::uint8_t value, std::uint8_t mask)
-  {
-    return { addr, reg, value, mask };
-  }
-
   constexpr reg_bit_t reg_bit(std::uint8_t reg, std::uint8_t mask)
   {
     return { reg, mask };
@@ -345,50 +325,57 @@ namespace board_detect
 
   constexpr pmic_variant_t pmic_variant(
     std::uint8_t addr, std::uint8_t id_reg, std::uint8_t id_value,
-    pmic_sequence_t power_on, reg_bit_t power_state, reg_bit_t reset_state,
-    pmic_sequence_t reset_assert, pmic_sequence_t reset_release,
+    ops::op_list_t power_on,
+    reg_bit_t power_state, reg_bit_t reset_state,
+    ops::op_list_t reset_assert, ops::op_list_t reset_release,
     register_list_t restore_registers, std::uint32_t detected_option)
   {
     return { addr, id_reg, id_value, 0xFF, power_on, power_state, reset_state,
-             reset_assert, reset_release, restore_registers, detected_option };
+             reset_assert, reset_release,
+             restore_registers, detected_option };
   }
 
   constexpr pmic_variant_t pmic_variant_ack_only(
     std::uint8_t addr, std::uint8_t id_reg,
-    pmic_sequence_t power_on, reg_bit_t power_state, reg_bit_t reset_state,
-    pmic_sequence_t reset_assert, pmic_sequence_t reset_release,
+    ops::op_list_t power_on,
+    reg_bit_t power_state, reg_bit_t reset_state,
+    ops::op_list_t reset_assert, ops::op_list_t reset_release,
     register_list_t restore_registers, std::uint32_t detected_option)
   {
     return { addr, id_reg, 0, 0, power_on, power_state, reset_state,
-             reset_assert, reset_release, restore_registers, detected_option };
+             reset_assert, reset_release,
+             restore_registers, detected_option };
   }
 
   constexpr power_desc_t no_power()
   {
-    return { -1, 0, nullptr, 0, 0, 0, 0 };
+    return { -1, 0, nullptr, 0, nullptr, 0, 0, 0, 0 };
   }
 
   constexpr power_desc_t gpio_power(int hold_pin)
   {
-    return { static_cast<std::int8_t>(hold_pin), 0, nullptr, 0, 0, 0, 0 };
+    return { static_cast<std::int8_t>(hold_pin), 0, nullptr, 0, nullptr, 0, 0, 0, 0 };
   }
 
-  template <std::size_t N>
+  template <std::size_t N, std::size_t D>
   constexpr power_desc_t i2c_power(std::uint32_t freq,
                                    const pmic_variant_t (&variants)[N],
+                                   const ops::i2c_device_t (&devices)[D],
                                    std::uint8_t warm_wait_ms, std::uint8_t cold_wait_ms)
   {
-    return { -1, freq, variants, list_size_t<N>::value, warm_wait_ms, cold_wait_ms, 0 };
+    return { -1, freq, devices, list_size_t<D>::value,
+             variants, list_size_t<N>::value, warm_wait_ms, cold_wait_ms, 0 };
   }
 
-  template <std::size_t N>
+  template <std::size_t N, std::size_t D>
   constexpr power_desc_t i2c_power_polled(std::uint32_t freq,
                                           const pmic_variant_t (&variants)[N],
+                                          const ops::i2c_device_t (&devices)[D],
                                           std::uint8_t warm_wait_ms,
                                           std::uint8_t cold_wait_ms,
                                           std::uint8_t wake_poll_ms)
   {
-    return { -1, freq, variants, list_size_t<N>::value,
+    return { -1, freq, devices, list_size_t<D>::value, variants, list_size_t<N>::value,
              warm_wait_ms, cold_wait_ms, wake_poll_ms };
   }
 

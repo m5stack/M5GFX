@@ -5,6 +5,7 @@
 #include "../board_detect.hpp"
 #include "board_registry.inl"
 #include "generated/esp32_d0wdq6_wiring.hpp"
+#include "pmic_ops.hpp"
 
 #include <new>
 
@@ -28,28 +29,6 @@ namespace m5
                                     std::uint32_t* detected_option);
   }
 
-  static const pmic_write_t power192[] = {
-    pmic_write(0x34, 0x95, 0x84, 0x72), pmic_write(0x34, 0x28, 0xF0, 0x0F),
-    pmic_write(0x34, 0x12, 0x04, 0xFF), pmic_write(0x34, 0x92, 0x00, 0xF8),
-    pmic_write(0x34, 0x96, 0x02, 0xFF), pmic_write(0x34, 0x94, 0x02, 0xFF),
-  };
-  static const pmic_write_t power2101[] = {
-    pmic_write(0x34, 0x90, 0x08, 0xF7), pmic_write(0x34, 0x80, 0x05, 0xFF),
-    pmic_write(0x34, 0x82, 0x12, 0x00), pmic_write(0x34, 0x84, 0x6A, 0x00),
-    pmic_write(0x34, 0x90, 0x02, 0xFD),
-  };
-  static const pmic_write_t reset192[] = {
-    pmic_write(0x34, 0x96, 0x00, 0xFD), pmic_write(0x34, 0x94, 0x00, 0xFD),
-  };
-  static const pmic_write_t release192[] = {
-    pmic_write(0x34, 0x96, 0x02, 0xFF), pmic_write(0x34, 0x94, 0x02, 0xFF),
-  };
-  static const pmic_write_t reset2101[] = {
-    pmic_write(0x34, 0x90, 0x00, 0xFD),
-  };
-  static const pmic_write_t release2101[] = {
-    pmic_write(0x34, 0x90, 0x02, 0xFF),
-  };
   static constexpr std::size_t max_restore_regs = max_pmic_restore_registers;
   static const std::uint8_t restore_order192[] = { 0x12, 0x28, 0x92, 0x95, 0x96, 0x94 };
   static const std::uint8_t restore_order2101[] = { 0x80, 0x82, 0x84, 0x90 };
@@ -59,12 +38,14 @@ namespace m5
   static_assert(generated_options::core2::new_pmic == generated_options::tough::reserved,
                 "Core2 new-PMIC and Tough reserved option bits must remain shared");
   static const pmic_variant_t core_pmic_variants[] = {
-    pmic_variant(0x34, 0x03, 0x03, sequence(power192),
+    pmic_variant(0x34, 0x03, 0x03, ops::list(pmic_ops::power192),
                  reg_bit(0x12, 0x04), reg_bit(0x96, 0x02),
-                 sequence(reset192), sequence(release192), registers(restore_order192), 0),
-    pmic_variant(0x34, 0x03, 0x4A, sequence(power2101),
+                 ops::list(pmic_ops::reset192), ops::list(pmic_ops::release192),
+                 registers(restore_order192), 0),
+    pmic_variant(0x34, 0x03, 0x4A, ops::list(pmic_ops::power2101),
                  reg_bit(0x90, 0x08), reg_bit(0x90, 0x02),
-                 sequence(reset2101), sequence(release2101), registers(restore_order2101),
+                 ops::list(pmic_ops::reset2101), ops::list(pmic_ops::release2101),
+                 registers(restore_order2101),
                  generated_options::core2::new_pmic),
   };
 
@@ -83,7 +64,7 @@ namespace m5
   };
   static constexpr board_desc_t desc_core2 = {
     { id(lgfx::board_M5StackCore2), "M5StackCore2", 0 },
-    i2c_power(400000, core_pmic_variants, 5, 20), i2c_reset(1, 10),
+    i2c_power(400000, core_pmic_variants, pmic_ops::core2_devices, 5, 20), i2c_reset(1, 10),
     shared_sd(wiring::core2::shared_sd_sclk, wiring::core2::shared_sd_mosi,
               wiring::core2::shared_sd_miso, wiring::core2::shared_sd_sd_cs,
               wiring::core2::shared_sd_other_cs),
@@ -99,7 +80,7 @@ namespace m5
   };
   static constexpr board_desc_t desc_tough = {
     { id(lgfx::board_M5Tough), "M5Tough", 0 },
-    i2c_power(400000, core_pmic_variants, 5, 20), i2c_reset(1, 10),
+    i2c_power(400000, core_pmic_variants, pmic_ops::core2_devices, 5, 20), i2c_reset(1, 10),
     shared_sd(wiring::tough::shared_sd_sclk, wiring::tough::shared_sd_mosi,
               wiring::tough::shared_sd_miso, wiring::tough::shared_sd_sd_cs,
               wiring::tough::shared_sd_other_cs),
@@ -225,41 +206,46 @@ namespace m5
       std::uint8_t mask;
     };
 
-    std::uint8_t changed_mask(pmic_sequence_t sequence, std::uint8_t addr,
-                              std::uint8_t reg)
+    std::uint8_t changed_mask(const power_desc_t& power, ops::op_list_t sequence,
+                              std::uint8_t addr, std::uint8_t reg)
     {
       std::uint8_t mask = 0;
       for (std::size_t i = 0; i < sequence.size; ++i)
       {
-        const auto& write = sequence.data[i];
-        if (write.addr == addr && write.reg == reg)
+        ops::decoded_register_write_t write;
+        if (ops::decode_register_write(sequence.data[i], &write)
+         && write.dev < power.device_count
+         && power.devices[write.dev].addr == addr && write.reg == reg)
         {
-          mask |= static_cast<std::uint8_t>(~write.mask) | write.value;
+          mask |= write.mask;
         }
       }
       return mask;
     }
 
-    std::uint8_t changed_mask(const pmic_variant_t& variant, std::uint8_t addr,
-                              std::uint8_t reg)
+    std::uint8_t changed_mask(const power_desc_t& power, const pmic_variant_t& variant,
+                              std::uint8_t addr, std::uint8_t reg)
     {
-      return changed_mask(variant.power_on, addr, reg)
-           | changed_mask(variant.reset_assert, addr, reg)
-           | changed_mask(variant.reset_release, addr, reg);
+      return changed_mask(power, variant.power_on, addr, reg)
+           | changed_mask(power, variant.reset_assert, addr, reg)
+           | changed_mask(power, variant.reset_release, addr, reg);
     }
 
-    bool restore_list_covers(const pmic_variant_t& variant)
+    bool restore_list_covers(const power_desc_t& power, const pmic_variant_t& variant)
     {
-      const pmic_sequence_t sequences[] = {
+      const ops::op_list_t sequences[] = {
         variant.power_on, variant.reset_assert, variant.reset_release
       };
       for (auto sequence : sequences)
       {
         for (std::size_t i = 0; i < sequence.size; ++i)
         {
-          const auto& write = sequence.data[i];
+          ops::decoded_register_write_t write;
+          if (!ops::decode_register_write(sequence.data[i], &write)) { continue; }
           bool covered = false;
-          if (write.addr == variant.i2c_addr)
+          const auto addr = write.dev < power.device_count
+                          ? power.devices[write.dev].addr : 0xFFFF;
+          if (addr == variant.i2c_addr)
           {
             for (std::size_t reg = 0; reg < variant.restore_registers.size; ++reg)
             {
@@ -273,7 +259,7 @@ namespace m5
           if (!covered)
           {
             ESP_LOGW("board_detect_m5", "PMIC write is absent from restore list addr=%02x reg=%02x",
-                     static_cast<unsigned>(write.addr),
+                     static_cast<unsigned>(addr),
                      static_cast<unsigned>(write.reg));
             return false;
           }
@@ -548,10 +534,15 @@ namespace m5
 #endif
       if (!core_first && try_station()) { return true; }
 
+      // Before the touch controller distinguishes Tough from Core2, a caller's
+      // explicit Tough hint selects the Tough descriptor for PMIC bookkeeping.
+      const auto& core_desc = ctx.hint == id(lgfx::board_M5Tough) ? desc_tough : desc_core2;
+
       // The variant owns the legacy read order; masks remain derived from all
       // of its power/reset writes so the restore description cannot drift.
       const auto& restore_regs = pmic->restore_registers;
-      if (restore_regs.size > max_restore_regs || !detail::restore_list_covers(*pmic))
+      if (restore_regs.size > max_restore_regs
+       || !detail::restore_list_covers(core_desc.power, *pmic))
       {
         return false;
       }
@@ -560,7 +551,8 @@ namespace m5
       {
         regs[i].addr = pmic->i2c_addr;
         regs[i].reg = restore_regs.data[i];
-        regs[i].mask = detail::changed_mask(*pmic, pmic->i2c_addr, restore_regs.data[i]);
+        regs[i].mask = detail::changed_mask(core_desc.power, *pmic,
+                                            pmic->i2c_addr, restore_regs.data[i]);
       }
       detail::register_backup_t saved[max_restore_regs];
       if (!detail::save_registers(i2c.port, regs, saved, restore_regs.size,

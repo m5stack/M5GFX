@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../board_detect.hpp"
+#include "pmic_ops.hpp"
 #include "board_registry.inl"
 #include "generated/esp32s3_wiring.hpp"
 #include "generated/esp32s3_specs.hpp"
@@ -135,24 +136,19 @@ namespace m5
   };
   static const board_def_t& board_vameter = desc_vameter.def;
 
-  static const pmic_write_t sticks3_power_on[] = {
-    pmic_write(specs::sticks3::pmic::i2c_addr, 0x09, 0x00, 0x00),
-    pmic_write(specs::sticks3::pmic::i2c_addr, 0x16, 0x00, 0xFB),
-    pmic_write(specs::sticks3::pmic::i2c_addr, 0x10, 0x04, 0xFF),
-    pmic_write(specs::sticks3::pmic::i2c_addr, 0x13, 0x00, 0xFB),
-    pmic_write(specs::sticks3::pmic::i2c_addr, 0x11, 0x04, 0xFF),
-  };
   // Preserve the register order needed by future rollback support.
   static const std::uint8_t sticks3_restore_order[] = { 0x09, 0x11, 0x13, 0x10, 0x16 };
   static const pmic_variant_t sticks3_pmic_variants[] = {
     pmic_variant_ack_only(specs::sticks3::pmic::i2c_addr, specs::sticks3::pmic::id_reg,
-                          sequence(sticks3_power_on), reg_bit(0x11, 0x04), reg_bit(0x11, 0x04),
-                          no_sequence(), no_sequence(), registers(sticks3_restore_order), 0),
+                          ops::list(pmic_ops::sticks3_power_on),
+                          reg_bit(0x11, 0x04), reg_bit(0x11, 0x04),
+                          ops::no_ops(), ops::no_ops(), registers(sticks3_restore_order), 0),
   };
 
   static constexpr board_desc_t desc_sticks3 = {
     { id(lgfx::board_M5StickS3), "M5StickS3", 0 },
-    i2c_power_polled(specs::sticks3::pmic::i2c_freq, sticks3_pmic_variants, 200, 200, 200),
+    i2c_power_polled(specs::sticks3::pmic::i2c_freq, sticks3_pmic_variants,
+                     pmic_ops::sticks3_devices, 200, 200, 200),
     gpio_reset(wiring::sticks3::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
     display_pins(wiring::sticks3::display_sclk, wiring::sticks3::display_mosi,
                  wiring::sticks3::display_miso, wiring::sticks3::display_dc,

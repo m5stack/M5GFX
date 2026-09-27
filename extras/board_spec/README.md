@@ -33,6 +33,28 @@ Generated headers represent unspecified values with target-specific unknown or
 sentinel values. Value precedence is board value, then part default, then the
 panel-class default.
 
+## Board-detection operation lists
+
+`src/board_detect/ops.hpp` defines a typed source IR for ordered I2C, GPIO, and
+delay operations. An I2C mask names the bits to change; masked writes compute
+`(old & ~mask) | (value & mask)`. Execution validates the complete list before
+the first side effect and then stops at the first failed operation. Fixed waits
+are explicit operations. Every GPIO mentioned by a list must be present in the
+detection pin set supplied to validation. Generic RMW must not be used for W1C,
+read-to-clear, or other read-sensitive registers.
+The legacy no-op RMW form (`keep=0xFF, value=0`) has a zero change mask and is
+intentionally rejected; add a dedicated operation before relying on its bus side effects.
+
+The IR layout is not a wire format. Its devices map mechanically to M5HAL bus
+configuration plus transfer metadata; full writes, delays, and GPIO operations
+map directly to their M5HAL bytecode counterparts. Masked writes and bounded
+ready waits require dedicated critical operations or orchestration when a
+future lowering layer is added.
+The lgfx backend cannot shorten an I2C transaction already in flight. A bounded
+ready wait therefore starts no transaction with zero time remaining, while one
+attempt may exceed the list deadline by at most the fixed stall limit plus a few
+byte times (about 26 ms).
+
 The editor includes all catalog boards, parts, and chip data. It can also open or accept
 dragged board JSON files, keeps best-effort drafts in `localStorage`, and
 downloads canonical formatted JSON. Selecting a revision shows the resolved
