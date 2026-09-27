@@ -9,31 +9,11 @@ import { validateParts } from "./parts.js";
 import { validateTarget } from "./targets.js";
 import { emitM5GFXWiring } from "./emit/m5gfx_board_wiring.js";
 import { emitPinTable } from "./emit/m5unified_pin_table.js";
+import { validateSchema } from "./schema.js";
 
 const error = (id, path, message) => ({ id, path, message });
 const warning = (id, path, message) => ({ id, path, message, severity: "warning" });
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
-
-function schemaAt(schema, node) {
-  if (!node?.$ref) return node ?? {};
-  const prefix = "#/definitions/";
-  return node.$ref.startsWith(prefix) ? schema.definitions[node.$ref.slice(prefix.length)] : {};
-}
-
-function unknownKeys(value, node, schema, path, errors) {
-  node = schemaAt(schema, node);
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => unknownKeys(item, node.items, schema, `${path}/${index}`, errors));
-    return;
-  }
-  if (!isPlainObject(value)) return;
-  const properties = node.properties ?? {};
-  for (const [key, item] of Object.entries(value)) {
-    if (own(properties, key)) unknownKeys(item, properties[key], schema, `${path}/${key}`, errors);
-    else if (isPlainObject(node.additionalProperties)) unknownKeys(item, node.additionalProperties, schema, `${path}/${key}`, errors);
-    else if (node.additionalProperties === false) errors.push(error("E_UNKNOWN_KEY", `${path}/${key}`, "key is not declared by the schema"));
-  }
-}
 
 function validateDeviceSpecKeys(board, schema, errors) {
   const allowedByKind = schema.definitions.deviceKind["x-spec-properties"];
@@ -55,6 +35,14 @@ function validateIds(board, schema, errors) {
   check(board.chip, "/chip");
   for (const group of ["buses", "devices", "connectors"]) for (const id of Object.keys(board[group] ?? {})) check(id, `/${group}/${id}`);
   for (const [index, revision] of (board.revisions ?? []).entries()) check(revision.id, `/revisions/${index}/id`);
+}
+
+function validatePinKeys(board, chip, errors) {
+  for (const pin of Object.keys(board.pins ?? {})) {
+    const path = `/pins/${pin}`;
+    if (!/^[0-9]+$/.test(pin)) errors.push(error("E_PIN_KEY", path, "SoC pin key must contain decimal digits only"));
+    else if (Number(pin) >= chip.gpio_count) errors.push(error("E_PIN_KEY", path, `GPIO ${pin} is outside chip range 0..${chip.gpio_count - 1}`));
+  }
 }
 
 function validateHex(value, schema, path, errors) {
@@ -328,21 +316,21 @@ function unique(errors) {
 }
 
 export function validateBoard(board, { schema, chip, connectorTypes = {}, parts = {}, target = {}, resolved = false }) {
-  const errors = [...(board.__compositionIssues ?? [])];
-  unknownKeys(board, schema, schema, "", errors);
+  const errors = [...(board.__compositionIssues ?? []), ...validateSchema(board, schema)];
   validateDeviceSpecKeys(board, schema, errors);
   validateIds(board, schema, errors);
+  validatePinKeys(board, chip, errors);
   validateHexFields(board, schema, errors);
   validateRoles(board, chip, schema, errors, resolved);
   validateReferences(board, schema, errors);
   validateSdAliases(board, parts, errors);
+  errors.push(...validateParts(board, parts, { resolved }));
   validateConnectors(board, chip, connectorTypes, errors, resolved);
+  errors.push(...validateOwners(board, parts));
   walkVerified(board, board, "", errors);
   if (resolved) {
     validateEndpointOwners(board, errors);
     validateSdModes(board, errors);
-    errors.push(...validateOwners(board, parts));
-    errors.push(...validateParts(board, parts));
   } else {
     validateSourceDerivedFields(board, errors);
     errors.push(...validateChoices(board));
@@ -387,7 +375,7 @@ export function validateResolvedVariants(board, context) {
   const wiringCatalogs = { chip: context.chip, parts: context.parts };
   const emitWiring = (resolved) => {
     try {
-      return emitM5GFXWiring(resolved, context.parts);
+      return emitM5GFXWiring(resolved, context.parts, context.target);
     } catch (failure) {
       errors.push(error("E_WIRING_GENERATION", "/pins", failure.message));
       return null;
@@ -399,14 +387,23 @@ export function validateResolvedVariants(board, context) {
     for (const output of resolveAll(board, context.connectorTypes, wiringCatalogs)) {
       const actual = emitWiring(output.board);
       if (actual && JSON.stringify(actual) !== expected) {
-        errors.push(error("E_VARIANT_PINTABLE", `/revisions/${output.revision ?? "base"}`, "revision changes GPIO wiring consumed by a board-level generator"));
+        errors.push(error("E_CHOICE_PINTABLE", `/revisions/${output.revision ?? "base"}`, "choice changes GPIO wiring consumed by a board-level generator"));
       }
     }
   }
-  const expectedPinTable = JSON.stringify(emitPinTable(resolveBoard(board, {}, context.connectorTypes, fullCatalogs), context.pinTableTarget).values);
+  const emitPins = (resolved) => {
+    try {
+      return JSON.stringify(emitPinTable(resolved, context.pinTableTarget).values);
+    } catch (failure) {
+      errors.push(error("E_CHOICE_PINTABLE", "/pins", failure.message));
+      return null;
+    }
+  };
+  const expectedPinTable = emitPins(resolveBoard(board, {}, context.connectorTypes, fullCatalogs));
   for (const output of fullOutputs) {
-    if (JSON.stringify(emitPinTable(output.board, context.pinTableTarget).values) !== expectedPinTable) {
-      errors.push(error("E_VARIANT_PINTABLE", `/revisions/${output.revision ?? "base"}`, "revision changes GPIO wiring consumed by a board-level generator"));
+    const actualPinTable = emitPins(output.board);
+    if (expectedPinTable && actualPinTable && actualPinTable !== expectedPinTable) {
+      errors.push(error("E_CHOICE_PINTABLE", `/revisions/${output.revision ?? "base"}`, "choice changes GPIO wiring consumed by a board-level generator"));
     }
   }
   return unique(errors);

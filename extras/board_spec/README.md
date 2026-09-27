@@ -29,6 +29,9 @@ SD wiring uses card terminal names (`clk`, `cmd`, `d0` through `d3`). The
 
 M5GFX board-detection wiring is generated from the base board only. Accessory
 and composition wiring does not participate in board descriptor generation.
+Generated headers represent unspecified values with target-specific unknown or
+sentinel values. Value precedence is board value, then part default, then the
+panel-class default.
 
 The editor includes all catalog boards, parts, and chip data. It can also open or accept
 dragged board JSON files, keeps best-effort drafts in `localStorage`, and

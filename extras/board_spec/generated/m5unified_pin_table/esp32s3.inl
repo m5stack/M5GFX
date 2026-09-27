@@ -1,4 +1,6 @@
 // Generated from extras/board_spec; do not edit.
+// Unspecified values use target-specific unknown or sentinel values.
+// Precedence: board value > part default > panel-class default.
 
 // _pin_table_i2c_ex_in[][5]
 { board_t::board_M5StickS3, 48, 47, 10, 9 },

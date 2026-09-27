@@ -1,12 +1,19 @@
-export const M5GFX_WIRING_BOARDS = [
-  { boardId: "m5station", cppNamespace: "station", boardEnum: "board_M5Station", descName: "desc_station", fields: ["display", "i2c", "hold"], reset: "display_rst" },
-  { boardId: "m5stack_core2", cppNamespace: "core2", boardEnum: "board_M5StackCore2", descName: "desc_core2", fields: ["display", "shared_sd", "i2c", "hold"] },
-  { boardId: "m5tough", cppNamespace: "tough", boardEnum: "board_M5Tough", descName: "desc_tough", fields: ["display", "shared_sd", "i2c", "hold"] },
-  { boardId: "m5stack", cppNamespace: "stack", boardEnum: "board_M5Stack", descName: "desc_stack", fields: ["display", "shared_sd", "hold"], reset: "display_rst" },
-  { boardId: "m5paper", cppNamespace: "paper", boardEnum: "board_M5Paper", descName: "desc_paper", fields: ["display", "shared_sd", "power", "hold"], reset: "display_rst" },
-  { boardId: "m5atoms3", cppNamespace: "atoms3", boardEnum: "board_M5AtomS3", descName: "desc_atoms3", fields: ["display", "hold", "backlight"], reset: "display_rst" },
-  { boardId: "m5sticks3", cppNamespace: "sticks3", boardEnum: "board_M5StickS3", descName: "desc_sticks3", fields: ["display", "i2c", "hold", "backlight", "power"], reset: "display_rst" },
-];
+export function m5gfxBoardMapping(target, boardId) {
+  const source = target.boards?.[boardId];
+  if (!source?.wiring_output) return null;
+  return {
+    boardId,
+    chip: source.chip,
+    cppNamespace: source.cpp_namespace,
+    boardEnum: source.board_enum,
+    descName: source.desc_name,
+    fields: source.wiring_fields ?? [],
+    reset: source.reset,
+    wiringOutput: source.wiring_output,
+    specsOutput: source.specs_output,
+    options: source.options ?? [],
+  };
+}
 
 // M5GFX board detection intentionally consumes only the base-board wiring.
 // Accessory/composition wiring is not an input to these board descriptors.
@@ -70,9 +77,9 @@ export function wiringAssignments(board, parts) {
   return values;
 }
 
-export function emitM5GFXWiring(board, parts) {
+export function emitM5GFXWiring(board, parts, target) {
   requireWiringParts(parts);
-  const mapping = M5GFX_WIRING_BOARDS.find((entry) => entry.boardId === board.id);
+  const mapping = m5gfxBoardMapping(target, board.id);
   if (!mapping) return null;
   return emitM5GFXWiringForMapping(board, parts, mapping);
 }
@@ -124,6 +131,8 @@ function constant(name, value) {
 export function renderM5GFXWiringHeader(entries) {
   const lines = [
     "// Generated from extras/board_spec; do not edit by hand.",
+    "// Unspecified values use target-specific unknown or sentinel values.",
+    "// Precedence: board value > part default > panel-class default.",
     "#pragma once",
     "",
     "#include <cstdint>",
@@ -147,11 +156,25 @@ export function renderM5GFXWiringHeader(entries) {
     if (fields.has("hold")) lines.push(`  constexpr std::int8_t hold[] = { ${value.hold.join(", ")} };`);
     lines.push(`} // namespace ${value.mapping.cppNamespace}`);
   }
-  lines.push("", "} } } } // namespace m5gfx::board_detect::m5::wiring", "");
+  lines.push("", "} // namespace wiring");
+  const optionEntries = entries.filter(({ emitted }) => emitted.mapping.options.length);
+  if (optionEntries.length) {
+    lines.push("", "namespace generated_options {");
+    for (const { emitted } of optionEntries) {
+      const { cppNamespace } = emitted.mapping;
+      const options = [...emitted.mapping.options].sort((left, right) => left.bit - right.bit);
+      lines.push(`namespace ${cppNamespace} {`);
+      for (const option of options) lines.push(`  constexpr std::uint32_t ${option.name} = 1u << ${option.bit};`);
+      lines.push(`  static const char* const names[] = { ${options.map((option) => `"${option.name}"`).join(", ")} };`);
+      lines.push(`} // namespace ${cppNamespace}`);
+    }
+    lines.push("} // namespace generated_options");
+  }
+  lines.push("", "} } } // namespace m5gfx::board_detect::m5", "");
   return lines.join("\n");
 }
 
-export function selectM5GFXWiringBoards(boards, mappings = M5GFX_WIRING_BOARDS) {
+export function selectM5GFXWiringBoards(boards, mappings) {
   return mappings.map((mapping) => {
     const matches = boards.filter((board) => board.id === mapping.boardId);
     if (matches.length !== 1) throw new Error(`M5GFX wiring board ${mapping.boardId} must appear exactly once; found ${matches.length}`);

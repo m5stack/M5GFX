@@ -1,0 +1,37 @@
+# BoardSpec.yml
+name: Board specification
+
+on:
+  push:
+    paths:
+      - 'extras/board_spec/**'
+      - 'src/board_detect/**'
+      - '.github/workflows/BoardSpec.yml'
+  pull_request:
+    paths:
+      - 'extras/board_spec/**'
+      - 'src/board_detect/**'
+      - '.github/workflows/BoardSpec.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Catalog and generated sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+
+      - name: Test board specification tools
+        working-directory: extras/board_spec
+        run: node --test test/
+
+      - name: Check catalog and generated sources
+        working-directory: extras/board_spec
+        run: node cli/spec.js check

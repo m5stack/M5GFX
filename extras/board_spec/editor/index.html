@@ -29,6 +29,9 @@
     <label><span data-i18n="toolbar.board">Board</span>
       <select id="board-select"></select>
     </label>
+    <button id="new-board-button" type="button" data-i18n="toolbar.new">New</button>
+    <button id="duplicate-board-button" type="button" class="secondary" data-i18n="toolbar.duplicate">Duplicate</button>
+    <button id="close-board-button" type="button" class="secondary" data-i18n="toolbar.close">Close</button>
     <label class="file-button"><span data-i18n="toolbar.open">Open JSON</span>
       <input id="file-input" type="file" accept="application/json,.json">
     </label>
@@ -116,6 +119,18 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <dialog id="board-dialog" class="board-dialog">
+    <form id="board-dialog-form" method="dialog">
+      <h2 id="board-dialog-title"></h2>
+      <label><span data-i18n="field.id">ID</span><input name="id" required pattern="[a-z][a-z0-9_]*"></label>
+      <label><span data-i18n="field.name">Name</span><input name="name" required></label>
+      <label><span data-i18n="field.legacyId">Legacy board ID</span><input name="legacy_board_id" type="number" required step="1"></label>
+      <label><span data-i18n="field.chip">Chip</span><select name="chip"></select></label>
+      <p id="board-dialog-error" class="dialog-error" aria-live="polite"></p>
+      <div class="dialog-actions"><button type="button" class="secondary" data-dialog-cancel data-i18n="dialog.cancel">Cancel</button><button type="submit" data-i18n="dialog.create">Create</button></div>
+    </form>
+  </dialog>
+
   <script type="application/json" id="board-spec-i18n">
   {
     "app.title": { "en": "M5 Board Spec Editor", "zh": "M5 板卡规格编辑器", "ja": "M5 ボード仕様エディタ" },
@@ -128,6 +143,23 @@
     "toolbar.download": { "en": "Download formatted JSON", "zh": "下载格式化 JSON", "ja": "format 済み JSON をダウンロード" },
     "toolbar.discard": { "en": "Discard draft", "zh": "丢弃草稿", "ja": "下書きを破棄" },
     "toolbar.drop": { "en": "Drop JSON here", "zh": "将 JSON 拖放到此处", "ja": "JSON をここへドロップ" },
+    "toolbar.new": { "en": "New", "zh": "新建", "ja": "新規" },
+    "toolbar.duplicate": { "en": "Duplicate", "zh": "复制", "ja": "複製" },
+    "toolbar.close": { "en": "Close", "zh": "关闭", "ja": "閉じる" },
+    "field.id": { "en": "ID", "zh": "ID", "ja": "ID" },
+    "field.name": { "en": "Name", "zh": "名称", "ja": "名前" },
+    "field.legacyId": { "en": "Legacy board ID", "zh": "旧版板卡 ID", "ja": "従来の board ID" },
+    "field.chip": { "en": "Chip", "zh": "芯片", "ja": "チップ" },
+    "dialog.cancel": { "en": "Cancel", "zh": "取消", "ja": "キャンセル" },
+    "dialog.create": { "en": "Create", "zh": "创建", "ja": "作成" },
+    "dialog.newTitle": { "en": "Create a board", "zh": "新建板卡", "ja": "機種を新規作成" },
+    "dialog.duplicateTitle": { "en": "Duplicate this board", "zh": "复制此板卡", "ja": "この機種を複製" },
+    "dialog.legacyWarning": { "en": "⚠ Legacy ID is also used by {board}; saving is allowed", "zh": "⚠ 旧版 ID 也被 {board} 使用；仍可保存", "ja": "⚠ 従来 ID は {board} でも使われています（保存可能）" },
+    "dialog.idExists": { "en": "That ID is already open", "zh": "该 ID 已打开", "ja": "その ID は既に開かれています" },
+    "dialog.nameRequired": { "en": "Name is required", "zh": "必须填写名称", "ja": "名前は必須です" },
+    "dialog.legacyInteger": { "en": "Legacy board ID must be an integer", "zh": "旧版板卡 ID 必须是整数", "ja": "従来の board ID は整数で入力してください" },
+    "dialog.closeDirtyConfirm": { "en": "Close this board and delete its browser draft?", "zh": "关闭此板卡并删除浏览器草稿？", "ja": "この機種を閉じ、ブラウザの下書きを削除しますか？" },
+    "dialog.chipChangeConfirm": { "en": "Change the chip? Existing roles are kept and may become validation errors.", "zh": "更改芯片？现有 role 将保留，可能产生验证错误。", "ja": "チップを変更しますか？既存 role は残り、検証エラーになる場合があります。" },
     "language.en": { "en": "English", "zh": "English", "ja": "English" },
     "language.zh": { "en": "中文 (简体)", "zh": "中文 (简体)", "ja": "中文 (简体)" },
     "language.ja": { "en": "日本語", "zh": "日本語", "ja": "日本語" },
@@ -160,6 +192,22 @@
     "configuration.remove": { "en": "Remove", "zh": "删除", "ja": "削除" },
     "configuration.unassigned": { "en": "Unassigned", "zh": "未分配", "ja": "未割当" },
     "configuration.idPrompt": { "en": "ID", "zh": "ID", "ja": "ID" },
+    "configuration.basic": { "en": "Basic information", "zh": "基本信息", "ja": "基本情報" },
+    "configuration.buses": { "en": "Buses", "zh": "总线", "ja": "バス" },
+    "configuration.noSpec": { "en": "No editable spec fields", "zh": "没有可编辑的规格字段", "ja": "編集できる spec 項目はありません" },
+    "configuration.selectedBy": { "en": "Selected by", "zh": "选择方式", "ja": "選択方法" },
+    "configuration.defaultChoice": { "en": "Default", "zh": "默认", "ja": "既定" },
+    "configuration.addChoice": { "en": "Add choice", "zh": "添加选项", "ja": "選択肢を追加" },
+    "configuration.optional": { "en": "Optional", "zh": "可选", "ja": "任意" },
+    "configuration.partOptional": { "en": "Search a part (optional)", "zh": "搜索部件（可选）", "ja": "部品を検索（任意）" },
+    "configuration.sdMatrix": { "en": "SDMMC signals can use the GPIO matrix on this chip.", "zh": "此芯片的 SDMMC 信号可使用 GPIO 矩阵。", "ja": "このチップの SDMMC 信号は GPIO matrix を利用できます。" },
+    "configuration.sdFixed": { "en": "Check this chip's fixed SDMMC pins.", "zh": "请确认此芯片的固定 SDMMC 引脚。", "ja": "このチップの SDMMC 固定ピンを確認してください。" },
+    "reason.lastBoard": { "en": "At least one board must remain open", "zh": "至少需保留一个打开的板卡", "ja": "少なくとも 1 機種は開いたままにしてください" },
+    "reason.busInUse": { "en": "This bus is still referenced by a role or device", "zh": "此总线仍被 role 或设备引用", "ja": "このバスは role またはデバイスから参照されています" },
+    "reason.deviceInUse": { "en": "This device still has assigned roles", "zh": "此设备仍有已分配的 role", "ja": "このデバイスには割当済み role があります" },
+    "reason.connectorInUse": { "en": "This connector still has assigned roles", "zh": "此连接器仍有已分配的 role", "ja": "このコネクタには割当済み role があります" },
+    "reason.chipReserved": { "en": "Reserved by the selected chip/package", "zh": "由所选芯片/封装保留", "ja": "選択中のチップ／パッケージで予約されています" },
+    "reason.chipReservedConditional": { "en": "Reserved by the selected PSRAM mode", "zh": "由所选 PSRAM 模式保留", "ja": "選択中の PSRAM モードで予約されています" },
     "revisions.eyebrow": { "en": "choices", "zh": "选择项", "ja": "選択枠" },
     "revisions.heading": { "en": "Revision matrix", "zh": "版本矩阵", "ja": "版マトリクス" },
     "revisions.add": { "en": "Add revision", "zh": "添加版本", "ja": "版を追加" },
@@ -178,6 +226,8 @@
     "gpio.reserved": { "en": "reserved", "zh": "reserved", "ja": "reserved" },
     "gpio.inputOnly": { "en": "input only", "zh": "仅输入", "ja": "input only" },
     "gpio.strapping": { "en": "strapping", "zh": "strapping", "ja": "strapping" },
+    "gpio.opiReserved": { "en": "reserved with OPI", "zh": "OPI 时保留", "ja": "OPI 時予約" },
+    "gpio.noInternalPull": { "en": "No reliable internal pull", "zh": "无可靠的内部上下拉", "ja": "内蔵 pull は信頼できません" },
     "column.gpio": { "en": "GPIO", "zh": "GPIO", "ja": "GPIO" },
     "column.roles": { "en": "roles", "zh": "roles", "ja": "roles" },
     "column.pull": { "en": "pull", "zh": "pull", "ja": "pull" },
@@ -239,6 +289,7 @@
     "file.chipMissing": { "en": "{file}: embedded chip data is unavailable: {chip}", "zh": "{file}: 找不到嵌入的 chip 数据: {chip}", "ja": "{file}: chip data が埋め込まれていません: {chip}" },
     "file.opened": { "en": "Opened {file}", "zh": "已打开 {file}", "ja": "{file} を開きました" },
     "file.downloaded": { "en": "Downloaded {file}", "zh": "已下载 {file}", "ja": "{file} をダウンロードしました" },
+    "file.downloadErrorsConfirm": { "en": "This board has {count} validation error(s). Download anyway?", "zh": "此板卡有 {count} 个验证错误。仍要下载吗？", "ja": "この機種には検証エラーが {count} 件あります。このままダウンロードしますか？" },
     "file.discardConfirm": { "en": "Discard the draft for this board?", "zh": "丢弃此板卡的草稿？", "ja": "この機種の下書きを破棄しますか？" },
     "validation.E_ROLE_DUP": { "en": "A role is assigned more than once", "zh": "role 被重复分配", "ja": "role が重複して割り当てられています" },
     "validation.E_ROLE_SOURCE": { "en": "Source prefixes are reserved for composed accessories", "zh": "来源前缀仅供组合配件使用", "ja": "source prefix は合成済みアクセサリ専用です" },
@@ -253,10 +304,19 @@
     "validation.E_CHIP_INPUT_ONLY": { "en": "An output uses an input-only GPIO", "zh": "输出使用了仅输入 GPIO", "ja": "出力が入力専用 GPIO を使用しています" },
     "validation.E_CHIP_RESERVED": { "en": "A reserved GPIO is in use", "zh": "使用了 reserved GPIO", "ja": "reserved GPIO が使用されています" },
     "validation.E_CHIP_RESERVED_COND": { "en": "A conditionally reserved GPIO is in use", "zh": "使用了条件保留的 GPIO", "ja": "条件付き reserved GPIO が使用されています" },
+    "validation.E_PIN_KEY": { "en": "A SoC pin key is invalid or outside the chip range", "zh": "SoC pin key 无效或超出芯片范围", "ja": "SoC pin key が不正かチップ範囲外です" },
     "validation.W_CHIP_USB_PIN": { "en": "This GPIO is shared with native USB", "zh": "此 GPIO 与原生 USB 共用", "ja": "この GPIO はネイティブ USB と共用です" },
     "validation.E_HEX_FORMAT": { "en": "A hexadecimal value has an invalid format", "zh": "十六进制值格式无效", "ja": "16 進値の形式が不正です" },
     "validation.E_VERIFIED_FAKE": { "en": "Verification metadata claims unsupported evidence", "zh": "verified 元数据声明了不支持的证据", "ja": "verified メタデータが未対応の根拠を示しています" },
-    "validation.E_VARIANT_PINTABLE": { "en": "A revision changes board-level generated wiring", "zh": "版本更改了板级生成配线", "ja": "版によって機種単位の生成配線が変わっています" },
+    "validation.E_CHOICE_PINTABLE": { "en": "A choice changes board-level generated wiring", "zh": "选项更改了板级生成配线", "ja": "choice によって機種単位の生成配線が変わっています" },
+    "validation.E_TGT_OPTION_NAME": { "en": "A target option name is invalid or duplicated", "zh": "目标 option 名称无效或重复", "ja": "target option 名が不正または重複しています" },
+    "validation.E_TGT_BIT_RANGE": { "en": "A target option bit is out of range", "zh": "目标 option bit 超出范围", "ja": "target option bit が範囲外です" },
+    "validation.E_TGT_BIT_DUP": { "en": "A target option bit is duplicated", "zh": "目标 option bit 重复", "ja": "target option bit が重複しています" },
+    "validation.E_TGT_BIT_GAP": { "en": "Target option bits are not contiguous", "zh": "目标 option bit 不连续", "ja": "target option bit に欠番があります" },
+    "validation.E_TGT_CHOICE_UNREPRESENTED": { "en": "A runtime choice has no target option", "zh": "runtime choice 没有目标 option", "ja": "runtime choice に対応する target option がありません" },
+    "validation.E_TGT_SELECT_UNKNOWN": { "en": "A target option selects an unknown choice", "zh": "目标 option 选择了未知 choice", "ja": "target option が未知の choice を選択しています" },
+    "validation.E_TGT_SLOT_DUP": { "en": "More than one target option selects the same slot", "zh": "多个目标 option 选择同一 slot", "ja": "複数の target option が同じ slot を選択しています" },
+    "validation.W_TGT_REV_INDISTINGUISHABLE": { "en": "Revision choices are not represented by target options", "zh": "revision choice 未由目标 option 表示", "ja": "revision choice が target option に表現されていません" },
     "validation.E_VERIFIED_KEY": { "en": "Verification metadata contains an unknown key", "zh": "verified 元数据含未知 key", "ja": "verified メタデータに未知の key があります" },
     "validation.E_MEASURED_BY": { "en": "Measurement attribution is invalid", "zh": "测量归属无效", "ja": "測定者情報が不正です" },
     "validation.E_CONN_TYPE_MISSING": { "en": "Connector type or standard is missing", "zh": "connector type 或 standard 不存在", "ja": "コネクタ型または standard がありません" },

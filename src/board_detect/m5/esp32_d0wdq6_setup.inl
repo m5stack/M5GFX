@@ -39,11 +39,11 @@ namespace m5
     return out.release_to(parts);
   }
 
-  void construct_core_panel(const board_result_t& result, const spi_bus_desc_t& bus_desc,
-                            display_parts_owner_t* out)
+  void construct_core_panel(const board_result_t& result, std::uint32_t lcd_e_option,
+                            const spi_bus_desc_t& bus_desc, display_parts_owner_t* out)
   {
     out->bus.reset(make_spi_bus(bus_desc));
-    if (result.option & option_lcd_e)
+    if (result.option & lcd_e_option)
     {
       out->panel.reset(make_panel<Panel_M5StackCore2E>(panel_core, out->bus.get()));
       _set_ili9342e_read(static_cast<lgfx::Panel_ILI9342*>(out->panel.get()), bus_desc.freq_read);
@@ -54,8 +54,8 @@ namespace m5
   bool construct_core2(const board_result_t& result, display_parts_t* parts)
   {
     display_parts_owner_t out;
-    construct_core_panel(result, bus_core2, &out);
-    out.light.reset((result.option & option_core2_new_pmic)
+    construct_core_panel(result, generated_options::core2::lcd_e, bus_core2, &out);
+    out.light.reset((result.option & generated_options::core2::new_pmic)
                   ? static_cast<lgfx::ILight*>(make_default_part<Light_M5StackCore2_AXP2101>())
                   : static_cast<lgfx::ILight*>(make_default_part<Light_M5StackCore2>()));
     out.touch.reset(make_i2c_touch<lgfx::Touch_FT5x06>(touch_core2));
@@ -68,7 +68,7 @@ namespace m5
   bool construct_tough(const board_result_t& result, display_parts_t* parts)
   {
     display_parts_owner_t out;
-    construct_core_panel(result, bus_tough, &out);
+    construct_core_panel(result, generated_options::tough::lcd_e, bus_tough, &out);
     out.light.reset(make_default_part<Light_M5Tough>());
     out.touch.reset(make_i2c_touch<lgfx::Touch_CHSC6540>(touch_tough));
     out.panel->touch(out.touch.get());
@@ -98,23 +98,9 @@ namespace m5
     return out.release_to(parts);
   }
 
-  using construct_fn_t = bool (*)(const board_result_t&, display_parts_t*);
-  struct construct_entry_t { board_id_t id; construct_fn_t construct; };
-  static const construct_entry_t constructors[] = {
-    { desc_station.def.id, construct_station }, { desc_core2.def.id, construct_core2 },
-    { desc_tough.def.id, construct_tough }, { desc_stack.def.id, construct_stack },
-    { desc_paper.def.id, construct_paper },
-  };
-
   bool setup_esp32_d0wdq6(const board_result_t& result, display_parts_t* parts)
   {
-    if (parts == nullptr || result.def == nullptr) { return false; }
-    for (const auto& entry : constructors)
-    {
-      if (entry.id == result.def->id) { return entry.construct(result, parts); }
-    }
-    ESP_LOGE(LIBRARY_NAME, "No display constructor for board id %u", static_cast<unsigned>(result.def->id));
-    return false;
+    return setup_board(esp32_d0wdq6_boards, result, parts);
   }
 }
 }

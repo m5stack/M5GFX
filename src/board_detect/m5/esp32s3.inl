@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../board_detect.hpp"
+#include "board_registry.inl"
 #include "generated/esp32s3_wiring.hpp"
 #include "generated/esp32s3_specs.hpp"
 
@@ -20,12 +21,6 @@ namespace m5
     }
   }
 
-  enum : std::uint8_t { atoms3_option_gc9107_index, atoms3_option_count };
-  static constexpr std::uint32_t option_atoms3_gc9107 = 1u << atoms3_option_gc9107_index;
-  static const char* const atoms3_options[] = { "gc9107" };
-  static_assert(atoms3_option_count == sizeof(atoms3_options) / sizeof(atoms3_options[0]),
-                "AtomS3 option name count must match the option bit count");
-
   static constexpr board_desc_t desc_atoms3 = {
     { id(lgfx::board_M5AtomS3), "M5AtomS3", 0 },
     no_power(), gpio_reset(wiring::atoms3::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
@@ -34,7 +29,7 @@ namespace m5
                  wiring::atoms3::display_cs, wiring::atoms3::display_rst,
                  wiring::atoms3::display_busy),
     pins(wiring::atoms3::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(atoms3_options),
+    options(generated_options::atoms3::names),
   };
   static const board_def_t& board_atoms3 = desc_atoms3.def;
 
@@ -45,7 +40,7 @@ namespace m5
     pmic_write(specs::sticks3::pmic::i2c_addr, 0x13, 0x00, 0xFB),
     pmic_write(specs::sticks3::pmic::i2c_addr, 0x11, 0x04, 0xFF),
   };
-  // S3 has no restore path yet; this records what to restore and in which order when one is added.
+  // Preserve the register order needed by future rollback support.
   static const std::uint8_t sticks3_restore_order[] = { 0x09, 0x11, 0x13, 0x10, 0x16 };
   static const pmic_variant_t sticks3_pmic_variants[] = {
     pmic_variant_ack_only(specs::sticks3::pmic::i2c_addr, specs::sticks3::pmic::id_reg,
@@ -72,11 +67,9 @@ namespace m5
     spi_id_probe(specs::atoms3::probe_st7735s::cmd, specs::atoms3::probe_st7735s::mask,
                  specs::atoms3::probe_st7735s::values, 0),
     spi_id_probe(specs::atoms3::probe_gc9107::cmd, specs::atoms3::probe_gc9107::mask,
-                 specs::atoms3::probe_gc9107::values, option_atoms3_gc9107),
+                 specs::atoms3::probe_gc9107::values, generated_options::atoms3::gc9107),
   };
 
-  // [atoms3:family]
-  // [/atoms3:family]
   class spi_id_detector_t final : public board_detector_t
   {
   public:
@@ -93,7 +86,6 @@ namespace m5
     static const board_def_t* const members_[];
   };
 
-  // [sticks3:family]
   class pmic_id_detector_t final : public board_detector_t
   {
   public:
@@ -108,7 +100,7 @@ namespace m5
         if (pulls.pulldown_high == mask) { return true; }
         const auto sda_bit = std::uint64_t(1) << (*desc)->internal_i2c.sda;
         const auto scl_bit = std::uint64_t(1) << (*desc)->internal_i2c.scl;
-        if (ctx.hint == id(lgfx::board_M5StickS3)
+        if (ctx.hint == (*desc)->def.id
          && (pulls.pulldown_high & scl_bit) && !(pulls.pulldown_high & sda_bit))
         {
           release_held_sda((*desc)->internal_i2c.sda, (*desc)->internal_i2c.scl);
@@ -138,50 +130,41 @@ namespace m5
     static const board_def_t* const members_[];
     static const board_desc_t* const descriptions_[];
   };
-  // [/sticks3:family]
-
-  // [atoms3:register]
   const board_def_t* const spi_id_detector_t::members_[] = { &board_atoms3, nullptr };
   static const spi_id_detector_t spi_id_detector;
   static const board_detector_t* const esp32s3_detectors_spi_id[] = { &spi_id_detector, nullptr };
-  // [/atoms3:register]
-  // [sticks3:register]
   const board_def_t* const pmic_id_detector_t::members_[] = { &board_sticks3, nullptr };
   const board_desc_t* const pmic_id_detector_t::descriptions_[] = { &desc_sticks3, nullptr };
-  static const board_desc_t* const esp32s3_descriptions[] = { &desc_atoms3, &desc_sticks3, nullptr };
   static const pmic_id_detector_t pmic_id_detector;
   static const board_detector_t* const esp32s3_detectors_pmic[] = { &pmic_id_detector, nullptr };
   static const board_detector_t* const esp32s3_detectors[] = { &spi_id_detector, &pmic_id_detector, nullptr };
-  // [/sticks3:register]
+
+  bool construct_atoms3(const board_result_t& result, display_parts_t* parts);
+  bool construct_sticks3(const board_result_t& result, display_parts_t* parts);
+
+  const char* atoms3_success_annotation(const board_result_t& result)
+  {
+    return result.option & generated_options::atoms3::gc9107 ? " (GC9107)" : " (ST7735)";
+  }
+
+  static const board_entry_t esp32s3_boards[] = {
+    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation },
+    { &desc_sticks3, construct_sticks3, "board_M5StickS3", nullptr },
+  };
 
   const board_desc_t* find_board_desc(board_id_t board)
   {
-    for (auto desc = esp32s3_descriptions; *desc != nullptr; ++desc)
-    {
-      if ((*desc)->def.id == board) { return *desc; }
-    }
-    ESP_LOGD("board_detect_m5", "board=%u is not available on the new detection path",
-             static_cast<unsigned>(board));
-    return nullptr;
-  }
-
-  const board_def_t* find_board_def(board_id_t board)
-  {
-    const auto* desc = find_board_desc(board);
-    return desc == nullptr ? nullptr : &desc->def;
-  }
-
-  bool prepare(board_result_t& result, const prepare_ctx_t& ctx)
-  {
-    if (result.desc == nullptr || result.def != &result.desc->def
-     || result.def->id == board_id_unknown) { return false; }
-    return board_detect::prepare(*result.desc, result, ctx);
+    return find_board_desc(esp32s3_boards, board);
   }
 
   board_result_t detect_board_family(board_id_t board, probe_ctx_t& ctx)
   {
-    if (!spi_id_detector.has_member(board) && !pmic_id_detector.has_member(board)) { return {}; }
-    return detect_board(esp32s3_detectors, board, ctx);
+    return detect_board_family(esp32s3_detectors, board, ctx);
+  }
+
+  success_log_t success_log(const board_result_t& result)
+  {
+    return success_log(esp32s3_boards, result);
   }
 }
 }

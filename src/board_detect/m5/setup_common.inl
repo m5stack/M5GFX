@@ -29,7 +29,9 @@ namespace m5
 
     constexpr spi_bus_desc_t(spi_host_device_t host_)
     : host(host_), freq_write(8000000), freq_read(8000000),
-      sclk(-1), mosi(-1), miso(-1), dc(-1), three_wire(true), dma_channel(1) {}
+      sclk(setup_sentinel::no_pin), mosi(setup_sentinel::no_pin),
+      miso(setup_sentinel::no_pin), dc(setup_sentinel::no_pin),
+      three_wire(true), dma_channel(1) {}
 
     constexpr spi_bus_desc_t(spi_host_device_t host_, std::uint32_t freq_write_,
                              std::uint32_t freq_read_, std::int8_t sclk_,
@@ -74,10 +76,13 @@ namespace m5
     std::int8_t bus_shared;
 
     constexpr panel_desc_t()
-    : width(0), height(0), memory_width(0), memory_height(0),
-      offset_x(-32768), offset_y(-32768), pin_cs(-1), pin_rst(-1), pin_busy(-1),
-      offset_rotation(0xFF), initial_rotation(-1), invert(-1), readable(-1),
-      bus_shared(-1) {}
+    : width(setup_sentinel::keep_dimension), height(setup_sentinel::keep_dimension),
+      memory_width(setup_sentinel::keep_dimension), memory_height(setup_sentinel::keep_dimension),
+      offset_x(setup_sentinel::keep_offset), offset_y(setup_sentinel::keep_offset),
+      pin_cs(setup_sentinel::keep_i8), pin_rst(setup_sentinel::keep_i8),
+      pin_busy(setup_sentinel::keep_i8), offset_rotation(setup_sentinel::keep_u8),
+      initial_rotation(setup_sentinel::keep_i8), invert(setup_sentinel::keep_i8),
+      readable(setup_sentinel::keep_i8), bus_shared(setup_sentinel::keep_i8) {}
 
     constexpr panel_desc_t(std::int16_t width_, std::int16_t height_,
                            std::int16_t memory_width_, std::int16_t memory_height_,
@@ -100,13 +105,13 @@ namespace m5
     constexpr panel_desc_t with_offset(std::int16_t x, std::int16_t y) const
     { return { width, height, memory_width, memory_height, x, y, pin_cs, pin_rst, pin_busy, offset_rotation, initial_rotation, invert, readable, bus_shared }; }
 
-    constexpr panel_desc_t with_pins(int cs, int rst, int busy = -1) const
+    constexpr panel_desc_t with_pins(int cs, int rst, int busy = setup_sentinel::keep_i8) const
     { return { width, height, memory_width, memory_height, offset_x, offset_y, static_cast<std::int8_t>(cs), static_cast<std::int8_t>(rst), static_cast<std::int8_t>(busy), offset_rotation, initial_rotation, invert, readable, bus_shared }; }
 
     constexpr panel_desc_t with_rst(int rst) const
     { return { width, height, memory_width, memory_height, offset_x, offset_y, pin_cs, static_cast<std::int8_t>(rst), pin_busy, offset_rotation, initial_rotation, invert, readable, bus_shared }; }
 
-    constexpr panel_desc_t with_rotation(std::uint8_t offset, int initial = -1) const
+    constexpr panel_desc_t with_rotation(std::uint8_t offset, int initial = setup_sentinel::keep_i8) const
     { return { width, height, memory_width, memory_height, offset_x, offset_y, pin_cs, pin_rst, pin_busy, offset, static_cast<std::int8_t>(initial), invert, readable, bus_shared }; }
 
     constexpr panel_desc_t with_invert(int enabled) const
@@ -134,8 +139,10 @@ namespace m5
     std::uint8_t offset_rotation;
 
     constexpr i2c_touch_desc_t(std::uint8_t addr_)
-    : addr(addr_), port(-1), sda(-1), scl(-1), pin_int(-1), freq(400000),
-      x_min(0), x_max(0), y_min(0), y_max(0), offset_rotation(0xFF) {}
+    : addr(addr_), port(setup_sentinel::no_pin), sda(setup_sentinel::no_pin),
+      scl(setup_sentinel::no_pin), pin_int(setup_sentinel::no_pin), freq(400000),
+      x_min(0), x_max(0), y_min(0), y_max(0),
+      offset_rotation(setup_sentinel::keep_u8) {}
 
     constexpr i2c_touch_desc_t(std::uint8_t addr_, std::int8_t port_, std::int8_t sda_,
                                std::int8_t scl_, std::int8_t pin_int_, std::uint32_t freq_,
@@ -206,29 +213,37 @@ namespace m5
   lgfx::Panel_Device* apply_panel_desc(lgfx::Panel_Device* target,
                                        const panel_desc_t& desc, lgfx::IBus* bus)
   {
-    if (desc.width || desc.height || desc.memory_width || desc.memory_height
-     || desc.offset_x != -32768 || desc.offset_y != -32768
-     || desc.pin_cs >= 0 || desc.pin_rst >= 0 || desc.pin_busy >= 0
-     || desc.offset_rotation != 0xFF || desc.invert >= 0 || desc.readable >= 0
-     || desc.bus_shared >= 0)
+    if (desc.width != setup_sentinel::keep_dimension
+     || desc.height != setup_sentinel::keep_dimension
+     || desc.memory_width != setup_sentinel::keep_dimension
+     || desc.memory_height != setup_sentinel::keep_dimension
+     || desc.offset_x != setup_sentinel::keep_offset
+     || desc.offset_y != setup_sentinel::keep_offset
+     || desc.pin_cs != setup_sentinel::keep_i8
+     || desc.pin_rst != setup_sentinel::keep_i8
+     || desc.pin_busy != setup_sentinel::keep_i8
+     || desc.offset_rotation != setup_sentinel::keep_u8
+     || desc.invert != setup_sentinel::keep_i8
+     || desc.readable != setup_sentinel::keep_i8
+     || desc.bus_shared != setup_sentinel::keep_i8)
     {
       auto cfg = target->config();
-      if (desc.width) { cfg.panel_width = desc.width; }
-      if (desc.height) { cfg.panel_height = desc.height; }
-      if (desc.memory_width) { cfg.memory_width = desc.memory_width; }
-      if (desc.memory_height) { cfg.memory_height = desc.memory_height; }
-      if (desc.offset_x != -32768) { cfg.offset_x = desc.offset_x; }
-      if (desc.offset_y != -32768) { cfg.offset_y = desc.offset_y; }
-      if (desc.pin_cs >= 0) { cfg.pin_cs = desc.pin_cs; }
-      if (desc.pin_rst >= 0) { cfg.pin_rst = desc.pin_rst; }
-      if (desc.pin_busy >= 0) { cfg.pin_busy = desc.pin_busy; }
-      if (desc.offset_rotation != 0xFF) { cfg.offset_rotation = desc.offset_rotation; }
-      if (desc.invert >= 0) { cfg.invert = desc.invert; }
-      if (desc.readable >= 0) { cfg.readable = desc.readable; }
-      if (desc.bus_shared >= 0) { cfg.bus_shared = desc.bus_shared; }
+      if (desc.width != setup_sentinel::keep_dimension) { cfg.panel_width = desc.width; }
+      if (desc.height != setup_sentinel::keep_dimension) { cfg.panel_height = desc.height; }
+      if (desc.memory_width != setup_sentinel::keep_dimension) { cfg.memory_width = desc.memory_width; }
+      if (desc.memory_height != setup_sentinel::keep_dimension) { cfg.memory_height = desc.memory_height; }
+      if (desc.offset_x != setup_sentinel::keep_offset) { cfg.offset_x = desc.offset_x; }
+      if (desc.offset_y != setup_sentinel::keep_offset) { cfg.offset_y = desc.offset_y; }
+      if (desc.pin_cs != setup_sentinel::keep_i8) { cfg.pin_cs = desc.pin_cs; }
+      if (desc.pin_rst != setup_sentinel::keep_i8) { cfg.pin_rst = desc.pin_rst; }
+      if (desc.pin_busy != setup_sentinel::keep_i8) { cfg.pin_busy = desc.pin_busy; }
+      if (desc.offset_rotation != setup_sentinel::keep_u8) { cfg.offset_rotation = desc.offset_rotation; }
+      if (desc.invert != setup_sentinel::keep_i8) { cfg.invert = desc.invert; }
+      if (desc.readable != setup_sentinel::keep_i8) { cfg.readable = desc.readable; }
+      if (desc.bus_shared != setup_sentinel::keep_i8) { cfg.bus_shared = desc.bus_shared; }
       target->config(cfg);
     }
-    if (desc.initial_rotation >= 0) { target->setRotation(desc.initial_rotation); }
+    if (desc.initial_rotation != setup_sentinel::keep_i8) { target->setRotation(desc.initial_rotation); }
     // Keep rotation before bus attachment: update_madctl writes when a bus is connected.
     target->bus(bus);
     return target;
@@ -251,7 +266,7 @@ namespace m5
     cfg.x_max = desc.x_max;
     cfg.y_min = desc.y_min;
     cfg.y_max = desc.y_max;
-    if (desc.offset_rotation != 0xFF) { cfg.offset_rotation = desc.offset_rotation; }
+    if (desc.offset_rotation != setup_sentinel::keep_u8) { cfg.offset_rotation = desc.offset_rotation; }
     cfg.bus_shared = false;
     target->config(cfg);
     return target;

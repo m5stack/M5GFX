@@ -9,10 +9,10 @@ import { renderBundle } from "../build/bundle.js";
 import { renderCompositionDoc, validateAccessory } from "../lib/compose.js";
 import { validateConnectorTypes } from "../lib/ctypes.js";
 import { validatePartCatalog } from "../lib/parts.js";
-import { renderRevisionDoc } from "../lib/targets.js";
+import { renderRevisionDoc, validateTargets } from "../lib/targets.js";
 import { formatBoard } from "../lib/format.js";
 import { emitPinTable, PIN_NAMES, PIN_TABLE_TARGETS, renderPinTableInl, renderPinTableJson } from "../lib/emit/m5unified_pin_table.js";
-import { emitM5GFXWiring, M5GFX_WIRING_BOARDS, renderM5GFXWiringHeader, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
+import { emitM5GFXWiring, m5gfxBoardMapping, renderM5GFXWiringHeader, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
 import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { assertBoard, assertChip, assertSchema, parseJson } from "../lib/model.js";
 import { resolveAll, resolveBoard } from "../lib/resolve.js";
@@ -88,6 +88,27 @@ function failureCount(errors) {
   return errors.filter((item) => item.severity !== "warning").length;
 }
 
+function safeOutputPath(directory, filename) {
+  const base = path.resolve(directory);
+  const output = path.resolve(base, filename);
+  if (!filename || path.basename(filename) !== filename || path.dirname(output) !== base) {
+    throw new Error(`unsafe generated filename: ${filename}`);
+  }
+  return output;
+}
+
+function validateGenerationInputs(boards, contexts, connectorTypes, parts, targets, accessories) {
+  const errors = [...validateConnectorTypes(connectorTypes), ...validatePartCatalog(parts)];
+  for (const accessory of Object.values(accessories)) errors.push(...validateAccessory(accessory, { connectorTypes, parts }));
+  errors.push(...validateCatalog(boards, (board) => contexts.get(board.id)));
+  errors.push(...validateTargets(boards, targets.m5gfx_board_desc));
+  for (const board of boards) errors.push(...validateResolvedVariants(board, contexts.get(board.id)));
+  if (failureCount(errors)) {
+    printErrors("catalog", errors);
+    throw new Error(`${failureCount(errors)} validation error(s)`);
+  }
+}
+
 async function boardFiles() {
   return (await fs.readdir(path.join(root, "boards")))
     .filter((name) => name.endsWith(".json"))
@@ -108,7 +129,7 @@ async function pinTableOutputs(boards, connectorTypes, contexts, targets, target
   const entries = await pinTableEntries(boards, connectorTypes, contexts, targets);
   return {
     json: renderPinTableJson(entries),
-    inl: renderPinTableInl(entries, targetId),
+    inl: renderPinTableInl(entries, targetId, targets.m5gfx_board_desc),
     entries,
   };
 }
@@ -128,14 +149,15 @@ async function writePinTableOutputs() {
   const boards = await Promise.all((await boardFiles()).map((filename) => readJson(filename, assertBoard)));
   const contexts = new Map();
   for (const board of boards) contexts.set(board.id, await context(board, schema, connectorTypes, parts, targets, accessories));
+  validateGenerationInputs(boards, contexts, connectorTypes, parts, targets, accessories);
   const directory = path.join(root, "generated/m5unified_pin_table");
   await fs.mkdir(directory, { recursive: true });
   let count = 0;
   for (const targetId of Object.keys(PIN_TABLE_TARGETS)) {
     const selected = pinTableBoards(boards, contexts, targetId);
     const output = await pinTableOutputs(selected, connectorTypes, contexts, targets, targetId);
-    await fs.writeFile(path.join(directory, `${targetId}.json`), output.json);
-    await fs.writeFile(path.join(directory, `${targetId}.inl`), output.inl);
+    await fs.writeFile(safeOutputPath(directory, `${targetId}.json`), output.json);
+    await fs.writeFile(safeOutputPath(directory, `${targetId}.inl`), output.inl);
     count += selected.length;
   }
   console.log(`generated M5Unified pin tables for ${count} board(s) across ${Object.keys(PIN_TABLE_TARGETS).length} target(s)`);
@@ -148,32 +170,41 @@ async function assertGeneratedFile(filename, expected) {
   if (actual !== expected) throw new Error(`stale generated artifact: ${path.relative(root, filename)}`);
 }
 
-function wiringEntries(boards, connectorTypes, contexts, chipId) {
-  const mappings = M5GFX_WIRING_BOARDS.filter((mapping) => boards.some((board) => board.id === mapping.boardId && board.chip === chipId));
+function wiringEntries(boards, connectorTypes, contexts, mappings, target) {
   return selectM5GFXWiringBoards(boards, mappings).map((board) => {
     const ctx = contexts.get(board.id);
     const resolved = resolveBoard(board, {}, connectorTypes, { chip: ctx.chip, parts: ctx.parts });
-    return { board, emitted: emitM5GFXWiring(resolved, ctx.parts) };
+    return { board, emitted: emitM5GFXWiring(resolved, ctx.parts, target) };
   });
 }
 
 async function wiringOutputs(boards, connectorTypes, contexts, targets) {
   const outputs = new Map();
-  for (const [chipId, filename] of Object.entries(targets.m5gfx_board_desc?.out_by_chip ?? {})) {
-    outputs.set(filename, renderM5GFXWiringHeader(wiringEntries(boards, connectorTypes, contexts, chipId)));
+  const target = targets.m5gfx_board_desc ?? {};
+  const mappings = Object.keys(target.boards ?? {}).map((id) => m5gfxBoardMapping(target, id)).filter(Boolean);
+  for (const filename of new Set(mappings.map((mapping) => mapping.wiringOutput))) {
+    const selected = mappings.filter((mapping) => mapping.wiringOutput === filename);
+    outputs.set(filename, renderM5GFXWiringHeader(wiringEntries(boards, connectorTypes, contexts, selected, target)));
   }
   return outputs;
 }
 
-function specsOutput(boards, connectorTypes, contexts) {
-  const selected = ["m5atoms3", "m5sticks3"].map((id) => {
-    const board = boards.find((item) => item.id === id);
-    if (!board) throw new Error(`${id} board is required for M5GFX specs`);
-    const ctx = contexts.get(board.id);
-    const variants = resolveAll(board, connectorTypes, resolveCatalogs(ctx)).map((item) => item.board);
-    return emitM5GFXSpecs(board, variants, ctx.parts);
-  });
-  return renderM5GFXSpecsHeader(selected);
+function specsOutputs(boards, connectorTypes, contexts, targets) {
+  const outputs = new Map();
+  const target = targets.m5gfx_board_desc ?? {};
+  const mappings = Object.keys(target.boards ?? {}).map((id) => m5gfxBoardMapping(target, id))
+    .filter((mapping) => mapping?.specsOutput);
+  for (const filename of new Set(mappings.map((mapping) => mapping.specsOutput))) {
+    const selected = mappings.filter((mapping) => mapping.specsOutput === filename).map((mapping) => {
+      const board = boards.find((item) => item.id === mapping.boardId);
+      if (!board) throw new Error(`${mapping.boardId} board is required for M5GFX specs`);
+      const ctx = contexts.get(board.id);
+      const variants = resolveAll(board, connectorTypes, resolveCatalogs(ctx)).map((item) => item.board);
+      return emitM5GFXSpecs(board, variants, ctx.parts, mapping);
+    });
+    outputs.set(filename, renderM5GFXSpecsHeader(selected));
+  }
+  return outputs;
 }
 
 async function writeWiringOutput() {
@@ -185,13 +216,17 @@ async function writeWiringOutput() {
   const boards = await Promise.all((await boardFiles()).map((filename) => readJson(filename, assertBoard)));
   const contexts = new Map();
   for (const board of boards) contexts.set(board.id, await context(board, schema, connectorTypes, parts, targets, accessories));
+  validateGenerationInputs(boards, contexts, connectorTypes, parts, targets, accessories);
   const directory = path.resolve(root, "../../src/board_detect/m5/generated");
   await fs.mkdir(directory, { recursive: true });
   for (const [filename, output] of await wiringOutputs(boards, connectorTypes, contexts, targets)) {
-    await fs.writeFile(path.join(directory, filename), output);
+    await fs.writeFile(safeOutputPath(directory, filename), output);
   }
-  await fs.writeFile(path.join(directory, "esp32s3_specs.hpp"), specsOutput(boards, connectorTypes, contexts));
-  console.log(`generated M5GFX wiring for ${M5GFX_WIRING_BOARDS.length} board(s)`);
+  for (const [filename, output] of specsOutputs(boards, connectorTypes, contexts, targets)) {
+    await fs.writeFile(safeOutputPath(directory, filename), output);
+  }
+  const count = Object.values(targets.m5gfx_board_desc?.boards ?? {}).filter((entry) => entry.wiring_output).length;
+  console.log(`generated M5GFX wiring for ${count} board(s)`);
 }
 
 async function validateFiles(files) {
@@ -245,18 +280,18 @@ async function resolveFile(filename) {
   const outputDir = path.join(root, "generated/resolved");
   await fs.mkdir(outputDir, { recursive: true });
   const outputs = resolveAll(board, connectorTypes, resolveCatalogs(ctx));
-  for (const output of outputs) await fs.writeFile(path.join(outputDir, output.filename), formatBoard(output.board));
+  for (const output of outputs) await fs.writeFile(safeOutputPath(outputDir, output.filename), formatBoard(output.board));
   const revisionDoc = renderRevisionDoc(board, ctx.target);
   if (revisionDoc) {
     const docsDir = path.join(root, "generated/docs");
     await fs.mkdir(docsDir, { recursive: true });
-    await fs.writeFile(path.join(docsDir, `${board.id}_revisions.md`), revisionDoc);
+    await fs.writeFile(safeOutputPath(docsDir, `${board.id}_revisions.md`), revisionDoc);
   }
   const compositionDoc = renderCompositionDoc(board, ctx.composition, accessories);
   if (compositionDoc) {
     const docsDir = path.join(root, "generated/docs");
     await fs.mkdir(docsDir, { recursive: true });
-    await fs.writeFile(path.join(docsDir, `${board.id}_composition.md`), compositionDoc);
+    await fs.writeFile(safeOutputPath(docsDir, `${board.id}_composition.md`), compositionDoc);
   }
   console.log(`resolved ${outputs.length} combination(s)`);
 }
@@ -276,6 +311,7 @@ async function check() {
   errors.push(...validatePartCatalog(parts));
   for (const accessory of Object.values(accessories)) errors.push(...validateAccessory(accessory, { connectorTypes, parts }));
   errors.push(...validateCatalog(boards, (board) => contexts.get(board.id)));
+  errors.push(...validateTargets(boards, targets.m5gfx_board_desc));
   for (const board of boards) errors.push(...validateResolvedVariants(board, contexts.get(board.id)));
   if (failureCount(errors)) {
     printErrors("catalog", errors);
@@ -333,7 +369,9 @@ async function check() {
   for (const [filename, output] of await wiringOutputs(boards, connectorTypes, contexts, targets)) {
     await assertGeneratedFile(path.join(wiringDirectory, filename), output);
   }
-  await assertGeneratedFile(path.join(wiringDirectory, "esp32s3_specs.hpp"), specsOutput(boards, connectorTypes, contexts));
+  for (const [filename, output] of specsOutputs(boards, connectorTypes, contexts, targets)) {
+    await assertGeneratedFile(path.join(wiringDirectory, filename), output);
+  }
 
   const distFilename = path.join(root, "dist/board_spec_editor.html");
   let dist;
@@ -359,18 +397,12 @@ function gpioDefines(source) {
   return [...new Set(numbers)].sort((left, right) => left - right).map((number) => `#define GPIO_NUM_${number} ${number}`).join("\n");
 }
 
-function comparisonHarness(tableSource, targetId, selectedBoards) {
-  const boards = {
-    m5stack: "board_M5Stack",
-    m5stack_core2: "board_M5StackCore2",
-    m5tough: "board_M5Tough",
-    m5station: "board_M5Station",
-    m5paper: "board_M5Paper",
-    m5timercam: "board_M5TimerCam",
-    m5atoms3: "board_M5AtomS3",
-    m5sticks3: "board_M5StickS3",
-  };
-  const rows = selectedBoards.map(({ id }) => `  { "${id}", lgfx::board_t::${boards[id]} },`).join("\n");
+function comparisonHarness(tableSource, targetId, selectedBoards, boardTarget) {
+  const rows = selectedBoards.map(({ id }) => {
+    const boardEnum = boardTarget.boards?.[id]?.board_enum;
+    if (!boardEnum) throw new Error(`missing board enum for ${id}`);
+    return `  { "${id}", lgfx::board_t::${boardEnum} },`;
+  }).join("\n");
   const target = PIN_TABLE_TARGETS[targetId];
   return `#include <cstdint>
 #include <cstdio>
@@ -443,7 +475,7 @@ async function comparePinTable(m5unifiedPath) {
       const selected = pinTableBoards(boards, contexts, targetId);
       const source = path.join(temporary, `compare-${targetId}.cpp`);
       const executable = path.join(temporary, `compare-${targetId}`);
-      await fs.writeFile(source, comparisonHarness(tableSource, targetId, selected));
+      await fs.writeFile(source, comparisonHarness(tableSource, targetId, selected, targets.m5gfx_board_desc));
       const compiled = spawnSync(compiler, ["-std=c++17", "-I", path.resolve(root, "../.."), source, "-o", executable], { encoding: "utf8" });
       if (compiled.error || compiled.status !== 0) throw new Error(`${targetId} pin-table harness compile failed:\n${compiled.error?.message ?? compiled.stderr.trim()}`);
       const ran = spawnSync(executable, [], { encoding: "utf8" });

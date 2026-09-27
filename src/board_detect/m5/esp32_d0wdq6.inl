@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../board_detect.hpp"
+#include "board_registry.inl"
 #include "generated/esp32_d0wdq6_wiring.hpp"
 
 #include <new>
@@ -20,27 +21,6 @@ namespace m5
       return static_cast<board_id_t>(value);
     }
   }
-
-  enum : std::uint8_t
-  {
-    core_option_new_pmic_index,
-    core_option_lcd_e_index,
-    core_option_count,
-  };
-  static constexpr std::uint32_t option_core2_new_pmic = 1u << core_option_new_pmic_index;
-  static constexpr std::uint32_t option_lcd_e = 1u << core_option_lcd_e_index;
-  static const char* const core_options[] = { "new_pmic", "lcd_e" };
-  static const char* const tough_options[] = { "reserved", "lcd_e" };
-  // These assertions check the name count only; array order remains tied to the indices above.
-  static_assert(core_option_count == sizeof(core_options) / sizeof(core_options[0])
-             && core_option_count == sizeof(tough_options) / sizeof(tough_options[0]),
-                "Core option name count must match the option bit count");
-
-  enum : std::uint8_t { stack_option_ips_index, stack_option_count };
-  static constexpr std::uint32_t option_stack_ips = 1u << stack_option_ips_index;
-  static const char* const stack_options[] = { "ips" };
-  static_assert(stack_option_count == sizeof(stack_options) / sizeof(stack_options[0]),
-                "Stack option name count must match the option bit count");
 
   namespace detail
   {
@@ -76,6 +56,8 @@ namespace m5
   static_assert(sizeof(restore_order192) <= max_restore_regs
              && sizeof(restore_order2101) <= max_restore_regs,
                 "PMIC restore list exceeds backup capacity");
+  static_assert(generated_options::core2::new_pmic == generated_options::tough::reserved,
+                "Core2 new-PMIC and Tough reserved option bits must remain shared");
   static const pmic_variant_t core_pmic_variants[] = {
     pmic_variant(0x34, 0x03, 0x03, sequence(power192),
                  reg_bit(0x12, 0x04), reg_bit(0x96, 0x02),
@@ -83,51 +65,8 @@ namespace m5
     pmic_variant(0x34, 0x03, 0x4A, sequence(power2101),
                  reg_bit(0x90, 0x08), reg_bit(0x90, 0x02),
                  sequence(reset2101), sequence(release2101), registers(restore_order2101),
-                 option_core2_new_pmic),
+                 generated_options::core2::new_pmic),
   };
-
-  static_assert(
-       wiring::station::display_sclk == GPIO_NUM_18 && wiring::station::display_mosi == GPIO_NUM_23
-    && wiring::station::display_miso == -1 && wiring::station::display_dc == GPIO_NUM_19
-    && wiring::station::display_cs == GPIO_NUM_5 && wiring::station::display_rst == GPIO_NUM_15
-    && wiring::station::display_busy == -1 && wiring::station::reset_gpio == GPIO_NUM_15
-    && wiring::station::internal_i2c_sda == GPIO_NUM_21 && wiring::station::internal_i2c_scl == GPIO_NUM_22
-    && wiring::station::internal_i2c_port == I2C_NUM_1 && wiring::station::hold[0] == GPIO_NUM_5
-    && wiring::core2::display_sclk == GPIO_NUM_18 && wiring::core2::display_mosi == GPIO_NUM_23
-    && wiring::core2::display_miso == GPIO_NUM_38 && wiring::core2::display_dc == GPIO_NUM_15
-    && wiring::core2::display_cs == GPIO_NUM_5 && wiring::core2::display_rst == -1
-    && wiring::core2::display_busy == -1 && wiring::core2::shared_sd_sclk == GPIO_NUM_18
-    && wiring::core2::shared_sd_mosi == GPIO_NUM_23 && wiring::core2::shared_sd_miso == GPIO_NUM_38
-    && wiring::core2::shared_sd_sd_cs == GPIO_NUM_4 && wiring::core2::shared_sd_other_cs == GPIO_NUM_5
-    && wiring::core2::internal_i2c_sda == GPIO_NUM_21 && wiring::core2::internal_i2c_scl == GPIO_NUM_22
-    && wiring::core2::internal_i2c_port == I2C_NUM_1
-    && wiring::core2::hold[0] == GPIO_NUM_4 && wiring::core2::hold[1] == GPIO_NUM_5
-    && wiring::tough::display_sclk == GPIO_NUM_18 && wiring::tough::display_mosi == GPIO_NUM_23
-    && wiring::tough::display_miso == GPIO_NUM_38 && wiring::tough::display_dc == GPIO_NUM_15
-    && wiring::tough::display_cs == GPIO_NUM_5 && wiring::tough::display_rst == -1
-    && wiring::tough::display_busy == -1 && wiring::tough::shared_sd_sclk == GPIO_NUM_18
-    && wiring::tough::shared_sd_mosi == GPIO_NUM_23 && wiring::tough::shared_sd_miso == GPIO_NUM_38
-    && wiring::tough::shared_sd_sd_cs == GPIO_NUM_4 && wiring::tough::shared_sd_other_cs == GPIO_NUM_5
-    && wiring::tough::internal_i2c_sda == GPIO_NUM_21 && wiring::tough::internal_i2c_scl == GPIO_NUM_22
-    && wiring::tough::internal_i2c_port == I2C_NUM_1
-    && wiring::tough::hold[0] == GPIO_NUM_4 && wiring::tough::hold[1] == GPIO_NUM_5
-    && wiring::stack::display_sclk == GPIO_NUM_18 && wiring::stack::display_mosi == GPIO_NUM_23
-    && wiring::stack::display_miso == GPIO_NUM_19 && wiring::stack::display_dc == GPIO_NUM_27
-    && wiring::stack::display_cs == GPIO_NUM_14 && wiring::stack::display_rst == GPIO_NUM_33
-    && wiring::stack::display_busy == -1 && wiring::stack::reset_gpio == GPIO_NUM_33
-    && wiring::stack::shared_sd_sclk == GPIO_NUM_18 && wiring::stack::shared_sd_mosi == GPIO_NUM_23
-    && wiring::stack::shared_sd_miso == GPIO_NUM_19 && wiring::stack::shared_sd_sd_cs == GPIO_NUM_4
-    && wiring::stack::shared_sd_other_cs == GPIO_NUM_14
-    && wiring::stack::hold[0] == GPIO_NUM_4 && wiring::stack::hold[1] == GPIO_NUM_14
-    && wiring::paper::display_sclk == GPIO_NUM_14 && wiring::paper::display_mosi == GPIO_NUM_12
-    && wiring::paper::display_miso == GPIO_NUM_13 && wiring::paper::display_dc == -1
-    && wiring::paper::display_cs == GPIO_NUM_15 && wiring::paper::display_rst == GPIO_NUM_23
-    && wiring::paper::display_busy == GPIO_NUM_27 && wiring::paper::reset_gpio == GPIO_NUM_23
-    && wiring::paper::power_gpio == GPIO_NUM_2 && wiring::paper::shared_sd_sclk == GPIO_NUM_14
-    && wiring::paper::shared_sd_mosi == GPIO_NUM_12 && wiring::paper::shared_sd_miso == GPIO_NUM_13
-    && wiring::paper::shared_sd_sd_cs == GPIO_NUM_4 && wiring::paper::shared_sd_other_cs == GPIO_NUM_15
-    && wiring::paper::hold[0] == GPIO_NUM_4 && wiring::paper::hold[1] == GPIO_NUM_15,
-    "generated ESP32 wiring must match the replaced board descriptions");
 
   static constexpr board_desc_t desc_station = {
     { id(lgfx::board_M5Station), "M5Station", 0 },
@@ -156,7 +95,7 @@ namespace m5
     internal_i2c(wiring::core2::internal_i2c_sda, wiring::core2::internal_i2c_scl,
                  wiring::core2::internal_i2c_port),
     direct_reset_panel_reload_wait(110),
-    options(core_options),
+    options(generated_options::core2::names),
   };
   static constexpr board_desc_t desc_tough = {
     { id(lgfx::board_M5Tough), "M5Tough", 0 },
@@ -172,7 +111,7 @@ namespace m5
     internal_i2c(wiring::tough::internal_i2c_sda, wiring::tough::internal_i2c_scl,
                  wiring::tough::internal_i2c_port),
     direct_reset_panel_reload_wait(110),
-    options(tough_options),
+    options(generated_options::tough::names),
   };
   static constexpr board_desc_t desc_stack = {
     { id(lgfx::board_M5Stack), "M5Stack", 0 },
@@ -184,7 +123,8 @@ namespace m5
                  wiring::stack::display_miso, wiring::stack::display_dc,
                  wiring::stack::display_cs, wiring::stack::display_rst,
                  wiring::stack::display_busy),
-    pins(wiring::stack::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(), options(stack_options),
+    pins(wiring::stack::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
+    options(generated_options::stack::names),
   };
   static constexpr board_desc_t desc_paper = {
     { id(lgfx::board_M5Paper), "M5Paper", 0 },
@@ -526,40 +466,28 @@ namespace m5
       lgfx::delay(reset.post_ms);
       if (ctx.allow_reset && ips && detected_option != nullptr)
       {
-        *detected_option |= option_stack_ips;
+        *detected_option |= generated_options::stack::ips;
       }
       return true;
     }
   }
 
+  bool construct_station(const board_result_t& result, display_parts_t* parts);
+  bool construct_core2(const board_result_t& result, display_parts_t* parts);
+  bool construct_tough(const board_result_t& result, display_parts_t* parts);
+  bool construct_stack(const board_result_t& result, display_parts_t* parts);
+  bool construct_paper(const board_result_t& result, display_parts_t* parts);
+  static const board_entry_t esp32_d0wdq6_boards[] = {
+    { &desc_station, construct_station, nullptr, nullptr },
+    { &desc_core2, construct_core2, nullptr, nullptr },
+    { &desc_tough, construct_tough, nullptr, nullptr },
+    { &desc_stack, construct_stack, nullptr, nullptr },
+    { &desc_paper, construct_paper, nullptr, nullptr },
+  };
+
   const board_desc_t* find_board_desc(board_id_t board)
   {
-    static const board_desc_t* const descriptions[] = {
-      &desc_station, &desc_core2, &desc_tough, &desc_stack, &desc_paper, nullptr
-    };
-    for (auto desc = descriptions; *desc != nullptr; ++desc)
-    {
-      if ((*desc)->def.id == board) { return *desc; }
-    }
-    ESP_LOGW("board_detect_m5", "board=%u is not available on the new detection path",
-             static_cast<unsigned>(board));
-    return nullptr;
-  }
-
-  const board_def_t* find_board_def(board_id_t board)
-  {
-    const auto* desc = find_board_desc(board);
-    return desc == nullptr ? nullptr : &desc->def;
-  }
-
-  bool prepare(board_result_t& result, const prepare_ctx_t& ctx)
-  {
-    if (result.desc == nullptr || result.def != &result.desc->def
-     || result.def->id == board_id_unknown)
-    {
-      return false;
-    }
-    return board_detect::prepare(*result.desc, result, ctx);
+    return find_board_desc(esp32_d0wdq6_boards, board);
   }
 
   class axp_family_detector_t final : public board_detector_t
@@ -764,8 +692,11 @@ namespace m5
         detail::tough_touch_i2c_frequency).has_value();
       result->assign(tough ? &desc_tough : &desc_core2);
       result->option = pmic->detected_option
-                     | (variant == detail::panel_variant_t::e ? option_lcd_e : 0);
-      if (tough) { result->option &= ~option_core2_new_pmic; }
+                     | (variant == detail::panel_variant_t::e
+                        ? (tough ? generated_options::tough::lcd_e
+                                 : generated_options::core2::lcd_e)
+                        : 0);
+      if (tough) { result->option &= ~generated_options::core2::new_pmic; }
       for (auto& pin : signals) { pin.restore(); }
       sd_cs.retain();
       lcd_cs.retain();
@@ -1020,14 +951,12 @@ namespace m5
 
   board_result_t detect_board_family(board_id_t board, probe_ctx_t& ctx)
   {
-    for (auto detector = esp32_d0wdq6_detectors; *detector != nullptr; ++detector)
-    {
-      if (!(*detector)->has_member(board)) { continue; }
-      const board_detector_t* const family[] = { *detector, nullptr };
-      return detect_board(family, board, ctx);
-    }
-    board_result_t result;
-    return result;
+    return detect_board_family(esp32_d0wdq6_detectors, board, ctx);
+  }
+
+  success_log_t success_log(const board_result_t& result)
+  {
+    return success_log(esp32_d0wdq6_boards, result);
   }
 }
 }

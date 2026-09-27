@@ -27,17 +27,6 @@ export const PIN_TABLE_TARGETS = {
   },
 };
 
-const CPP_BOARD_NAMES = {
-  m5stack: "board_M5Stack",
-  m5stack_core2: "board_M5StackCore2",
-  m5tough: "board_M5Tough",
-  m5station: "board_M5Station",
-  m5paper: "board_M5Paper",
-  m5timercam: "board_M5TimerCam",
-  m5atoms3: "board_M5AtomS3",
-  m5sticks3: "board_M5StickS3",
-};
-
 export function stripRoleSource(role) {
   const slash = role.indexOf("/");
   return slash === -1 ? role : role.slice(slash + 1);
@@ -79,7 +68,12 @@ export function pinTableAssignments(board) {
   const assignments = {};
   for (const [gpio, pin] of Object.entries(board.pins ?? {})) for (const role of pin.roles ?? []) {
     const name = pinNameForRole(board, role);
-    if (name) assignments[name] = Number(gpio);
+    if (name) {
+      if (assignments[name] !== undefined && assignments[name] !== Number(gpio)) {
+        throw new Error(`${board.id}: ${name} is assigned to both GPIO ${assignments[name]} and GPIO ${gpio}`);
+      }
+      assignments[name] = Number(gpio);
+    }
   }
   return assignments;
 }
@@ -106,10 +100,14 @@ export function renderPinTableJson(entries) {
   return `${JSON.stringify(Object.fromEntries(entries.map(({ board, emitted }) => [board.id, emitted.values])), null, 2)}\n`;
 }
 
-export function renderPinTableInl(entries, targetId = "esp32") {
+export function renderPinTableInl(entries, targetId = "esp32", boardTarget = {}) {
   const target = PIN_TABLE_TARGETS[targetId];
   if (!target) throw new Error(`unknown pin-table target ${targetId}`);
-  const lines = ["// Generated from extras/board_spec; do not edit."];
+  const lines = [
+    "// Generated from extras/board_spec; do not edit.",
+    "// Unspecified values use target-specific unknown or sentinel values.",
+    "// Precedence: board value > part default > panel-class default.",
+  ];
   for (const group of PIN_TABLE_GROUPS) {
     const unknown = target.unknown[group.name] ?? group.unknown;
     lines.push("", `// ${group.name}[][${group.pins.length + 1}]`);
@@ -120,7 +118,9 @@ export function renderPinTableInl(entries, targetId = "esp32") {
         .filter((name) => emitted.overrides[name])
         .map((name) => `${name}: ${emitted.overrides[name].reason}`);
       const suffix = comments.length ? ` // override: ${comments.join("; ")}` : "";
-      lines.push(`{ board_t::${CPP_BOARD_NAMES[board.id]}, ${values.join(", ")} },${suffix}`);
+      const boardEnum = boardTarget.boards?.[board.id]?.board_enum;
+      if (!boardEnum) throw new Error(`missing board enum for ${board.id}`);
+      lines.push(`{ board_t::${boardEnum}, ${values.join(", ")} },${suffix}`);
     }
     lines.push(`{ board_t::board_unknown, ${unknown.join(", ")} },`);
   }

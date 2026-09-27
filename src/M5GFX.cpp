@@ -36,6 +36,8 @@
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
 #include "lgfx/v1/touch/Touch_GT911.hpp"
 
+#include "board_detect/m5/setup_sentinels.hpp"
+
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/board_detect.inl"
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
@@ -1024,85 +1026,78 @@ namespace m5gfx
 #endif
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
-  bool M5GFX::_setup_detected(const board_detect::board_result_t& result)
+  static bool construct_detected(const board_detect::board_result_t& result,
+                                 board_detect::m5::display_parts_t* parts)
   {
-    board_detect::m5::display_parts_t parts;
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-    if (!board_detect::m5::setup_esp32_d0wdq6(result, &parts)) { return false; }
+    return board_detect::m5::setup_esp32_d0wdq6(result, parts);
 #else
-    if (!board_detect::m5::setup_esp32s3(result, &parts)) { return false; }
+    return board_detect::m5::setup_esp32s3(result, parts);
 #endif
-
-    _bus_last.reset(parts.bus);
-    _panel_last.reset(parts.panel);
-    if (parts.light != nullptr) { _set_backlight(parts.light); }
-    if (parts.touch != nullptr)
-    {
-      _touch_last.reset(parts.touch);
-    }
-    panel(_panel_last.get());
-    return true;
   }
 
-  bool M5GFX::_init_direct(board_t board, std::uint32_t option, bool option_known,
-                           bool use_reset, bool use_clear)
+  template <class SetupDetected>
+  static bool try_setup_detected(const board_detect::board_detector_t* const* detectors,
+                                 board_t hint, bool allow_reset, bool final_attempt,
+                                 board_t* detected_board, SetupDetected setup,
+                                 bool* detector_matched = nullptr)
   {
-    board_detect::board_result_t result;
-    const auto desc = board_detect::m5::find_board_desc(
-      static_cast<board_detect::board_id_t>(board));
-    if (desc == nullptr) { return false; }
-    if (option_known)
+    if (detector_matched != nullptr) { *detector_matched = false; }
+    board_detect::probe_ctx_t probe;
+    probe.allow_reset = allow_reset;
+    probe.final_attempt = final_attempt;
+    probe.i2c_port_probe = probe_i2c_port;
+    auto result = board_detect::detect_board(
+      detectors, static_cast<board_detect::board_id_t>(hint), probe);
+    if (result.status == board_detect::detect_status_t::excluded)
     {
-      result.assign(desc);
-      result.option = option;
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] detected board:%u is excluded",
+               static_cast<unsigned>(result.def->id));
+      return false;
     }
-    else
-    {
-      board_detect::probe_ctx_t probe;
-      probe.allow_reset = use_reset;
-      probe.final_attempt = true;
-      probe.i2c_port_probe = probe_i2c_port;
-      result = board_detect::m5::detect_board_family(
-        static_cast<board_detect::board_id_t>(board), probe);
-      if (result.status != board_detect::detect_status_t::matched
-       || result.def == nullptr
-       || result.def->id != static_cast<board_detect::board_id_t>(board))
-      {
-        ESP_LOGW(LIBRARY_NAME, "[Direct] requested board:%u did not match its detector family",
-                 static_cast<unsigned>(board));
-        return false;
-      }
-    }
+    if (result.status != board_detect::detect_status_t::matched) { return false; }
+    if (detector_matched != nullptr) { *detector_matched = true; }
 
     board_detect::prepare_ctx_t prepare_ctx;
-    prepare_ctx.allow_reset = use_reset;
+    prepare_ctx.allow_reset = allow_reset;
     prepare_ctx.i2c_port_probe = probe_i2c_port;
     if (!board_detect::m5::prepare(result, prepare_ctx))
     {
-      ESP_LOGW(LIBRARY_NAME, "[Direct] prepare failed for board:%u",
-               static_cast<unsigned>(board));
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] prepare failed for detected board:%u",
+               static_cast<unsigned>(result.def->id));
       return false;
     }
-    if ((result.prepared & board_detect::panel_dirty) && !use_reset)
+    if ((result.prepared & board_detect::panel_dirty) && !allow_reset)
     {
-      ESP_LOGD(LIBRARY_NAME, "[Direct] panel probe changed registers while reset was disabled");
+      ESP_LOGD(LIBRARY_NAME,
+               "[Autodetect] panel probe changed registers while reset was disabled");
     }
-    if (!_setup_detected(result)) { return false; }
-    _board = static_cast<board_t>(result.def->id);
-    return LGFX_Device::init_impl(false, use_clear);
+    board_detect::m5::display_parts_t parts;
+    if (!construct_detected(result, &parts)
+     || !setup(parts))
+    {
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
+               static_cast<unsigned>(result.def->id));
+      return false;
+    }
+    *detected_board = static_cast<board_t>(result.def->id);
+    const auto log = board_detect::m5::success_log(result);
+    ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s%s", log.name, log.annotation);
+    return true;
   }
-#endif
 
-#if defined (CONFIG_IDF_TARGET) && !defined (CONFIG_IDF_TARGET_ESP32) && !defined (CONFIG_IDF_TARGET_ESP32S3)
-  bool M5GFX::_setup_detected(const board_detect::board_result_t&)
+  bool M5GFX::_adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
+                                    lgfx::ILight* light, lgfx::ITouch* touch)
   {
-    return false;
-  }
-
-  bool M5GFX::_init_direct(board_t, std::uint32_t, bool, bool, bool)
-  {
-    ESP_LOGW(LIBRARY_NAME, "[Direct] board detection is not available for this target");
-    return false;
+    _bus_last.reset(bus);
+    _panel_last.reset(panel_part);
+    if (light != nullptr) { _set_backlight(light); }
+    if (touch != nullptr)
+    {
+      _touch_last.reset(touch);
+    }
+    panel(_panel_last.get());
+    return true;
   }
 #endif
 
@@ -1198,47 +1193,20 @@ namespace m5gfx
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
       if (use_d0wdq6_detector)
       {
-        board_detect::probe_ctx_t probe;
-        // Unlike the legacy fallback below, retries must keep the caller's
-        // reset policy. Turning reset on would destroy a display the caller
-        // explicitly asked to preserve.
-        probe.allow_reset = detector_allow_reset;
-        probe.final_attempt = retry == 0;
-        probe.i2c_port_probe = probe_i2c_port;
-        auto result = board_detect::detect_board(board_detect::m5::esp32_d0wdq6_detectors,
-                         static_cast<board_detect::board_id_t>(nvs_board), probe);
-        if (result.status == board_detect::detect_status_t::matched)
+        bool detector_matched;
+        if (try_setup_detected(board_detect::m5::esp32_d0wdq6_detectors,
+                               static_cast<board_t>(nvs_board), detector_allow_reset,
+                               retry == 0, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); },
+                               &detector_matched))
         {
-          board_detect::prepare_ctx_t prepare_ctx;
-          prepare_ctx.allow_reset = detector_allow_reset;
-          prepare_ctx.i2c_port_probe = probe_i2c_port;
-          if (!board_detect::m5::prepare(result, prepare_ctx))
-          {
-            ESP_LOGW(LIBRARY_NAME, "[Autodetect] prepare failed for detected board:%u",
-                     static_cast<unsigned>(result.def->id));
-            board = board_t::board_unknown;
-            continue;
-          }
-          if ((result.prepared & board_detect::panel_dirty) && !detector_allow_reset)
-          {
-            ESP_LOGD(LIBRARY_NAME,
-                     "[Autodetect] panel probe changed registers while reset was disabled");
-          }
-          if (_setup_detected(result))
-          {
-            board = static_cast<board_t>(result.def->id);
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s", result.def->name);
-            break;
-          }
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
-                   static_cast<unsigned>(result.def->id));
+          break;
+        }
+        if (detector_matched)
+        {
           board = board_t::board_unknown;
           continue;
-        }
-        else if (result.status == board_detect::detect_status_t::excluded)
-        {
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] detected board:%u is excluded",
-                   static_cast<unsigned>(result.def->id));
         }
       }
 #endif
@@ -2239,30 +2207,12 @@ namespace m5gfx
 
       if (board == 0 || board == board_t::board_M5AtomS3)
       {
-        const bool detector_allow_reset = use_reset;
-        board_detect::probe_ctx_t probe;
-        probe.allow_reset = detector_allow_reset;
-        probe.i2c_port_probe = probe_i2c_port;
-        // [atoms3:register]
-        auto result = board_detect::detect_board(board_detect::m5::esp32s3_detectors_spi_id, static_cast<board_detect::board_id_t>(board), probe);
-        // [/atoms3:register]
-        if (result.status == board_detect::detect_status_t::matched)
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_spi_id,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
         {
-          board_detect::prepare_ctx_t prepare_ctx;
-          prepare_ctx.allow_reset = detector_allow_reset;
-          prepare_ctx.i2c_port_probe = probe_i2c_port;
-          if (board_detect::m5::prepare(result, prepare_ctx) && _setup_detected(result))
-          {
-            board = board_t::board_M5AtomS3;
-            if (result.option & board_detect::m5::option_atoms3_gc9107)
-            {
-              ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3 (GC9107)");
-            }
-            else { ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5AtomS3 (ST7735)"); }
-            goto init_clear;
-          }
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
-                   static_cast<unsigned>(result.def->id));
+          goto init_clear;
         }
       }
 
@@ -2616,26 +2566,12 @@ The usage of each pin is as follows.
       
       if (board == 0 || board == board_t::board_M5StickS3)
       {
-        const bool detector_allow_reset = use_reset;
-        board_detect::probe_ctx_t probe;
-        probe.allow_reset = detector_allow_reset;
-        probe.i2c_port_probe = probe_i2c_port;
-        // [sticks3:register]
-        auto result = board_detect::detect_board(board_detect::m5::esp32s3_detectors_pmic, static_cast<board_detect::board_id_t>(board), probe);
-        // [/sticks3:register]
-        if (result.status == board_detect::detect_status_t::matched)
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_pmic,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
         {
-          board_detect::prepare_ctx_t prepare_ctx;
-          prepare_ctx.allow_reset = detector_allow_reset;
-          prepare_ctx.i2c_port_probe = probe_i2c_port;
-          if (board_detect::m5::prepare(result, prepare_ctx) && _setup_detected(result))
-          {
-            board = board_t::board_M5StickS3;
-            ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StickS3");
-            goto init_clear;
-          }
-          ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
-                   static_cast<unsigned>(result.def->id));
+          goto init_clear;
         }
       }
 
@@ -3492,16 +3428,6 @@ init_clear:
   }
 
 #else
-
-  bool M5GFX::_setup_detected(const board_detect::board_result_t&)
-  {
-    return false;
-  }
-
-  bool M5GFX::_init_direct(board_t, std::uint32_t, bool, bool, bool)
-  {
-    return false;
-  }
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {

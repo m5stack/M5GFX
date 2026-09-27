@@ -72,6 +72,15 @@ export function resolveBoard(board, selection = {}, connectorTypes = {}, catalog
 }
 
 export function resolvedFilename(board, revision, runtime = {}) {
+  const requireId = (value, label) => {
+    if (typeof value !== "string" || !/^[a-z][a-z0-9_]*$/.test(value)) throw new Error(`${label} is not a safe ID`);
+  };
+  requireId(board.id, "board ID");
+  if (revision) requireId(revision.id, "revision ID");
+  for (const [slot, choice] of Object.entries(runtime)) {
+    requireId(slot, "runtime slot");
+    requireId(choice, "runtime choice");
+  }
   const revisionPart = revision ? `@${revision.id}` : "";
   const runtimePart = Object.entries(runtime).map(([slot, choice]) => `+${slot}=${choice}`).join("");
   return `${board.id}${revisionPart}${runtimePart}.json`;

@@ -1,4 +1,6 @@
 {
   "id": "sk6812", "name": "SK6812", "kind": "led_strip", "bus": { "kind": "none" },
-  "signals": { "required": ["data"], "optional": [] }, "spec_keys": ["count"], "verified": { "signals": null }
+  "signals": { "required": ["data"], "optional": [] },
+  "spec_keys": { "count": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" } },
+  "verified": { "signals": null }
 }

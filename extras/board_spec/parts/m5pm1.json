@@ -7,6 +7,7 @@
   "id_probe": {
     "reg": "0x00",
     "value": "0x50",
+    "match": "ack_only",
     "note": "device id 0x2050 (reg 0x00-0x01 LE) の下位バイト"
   },
   "pins": {

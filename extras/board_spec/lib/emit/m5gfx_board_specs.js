@@ -38,24 +38,32 @@ function optionalBoolean(value, label) {
   return value;
 }
 
-function panel(spec, defaults, label) {
-  const width = integer(spec.width, `${label}.width`);
-  const height = integer(spec.height, `${label}.height`);
-  return {
-    width,
-    height,
-    memoryWidth: optionalInteger(spec.memory_width ?? defaults?.memory_width, `${label}.memory_width`),
-    memoryHeight: optionalInteger(spec.memory_height ?? defaults?.memory_height, `${label}.memory_height`),
-    offsetX: optionalInteger(spec.offset_x ?? defaults?.offset_x, `${label}.offset_x`),
-    offsetY: optionalInteger(spec.offset_y ?? defaults?.offset_y, `${label}.offset_y`),
-    rotationOffset: optionalInteger(spec.rotation_offset ?? defaults?.rotation_offset, `${label}.rotation_offset`),
-    invert: optionalBoolean(spec.invert ?? defaults?.invert, `${label}.invert`),
-    readable: optionalBoolean(spec.readable ?? defaults?.readable, `${label}.readable`),
-  };
+function partDefault(definitions, key) {
+  return definitions?.[key]?.default;
 }
 
-export function emitM5GFXSpecs(board, resolvedVariants, parts) {
-  if (board.id !== "m5atoms3" && board.id !== "m5sticks3") return null;
+function panel(spec, definitions, label) {
+  const width = integer(spec.width, `${label}.width`);
+  const height = integer(spec.height, `${label}.height`);
+  const result = {
+    width,
+    height,
+    memoryWidth: optionalInteger(spec.memory_width ?? partDefault(definitions, "memory_width"), `${label}.memory_width`),
+    memoryHeight: optionalInteger(spec.memory_height ?? partDefault(definitions, "memory_height"), `${label}.memory_height`),
+    offsetX: optionalInteger(spec.offset_x ?? partDefault(definitions, "offset_x"), `${label}.offset_x`),
+    offsetY: optionalInteger(spec.offset_y ?? partDefault(definitions, "offset_y"), `${label}.offset_y`),
+    rotationOffset: optionalInteger(spec.rotation_offset ?? partDefault(definitions, "rotation_offset"), `${label}.rotation_offset`),
+    invert: optionalBoolean(spec.invert ?? partDefault(definitions, "invert"), `${label}.invert`),
+    readable: optionalBoolean(spec.readable ?? partDefault(definitions, "readable"), `${label}.readable`),
+  };
+  Object.defineProperty(result, "cppTypes", {
+    value: Object.fromEntries(Object.entries(definitions ?? {}).map(([key, definition]) => [key, definition["x-cpp-type"] ?? "int"])),
+  });
+  return result;
+}
+
+export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
+  if (!mapping?.specsOutput) return null;
   const bus = board.buses?.main_spi;
   const display = board.devices?.lcd;
   const backlight = board.devices?.backlight?.spec;
@@ -66,7 +74,7 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts) {
     const device = variant.devices?.lcd;
     const name = device?.part;
     if (!name || panels[name]) continue;
-    panels[name] = panel(device.spec ?? {}, parts[name]?.spec, `${board.id}.${name}`);
+    panels[name] = panel(device.spec ?? {}, parts[name]?.spec_keys, `${board.id}.${name}`);
     if (parts[name]?.id_probe) probes[name] = probe(parts[name], name);
   }
   const pmicDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "pmic");
@@ -76,14 +84,12 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts) {
     i2cAddr: hex(pmicPart?.i2c_addr?.[0], `${board.id}.${pmicDevice.part}.i2c_addr`),
     i2cFreq: integer(pmicBus?.freq, `${board.id}.${pmicDevice.bus}.freq`),
     idReg: hex(pmicPart?.id_probe?.reg, `${board.id}.${pmicDevice.part}.id_probe.reg`),
-    // StickS3 deliberately matches the PMIC by ACK only. Keep the catalog's
-    // documented ID value, but do not generate a constant that detection ignores.
-    ...(board.id === "m5sticks3" ? {} : {
+    ...(pmicPart?.id_probe?.match === "ack_only" ? {} : {
       idValue: hex(pmicPart?.id_probe?.value, `${board.id}.${pmicDevice.part}.id_probe.value`),
     }),
   } : null;
   return {
-    namespace: board.id === "m5atoms3" ? "atoms3" : "sticks3",
+    namespace: mapping.cppNamespace,
     bus: {
       host: host(bus.preferred_host),
       hostSymbol: typeof bus.preferred_host === "string" ? bus.preferred_host : null,
@@ -111,9 +117,12 @@ export function renderM5GFXSpecsHeader(specs) {
   const entries = Array.isArray(specs) ? specs : [specs];
   const lines = [
     "// Generated from extras/board_spec; do not edit by hand.",
+    "// Unspecified values use target-specific unknown or sentinel values.",
+    "// Precedence: board value > part default > panel-class default.",
     "#pragma once",
     "",
     "#include <cstdint>",
+    '#include "../setup_sentinels.hpp"',
   ];
   for (const entry of entries) {
     lines.push("", `namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace ${entry.namespace} {`,
@@ -122,16 +131,17 @@ export function renderM5GFXSpecsHeader(specs) {
       `constexpr std::uint32_t bus_freq_read = ${entry.bus.freqRead};`,
       `constexpr bool bus_three_wire = ${boolean(entry.bus.threeWire)};`);
     for (const [name, value] of Object.entries(entry.panels)) {
+      const cpp = (key) => value.cppTypes[key] ?? "int";
       lines.push("", `namespace panel_${name} {`,
-      `  constexpr int width = ${value.width};`,
-      `  constexpr int height = ${value.height};`,
-      `  constexpr int memory_width = ${value.memoryWidth ?? 0};`,
-      `  constexpr int memory_height = ${value.memoryHeight ?? 0};`,
-      `  constexpr int offset_x = ${value.offsetX ?? -32768};`,
-      `  constexpr int offset_y = ${value.offsetY ?? -32768};`,
-      `  constexpr int rotation_offset = ${value.rotationOffset ?? "0xFF"};`,
-      `  constexpr int invert = ${optionalFlag(value.invert)};`,
-      `  constexpr int readable = ${optionalFlag(value.readable)};`,
+      `  constexpr ${cpp("width")} width = ${value.width};`,
+      `  constexpr ${cpp("height")} height = ${value.height};`,
+      `  constexpr ${cpp("memory_width")} memory_width = ${value.memoryWidth ?? "setup_sentinel::keep_dimension"};`,
+      `  constexpr ${cpp("memory_height")} memory_height = ${value.memoryHeight ?? "setup_sentinel::keep_dimension"};`,
+      `  constexpr ${cpp("offset_x")} offset_x = ${value.offsetX ?? "setup_sentinel::keep_offset"};`,
+      `  constexpr ${cpp("offset_y")} offset_y = ${value.offsetY ?? "setup_sentinel::keep_offset"};`,
+      `  constexpr ${cpp("rotation_offset")} rotation_offset = ${value.rotationOffset ?? "setup_sentinel::keep_u8"};`,
+      `  constexpr ${cpp("invert")} invert = ${value.invert === null ? "setup_sentinel::keep_i8" : optionalFlag(value.invert)};`,
+      `  constexpr ${cpp("readable")} readable = ${value.readable === null ? "setup_sentinel::keep_i8" : optionalFlag(value.readable)};`,
         `} // namespace panel_${name}`);
     }
     for (const [name, value] of Object.entries(entry.probes)) {

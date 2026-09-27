@@ -1,4 +1,6 @@
 // Generated from extras/board_spec; do not edit by hand.
+// Unspecified values use target-specific unknown or sentinel values.
+// Precedence: board value > part default > panel-class default.
 #pragma once
 
 #include <cstdint>
@@ -35,4 +37,13 @@ namespace sticks3 {
   constexpr std::int8_t hold[] = { 41 };
 } // namespace sticks3
 
-} } } } // namespace m5gfx::board_detect::m5::wiring
+} // namespace wiring
+
+namespace generated_options {
+namespace atoms3 {
+  constexpr std::uint32_t gc9107 = 1u << 0;
+  static const char* const names[] = { "gc9107" };
+} // namespace atoms3
+} // namespace generated_options
+
+} } } // namespace m5gfx::board_detect::m5

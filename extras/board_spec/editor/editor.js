@@ -1,9 +1,10 @@
 import { assertBoard, clone, parseJson } from "../lib/model.js";
 import { choiceSlots, revisionSelection } from "../lib/choices.js";
-import { validateBoard } from "../lib/validate.js";
+import { validateBoard, validateResolvedVariants } from "../lib/validate.js";
 import { resolveBoard } from "../lib/resolve.js";
 import { formatBoard } from "../lib/format.js";
 import { pinChangeLayer } from "./provenance.js";
+import { BoardOperationError, addBus, addChoice, addConnector, addDevice, addRole, boardRoleOptions, createBoard, duplicateBoard, removeBus, removeChoice, removeConnector, removeDevice, setBoardField, setChoiceDefaults, setDeviceSpec, setSpec } from "./board_ops.js";
 
 const schema = readEmbedded("board-spec-schema");
 const chips = readEmbedded("board-spec-chips");
@@ -14,10 +15,18 @@ const targets = readEmbedded("board-spec-targets");
 const embeddedBoards = readEmbedded("board-spec-boards");
 const messages = readEmbedded("board-spec-i18n");
 const languageStorageKey = "m5-board-spec-language:v1";
+const draftIndexKey = "m5-board-spec-drafts:v1";
 let comboboxSerial = 0;
 
 const elements = {
   boardSelect: document.querySelector("#board-select"),
+  newBoard: document.querySelector("#new-board-button"),
+  duplicateBoard: document.querySelector("#duplicate-board-button"),
+  closeBoard: document.querySelector("#close-board-button"),
+  boardDialog: document.querySelector("#board-dialog"),
+  boardDialogTitle: document.querySelector("#board-dialog-title"),
+  boardDialogError: document.querySelector("#board-dialog-error"),
+  boardDialogForm: document.querySelector("#board-dialog-form"),
   languageSelect: document.querySelector("#language-select"),
   fileInput: document.querySelector("#file-input"),
   download: document.querySelector("#download-button"),
@@ -63,6 +72,7 @@ const state = {
   language: initialLanguage(),
   undo: null,
   toastTimer: null,
+  boardDialogMode: "new",
 };
 
 class SearchCombobox {
@@ -231,11 +241,21 @@ function readDraft(board) {
 
 function writeDraft(entry) {
   const stored = { board: entry.base, dirty: entry.dirty, expandedGPIO: entry.expandedGPIO };
-  try { localStorage.setItem(storageKey(entry.base.id), JSON.stringify(stored)); } catch { /* storage is optional */ }
+  try {
+    localStorage.setItem(storageKey(entry.base.id), JSON.stringify(stored));
+    const ids = new Set(JSON.parse(localStorage.getItem(draftIndexKey) ?? "[]"));
+    ids.add(entry.base.id);
+    localStorage.setItem(draftIndexKey, JSON.stringify([...ids]));
+  } catch { /* storage is optional */ }
 }
 
 function removeDraft(id) {
-  try { localStorage.removeItem(storageKey(id)); } catch { /* storage is optional */ }
+  try {
+    localStorage.removeItem(storageKey(id));
+    const ids = new Set(JSON.parse(localStorage.getItem(draftIndexKey) ?? "[]"));
+    ids.delete(id);
+    localStorage.setItem(draftIndexKey, JSON.stringify([...ids]));
+  } catch { /* storage is optional */ }
 }
 
 function addEmbeddedBoards() {
@@ -250,12 +270,84 @@ function addEmbeddedBoards() {
       source: "embedded",
     });
   }
+  try {
+    for (const id of JSON.parse(localStorage.getItem(draftIndexKey) ?? "[]")) {
+      if (state.documents.has(id)) continue;
+      const stored = parseJson(localStorage.getItem(storageKey(id)), `draft:${id}`);
+      const board = assertBoard(stored.board ?? stored);
+      if (!chips[board.chip]) continue;
+      state.documents.set(id, { base: clone(board), original: clone(board), dirty: true, expandedGPIO: stored.expandedGPIO ?? null, source: "draft" });
+    }
+  } catch { /* ignore stale draft indexes */ }
   for (const id of state.documents.keys()) {
     state.compositionEntries.set(id, clone(targets.m5unified_pin_table?.compositions?.[id]?.default?.accessories ?? []));
     const board = state.documents.get(id).base;
     state.runtimeSelections.set(id, Object.fromEntries(choiceSlots(board).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => [slot, device.default])));
   }
   state.currentId = state.documents.has("m5stack_core2") ? "m5stack_core2" : [...state.documents.keys()][0];
+}
+
+function initializeDocument(board, { original = board, dirty = true, source = "editor" } = {}) {
+  state.documents.set(board.id, { base: clone(board), original: clone(original), dirty, expandedGPIO: null, source });
+  state.runtimeSelections.set(board.id, Object.fromEntries(choiceSlots(board).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => [slot, device.default])));
+  state.compositionEntries.set(board.id, []);
+  state.currentId = board.id;
+  state.selectedOptions.clear();
+  state.connectorId = null;
+  state.connectorPosition = null;
+  state.undo = null;
+  if (dirty) writeDraft(state.documents.get(board.id));
+}
+
+function legacyIdWarning(value, currentId = null) {
+  const duplicate = [...state.documents.values()].find((entry) => entry.base.id !== currentId && entry.base.legacy_board_id === value);
+  return duplicate ? t("dialog.legacyWarning", { board: duplicate.base.name }) : "";
+}
+
+function validateBoardDialog() {
+  const form = elements.boardDialogForm;
+  const id = form.elements.id.value.trim();
+  const legacy = Number(form.elements.legacy_board_id.value);
+  let message = "";
+  if (!(new RegExp(schema.definitions.id.pattern)).test(id)) message = t("validation.E_ID_FORMAT");
+  else if (state.documents.has(id) && (state.boardDialogMode === "new" || id !== state.currentId)) message = t("dialog.idExists");
+  else if (!form.elements.name.value.trim()) message = t("dialog.nameRequired");
+  else if (!Number.isInteger(legacy)) message = t("dialog.legacyInteger");
+  else message = legacyIdWarning(legacy, state.boardDialogMode === "duplicate" ? state.currentId : null);
+  elements.boardDialogError.textContent = message;
+  elements.boardDialogError.classList.toggle("warning", message.startsWith("⚠"));
+  return !message || message.startsWith("⚠");
+}
+
+function openBoardDialog(mode) {
+  state.boardDialogMode = mode;
+  const source = currentBase();
+  const form = elements.boardDialogForm;
+  elements.boardDialogTitle.textContent = t(mode === "new" ? "dialog.newTitle" : "dialog.duplicateTitle");
+  form.elements.id.value = mode === "duplicate" ? `${source.id}_copy` : "";
+  form.elements.name.value = mode === "duplicate" ? `${source.name} copy` : "";
+  form.elements.legacy_board_id.value = mode === "duplicate" ? source.legacy_board_id : "";
+  form.elements.chip.innerHTML = Object.keys(chips).sort().map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
+  form.elements.chip.value = mode === "duplicate" ? source.chip : Object.keys(chips).sort()[0];
+  form.elements.chip.closest("label").hidden = mode === "duplicate";
+  elements.boardDialogError.textContent = "";
+  elements.boardDialog.showModal();
+  form.elements.id.focus();
+}
+
+function closeCurrentDocument() {
+  if (state.documents.size <= 1) return showToast(t("reason.lastBoard"));
+  const entry = currentEntry();
+  if (entry.dirty && !window.confirm(t("dialog.closeDirtyConfirm"))) return;
+  const id = state.currentId;
+  if (entry.dirty) removeDraft(id);
+  state.documents.delete(id);
+  state.runtimeSelections.delete(id);
+  state.compositionEntries.delete(id);
+  state.currentId = state.documents.keys().next().value;
+  state.selectedOptions.clear();
+  state.connectorId = null;
+  renderAll();
 }
 
 function currentEntry() {
@@ -403,38 +495,7 @@ function schemaSignals(definitionName) {
 }
 
 function allRoleOptions(board, currentGPIO = null) {
-  const roles = [];
-  const busSignals = schemaSignals("busKind");
-  for (const [id, bus] of Object.entries(board.buses ?? {})) {
-    const allowed = new Set(busSignals[bus.kind] ?? []);
-    for (const signal of bus.signals ?? []) if (allowed.has(signal)) roles.push(`bus:${id}.${signal}`);
-  }
-
-  for (const [id, device] of Object.entries(board.devices ?? {})) {
-    for (const signal of deviceSignals(device)) roles.push(`dev:${id}.${signal}`);
-  }
-
-  for (const [id, connector] of Object.entries(board.connectors ?? {})) {
-    const type = resolveConnectorType(connectorTypes, connector.type);
-    const positions = new Set((type?.positions ?? []).filter((position) => !Object.hasOwn(type.fixed_positions ?? {}, position.id) && !Object.hasOwn(type.default_positions ?? {}, position.id) && !Object.hasOwn(connector.positions ?? {}, position.id)).map((position) => position.id));
-    for (const pin of Object.values(board.pins ?? {})) {
-      for (const role of pin.roles ?? []) {
-        const match = new RegExp(`^conn:${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.([a-z0-9_]+)$`).exec(role);
-        if (match) positions.add(match[1]);
-      }
-    }
-    for (const position of positions) roles.push(`conn:${id}.${position}`);
-  }
-  const assignedElsewhere = new Set();
-  for (const [gpio, pin] of Object.entries(board.pins ?? {})) if (String(gpio) !== String(currentGPIO)) for (const role of pin.roles ?? []) {
-    const connector = /^conn:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
-    if (!connector || !(board.connectors?.[connector[1]]?.multi_gpio ?? []).includes(connector[2])) assignedElsewhere.add(role);
-  }
-  for (const device of Object.values(board.devices ?? {})) {
-    for (const pin of Object.values(device.pins ?? {})) for (const role of pin.roles ?? []) assignedElsewhere.add(role);
-    for (const choice of Object.values(device.choices ?? {})) for (const pin of Object.values(choice.pins ?? {})) for (const role of pin.roles ?? []) assignedElsewhere.add(role);
-  }
-  return [...new Set(roles)].filter((role) => !assignedElsewhere.has(role)).sort((a, b) => a.localeCompare(b));
+  return boardRoleOptions(board, { schema, chip: chips[board.chip], parts, connectorTypes, resolveConnectorType, currentGPIO });
 }
 
 function roleDisplay(board, role) {
@@ -497,10 +558,18 @@ function findRoleGPIO(board, prefix) {
   return result.sort((a, b) => Number(a) - Number(b));
 }
 
-function validationFor(board, resolved = isResolvedMode()) {
+function validationFor(board) {
   const chip = chips[board.chip];
   if (!chip) return [{ id: "E_REF_MISSING", path: "/chip", message: `embedded chip not found: ${board.chip}` }];
-  return validateBoard(board, { schema, chip, connectorTypes, parts, target: targets.m5gfx_board_desc, resolved });
+  const compositionTarget = targets.m5unified_pin_table ?? {};
+  const context = {
+    schema, chip, connectorTypes, parts, accessories,
+    target: targets.m5gfx_board_desc,
+    pinTableTarget: compositionTarget,
+    composition: compositionTarget.compositions?.[board.id]?.default,
+    allow_origins: compositionTarget.allow_origins,
+  };
+  return [...validateBoard(board, context), ...validateResolvedVariants(board, context)];
 }
 
 function renderBoardSelect() {
@@ -549,12 +618,13 @@ function renderTable(board, errors) {
   for (let gpio = 0; gpio < chip.gpio_count; gpio += 1) {
     const key = String(gpio);
     const pin = board.pins?.[key] ?? { roles: [] };
-    const readonlyReason = readonlyReasons.get(key) ?? "";
+    const conditionalReserved = (chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? []).includes(gpio);
+    const readonlyReason = readonlyReasons.get(key) ?? (chip.reserved.includes(gpio) ? t("reason.chipReserved") : conditionalReserved ? t("reason.chipReservedConditional") : "");
     const readonly = readonlyAttributes(readonlyReason);
     const expanded = currentEntry().expandedGPIO === key;
     const rowErrors = errorsByGPIO.get(key) ?? [];
     const classes = ["gpio-row", gpio % 2 ? "zebra-odd" : "zebra-even"];
-    if (chip.reserved.includes(gpio)) classes.push("gpio-reserved");
+    if (chip.reserved.includes(gpio) || conditionalReserved) classes.push("gpio-reserved");
     if (chip.input_only.includes(gpio)) classes.push("gpio-input");
     if (chip.strapping.includes(gpio)) classes.push("gpio-strapping");
     if (rowErrors.length) classes.push("row-error");
@@ -568,7 +638,7 @@ function renderTable(board, errors) {
       ? `<span class="error-indicator" title="${escapeHtml(rowErrors.map((item) => item.id).join(", "))}">! ${rowErrors.length}</span>`
       : '<span class="ok-indicator">✓</span>';
     const cells = {
-      gpio: `<td class="gpio-number">${key}</td>`,
+      gpio: `<td class="gpio-number">${key}${gpio === chip.usb?.dn ? '<small class="gpio-badge">USB D−</small>' : ""}${gpio === chip.usb?.dp ? '<small class="gpio-badge">USB D+</small>' : ""}${(chip.reserved_conditional?.opi ?? []).includes(gpio) && !conditionalReserved ? `<small class="gpio-badge">${escapeHtml(t("gpio.opiReserved"))}</small>` : ""}</td>`,
       roles: `<td><div class="compact-roles">${compactRoles || "<span>—</span>"}${overflow}</div></td>`,
       pull: `<td>${escapeHtml(pull || "—")}</td>`,
       verified: `<td class="compact-verified">${escapeHtml(compactVerification(pin))}</td>`,
@@ -582,7 +652,7 @@ function renderTable(board, errors) {
         <section class="detail-roles"><h3>${escapeHtml(t("column.roles"))}</h3><div class="role-list">${editableRoles || "<span>—</span>"}</div>
           <div class="search-combobox" data-role-combobox="${key}"><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${escapeHtml(t("detail.searchRole"))}" autocomplete="off"${readonly}><ul role="listbox"></ul></div>${readonlyNote(readonlyReason)}
         </section>
-        <label>${escapeHtml(t("column.pull"))}<select class="cell-select" data-pull data-gpio="${key}"${readonly}><option value=""${pull === "" ? " selected" : ""}>${escapeHtml(t("detail.empty"))}</option><option value="up"${pull === "up" ? " selected" : ""}>up</option><option value="down"${pull === "down" ? " selected" : ""}>down</option><option value="none"${pull === "none" ? " selected" : ""}>none</option></select>${readonlyNote(readonlyReason)}</label>
+        <label>${escapeHtml(t("column.pull"))}<select class="cell-select" data-pull data-gpio="${key}"${readonly}><option value=""${pull === "" ? " selected" : ""}>${escapeHtml(t("detail.empty"))}</option><option value="up"${pull === "up" ? " selected" : ""}>up</option><option value="down"${pull === "down" ? " selected" : ""}>down</option><option value="none"${pull === "none" ? " selected" : ""}>none</option></select>${chip.no_internal_pull?.includes(gpio) ? `<small class="readonly-note">${escapeHtml(t("gpio.noInternalPull"))}</small>` : ""}${readonlyNote(readonlyReason)}</label>
         <label>${escapeHtml(t("column.note"))}<input class="cell-input note-input" data-note data-gpio="${key}" type="text" value="${escapeHtml(pin.note ?? "")}"${readonly}>${readonlyNote(readonlyReason)}</label>
         <section><h3>${escapeHtml(t("column.verified"))}</h3><div class="verified">${verificationSummary(pin)}</div></section>
         <section><h3>${escapeHtml(t("detail.related"))}</h3><div class="detail-related">${related || `<span>${escapeHtml(t("common.none"))}</span>`}</div></section>
@@ -594,7 +664,7 @@ function renderTable(board, errors) {
   if (combobox) {
     const gpio = combobox.dataset.roleCombobox;
     const assigned = new Set(board.pins?.[gpio]?.roles ?? []);
-    new SearchCombobox(combobox, allRoleOptions(board, gpio).filter((role) => !assigned.has(role)).map((role) => ({ value: role, label: roleDisplay(board, role).plain, search: role })), (role) => addRole(gpio, role), readonlyReasons.get(gpio));
+    new SearchCombobox(combobox, allRoleOptions(board, gpio).filter((role) => !assigned.has(role)).map((role) => ({ value: role, label: roleDisplay(board, role).plain, search: role })), (role) => addRoleUI(gpio, role), readonlyReasons.get(gpio));
   }
 }
 
@@ -929,17 +999,94 @@ function roleAssigned(board, role) {
   ));
 }
 
+function valueAtPath(object, path) {
+  return path.split(".").reduce((value, key) => value?.[key], object);
+}
+
+function scalarInput(value, attributes, type = "string", placeholder = "", choices = null) {
+  if (type === "boolean") return `<select ${attributes}><option value="">—${placeholder !== "" ? ` (${escapeHtml(placeholder)})` : ""}</option><option value="true"${value === true ? " selected" : ""}>true</option><option value="false"${value === false ? " selected" : ""}>false</option></select>`;
+  if (choices) return `<select ${attributes}><option value="">—${placeholder !== "" ? ` (${escapeHtml(placeholder)})` : ""}</option>${choices.map((choice) => `<option value="${escapeHtml(choice)}"${value === choice ? " selected" : ""}>${escapeHtml(choice)}</option>`).join("")}</select>`;
+  return `<input ${attributes} type="${type === "number" ? "number" : "text"}" value="${escapeHtml(value ?? "")}"${placeholder !== "" ? ` placeholder="${escapeHtml(placeholder)}"` : ""}>`;
+}
+
+function boardSpecFields(board) {
+  const fields = [
+    ["display.touch", "boolean"], ["storage.psram_mb", "number"], ["storage.psram_mode", "string"],
+    ["storage.flash_mb", "number"], ["storage.sd", "boolean"], ["power.pmic_part", "string"],
+    ["power.battery_mah", "number"], ["power.usb", "string"], ["links.schematic", "string"], ["links.product", "string"],
+  ];
+  const resolution = valueAtPath(board.spec, "display.resolution") ?? [];
+  return `<div class="field-grid"><label>display.resolution<input data-board-resolution="0" type="number" value="${escapeHtml(resolution[0] ?? "")}" placeholder="width"></label><label>display.resolution<input data-board-resolution="1" type="number" value="${escapeHtml(resolution[1] ?? "")}" placeholder="height"></label>${fields.map(([path, type]) => `<label>${escapeHtml(path)}${scalarInput(valueAtPath(board.spec, path), `data-board-spec="${path}" data-value-type="${type}"`, type)}</label>`).join("")}</div>`;
+}
+
+function busRemovalReason(board, id) {
+  if (Object.values(board.devices ?? {}).some((device) => device.bus === id || Object.values(device.choices ?? {}).some((choice) => choice.bus === id))) return t("reason.busInUse");
+  if (Object.values(board.pins ?? {}).some((pin) => (pin.roles ?? []).some((role) => role.startsWith(`bus:${id}.`)))) return t("reason.busInUse");
+  return "";
+}
+
+function objectRemovalReason(board, prefix, id) {
+  if (Object.values(board.pins ?? {}).some((pin) => (pin.roles ?? []).some((role) => role.startsWith(`${prefix}:${id}.`)))) return t(prefix === "dev" ? "reason.deviceInUse" : "reason.connectorInUse");
+  return "";
+}
+
+function hostSuggestions(kind, chip) {
+  if (kind === "spi" && Number.isInteger(chip.spi_hosts)) return Array.from({ length: chip.spi_hosts }, (_, index) => `SPI${index + 2}_HOST`);
+  const count = kind === "i2c" ? chip.i2c_hosts : kind === "i2s" ? chip.i2s_ports : undefined;
+  return Number.isInteger(count) ? Array.from({ length: count }, (_, index) => index) : [];
+}
+
+function specKeys(device, fragment = device) {
+  const part = parts[fragment.part];
+  if (part?.spec_keys) return part.spec_keys;
+  return Object.fromEntries((schema.definitions.deviceKind["x-spec-properties"][fragment.kind ?? device.kind] ?? [])
+    .map((key) => [key, { type: ["invert", "readable"].includes(key) ? "boolean" : key === "panel_type" ? "string" : "number" }]));
+}
+
+function deviceSpecType(definition) {
+  return ["integer", "number"].includes(definition.type) ? "number" : definition.type;
+}
+
+function deviceSpecEditor(deviceId, device, choiceId = null) {
+  const fragment = choiceId === null ? device : device.choices[choiceId];
+  const part = parts[fragment.part];
+  const rows = Object.entries(specKeys(device, fragment)).map(([key, definition]) => {
+    const value = fragment.spec?.[key];
+    const fallback = definition.default;
+    const type = deviceSpecType(definition);
+    const attrs = `data-device-spec="${escapeHtml(deviceId)}" data-choice-id="${escapeHtml(choiceId ?? "")}" data-spec-key="${escapeHtml(key)}" data-value-type="${type}"`;
+    return `<label>${escapeHtml(key)}${scalarInput(value, attrs, type, fallback ?? "", definition.enum)}</label>`;
+  }).join("");
+  return `<div class="field-grid device-spec">${rows || `<span>${escapeHtml(t("configuration.noSpec"))}</span>`}</div>`;
+}
+
+function deviceRow(board, id, device) {
+  const required = requiredDeviceSignals(device);
+  const optional = deviceSignals(device).filter((signal) => !required.includes(signal));
+  const missing = required.filter((signal) => !roleAssigned(board, `dev:${id}.${signal}`));
+  const availableOptional = optional.filter((signal) => !roleAssigned(board, `dev:${id}.${signal}`));
+  const reason = objectRemovalReason(board, "dev", id);
+  const choices = device.choices ? Object.entries(device.choices).map(([choiceId, choice]) => `<section class="choice-editor"><div class="object-title"><code>${escapeHtml(choiceId)}</code><span>${escapeHtml(choice.part ?? "")}</span><button type="button" class="secondary" data-remove-choice="${escapeHtml(id)}" data-choice-id="${escapeHtml(choiceId)}">${escapeHtml(t("configuration.remove"))}</button></div>${deviceSpecEditor(id, device, choiceId)}</section>`).join("") : deviceSpecEditor(id, device);
+  const choiceControls = device.choices
+    ? `<div class="choice-settings"><label>${escapeHtml(t("configuration.selectedBy"))}<select data-choice-selected-by="${escapeHtml(id)}"><option value="revision"${device.selected_by === "revision" ? " selected" : ""}>revision</option><option value="runtime"${device.selected_by === "runtime" ? " selected" : ""}>runtime</option><option value="user"${device.selected_by === "user" ? " selected" : ""}>user</option></select></label><label>${escapeHtml(t("configuration.defaultChoice"))}<select data-choice-default="${escapeHtml(id)}">${Object.keys(device.choices).map((choice) => `<option value="${escapeHtml(choice)}"${choice === device.default ? " selected" : ""}>${escapeHtml(choice)}</option>`).join("")}</select></label></div>`
+    : "";
+  const partChoices = Object.values(parts).filter((part) => part.kind === device.kind && part.id !== device.part).map((part) => `<option value="${escapeHtml(part.id)}">${escapeHtml(part.name)}</option>`).join("");
+  return `<details class="config-object"><summary><code>${escapeHtml(id)}</code><span>${escapeHtml(device.part ?? device.kind)}</span><button type="button" class="secondary" data-remove-device="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></summary>${readonlyNote(reason)}${choiceControls}${choices}<div class="choice-add"><select data-new-choice-part="${escapeHtml(id)}">${partChoices}</select>${device.choices ? "" : `<select data-new-choice-selected-by="${escapeHtml(id)}"><option value="runtime">runtime</option><option value="revision">revision</option><option value="user">user</option></select>`}<button type="button" class="secondary" data-add-choice="${escapeHtml(id)}">${escapeHtml(t("configuration.addChoice"))}</button></div>${missing.length ? `<div class="unassigned"><strong>${escapeHtml(t("configuration.unassigned"))}:</strong>${missing.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}${availableOptional.length ? `<div class="unassigned optional"><strong>${escapeHtml(t("configuration.optional"))}:</strong>${availableOptional.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}</details>`;
+}
+
 function renderConfiguration() {
   const board = currentBase();
   const connectorRows = Object.entries(board.connectors ?? {}).map(([id, connector]) => {
     const type = connectorTypes[connector.type];
     const standards = Object.keys(type?.standards ?? {});
-    return `<div class="config-row"><code>${escapeHtml(id)}</code><span>${escapeHtml(connector.type)}</span><select data-config-standard="${escapeHtml(id)}"><option value="">—</option>${standards.map((standard) => `<option value="${escapeHtml(standard)}"${standard === connector.standard ? " selected" : ""}>${escapeHtml(standard)}</option>`).join("")}</select><button type="button" class="secondary" data-remove-connector="${escapeHtml(id)}">${escapeHtml(t("configuration.remove"))}</button></div>`;
+    const reason = objectRemovalReason(board, "conn", id);
+    return `<div class="config-row"><code>${escapeHtml(id)}</code><span>${escapeHtml(connector.type)}</span><select data-config-standard="${escapeHtml(id)}"><option value="">—</option>${standards.map((standard) => `<option value="${escapeHtml(standard)}"${standard === connector.standard ? " selected" : ""}>${escapeHtml(standard)}</option>`).join("")}</select><button type="button" class="secondary" data-remove-connector="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>${readonlyNote(reason)}`;
   }).join("");
-  const deviceRows = Object.entries(board.devices ?? {}).map(([id, device]) => {
-    const missing = requiredDeviceSignals(device).filter((signal) => !roleAssigned(board, `dev:${id}.${signal}`));
-    return `<div class="config-row config-device"><code>${escapeHtml(id)}</code><span>${escapeHtml(device.part ?? device.kind)}</span><button type="button" class="secondary" data-remove-device="${escapeHtml(id)}">${escapeHtml(t("configuration.remove"))}</button>${missing.length ? `<div class="unassigned"><strong>${escapeHtml(t("configuration.unassigned"))}:</strong>${missing.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}</div>`;
+  const busRows = Object.entries(board.buses ?? {}).map(([id, bus]) => {
+    const reason = busRemovalReason(board, id);
+    return `<div class="config-row"><code>${escapeHtml(id)}</code><span>${escapeHtml(bus.kind)}</span><span>${escapeHtml((bus.signals ?? []).join(", "))}</span><button type="button" class="secondary" data-remove-bus="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>${readonlyNote(reason)}`;
   }).join("");
+  const deviceRows = Object.entries(board.devices ?? {}).map(([id, device]) => deviceRow(board, id, device)).join("");
   const entries = state.compositionEntries.get(state.currentId) ?? [];
   const candidates = Object.values(accessories).filter((accessory) => !accessory.compatible_with || accessory.compatible_with.includes(state.currentId));
   const accessoryRows = candidates.map((accessory) => {
@@ -951,11 +1098,67 @@ function renderConfiguration() {
     return `<div class="config-row accessory-row"><label><input type="checkbox" data-accessory="${escapeHtml(accessory.id)}"${entry ? " checked" : ""}>${escapeHtml(accessory.name)}</label><span class="origin-badge">${escapeHtml(accessory.origin)}${accessory.bundled ? " · bundled" : ""}</span>${settings}</div>`;
   }).join("");
   const typeOptions = Object.keys(connectorTypes).map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
-  const partOptions = Object.values(parts).map((part) => `<option value="${escapeHtml(part.id)}">${escapeHtml(part.kind)} · ${escapeHtml(part.name)}</option>`).join("");
+  const busKinds = schema.definitions.busKind.enum.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("");
+  const deviceKinds = schema.definitions.deviceKind.enum.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("");
+  const spiSignals = schemaSignals("busKind").spi.map((signal) => `<label><input type="checkbox" data-new-bus-signal value="${escapeHtml(signal)}"${["sclk", "mosi"].includes(signal) ? " checked" : ""}>${escapeHtml(signal)}</label>`).join("");
   elements.configurationList.innerHTML = `
+    <section class="config-group"><h3>${escapeHtml(t("configuration.basic"))}</h3><div class="field-grid"><label>${escapeHtml(t("field.name"))}<input data-board-field="name" value="${escapeHtml(board.name)}"></label><label>${escapeHtml(t("field.legacyId"))}<input data-board-field="legacy_board_id" data-value-type="number" type="number" value="${board.legacy_board_id}"></label><label>${escapeHtml(t("field.chip"))}<select data-board-field="chip">${Object.keys(chips).map((id) => `<option value="${escapeHtml(id)}"${id === board.chip ? " selected" : ""}>${escapeHtml(id)}</option>`).join("")}</select></label></div>${boardSpecFields(board)}</section>
+    <section class="config-group"><h3>${escapeHtml(t("configuration.buses"))}</h3>${busRows}<div class="config-add bus-add"><input data-new-bus-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-bus-kind>${busKinds}</select><div data-new-bus-signals class="signal-checks">${spiSignals}</div><input data-new-bus-host list="new-bus-hosts" placeholder="preferred_host"><datalist id="new-bus-hosts"></datalist><input data-new-bus-freq type="number" placeholder="freq"><input data-new-bus-freq-read type="number" placeholder="freq_read"><label><input data-new-bus-fixed type="checkbox">fixed</label><button type="button" data-add-bus>${escapeHtml(t("configuration.add"))}</button></div></section>
     <section class="config-group"><h3>${escapeHtml(t("configuration.connectors"))}</h3>${connectorRows}<div class="config-add"><input data-new-connector-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-connector-type>${typeOptions}</select><button type="button" data-add-connector>${escapeHtml(t("configuration.add"))}</button></div></section>
-    <section class="config-group"><h3>${escapeHtml(t("configuration.devices"))}</h3>${deviceRows}<div class="config-add"><input data-new-device-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-device-part>${partOptions}</select><button type="button" data-add-device>${escapeHtml(t("configuration.add"))}</button></div></section>
+    <section class="config-group"><h3>${escapeHtml(t("configuration.devices"))}</h3>${deviceRows}<div class="config-add device-add"><input data-new-device-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-device-kind>${deviceKinds}</select><div class="search-combobox" data-new-device-part><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${escapeHtml(t("configuration.partOptional"))}" autocomplete="off"><ul role="listbox"></ul></div><select data-new-device-bus><option value="">—</option></select><button type="button" data-add-device>${escapeHtml(t("configuration.add"))}</button><small data-sd-note hidden></small></div></section>
     <section class="config-group"><h3>${escapeHtml(t("configuration.accessories"))}</h3>${accessoryRows || `<p>${escapeHtml(t("related.empty"))}</p>`}</section>`;
+  const partRoot = elements.configurationList.querySelector("[data-new-device-part]");
+  partRoot.dataset.value = "";
+  new SearchCombobox(partRoot, Object.values(parts).map((part) => ({ value: part.id, label: `${part.kind} · ${part.name}`, search: `${part.id} ${part.vendor ?? ""}` })), (partId) => {
+    partRoot.dataset.value = partId;
+    const part = parts[partId];
+    elements.configurationList.querySelector("[data-new-device-kind]").value = part.kind;
+    updateNewDeviceBuses();
+    partRoot.querySelector("input").placeholder = `${part.kind} · ${part.name}`;
+  });
+  updateNewBusSignals();
+  updateNewDeviceBuses();
+}
+
+function controlValue(control) {
+  if (control.value === "") return undefined;
+  if (control.dataset.valueType === "number") return Number(control.value);
+  if (control.dataset.valueType === "boolean") return control.value === "true";
+  return control.value;
+}
+
+function updateNewBusSignals() {
+  const kind = elements.configurationList.querySelector("[data-new-bus-kind]")?.value;
+  const root = elements.configurationList.querySelector("[data-new-bus-signals]");
+  if (!kind || !root) return;
+  const defaults = kind === "spi" ? new Set(["sclk", "mosi"]) : kind === "i2c" ? new Set(["sda", "scl"]) : new Set();
+  root.innerHTML = (schemaSignals("busKind")[kind] ?? []).map((signal) => `<label><input type="checkbox" data-new-bus-signal value="${escapeHtml(signal)}"${defaults.has(signal) ? " checked" : ""}>${escapeHtml(signal)}</label>`).join("");
+  const host = elements.configurationList.querySelector("[data-new-bus-host]");
+  const suggestions = hostSuggestions(kind, chips[currentBase().chip]);
+  host.placeholder = suggestions.join(" / ") || "preferred_host";
+  elements.configurationList.querySelector("#new-bus-hosts").innerHTML = suggestions.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+  elements.configurationList.querySelector("[data-new-bus-freq-read]").hidden = kind !== "spi";
+}
+
+function updateNewDeviceBuses() {
+  const partId = elements.configurationList.querySelector("[data-new-device-part]")?.dataset.value;
+  const kind = elements.configurationList.querySelector("[data-new-device-kind]")?.value;
+  const expected = parts[partId]?.bus?.kind;
+  const busKind = expected && !["none", "any"].includes(expected) ? expected : null;
+  const select = elements.configurationList.querySelector("[data-new-device-bus]");
+  if (!select) return;
+  const candidates = Object.entries(currentBase().buses ?? {}).filter(([, bus]) => !busKind || bus.kind === busKind);
+  select.innerHTML = `<option value="">—</option>${candidates.map(([id]) => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("")}`;
+  select.hidden = expected === "none";
+  if (!partId) select.hidden = !["display", "sd", "touch", "speaker", "mic", "pmic", "rtc", "imu"].includes(kind);
+  const sdNote = elements.configurationList.querySelector("[data-sd-note]");
+  sdNote.hidden = kind !== "sd";
+  sdNote.textContent = chips[currentBase().chip].sdmmc?.gpio_matrix ? t("configuration.sdMatrix") : t("configuration.sdFixed");
+}
+
+function operationFailure(failure) {
+  if (!(failure instanceof BoardOperationError)) throw failure;
+  showToast(messages[`validation.${failure.code}`] ? validationMessage(failure) : failure.message);
 }
 
 function revisionChoice(board, revision, slot, device) {
@@ -1038,7 +1241,7 @@ function renderAll() {
   try {
     applyStaticTranslations();
     const board = shownBoard();
-    const errors = validationFor(board);
+    const errors = validationFor(currentBase());
     renderBoardSelect();
     renderOptions();
     renderViews(board);
@@ -1076,18 +1279,18 @@ function removeRole(gpio, role) {
   renderAll();
 }
 
-function addRole(gpio, role) {
+function addRoleUI(gpio, role) {
   if (!role) return;
   const connectorRole = /^conn:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
   if (connectorRole) {
     assignConnectorPosition(currentBase(), connectorRole[1], connectorRole[2], `gpio:${gpio}`);
     return;
   }
-  const pin = editablePin(gpio);
-  if (!pin.roles.includes(role)) pin.roles.push(role);
-  clearVerification(pin, "roles");
-  markDirty();
-  renderAll();
+  try {
+    addRole(currentBase(), gpio, role, { chip: chips[currentBase().chip] });
+    markDirty();
+    renderAll();
+  } catch (failure) { operationFailure(failure); }
 }
 
 function rememberConnectorUndo(board) {
@@ -1206,7 +1409,8 @@ function openRoleChooser(role) {
   state.activeView = "configuration";
   clearResolvedMode();
   const chip = chips[currentBase().chip];
-  const gpio = Array.from({ length: chip.gpio_count }, (_, index) => String(index)).find((id) => !chip.reserved.includes(Number(id)) && !(currentBase().pins[id]?.roles?.length)) ?? "0";
+  const conditional = chip.reserved_conditional?.[currentBase().spec?.storage?.psram_mode] ?? [];
+  const gpio = Array.from({ length: chip.gpio_count }, (_, index) => String(index)).find((id) => !chip.reserved.includes(Number(id)) && !conditional.includes(Number(id)) && allRoleOptions(currentBase(), id).includes(role) && !(currentBase().pins[id]?.roles?.length)) ?? "0";
   currentEntry().expandedGPIO = gpio;
   renderAll();
   const input = elements.tableBody.querySelector(`[data-role-combobox="${gpio}"] input`);
@@ -1241,6 +1445,8 @@ async function openFile(file) {
 
 function downloadCurrent() {
   const entry = currentEntry();
+  const errors = validationFor(entry.base).filter((item) => item.severity !== "warning");
+  if (errors.length && !window.confirm(t("file.downloadErrorsConfirm", { count: errors.length }))) return;
   const formatted = formatBoard(entry.base);
   const normalized = JSON.parse(formatted);
   const blob = new Blob([formatted], { type: "application/json" });
@@ -1311,6 +1517,26 @@ elements.boardSelect.addEventListener("change", () => {
   renderAll();
 });
 
+elements.newBoard.addEventListener("click", () => openBoardDialog("new"));
+elements.duplicateBoard.addEventListener("click", () => openBoardDialog("duplicate"));
+elements.closeBoard.addEventListener("click", closeCurrentDocument);
+elements.boardDialogForm.addEventListener("input", validateBoardDialog);
+elements.boardDialogForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!validateBoardDialog()) return;
+  const form = elements.boardDialogForm;
+  const values = { id: form.elements.id.value.trim(), name: form.elements.name.value.trim(), legacy_board_id: Number(form.elements.legacy_board_id.value) };
+  try {
+    const board = state.boardDialogMode === "duplicate"
+      ? duplicateBoard(currentBase(), values)
+      : createBoard({ ...values, chip: form.elements.chip.value });
+    initializeDocument(board);
+    elements.boardDialog.close();
+    renderAll();
+  } catch (failure) { operationFailure(failure); }
+});
+elements.boardDialog.querySelector("[data-dialog-cancel]").addEventListener("click", () => elements.boardDialog.close());
+
 elements.languageSelect.addEventListener("change", () => {
   state.language = elements.languageSelect.value;
   saveLanguage(state.language);
@@ -1351,7 +1577,44 @@ elements.viewTabs.addEventListener("click", (event) => {
   renderAll();
 });
 
+elements.configurationList.addEventListener("focusout", (event) => {
+  if (event.target.matches("input[data-board-field], input[data-board-spec], [data-board-resolution], input[data-device-spec]")) {
+    event.target.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+});
+
 elements.configurationList.addEventListener("change", (event) => {
+  if (event.target.matches("[data-new-bus-kind]")) { updateNewBusSignals(); return; }
+  if (event.target.matches("[data-new-device-kind]")) { updateNewDeviceBuses(); return; }
+  if (event.target.matches("[data-board-field]")) {
+    const key = event.target.dataset.boardField;
+    const value = controlValue(event.target);
+    if (key === "chip" && value !== currentBase().chip && !window.confirm(t("dialog.chipChangeConfirm"))) { renderAll(); return; }
+    try { setBoardField(currentBase(), key, value); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); renderAll(); }
+    return;
+  }
+  if (event.target.matches("[data-board-spec]")) {
+    setSpec(currentBase(), event.target.dataset.boardSpec, controlValue(event.target));
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-board-resolution]")) {
+    const inputs = [...elements.configurationList.querySelectorAll("[data-board-resolution]")];
+    const values = inputs.map((input) => input.value === "" ? undefined : Number(input.value));
+    setSpec(currentBase(), "display.resolution", values[0] === undefined ? undefined : values[1] === undefined ? [values[0]] : values);
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-device-spec]")) {
+    setDeviceSpec(currentBase(), event.target.dataset.deviceSpec, event.target.dataset.choiceId || null, event.target.dataset.specKey, controlValue(event.target));
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-choice-selected-by]")) {
+    setChoiceDefaults(currentBase(), event.target.dataset.choiceSelectedBy, { selected_by: event.target.value });
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-choice-default]")) {
+    setChoiceDefaults(currentBase(), event.target.dataset.choiceDefault, { default: event.target.value });
+    markDirty(); renderAll(); return;
+  }
   const accessoryId = event.target.dataset.accessory;
   if (accessoryId) {
     const entries = clone(state.compositionEntries.get(state.currentId) ?? []);
@@ -1375,24 +1638,48 @@ elements.configurationList.addEventListener("change", (event) => {
 elements.configurationList.addEventListener("click", (event) => {
   const roleButton = event.target.closest("[data-unassigned-role]");
   if (roleButton) return openRoleChooser(roleButton.dataset.unassignedRole);
-  const removeConnector = event.target.closest("[data-remove-connector]");
-  if (removeConnector) { delete currentBase().connectors[removeConnector.dataset.removeConnector]; markDirty(); renderAll(); return; }
-  const removeDevice = event.target.closest("[data-remove-device]");
-  if (removeDevice) { delete currentBase().devices[removeDevice.dataset.removeDevice]; markDirty(); renderAll(); return; }
+  const removeConnectorButton = event.target.closest("[data-remove-connector]");
+  if (removeConnectorButton) { try { removeConnector(currentBase(), removeConnectorButton.dataset.removeConnector); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
+  const removeDeviceButton = event.target.closest("[data-remove-device]");
+  if (removeDeviceButton) { try { removeDevice(currentBase(), removeDeviceButton.dataset.removeDevice); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
+  const removeBusButton = event.target.closest("[data-remove-bus]");
+  if (removeBusButton) { try { removeBus(currentBase(), removeBusButton.dataset.removeBus); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
+  const removeChoiceButton = event.target.closest("[data-remove-choice]");
+  if (removeChoiceButton) { try { removeChoice(currentBase(), removeChoiceButton.dataset.removeChoice, removeChoiceButton.dataset.choiceId); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
   if (event.target.closest("[data-add-connector]")) {
     const id = elements.configurationList.querySelector("[data-new-connector-id]").value.trim();
     const type = elements.configurationList.querySelector("[data-new-connector-type]").value;
     if (!/^[a-z][a-z0-9_]*$/.test(id) || currentBase().connectors?.[id]) return showToast(t("validation.E_ID_FORMAT"));
-    currentBase().connectors ??= {};
-    currentBase().connectors[id] = { type };
-    markDirty(); renderAll(); return;
+    try { addConnector(currentBase(), id, { type }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return;
+  }
+  if (event.target.closest("[data-add-bus]")) {
+    const id = elements.configurationList.querySelector("[data-new-bus-id]").value.trim();
+    const kind = elements.configurationList.querySelector("[data-new-bus-kind]").value;
+    const signals = [...elements.configurationList.querySelectorAll("[data-new-bus-signal]:checked")].map((input) => input.value);
+    const rawHost = elements.configurationList.querySelector("[data-new-bus-host]").value.trim();
+    const preferred_host = ["i2c", "i2s"].includes(kind) && /^\d+$/.test(rawHost) ? Number(rawHost) : rawHost || undefined;
+    const freq = elements.configurationList.querySelector("[data-new-bus-freq]").value;
+    const freq_read = elements.configurationList.querySelector("[data-new-bus-freq-read]").value;
+    const fixed = elements.configurationList.querySelector("[data-new-bus-fixed]").checked;
+    try { addBus(currentBase(), id, { kind, signals, preferred_host, freq: freq || undefined, freq_read: freq_read || undefined, fixed }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); }
+    return;
   }
   if (event.target.closest("[data-add-device]")) {
     const id = elements.configurationList.querySelector("[data-new-device-id]").value.trim();
-    const partId = elements.configurationList.querySelector("[data-new-device-part]").value;
+    const partId = elements.configurationList.querySelector("[data-new-device-part]").dataset.value;
+    const kind = partId ? parts[partId].kind : elements.configurationList.querySelector("[data-new-device-kind]").value;
+    const bus = elements.configurationList.querySelector("[data-new-device-bus]").value;
     if (!/^[a-z][a-z0-9_]*$/.test(id) || currentBase().devices?.[id]) return showToast(t("validation.E_ID_FORMAT"));
-    currentBase().devices[id] = { kind: parts[partId].kind, part: partId };
-    markDirty(); renderAll();
+    try { addDevice(currentBase(), id, { kind, part: partId || undefined, bus: bus || undefined }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); }
+    return;
+  }
+  const addChoiceButton = event.target.closest("[data-add-choice]");
+  if (addChoiceButton) {
+    const id = addChoiceButton.dataset.addChoice;
+    const select = elements.configurationList.querySelector(`[data-new-choice-part="${id}"]`);
+    const partId = select.value;
+    const selectedBy = elements.configurationList.querySelector(`[data-new-choice-selected-by="${id}"]`)?.value;
+    try { addChoice(currentBase(), id, partId, { part: partId, selected_by: selectedBy }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); }
   }
 });
 
@@ -1473,7 +1760,7 @@ elements.validationList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-error-index]");
   if (!button) return;
   const board = shownBoard();
-  const errors = validationFor(board);
+  const errors = validationFor(currentBase());
   focusGPIO(gpioForError(errors[Number(button.dataset.errorIndex)], board));
 });
 

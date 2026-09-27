@@ -1,4 +1,6 @@
 // Generated from extras/board_spec; do not edit by hand.
+// Unspecified values use target-specific unknown or sentinel values.
+// Precedence: board value > part default > panel-class default.
 #pragma once
 
 #include <cstdint>
@@ -93,4 +95,23 @@ namespace paper {
   constexpr std::int8_t hold[] = { 4, 15 };
 } // namespace paper
 
-} } } } // namespace m5gfx::board_detect::m5::wiring
+} // namespace wiring
+
+namespace generated_options {
+namespace core2 {
+  constexpr std::uint32_t new_pmic = 1u << 0;
+  constexpr std::uint32_t lcd_e = 1u << 1;
+  static const char* const names[] = { "new_pmic", "lcd_e" };
+} // namespace core2
+namespace tough {
+  constexpr std::uint32_t reserved = 1u << 0;
+  constexpr std::uint32_t lcd_e = 1u << 1;
+  static const char* const names[] = { "reserved", "lcd_e" };
+} // namespace tough
+namespace stack {
+  constexpr std::uint32_t ips = 1u << 0;
+  static const char* const names[] = { "ips" };
+} // namespace stack
+} // namespace generated_options
+
+} } } // namespace m5gfx::board_detect::m5

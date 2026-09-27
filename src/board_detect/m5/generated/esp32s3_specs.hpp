@@ -1,7 +1,10 @@
 // Generated from extras/board_spec; do not edit by hand.
+// Unspecified values use target-specific unknown or sentinel values.
+// Precedence: board value > part default > panel-class default.
 #pragma once
 
 #include <cstdint>
+#include "../setup_sentinels.hpp"
 
 namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace atoms3 {
 constexpr int bus_host = SPI3_HOST;
@@ -63,8 +66,8 @@ constexpr bool bus_three_wire = true;
 namespace panel_st7789v2 {
   constexpr int width = 135;
   constexpr int height = 240;
-  constexpr int memory_width = 0;
-  constexpr int memory_height = 0;
+  constexpr int memory_width = setup_sentinel::keep_dimension;
+  constexpr int memory_height = setup_sentinel::keep_dimension;
   constexpr int offset_x = 52;
   constexpr int offset_y = 40;
   constexpr int rotation_offset = 0;

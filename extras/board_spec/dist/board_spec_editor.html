@@ -45,6 +45,7 @@ button:disabled, select:disabled, input:disabled, [aria-disabled="true"] { opaci
 .toolbar { display: flex; flex: none; flex-wrap: wrap; align-items: end; gap: .7rem; padding: .85rem 1.5rem; background: var(--paper); border-bottom: 1px solid var(--line); }
 .toolbar label { display: grid; gap: .25rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
 .toolbar select { min-width: 15rem; padding: .5rem; }
+.toolbar button { white-space: nowrap; }
 .file-button { position: relative; padding: .55rem .8rem; border-radius: 6px; background: #273c46; color: #fff !important; cursor: pointer; }
 .file-button input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
 .drop-zone { padding: .48rem .75rem; border: 1px dashed #8da0ad; border-radius: 6px; color: var(--muted); }
@@ -92,6 +93,7 @@ tr.flash { animation: flash 1.2s ease; }
 .object-item.flash { animation: flash 1.2s ease; }
 @keyframes flash { 0%, 100% { background: inherit; } 35% { background: #c8f2ef; } }
 .gpio-number { font-weight: 800; font-variant-numeric: tabular-nums; }
+.gpio-badge { display: block; margin-top: .12rem; color: var(--muted); font-size: .55rem; font-weight: 650; white-space: normal; }
 .role-list { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .35rem; min-width: 16rem; }
 .compact-roles { display: flex; align-items: center; gap: .25rem; max-width: 34rem; overflow: hidden; }
 .role-chip { display: inline-flex; align-items: center; gap: .2rem; padding: .16rem .3rem .16rem .42rem; border-radius: 999px; background: #e8f1f3; color: #16464c; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }
@@ -209,6 +211,22 @@ tr.flash { animation: flash 1.2s ease; }
 .config-row button, .config-add button { padding: .28rem .45rem; font-size: .68rem; }
 .config-row select, .config-add select, .config-add input { min-width: 0; padding: .3rem; }
 .config-device { grid-template-columns: minmax(5rem, 1fr) minmax(5rem, 1fr) auto; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(7rem, 1fr)); gap: .4rem; margin-bottom: .55rem; }
+.field-grid label { display: grid; gap: .15rem; color: var(--muted); font-size: .67rem; }
+.field-grid input, .field-grid select, .choice-settings select, .choice-add select { width: 100%; min-width: 0; padding: .3rem; }
+.bus-add { grid-template-columns: repeat(2, minmax(6rem, 1fr)); }
+.signal-checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .5rem; }
+.signal-checks label { display: flex; align-items: center; gap: .15rem; }
+.device-add { grid-template-columns: minmax(5rem, .7fr) minmax(6rem, .7fr) minmax(9rem, 1.5fr) minmax(6rem, 1fr) auto; }
+.device-add .search-combobox { min-width: 0; }
+.config-object { border-top: 1px solid #eef1f3; }
+.config-object summary { display: grid; grid-template-columns: minmax(5rem, 1fr) minmax(5rem, 1fr) auto; align-items: center; gap: .35rem; padding: .4rem 0; cursor: pointer; }
+.config-object summary button { justify-self: end; }
+.device-spec, .choice-settings, .choice-add { margin: .4rem 0 .55rem 1rem; }
+.choice-settings, .choice-add { display: flex; align-items: end; gap: .4rem; }
+.choice-settings label { display: grid; gap: .15rem; color: var(--muted); font-size: .67rem; }
+.choice-editor { margin-left: 1rem; padding: .4rem; border-left: 3px solid var(--accent-soft); }
+.optional { opacity: .7; font-weight: 400; }
 .unassigned { grid-column: 1 / -1; display: flex; align-items: center; gap: .25rem; overflow-x: auto; color: var(--warning); white-space: nowrap; }
 .accessory-row { grid-template-columns: minmax(8rem, 1fr) auto; }
 .accessory-row label { display: flex; align-items: center; gap: .25rem; }
@@ -237,6 +255,16 @@ tr.flash { animation: flash 1.2s ease; }
 
 .toast { position: fixed; right: 1rem; bottom: 1rem; max-width: min(30rem, calc(100vw - 2rem)); padding: .7rem .9rem; border-radius: 7px; background: #17212b; color: #fff; opacity: 0; transform: translateY(.5rem); pointer-events: none; transition: .18s ease; }
 .toast.show { opacity: 1; transform: none; }
+
+.board-dialog { width: min(30rem, calc(100vw - 2rem)); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 18px 50px rgb(0 0 0 / 30%); }
+.board-dialog::backdrop { background: rgb(3 20 25 / 55%); }
+.board-dialog form { display: grid; gap: .65rem; }
+.board-dialog h2 { margin: 0 0 .25rem; }
+.board-dialog label { display: grid; gap: .2rem; color: var(--muted); font-size: .75rem; font-weight: 700; }
+.board-dialog input, .board-dialog select { padding: .45rem; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.dialog-error { min-height: 1.2rem; margin: 0; color: var(--danger); font-size: .75rem; }
+.dialog-error.warning { color: var(--warning); }
 
 @media (max-width: 980px) {
   .workspace { display: flex; flex-direction: column; overflow-y: auto; }
@@ -280,6 +308,9 @@ tr.flash { animation: flash 1.2s ease; }
     <label><span data-i18n="toolbar.board">Board</span>
       <select id="board-select"></select>
     </label>
+    <button id="new-board-button" type="button" data-i18n="toolbar.new">New</button>
+    <button id="duplicate-board-button" type="button" class="secondary" data-i18n="toolbar.duplicate">Duplicate</button>
+    <button id="close-board-button" type="button" class="secondary" data-i18n="toolbar.close">Close</button>
     <label class="file-button"><span data-i18n="toolbar.open">Open JSON</span>
       <input id="file-input" type="file" accept="application/json,.json">
     </label>
@@ -367,6 +398,18 @@ tr.flash { animation: flash 1.2s ease; }
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <dialog id="board-dialog" class="board-dialog">
+    <form id="board-dialog-form" method="dialog">
+      <h2 id="board-dialog-title"></h2>
+      <label><span data-i18n="field.id">ID</span><input name="id" required pattern="[a-z][a-z0-9_]*"></label>
+      <label><span data-i18n="field.name">Name</span><input name="name" required></label>
+      <label><span data-i18n="field.legacyId">Legacy board ID</span><input name="legacy_board_id" type="number" required step="1"></label>
+      <label><span data-i18n="field.chip">Chip</span><select name="chip"></select></label>
+      <p id="board-dialog-error" class="dialog-error" aria-live="polite"></p>
+      <div class="dialog-actions"><button type="button" class="secondary" data-dialog-cancel data-i18n="dialog.cancel">Cancel</button><button type="submit" data-i18n="dialog.create">Create</button></div>
+    </form>
+  </dialog>
+
   <script type="application/json" id="board-spec-i18n">
   {
     "app.title": { "en": "M5 Board Spec Editor", "zh": "M5 板卡规格编辑器", "ja": "M5 ボード仕様エディタ" },
@@ -379,6 +422,23 @@ tr.flash { animation: flash 1.2s ease; }
     "toolbar.download": { "en": "Download formatted JSON", "zh": "下载格式化 JSON", "ja": "format 済み JSON をダウンロード" },
     "toolbar.discard": { "en": "Discard draft", "zh": "丢弃草稿", "ja": "下書きを破棄" },
     "toolbar.drop": { "en": "Drop JSON here", "zh": "将 JSON 拖放到此处", "ja": "JSON をここへドロップ" },
+    "toolbar.new": { "en": "New", "zh": "新建", "ja": "新規" },
+    "toolbar.duplicate": { "en": "Duplicate", "zh": "复制", "ja": "複製" },
+    "toolbar.close": { "en": "Close", "zh": "关闭", "ja": "閉じる" },
+    "field.id": { "en": "ID", "zh": "ID", "ja": "ID" },
+    "field.name": { "en": "Name", "zh": "名称", "ja": "名前" },
+    "field.legacyId": { "en": "Legacy board ID", "zh": "旧版板卡 ID", "ja": "従来の board ID" },
+    "field.chip": { "en": "Chip", "zh": "芯片", "ja": "チップ" },
+    "dialog.cancel": { "en": "Cancel", "zh": "取消", "ja": "キャンセル" },
+    "dialog.create": { "en": "Create", "zh": "创建", "ja": "作成" },
+    "dialog.newTitle": { "en": "Create a board", "zh": "新建板卡", "ja": "機種を新規作成" },
+    "dialog.duplicateTitle": { "en": "Duplicate this board", "zh": "复制此板卡", "ja": "この機種を複製" },
+    "dialog.legacyWarning": { "en": "⚠ Legacy ID is also used by {board}; saving is allowed", "zh": "⚠ 旧版 ID 也被 {board} 使用；仍可保存", "ja": "⚠ 従来 ID は {board} でも使われています（保存可能）" },
+    "dialog.idExists": { "en": "That ID is already open", "zh": "该 ID 已打开", "ja": "その ID は既に開かれています" },
+    "dialog.nameRequired": { "en": "Name is required", "zh": "必须填写名称", "ja": "名前は必須です" },
+    "dialog.legacyInteger": { "en": "Legacy board ID must be an integer", "zh": "旧版板卡 ID 必须是整数", "ja": "従来の board ID は整数で入力してください" },
+    "dialog.closeDirtyConfirm": { "en": "Close this board and delete its browser draft?", "zh": "关闭此板卡并删除浏览器草稿？", "ja": "この機種を閉じ、ブラウザの下書きを削除しますか？" },
+    "dialog.chipChangeConfirm": { "en": "Change the chip? Existing roles are kept and may become validation errors.", "zh": "更改芯片？现有 role 将保留，可能产生验证错误。", "ja": "チップを変更しますか？既存 role は残り、検証エラーになる場合があります。" },
     "language.en": { "en": "English", "zh": "English", "ja": "English" },
     "language.zh": { "en": "中文 (简体)", "zh": "中文 (简体)", "ja": "中文 (简体)" },
     "language.ja": { "en": "日本語", "zh": "日本語", "ja": "日本語" },
@@ -411,6 +471,22 @@ tr.flash { animation: flash 1.2s ease; }
     "configuration.remove": { "en": "Remove", "zh": "删除", "ja": "削除" },
     "configuration.unassigned": { "en": "Unassigned", "zh": "未分配", "ja": "未割当" },
     "configuration.idPrompt": { "en": "ID", "zh": "ID", "ja": "ID" },
+    "configuration.basic": { "en": "Basic information", "zh": "基本信息", "ja": "基本情報" },
+    "configuration.buses": { "en": "Buses", "zh": "总线", "ja": "バス" },
+    "configuration.noSpec": { "en": "No editable spec fields", "zh": "没有可编辑的规格字段", "ja": "編集できる spec 項目はありません" },
+    "configuration.selectedBy": { "en": "Selected by", "zh": "选择方式", "ja": "選択方法" },
+    "configuration.defaultChoice": { "en": "Default", "zh": "默认", "ja": "既定" },
+    "configuration.addChoice": { "en": "Add choice", "zh": "添加选项", "ja": "選択肢を追加" },
+    "configuration.optional": { "en": "Optional", "zh": "可选", "ja": "任意" },
+    "configuration.partOptional": { "en": "Search a part (optional)", "zh": "搜索部件（可选）", "ja": "部品を検索（任意）" },
+    "configuration.sdMatrix": { "en": "SDMMC signals can use the GPIO matrix on this chip.", "zh": "此芯片的 SDMMC 信号可使用 GPIO 矩阵。", "ja": "このチップの SDMMC 信号は GPIO matrix を利用できます。" },
+    "configuration.sdFixed": { "en": "Check this chip's fixed SDMMC pins.", "zh": "请确认此芯片的固定 SDMMC 引脚。", "ja": "このチップの SDMMC 固定ピンを確認してください。" },
+    "reason.lastBoard": { "en": "At least one board must remain open", "zh": "至少需保留一个打开的板卡", "ja": "少なくとも 1 機種は開いたままにしてください" },
+    "reason.busInUse": { "en": "This bus is still referenced by a role or device", "zh": "此总线仍被 role 或设备引用", "ja": "このバスは role またはデバイスから参照されています" },
+    "reason.deviceInUse": { "en": "This device still has assigned roles", "zh": "此设备仍有已分配的 role", "ja": "このデバイスには割当済み role があります" },
+    "reason.connectorInUse": { "en": "This connector still has assigned roles", "zh": "此连接器仍有已分配的 role", "ja": "このコネクタには割当済み role があります" },
+    "reason.chipReserved": { "en": "Reserved by the selected chip/package", "zh": "由所选芯片/封装保留", "ja": "選択中のチップ／パッケージで予約されています" },
+    "reason.chipReservedConditional": { "en": "Reserved by the selected PSRAM mode", "zh": "由所选 PSRAM 模式保留", "ja": "選択中の PSRAM モードで予約されています" },
     "revisions.eyebrow": { "en": "choices", "zh": "选择项", "ja": "選択枠" },
     "revisions.heading": { "en": "Revision matrix", "zh": "版本矩阵", "ja": "版マトリクス" },
     "revisions.add": { "en": "Add revision", "zh": "添加版本", "ja": "版を追加" },
@@ -429,6 +505,8 @@ tr.flash { animation: flash 1.2s ease; }
     "gpio.reserved": { "en": "reserved", "zh": "reserved", "ja": "reserved" },
     "gpio.inputOnly": { "en": "input only", "zh": "仅输入", "ja": "input only" },
     "gpio.strapping": { "en": "strapping", "zh": "strapping", "ja": "strapping" },
+    "gpio.opiReserved": { "en": "reserved with OPI", "zh": "OPI 时保留", "ja": "OPI 時予約" },
+    "gpio.noInternalPull": { "en": "No reliable internal pull", "zh": "无可靠的内部上下拉", "ja": "内蔵 pull は信頼できません" },
     "column.gpio": { "en": "GPIO", "zh": "GPIO", "ja": "GPIO" },
     "column.roles": { "en": "roles", "zh": "roles", "ja": "roles" },
     "column.pull": { "en": "pull", "zh": "pull", "ja": "pull" },
@@ -490,6 +568,7 @@ tr.flash { animation: flash 1.2s ease; }
     "file.chipMissing": { "en": "{file}: embedded chip data is unavailable: {chip}", "zh": "{file}: 找不到嵌入的 chip 数据: {chip}", "ja": "{file}: chip data が埋め込まれていません: {chip}" },
     "file.opened": { "en": "Opened {file}", "zh": "已打开 {file}", "ja": "{file} を開きました" },
     "file.downloaded": { "en": "Downloaded {file}", "zh": "已下载 {file}", "ja": "{file} をダウンロードしました" },
+    "file.downloadErrorsConfirm": { "en": "This board has {count} validation error(s). Download anyway?", "zh": "此板卡有 {count} 个验证错误。仍要下载吗？", "ja": "この機種には検証エラーが {count} 件あります。このままダウンロードしますか？" },
     "file.discardConfirm": { "en": "Discard the draft for this board?", "zh": "丢弃此板卡的草稿？", "ja": "この機種の下書きを破棄しますか？" },
     "validation.E_ROLE_DUP": { "en": "A role is assigned more than once", "zh": "role 被重复分配", "ja": "role が重複して割り当てられています" },
     "validation.E_ROLE_SOURCE": { "en": "Source prefixes are reserved for composed accessories", "zh": "来源前缀仅供组合配件使用", "ja": "source prefix は合成済みアクセサリ専用です" },
@@ -504,10 +583,19 @@ tr.flash { animation: flash 1.2s ease; }
     "validation.E_CHIP_INPUT_ONLY": { "en": "An output uses an input-only GPIO", "zh": "输出使用了仅输入 GPIO", "ja": "出力が入力専用 GPIO を使用しています" },
     "validation.E_CHIP_RESERVED": { "en": "A reserved GPIO is in use", "zh": "使用了 reserved GPIO", "ja": "reserved GPIO が使用されています" },
     "validation.E_CHIP_RESERVED_COND": { "en": "A conditionally reserved GPIO is in use", "zh": "使用了条件保留的 GPIO", "ja": "条件付き reserved GPIO が使用されています" },
+    "validation.E_PIN_KEY": { "en": "A SoC pin key is invalid or outside the chip range", "zh": "SoC pin key 无效或超出芯片范围", "ja": "SoC pin key が不正かチップ範囲外です" },
     "validation.W_CHIP_USB_PIN": { "en": "This GPIO is shared with native USB", "zh": "此 GPIO 与原生 USB 共用", "ja": "この GPIO はネイティブ USB と共用です" },
     "validation.E_HEX_FORMAT": { "en": "A hexadecimal value has an invalid format", "zh": "十六进制值格式无效", "ja": "16 進値の形式が不正です" },
     "validation.E_VERIFIED_FAKE": { "en": "Verification metadata claims unsupported evidence", "zh": "verified 元数据声明了不支持的证据", "ja": "verified メタデータが未対応の根拠を示しています" },
-    "validation.E_VARIANT_PINTABLE": { "en": "A revision changes board-level generated wiring", "zh": "版本更改了板级生成配线", "ja": "版によって機種単位の生成配線が変わっています" },
+    "validation.E_CHOICE_PINTABLE": { "en": "A choice changes board-level generated wiring", "zh": "选项更改了板级生成配线", "ja": "choice によって機種単位の生成配線が変わっています" },
+    "validation.E_TGT_OPTION_NAME": { "en": "A target option name is invalid or duplicated", "zh": "目标 option 名称无效或重复", "ja": "target option 名が不正または重複しています" },
+    "validation.E_TGT_BIT_RANGE": { "en": "A target option bit is out of range", "zh": "目标 option bit 超出范围", "ja": "target option bit が範囲外です" },
+    "validation.E_TGT_BIT_DUP": { "en": "A target option bit is duplicated", "zh": "目标 option bit 重复", "ja": "target option bit が重複しています" },
+    "validation.E_TGT_BIT_GAP": { "en": "Target option bits are not contiguous", "zh": "目标 option bit 不连续", "ja": "target option bit に欠番があります" },
+    "validation.E_TGT_CHOICE_UNREPRESENTED": { "en": "A runtime choice has no target option", "zh": "runtime choice 没有目标 option", "ja": "runtime choice に対応する target option がありません" },
+    "validation.E_TGT_SELECT_UNKNOWN": { "en": "A target option selects an unknown choice", "zh": "目标 option 选择了未知 choice", "ja": "target option が未知の choice を選択しています" },
+    "validation.E_TGT_SLOT_DUP": { "en": "More than one target option selects the same slot", "zh": "多个目标 option 选择同一 slot", "ja": "複数の target option が同じ slot を選択しています" },
+    "validation.W_TGT_REV_INDISTINGUISHABLE": { "en": "Revision choices are not represented by target options", "zh": "revision choice 未由目标 option 表示", "ja": "revision choice が target option に表現されていません" },
     "validation.E_VERIFIED_KEY": { "en": "Verification metadata contains an unknown key", "zh": "verified 元数据含未知 key", "ja": "verified メタデータに未知の key があります" },
     "validation.E_MEASURED_BY": { "en": "Measurement attribution is invalid", "zh": "测量归属无效", "ja": "測定者情報が不正です" },
     "validation.E_CONN_TYPE_MISSING": { "en": "Connector type or standard is missing", "zh": "connector type 或 standard 不存在", "ja": "コネクタ型または standard がありません" },
@@ -536,12 +624,12 @@ tr.flash { animation: flash 1.2s ease; }
   }
   </script>
 
-  <script type="application/json" id="board-spec-schema">{"$schema":"http://json-schema.org/draft-07/schema#","$id":"https://m5stack.example/schema/board-spec-v1.json","title":"M5 board specification v1","type":"object","x-editor":{"pinColumns":[{"id":"gpio","label":"GPIO"},{"id":"roles","label":"roles"},{"id":"pull","label":"pull"},{"id":"note","label":"note"},{"id":"verified","label":"verified"},{"id":"validation","label":"検証"}]},"additionalProperties":false,"required":["schema_version","id","name","legacy_board_id","chip","pins","buses","devices"],"properties":{"schema_version":{"const":1},"id":{"$ref":"#/definitions/id"},"name":{"type":"string"},"legacy_board_id":{"type":"integer","minimum":0},"chip":{"$ref":"#/definitions/id"},"spec":{"$ref":"#/definitions/catalogSpec"},"pins":{"type":"object","additionalProperties":{"$ref":"#/definitions/pin"}},"buses":{"type":"object","additionalProperties":{"$ref":"#/definitions/bus"}},"devices":{"type":"object","additionalProperties":{"$ref":"#/definitions/device"}},"connectors":{"type":"object","additionalProperties":{"$ref":"#/definitions/connector"}},"revisions":{"type":"array","items":{"$ref":"#/definitions/revision"}}},"definitions":{"id":{"type":"string","pattern":"^[a-z][a-z0-9_]*$"},"hexByte":{"type":"string","pattern":"^0x[0-9A-Fa-f]{1,2}$"},"endpoint":{"type":"string","pattern":"^(gpio:\\d{1,2}|pin:[a-z][a-z0-9_]*\\.[a-z0-9_]+|fixed:[a-z0-9_]+\\.[a-z0-9_]+|pwr:[a-z0-9_]+|chip:[a-z0-9_]+|nc|none)$"},"role":{"type":"string","pattern":"^([a-z][a-z0-9_]*/)?((bus|dev|conn):[a-z][a-z0-9_]*\\.[a-z0-9_]+|pwr:[a-z0-9_]+)$"},"source":{"type":"object","additionalProperties":false,"required":["accessory","origin","bundled"],"properties":{"accessory":{"$ref":"#/definitions/id"},"origin":{"enum":["official","third_party","virtual"]},"bundled":{"type":"boolean"}}},"verified":{"type":"object","additionalProperties":{"enum":["generated","measured","datasheet",null]}},"measuredBy":{"type":"object","additionalProperties":{"type":"string"}},"pin":{"type":"object","additionalProperties":false,"required":["roles"],"properties":{"roles":{"type":"array","items":{"$ref":"#/definitions/role"},"uniqueItems":true},"pull":{"enum":["up","down","none"]},"pull_reliable":{"type":"boolean"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"bus":{"type":"object","additionalProperties":false,"required":["kind","signals","fixed"],"properties":{"kind":{"$ref":"#/definitions/busKind"},"signals":{"type":"array","items":{"type":"string"},"uniqueItems":true},"preferred_host":{"type":["string","integer"]},"fixed":{"type":"boolean"},"freq":{"type":"integer"},"freq_read":{"type":"integer"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"busKind":{"type":"string","enum":["spi","i2c","i2s","sdmmc","uart","pdm","dsi"],"x-signals":{"spi":["sclk","mosi","miso"],"i2c":["sda","scl"],"i2s":["mck","bck","ws","data_out","data_in"],"sdmmc":["clk","cmd","d0","d1","d2","d3"],"uart":["tx","rx","rts","cts"],"pdm":["ws","data_in"],"dsi":["clk","d0","d1","d2","d3"]},"x-output-signals":["sclk","mosi","mck","bck","ws","data_out","clk","cmd","tx","rts"]},"device":{"type":"object","additionalProperties":false,"required":["kind"],"properties":{"kind":{"$ref":"#/definitions/deviceKind"},"part":{"type":"string"},"bus":{"$ref":"#/definitions/id"},"i2c_addr":{"$ref":"#/definitions/hexByte"},"selected_by":{"enum":["revision","runtime","user"]},"default":{"$ref":"#/definitions/id"},"choices":{"type":"object","additionalProperties":{"$ref":"#/definitions/choice"}},"pins":{"type":"object","additionalProperties":{"$ref":"#/definitions/ownerPin"}},"rails":{"type":"array","items":{"$ref":"#/definitions/id"},"uniqueItems":true},"signals":{"type":"object","additionalProperties":{"$ref":"#/definitions/endpoint"}},"enable":{"$ref":"#/definitions/endpoint"},"derived":{"$ref":"#/definitions/sdDerived"},"spec":{"type":"object"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"deviceKind":{"type":"string","enum":["display","sd","touch","pmic","speaker","mic","imu","rtc","led_strip","led","vibration","power_hold","backlight","camera","transceiver","regulator"],"x-signals":{"display":["cs","dc","rst","busy","backlight","power"],"sd":["clk","cmd","d0","d1","d2","d3","cd","wp"],"touch":["int","rst"],"pmic":[],"speaker":["data_out","enable"],"mic":["data_in"],"imu":["int"],"rtc":["int"],"led_strip":["data"],"power_hold":["enable"],"backlight":["pwm"],"led":["on","pwm"],"vibration":["enable"],"camera":["pwdn","reset","xclk","vsync","href","pclk","d0","d1","d2","d3","d4","d5","d6","d7"],"transceiver":["de","re"],"regulator":["en"]},"x-output-signals":["cs","dc","rst","power","data","data_out","enable","pwm"],"x-spec-properties":{"display":["width","height","memory_width","memory_height","offset_x","offset_y","rotation_offset","invert","readable","panel_type"],"sd":[],"touch":["x_max","y_max"],"pmic":[],"speaker":[],"mic":[],"imu":[],"rtc":[],"led_strip":["count"],"power_hold":[],"backlight":["freq","channel","invert","offset"],"led":[],"vibration":[],"camera":[],"transceiver":[],"regulator":[]}},"ownerPin":{"type":"object","additionalProperties":false,"required":["roles"],"properties":{"roles":{"type":"array","items":{"$ref":"#/definitions/role"},"uniqueItems":true},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"sdDerived":{"type":"object","additionalProperties":false,"required":["modes"],"properties":{"modes":{"type":"array","items":{"enum":["spi","sdio1","sdio4"]},"uniqueItems":true},"bus":{"$ref":"#/definitions/id"},"cs":{"$ref":"#/definitions/endpoint"}}},"choice":{"type":"object","additionalProperties":false,"properties":{"kind":{"$ref":"#/definitions/deviceKind"},"part":{"$ref":"#/definitions/id"},"bus":{"$ref":"#/definitions/id"},"i2c_addr":{"$ref":"#/definitions/hexByte"},"pins":{"type":"object","additionalProperties":{"$ref":"#/definitions/ownerPin"}},"rails":{"type":"array","items":{"$ref":"#/definitions/id"},"uniqueItems":true},"spec":{"type":"object"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"connector":{"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"$ref":"#/definitions/id"},"standard":{"type":"string"},"positions":{"type":"object","additionalProperties":{"$ref":"#/definitions/endpoint"}},"multi_gpio":{"type":"array","items":{"type":"string","pattern":"^[a-z0-9_]+$"},"uniqueItems":true},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"catalogSpec":{"type":"object","additionalProperties":false,"properties":{"display":{"$ref":"#/definitions/displaySpec"},"power":{"$ref":"#/definitions/powerSpec"},"audio":{"$ref":"#/definitions/audioSpec"},"sensors":{"type":"array","items":{"$ref":"#/definitions/sensorSpec"}},"storage":{"$ref":"#/definitions/storageSpec"},"links":{"$ref":"#/definitions/linkSpec"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"displaySpec":{"type":"object","additionalProperties":false,"properties":{"size_inch":{"type":"number"},"resolution":{"type":"array","items":{"type":"integer"},"minItems":2,"maxItems":2},"panel_part":{"type":"string"},"touch":{"type":"boolean"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"powerSpec":{"type":"object","additionalProperties":false,"properties":{"pmic_part":{"type":"string"},"battery_mah":{"type":"integer"},"usb":{"enum":["type-c","micro"]},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"audioSpec":{"type":"object","additionalProperties":false,"properties":{"speaker_part":{"type":"string"},"mic_part":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"sensorSpec":{"type":"object","additionalProperties":false,"properties":{"kind":{"$ref":"#/definitions/id"},"part":{"type":"string"},"i2c_addr":{"$ref":"#/definitions/hexByte"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"storageSpec":{"type":"object","additionalProperties":false,"properties":{"psram_mb":{"type":"integer"},"psram_mode":{"enum":["quad","opi"]},"flash_mb":{"type":"integer"},"sd":{"type":"boolean"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"linkSpec":{"type":"object","additionalProperties":false,"properties":{"schematic":{"type":"string","format":"uri"},"product":{"type":"string","format":"uri"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"revision":{"type":"object","additionalProperties":false,"required":["id","name","select"],"properties":{"id":{"$ref":"#/definitions/id"},"name":{"type":"string"},"select":{"type":"object","additionalProperties":{"$ref":"#/definitions/id"}},"note":{"type":"string"}}}}}</script>
+  <script type="application/json" id="board-spec-schema">{"$schema":"http://json-schema.org/draft-07/schema#","$id":"https://m5stack.example/schema/board-spec-v1.json","title":"M5 board specification v1","type":"object","x-editor":{"pinColumns":[{"id":"gpio","label":"GPIO"},{"id":"roles","label":"roles"},{"id":"pull","label":"pull"},{"id":"note","label":"note"},{"id":"verified","label":"verified"},{"id":"validation","label":"検証"}]},"additionalProperties":false,"required":["schema_version","id","name","legacy_board_id","chip","pins","buses","devices"],"properties":{"schema_version":{"const":1},"id":{"$ref":"#/definitions/id"},"name":{"type":"string"},"legacy_board_id":{"type":"integer","minimum":0},"chip":{"$ref":"#/definitions/id"},"spec":{"$ref":"#/definitions/catalogSpec"},"pins":{"type":"object","propertyNames":{"pattern":"^[0-9]+$"},"additionalProperties":{"$ref":"#/definitions/pin"}},"buses":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/bus"}},"devices":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/device"}},"connectors":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/connector"}},"revisions":{"type":"array","items":{"$ref":"#/definitions/revision"}}},"definitions":{"id":{"type":"string","pattern":"^[a-z][a-z0-9_]*$"},"hexByte":{"type":"string","pattern":"^0x[0-9A-Fa-f]{1,2}$"},"endpoint":{"type":"string","pattern":"^(gpio:\\d{1,2}|pin:[a-z][a-z0-9_]*\\.[a-z0-9_]+|fixed:[a-z0-9_]+\\.[a-z0-9_]+|pwr:[a-z0-9_]+|chip:[a-z0-9_]+|nc|none)$"},"role":{"type":"string","pattern":"^([a-z][a-z0-9_]*/)?((bus|dev|conn):[a-z][a-z0-9_]*\\.[a-z0-9_]+|pwr:[a-z0-9_]+)$"},"source":{"type":"object","additionalProperties":false,"required":["accessory","origin","bundled"],"properties":{"accessory":{"$ref":"#/definitions/id"},"origin":{"enum":["official","third_party","virtual"]},"bundled":{"type":"boolean"}}},"verified":{"type":"object","additionalProperties":{"enum":["generated","measured","datasheet",null]}},"measuredBy":{"type":"object","additionalProperties":{"type":"string"}},"pin":{"type":"object","additionalProperties":false,"required":["roles"],"properties":{"roles":{"type":"array","items":{"$ref":"#/definitions/role"},"uniqueItems":true},"pull":{"enum":["up","down","none"]},"pull_reliable":{"type":"boolean"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"bus":{"type":"object","additionalProperties":false,"required":["kind","signals","fixed"],"properties":{"kind":{"$ref":"#/definitions/busKind"},"signals":{"type":"array","items":{"type":"string"},"uniqueItems":true},"preferred_host":{"type":["string","integer"]},"fixed":{"type":"boolean"},"freq":{"type":"integer"},"freq_read":{"type":"integer"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"busKind":{"type":"string","enum":["spi","i2c","i2s","sdmmc","uart","pdm","dsi"],"x-signals":{"spi":["sclk","mosi","miso"],"i2c":["sda","scl"],"i2s":["mck","bck","ws","data_out","data_in"],"sdmmc":["clk","cmd","d0","d1","d2","d3"],"uart":["tx","rx","rts","cts"],"pdm":["ws","data_in"],"dsi":["clk","d0","d1","d2","d3"]},"x-output-signals":["sclk","mosi","mck","bck","ws","data_out","clk","cmd","tx","rts"]},"device":{"type":"object","additionalProperties":false,"required":["kind"],"properties":{"kind":{"$ref":"#/definitions/deviceKind"},"part":{"$ref":"#/definitions/id"},"bus":{"$ref":"#/definitions/id"},"i2c_addr":{"$ref":"#/definitions/hexByte"},"selected_by":{"enum":["revision","runtime","user"]},"default":{"$ref":"#/definitions/id"},"choices":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/choice"}},"pins":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/ownerPin"}},"rails":{"type":"array","items":{"$ref":"#/definitions/id"},"uniqueItems":true},"signals":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/endpoint"}},"enable":{"$ref":"#/definitions/endpoint"},"derived":{"$ref":"#/definitions/sdDerived"},"spec":{"type":"object"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"deviceKind":{"type":"string","enum":["display","sd","touch","pmic","speaker","mic","imu","rtc","led_strip","led","vibration","power_hold","backlight","camera","transceiver","regulator"],"x-signals":{"display":["cs","dc","rst","busy","backlight","power"],"sd":["clk","cmd","d0","d1","d2","d3","cd","wp"],"touch":["int","rst"],"pmic":[],"speaker":["data_out","enable"],"mic":["data_in"],"imu":["int"],"rtc":["int"],"led_strip":["data"],"power_hold":["enable"],"backlight":["pwm"],"led":["on","pwm"],"vibration":["enable"],"camera":["pwdn","reset","xclk","vsync","href","pclk","d0","d1","d2","d3","d4","d5","d6","d7"],"transceiver":["de","re"],"regulator":["en"]},"x-output-signals":["cs","dc","rst","power","data","data_out","enable","pwm"],"x-spec-properties":{"display":["width","height","memory_width","memory_height","offset_x","offset_y","rotation_offset","invert","readable","panel_type"],"sd":[],"touch":["x_max","y_max"],"pmic":[],"speaker":[],"mic":[],"imu":[],"rtc":[],"led_strip":["count"],"power_hold":[],"backlight":["freq","channel","invert","offset"],"led":[],"vibration":[],"camera":[],"transceiver":[],"regulator":[]}},"ownerPin":{"type":"object","additionalProperties":false,"required":["roles"],"properties":{"roles":{"type":"array","items":{"$ref":"#/definitions/role"},"uniqueItems":true},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"sdDerived":{"type":"object","additionalProperties":false,"required":["modes"],"properties":{"modes":{"type":"array","items":{"enum":["spi","sdio1","sdio4"]},"uniqueItems":true},"bus":{"$ref":"#/definitions/id"},"cs":{"$ref":"#/definitions/endpoint"}}},"choice":{"type":"object","additionalProperties":false,"properties":{"kind":{"$ref":"#/definitions/deviceKind"},"part":{"$ref":"#/definitions/id"},"bus":{"$ref":"#/definitions/id"},"i2c_addr":{"$ref":"#/definitions/hexByte"},"pins":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/ownerPin"}},"rails":{"type":"array","items":{"$ref":"#/definitions/id"},"uniqueItems":true},"spec":{"type":"object"},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"connector":{"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"$ref":"#/definitions/id"},"standard":{"type":"string"},"positions":{"type":"object","additionalProperties":{"$ref":"#/definitions/endpoint"}},"multi_gpio":{"type":"array","items":{"type":"string","pattern":"^[a-z0-9_]+$"},"uniqueItems":true},"note":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"},"source":{"$ref":"#/definitions/source"}}},"catalogSpec":{"type":"object","additionalProperties":false,"properties":{"display":{"$ref":"#/definitions/displaySpec"},"power":{"$ref":"#/definitions/powerSpec"},"audio":{"$ref":"#/definitions/audioSpec"},"sensors":{"type":"array","items":{"$ref":"#/definitions/sensorSpec"}},"storage":{"$ref":"#/definitions/storageSpec"},"links":{"$ref":"#/definitions/linkSpec"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"displaySpec":{"type":"object","additionalProperties":false,"properties":{"size_inch":{"type":"number"},"resolution":{"type":"array","items":{"type":"integer"},"minItems":2,"maxItems":2},"panel_part":{"type":"string"},"touch":{"type":"boolean"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"powerSpec":{"type":"object","additionalProperties":false,"properties":{"pmic_part":{"type":"string"},"battery_mah":{"type":"integer"},"usb":{"enum":["type-c","micro"]},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"audioSpec":{"type":"object","additionalProperties":false,"properties":{"speaker_part":{"type":"string"},"mic_part":{"type":"string"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"sensorSpec":{"type":"object","additionalProperties":false,"properties":{"kind":{"$ref":"#/definitions/id"},"part":{"type":"string"},"i2c_addr":{"$ref":"#/definitions/hexByte"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"storageSpec":{"type":"object","additionalProperties":false,"properties":{"psram_mb":{"type":"integer"},"psram_mode":{"enum":["quad","opi"]},"flash_mb":{"type":"integer"},"sd":{"type":"boolean"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"linkSpec":{"type":"object","additionalProperties":false,"properties":{"schematic":{"type":"string","format":"uri"},"product":{"type":"string","format":"uri"},"verified":{"$ref":"#/definitions/verified"},"measured_by":{"$ref":"#/definitions/measuredBy"}}},"revision":{"type":"object","additionalProperties":false,"required":["id","name","select"],"properties":{"id":{"$ref":"#/definitions/id"},"name":{"type":"string"},"select":{"type":"object","propertyNames":{"$ref":"#/definitions/id"},"additionalProperties":{"$ref":"#/definitions/id"}},"note":{"type":"string"}}}}}</script>
 <script type="application/json" id="board-spec-chips">{"esp32_d0wdq6":{"id":"esp32_d0wdq6","soc":"esp32","package":"d0wdq6","gpio_count":40,"input_only":[34,35,36,37,38,39],"strapping":[0,2,5,12,15],"no_internal_pull":[34,35,36,37,38,39],"reserved":[6,7,8,9,10,11],"sdmmc":{"gpio_matrix":false,"slots":[{"id":1,"pins":{"clk":14,"cmd":15,"d0":2,"d1":4,"d2":12,"d3":13}}]}},"esp32s3":{"id":"esp32s3","soc":"esp32s3","package":"generic","gpio_count":49,"input_only":[],"strapping":[0,3,45,46],"no_internal_pull":[],"reserved":[26,27,28,29,30,31,32],"reserved_conditional":{"opi":[33,34,35,36,37]},"usb":{"dn":19,"dp":20},"sdmmc":{"gpio_matrix":true},"spi_hosts":2,"i2c_hosts":2,"i2s_ports":2}}</script>
 <script type="application/json" id="board-spec-connector-types">{"faces_22p":{"id":"faces_22p","name":"FACES 22-pin panel bus","layout":{"rows":2,"cols":11,"pitch_mm":2.54,"numbering":"custom","key":"none","view":"component_side"},"positions":[{"id":"1","row":0,"col":0},{"id":"2","row":1,"col":0},{"id":"3","row":0,"col":1},{"id":"4","row":1,"col":1},{"id":"5","row":0,"col":2},{"id":"6","row":1,"col":2},{"id":"7","row":0,"col":3},{"id":"8","row":1,"col":3},{"id":"9","row":0,"col":4},{"id":"10","row":1,"col":4},{"id":"11","row":0,"col":5},{"id":"12","row":1,"col":5},{"id":"13","row":0,"col":6},{"id":"14","row":1,"col":6},{"id":"15","row":0,"col":7},{"id":"16","row":1,"col":7},{"id":"17","row":0,"col":8},{"id":"18","row":1,"col":8},{"id":"19","row":0,"col":9},{"id":"20","row":1,"col":9},{"id":"21","row":0,"col":10},{"id":"22","row":1,"col":10}]},"hy2_4p":{"id":"hy2_4p","name":"4-pin port (HY2.0-4P)","layout":{"rows":1,"cols":4,"pitch_mm":2,"numbering":"custom","key":"none","view":"component_side"},"positions":[{"id":"1","row":0,"col":0,"color":"white"},{"id":"2","row":0,"col":1,"color":"yellow"},{"id":"3","row":0,"col":2,"name":"5v","color":"red"},{"id":"4","row":0,"col":3,"name":"gnd","color":"black"}],"fixed_positions":{"4":"pwr:gnd"},"default_positions":{"3":"pwr:5v"},"standards":{"port_i2c":{"1":"scl","2":"sda"},"port_uart":{"1":"rx","2":"tx"},"port_io":{"1":"in","2":"out"},"port_rs485":{"1":"b","2":"a"},"port_reset":{"1":"en","2":"reset_io"}}},"mbus":{"id":"mbus","name":"M-Bus (2x15, 2.54 mm)","layout":{"rows":15,"cols":2,"pitch_mm":2.54,"numbering":"custom","key":"none","view":"component_side"},"positions":[{"id":"1","row":0,"col":0,"name":"gnd"},{"id":"2","row":0,"col":1},{"id":"3","row":1,"col":0,"name":"gnd"},{"id":"4","row":1,"col":1},{"id":"5","row":2,"col":0,"name":"gnd"},{"id":"6","row":2,"col":1,"name":"en"},{"id":"7","row":3,"col":0},{"id":"8","row":3,"col":1},{"id":"9","row":4,"col":0},{"id":"10","row":4,"col":1},{"id":"11","row":5,"col":0},{"id":"12","row":5,"col":1,"name":"3v3"},{"id":"13","row":6,"col":0},{"id":"14","row":6,"col":1},{"id":"15","row":7,"col":0},{"id":"16","row":7,"col":1},{"id":"17","row":8,"col":0},{"id":"18","row":8,"col":1},{"id":"19","row":9,"col":0},{"id":"20","row":9,"col":1},{"id":"21","row":10,"col":0},{"id":"22","row":10,"col":1},{"id":"23","row":11,"col":0},{"id":"24","row":11,"col":1},{"id":"25","row":12,"col":0,"name":"hpwr"},{"id":"26","row":12,"col":1},{"id":"27","row":13,"col":0,"name":"hpwr"},{"id":"28","row":13,"col":1,"name":"5v"},{"id":"29","row":14,"col":0,"name":"hpwr"},{"id":"30","row":14,"col":1,"name":"bat"}],"fixed_positions":{"1":"pwr:gnd","3":"pwr:gnd","5":"pwr:gnd"},"default_positions":{"6":"chip:en","12":"pwr:3v3","25":"nc","27":"nc","28":"pwr:5v","29":"nc","30":"pwr:bat"},"rails":["hpwr"]}}</script>
-<script type="application/json" id="board-spec-parts">{"axp192":{"id":"axp192","name":"AXP192","kind":"pmic","vendor":"X-Powers","bus":{"kind":"i2c"},"i2c_addr":["0x34"],"id_probe":{"reg":"0x03","value":"0x03"},"pins":{"gpio0":{"cap":["output","input","ldo"]},"gpio1":{"cap":["output","input","pwm"]},"gpio2":{"cap":["output","input"]},"gpio3":{"cap":["output"]},"gpio4":{"cap":["output"]},"dcdc1":{"cap":["rail"]},"dcdc2":{"cap":["rail"]},"dcdc3":{"cap":["rail"]},"ldo2":{"cap":["rail"]},"ldo3":{"cap":["rail"]},"exten":{"cap":["output"]}},"verified":{"pins":null}},"axp2101":{"id":"axp2101","name":"AXP2101","kind":"pmic","vendor":"X-Powers","bus":{"kind":"i2c"},"i2c_addr":["0x34"],"id_probe":{"reg":"0x03","value":"0x4A"},"pins":{"aldo1":{"cap":["rail"]},"aldo2":{"cap":["rail"]},"aldo3":{"cap":["rail"]},"aldo4":{"cap":["rail"]},"bldo1":{"cap":["rail"]},"bldo2":{"cap":["rail"]},"dldo1":{"cap":["rail"]},"dldo2":{"cap":["rail"]},"dcdc1":{"cap":["rail"]},"dcdc2":{"cap":["rail"]},"dcdc3":{"cap":["rail"]},"dcdc4":{"cap":["rail"]},"chgled":{"cap":["output"]}},"verified":{"pins":null}},"bm8563":{"id":"bm8563","name":"BM8563","kind":"rtc","bus":{"kind":"i2c"},"i2c_addr":["0x51"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"bmi270":{"id":"bmi270","name":"BMI270","kind":"imu","bus":{"kind":"i2c"},"i2c_addr":["0x68","0x69"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"chsc6540":{"id":"chsc6540","name":"CHSC6540","kind":"touch","bus":{"kind":"i2c"},"i2c_addr":["0x2E"],"signals":{"required":[],"optional":["int","rst"]},"spec_keys":["x_max","y_max"],"verified":{"i2c_addr":null}},"ft5x06":{"id":"ft5x06","name":"FT5x06","kind":"touch","bus":{"kind":"i2c"},"i2c_addr":["0x38"],"signals":{"required":[],"optional":["int","rst"]},"spec_keys":["x_max","y_max"],"verified":{"i2c_addr":null}},"gc9107":{"id":"gc9107","name":"GC9107","kind":"display","vendor":"GalaxyCore","bus":{"kind":"spi","modes":["3wire"]},"signals":{"required":["cs","dc","rst"],"optional":["backlight"]},"spec_keys":["width","height","memory_width","memory_height","offset_x","offset_y","rotation_offset","invert","readable","panel_type"],"spec":{"memory_width":128,"memory_height":160},"id_probe":{"reg":"0x04","mask":"0xFFFFFF","value":"0x079100"},"verified":{"id_probe":"generated"}},"gt911":{"id":"gt911","name":"GT911","kind":"touch","bus":{"kind":"i2c"},"i2c_addr":["0x5D","0x14"],"signals":{"required":[],"optional":["int","rst"]},"spec_keys":["x_max","y_max"],"verified":{"i2c_addr":null}},"ili9342c":{"id":"ili9342c","name":"ILI9342C","kind":"display","vendor":"Ilitek","bus":{"kind":"spi","modes":["4wire","3wire"]},"signals":{"required":["cs","dc"],"optional":["rst","busy","te","backlight"]},"spec_keys":["width","height","rotation_offset","panel_type"],"id_probe":{"reg":"0x04","mask":"0xFF","value":"0xE3"},"verified":{"id_probe":null}},"ili9342e":{"id":"ili9342e","name":"ILI9342E","kind":"display","vendor":"Ilitek","bus":{"kind":"spi","modes":["4wire","3wire"]},"signals":{"required":["cs","dc"],"optional":["rst","busy","te","backlight"]},"spec_keys":["width","height","rotation_offset","panel_type"],"verified":{"signals":null}},"it8951":{"id":"it8951","name":"IT8951","kind":"display","vendor":"ITE","bus":{"kind":"spi"},"signals":{"required":["cs","rst","busy"],"optional":[]},"spec_keys":["width","height","rotation_offset"],"verified":{"signals":null}},"m5pm1":{"id":"m5pm1","name":"M5 PM1","kind":"pmic","bus":{"kind":"i2c"},"i2c_addr":["0x6E"],"id_probe":{"reg":"0x00","value":"0x50","note":"device id 0x2050 (reg 0x00-0x01 LE) の下位バイト"},"pins":{"gpio0":{"cap":["input","output"]},"gpio1":{"cap":["input","output"]},"gpio2":{"cap":["input","output"]},"gpio3":{"cap":["input","output","pwm"]},"gpio4":{"cap":["input","output","pwm"]},"boost":{"cap":["rail"]},"ldo":{"cap":["rail"]},"dcdc_3v3":{"cap":["rail"]},"led_en":{"cap":["output"]}}},"me3116":{"id":"me3116","name":"ME3116AM6G","kind":"regulator","bus":{"kind":"none"},"pins":{"vin":{"cap":["input","rail"]},"vout":{"cap":["rail"]},"en":{"cap":["input"]}},"signals":{"required":[],"optional":["en"]},"note":"Tough subboard buck regulator from the J4/M-Bus HPWR input rail to 5V.","verified":{"pins":"datasheet","note":"datasheet"}},"mpu6886":{"id":"mpu6886","name":"MPU6886","kind":"imu","bus":{"kind":"i2c"},"i2c_addr":["0x68"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"ns4168":{"id":"ns4168","name":"NS4168","kind":"speaker","bus":{"kind":"i2s"},"signals":{"required":[],"optional":["enable"]},"verified":{"signals":null}},"ov3660":{"id":"ov3660","name":"OV3660","kind":"camera","bus":{"kind":"any"},"signals":{"required":[],"optional":["pwdn","reset","xclk","vsync","href","pclk","d0","d1","d2","d3","d4","d5","d6","d7"]},"verified":{"signals":null}},"regulator":{"id":"regulator","name":"Unspecified regulator","kind":"regulator","bus":{"kind":"none"},"pins":{"vin":{"cap":["output","input"]},"vout":{"cap":["rail"]},"en":{"cap":["input"]}},"signals":{"required":[],"optional":["en"]}},"sd_slot":{"id":"sd_slot","name":"SD card slot","kind":"sd","bus":{"kind":"any"},"signals":{"required":["clk","cmd","d0"],"optional":["d1","d2","d3","cd","wp"]},"spi_alias":{"clk":"sclk","cmd":"mosi","d0":"miso","d3":"cs"},"verified":{"signals":null}},"sh200q":{"id":"sh200q","name":"SH200Q","kind":"imu","bus":{"kind":"i2c"},"i2c_addr":["0x6C"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"sk6812":{"id":"sk6812","name":"SK6812","kind":"led_strip","bus":{"kind":"none"},"signals":{"required":["data"],"optional":[]},"spec_keys":["count"],"verified":{"signals":null}},"sp485e":{"id":"sp485e","name":"SP485EEN-L/TR","kind":"transceiver","vendor":"MaxLinear","bus":{"kind":"uart"},"pins":{"a":{"cap":["output","input"]},"b":{"cap":["output","input"]},"ro":{"cap":["output"]},"di":{"cap":["input"]},"de":{"cap":["input"]},"re":{"cap":["input"]}},"signals":{"required":[],"optional":["de","re"]},"note":"Tough subboard uses an automatic half-duplex direction circuit: DI is tied to GND and GPIO19 drives the combined DE/RE node through Q1.","verified":{"pins":"datasheet","note":"datasheet"}},"spm1423":{"id":"spm1423","name":"SPM1423","kind":"mic","bus":{"kind":"pdm"},"signals":{"required":[],"optional":[]},"verified":{"bus":null}},"st7735s":{"id":"st7735s","name":"ST7735S","kind":"display","vendor":"Sitronix","bus":{"kind":"spi","modes":["3wire"]},"signals":{"required":["cs","dc","rst"],"optional":["backlight"]},"spec_keys":["width","height","memory_width","memory_height","offset_x","offset_y","rotation_offset","invert","readable","panel_type"],"spec":{"memory_width":132,"memory_height":162},"id_probe":{"reg":"0x04","mask":"0xFFFF","values":["0x7683","0x897C"]},"verified":{"id_probe":"generated"}},"st7789v2":{"id":"st7789v2","name":"ST7789V2","kind":"display","vendor":"Sitronix","bus":{"kind":"spi"},"signals":{"required":["cs","dc","rst"],"optional":["backlight","power"]},"spec_keys":["width","height","offset_x","offset_y","rotation_offset","invert","readable","panel_type"],"verified":{"signals":null}},"transceiver":{"id":"transceiver","name":"Unspecified transceiver","kind":"transceiver","bus":{"kind":"uart"},"pins":{"a":{"cap":["output","input"]},"b":{"cap":["output","input"]},"de":{"cap":["input"]},"re":{"cap":["input"]}},"signals":{"required":[],"optional":["de","re"]}}}</script>
+<script type="application/json" id="board-spec-parts">{"axp192":{"id":"axp192","name":"AXP192","kind":"pmic","vendor":"X-Powers","bus":{"kind":"i2c"},"i2c_addr":["0x34"],"id_probe":{"reg":"0x03","value":"0x03"},"pins":{"gpio0":{"cap":["output","input","ldo"]},"gpio1":{"cap":["output","input","pwm"]},"gpio2":{"cap":["output","input"]},"gpio3":{"cap":["output"]},"gpio4":{"cap":["output"]},"dcdc1":{"cap":["rail"]},"dcdc2":{"cap":["rail"]},"dcdc3":{"cap":["rail"]},"ldo2":{"cap":["rail"]},"ldo3":{"cap":["rail"]},"exten":{"cap":["output"]}},"verified":{"pins":null}},"axp2101":{"id":"axp2101","name":"AXP2101","kind":"pmic","vendor":"X-Powers","bus":{"kind":"i2c"},"i2c_addr":["0x34"],"id_probe":{"reg":"0x03","value":"0x4A"},"pins":{"aldo1":{"cap":["rail"]},"aldo2":{"cap":["rail"]},"aldo3":{"cap":["rail"]},"aldo4":{"cap":["rail"]},"bldo1":{"cap":["rail"]},"bldo2":{"cap":["rail"]},"dldo1":{"cap":["rail"]},"dldo2":{"cap":["rail"]},"dcdc1":{"cap":["rail"]},"dcdc2":{"cap":["rail"]},"dcdc3":{"cap":["rail"]},"dcdc4":{"cap":["rail"]},"chgled":{"cap":["output"]}},"verified":{"pins":null}},"bm8563":{"id":"bm8563","name":"BM8563","kind":"rtc","bus":{"kind":"i2c"},"i2c_addr":["0x51"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"bmi270":{"id":"bmi270","name":"BMI270","kind":"imu","bus":{"kind":"i2c"},"i2c_addr":["0x68","0x69"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"chsc6540":{"id":"chsc6540","name":"CHSC6540","kind":"touch","bus":{"kind":"i2c"},"i2c_addr":["0x2E"],"signals":{"required":[],"optional":["int","rst"]},"spec_keys":{"x_max":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"y_max":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"}},"verified":{"i2c_addr":null}},"ft5x06":{"id":"ft5x06","name":"FT5x06","kind":"touch","bus":{"kind":"i2c"},"i2c_addr":["0x38"],"signals":{"required":[],"optional":["int","rst"]},"spec_keys":{"x_max":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"y_max":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"}},"verified":{"i2c_addr":null}},"gc9107":{"id":"gc9107","name":"GC9107","kind":"display","vendor":"GalaxyCore","bus":{"kind":"spi","modes":["3wire"]},"signals":{"required":["cs","dc","rst"],"optional":["backlight"]},"spec_keys":{"width":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"height":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"memory_width":{"type":"integer","minimum":1,"maximum":4096,"default":128,"x-cpp-type":"int"},"memory_height":{"type":"integer","minimum":1,"maximum":4096,"default":160,"x-cpp-type":"int"},"offset_x":{"type":"integer","minimum":-4096,"maximum":4096,"x-cpp-type":"int"},"offset_y":{"type":"integer","minimum":-4096,"maximum":4096,"x-cpp-type":"int"},"rotation_offset":{"type":"integer","minimum":0,"maximum":7,"x-cpp-type":"int"},"invert":{"type":"boolean","x-cpp-type":"int"},"readable":{"type":"boolean","x-cpp-type":"int"},"panel_type":{"type":"string","const":"gc9107"}},"id_probe":{"reg":"0x04","mask":"0xFFFFFF","value":"0x079100"},"verified":{"id_probe":"generated"}},"gt911":{"id":"gt911","name":"GT911","kind":"touch","bus":{"kind":"i2c"},"i2c_addr":["0x5D","0x14"],"signals":{"required":[],"optional":["int","rst"]},"spec_keys":{"x_max":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"y_max":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"}},"verified":{"i2c_addr":null}},"ili9342c":{"id":"ili9342c","name":"ILI9342C","kind":"display","vendor":"Ilitek","bus":{"kind":"spi","modes":["4wire","3wire"]},"signals":{"required":["cs","dc"],"optional":["rst","busy","te","backlight"]},"spec_keys":{"width":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"height":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"rotation_offset":{"type":"integer","minimum":0,"maximum":7,"x-cpp-type":"int"},"panel_type":{"type":"string","enum":["tn","ips"]}},"id_probe":{"reg":"0x04","mask":"0xFF","value":"0xE3"},"verified":{"id_probe":null}},"ili9342e":{"id":"ili9342e","name":"ILI9342E","kind":"display","vendor":"Ilitek","bus":{"kind":"spi","modes":["4wire","3wire"]},"signals":{"required":["cs","dc"],"optional":["rst","busy","te","backlight"]},"spec_keys":{"width":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"height":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"rotation_offset":{"type":"integer","minimum":0,"maximum":7,"x-cpp-type":"int"},"panel_type":{"type":"string"}},"verified":{"signals":null}},"it8951":{"id":"it8951","name":"IT8951","kind":"display","vendor":"ITE","bus":{"kind":"spi"},"signals":{"required":["cs","rst","busy"],"optional":[]},"spec_keys":{"width":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"height":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"rotation_offset":{"type":"integer","minimum":0,"maximum":7,"x-cpp-type":"int"}},"verified":{"signals":null}},"m5pm1":{"id":"m5pm1","name":"M5 PM1","kind":"pmic","bus":{"kind":"i2c"},"i2c_addr":["0x6E"],"id_probe":{"reg":"0x00","value":"0x50","match":"ack_only","note":"device id 0x2050 (reg 0x00-0x01 LE) の下位バイト"},"pins":{"gpio0":{"cap":["input","output"]},"gpio1":{"cap":["input","output"]},"gpio2":{"cap":["input","output"]},"gpio3":{"cap":["input","output","pwm"]},"gpio4":{"cap":["input","output","pwm"]},"boost":{"cap":["rail"]},"ldo":{"cap":["rail"]},"dcdc_3v3":{"cap":["rail"]},"led_en":{"cap":["output"]}}},"me3116":{"id":"me3116","name":"ME3116AM6G","kind":"regulator","bus":{"kind":"none"},"pins":{"vin":{"cap":["input","rail"]},"vout":{"cap":["rail"]},"en":{"cap":["input"]}},"signals":{"required":[],"optional":["en"]},"note":"Tough subboard buck regulator from the J4/M-Bus HPWR input rail to 5V.","verified":{"pins":"datasheet","note":"datasheet"}},"mpu6886":{"id":"mpu6886","name":"MPU6886","kind":"imu","bus":{"kind":"i2c"},"i2c_addr":["0x68"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"ns4168":{"id":"ns4168","name":"NS4168","kind":"speaker","bus":{"kind":"i2s"},"signals":{"required":[],"optional":["enable"]},"verified":{"signals":null}},"ov3660":{"id":"ov3660","name":"OV3660","kind":"camera","bus":{"kind":"any"},"signals":{"required":[],"optional":["pwdn","reset","xclk","vsync","href","pclk","d0","d1","d2","d3","d4","d5","d6","d7"]},"verified":{"signals":null}},"regulator":{"id":"regulator","name":"Unspecified regulator","kind":"regulator","bus":{"kind":"none"},"pins":{"vin":{"cap":["output","input"]},"vout":{"cap":["rail"]},"en":{"cap":["input"]}},"signals":{"required":[],"optional":["en"]}},"sd_slot":{"id":"sd_slot","name":"SD card slot","kind":"sd","bus":{"kind":"any"},"signals":{"required":["clk","cmd","d0"],"optional":["d1","d2","d3","cd","wp"]},"spi_alias":{"clk":"sclk","cmd":"mosi","d0":"miso","d3":"cs"},"verified":{"signals":null}},"sh200q":{"id":"sh200q","name":"SH200Q","kind":"imu","bus":{"kind":"i2c"},"i2c_addr":["0x6C"],"signals":{"required":[],"optional":["int"]},"verified":{"i2c_addr":null}},"sk6812":{"id":"sk6812","name":"SK6812","kind":"led_strip","bus":{"kind":"none"},"signals":{"required":["data"],"optional":[]},"spec_keys":{"count":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"}},"verified":{"signals":null}},"sp485e":{"id":"sp485e","name":"SP485EEN-L/TR","kind":"transceiver","vendor":"MaxLinear","bus":{"kind":"uart"},"pins":{"a":{"cap":["output","input"]},"b":{"cap":["output","input"]},"ro":{"cap":["output"]},"di":{"cap":["input"]},"de":{"cap":["input"]},"re":{"cap":["input"]}},"signals":{"required":[],"optional":["de","re"]},"note":"Tough subboard uses an automatic half-duplex direction circuit: DI is tied to GND and GPIO19 drives the combined DE/RE node through Q1.","verified":{"pins":"datasheet","note":"datasheet"}},"spm1423":{"id":"spm1423","name":"SPM1423","kind":"mic","bus":{"kind":"pdm"},"signals":{"required":[],"optional":[]},"verified":{"bus":null}},"st7735s":{"id":"st7735s","name":"ST7735S","kind":"display","vendor":"Sitronix","bus":{"kind":"spi","modes":["3wire"]},"signals":{"required":["cs","dc","rst"],"optional":["backlight"]},"spec_keys":{"width":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"height":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"memory_width":{"type":"integer","minimum":1,"maximum":4096,"default":132,"x-cpp-type":"int"},"memory_height":{"type":"integer","minimum":1,"maximum":4096,"default":162,"x-cpp-type":"int"},"offset_x":{"type":"integer","minimum":-4096,"maximum":4096,"x-cpp-type":"int"},"offset_y":{"type":"integer","minimum":-4096,"maximum":4096,"x-cpp-type":"int"},"rotation_offset":{"type":"integer","minimum":0,"maximum":7,"x-cpp-type":"int"},"invert":{"type":"boolean","x-cpp-type":"int"},"readable":{"type":"boolean","x-cpp-type":"int"},"panel_type":{"type":"string","const":"st7735s"}},"id_probe":{"reg":"0x04","mask":"0xFFFF","values":["0x7683","0x897C"]},"verified":{"id_probe":"generated"}},"st7789v2":{"id":"st7789v2","name":"ST7789V2","kind":"display","vendor":"Sitronix","bus":{"kind":"spi"},"signals":{"required":["cs","dc","rst"],"optional":["backlight","power"]},"spec_keys":{"width":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"height":{"type":"integer","minimum":1,"maximum":4096,"x-cpp-type":"int"},"offset_x":{"type":"integer","minimum":-4096,"maximum":4096,"x-cpp-type":"int"},"offset_y":{"type":"integer","minimum":-4096,"maximum":4096,"x-cpp-type":"int"},"rotation_offset":{"type":"integer","minimum":0,"maximum":7,"x-cpp-type":"int"},"invert":{"type":"boolean","x-cpp-type":"int"},"readable":{"type":"boolean","x-cpp-type":"int"},"panel_type":{"type":"string"}},"verified":{"signals":null}},"transceiver":{"id":"transceiver","name":"Unspecified transceiver","kind":"transceiver","bus":{"kind":"uart"},"pins":{"a":{"cap":["output","input"]},"b":{"cap":["output","input"]},"de":{"cap":["input"]},"re":{"cap":["input"]}},"signals":{"required":[],"optional":["de","re"]}}}</script>
 <script type="application/json" id="board-spec-accessories">{"extport_core2":{"schema_version":1,"id":"extport_core2","name":"Module ExtPort for Core2","origin":"official","attaches":{"connector_type":"mbus","occupies":"stack"},"compatible_with":["m5stack_core2"],"host_pins":{"mbus.4":{"roles":["conn:port_b.1"]},"mbus.10":{"roles":["conn:port_b.2"]},"mbus.15":{"roles":["conn:port_c.1"]},"mbus.16":{"roles":["conn:port_c.2"]}},"connectors":{"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"},"port_d":{"type":"hy2_4p","standard":"port_io"},"port_e":{"type":"hy2_4p","standard":"port_uart"}},"settings":{"port_d_1":{"name":"PORT.D-1 DIP","selected_by":"user","default":"g34","choices":{"g34":{"host_pins":{"mbus.26":{"roles":["conn:port_d.1"]}}},"g22":{"host_pins":{"mbus.18":{"roles":["conn:port_d.1"]}}},"g1":{"host_pins":{"mbus.14":{"roles":["conn:port_d.1"]}}}}},"port_d_2":{"name":"PORT.D-2 DIP","selected_by":"user","default":"g35","choices":{"g35":{"host_pins":{"mbus.2":{"roles":["conn:port_d.2"]}}},"g21":{"host_pins":{"mbus.17":{"roles":["conn:port_d.2"]}}},"g3":{"host_pins":{"mbus.13":{"roles":["conn:port_d.2"]}}}}},"port_e_1":{"name":"PORT.E-1 DIP","selected_by":"user","default":"g27","choices":{"g27":{"host_pins":{"mbus.21":{"roles":["conn:port_e.1"]}}},"g2":{"host_pins":{"mbus.23":{"roles":["conn:port_e.1"]}}},"g0":{"host_pins":{"mbus.24":{"roles":["conn:port_e.1"]}}}}},"port_e_2":{"name":"PORT.E-2 DIP","selected_by":"user","default":"g19","choices":{"g19":{"host_pins":{"mbus.22":{"roles":["conn:port_e.2"]}}},"g25":{"host_pins":{"mbus.8":{"roles":["conn:port_e.2"]}}},"g2":{"host_pins":{"mbus.23":{"roles":["conn:port_e.2"]}}}}}},"note":"Only one position of each DIP selector may be ON."},"m5basic_base_lite":{"schema_version":1,"id":"m5basic_base_lite","name":"M5BasicBaseLite","origin":"third_party","vendor":"Akita","source_url":"https://github.com/akita11/M5BasicBaseLite","attaches":{"connector_type":"mbus","occupies":"stack"},"compatible_with":["m5stack"],"host_pins":{"mbus.18":{"roles":["conn:port_a.1"]},"mbus.17":{"roles":["conn:port_a.2"]},"mbus.4":{"roles":["conn:port_b.1"]},"mbus.10":{"roles":["conn:port_b.2"]},"mbus.15":{"roles":["conn:port_c.1"]},"mbus.16":{"roles":["conn:port_c.2"]},"mbus.26":{"roles":["conn:port_d.1"]},"mbus.2":{"roles":["conn:port_d.2"]},"mbus.20":{"roles":["conn:port_e.1"]},"mbus.22":{"roles":["conn:port_e.2"]},"mbus.23":{"roles":["dev:rgb_led.data"]}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"},"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"},"port_d":{"type":"hy2_4p","standard":"port_io"},"port_e":{"type":"hy2_4p","standard":"port_uart"}},"devices":{"rgb_led":{"kind":"led_strip","part":"sk6812","spec":{"count":10}}},"note":"Port D/E pin order follows the current M5Unified table (D 34/35, E 5/13); the README lists 35/34 and 13/5."},"m5go_bottom":{"schema_version":1,"id":"m5go_bottom","name":"M5GO Bottom","origin":"official","attaches":{"connector_type":"mbus","occupies":"bottom"},"compatible_with":["m5stack"],"host_pins":{"mbus.4":{"roles":["conn:port_b.1"]},"mbus.10":{"roles":["conn:port_b.2"]},"mbus.15":{"roles":["conn:port_c.1"]},"mbus.16":{"roles":["conn:port_c.2"]},"mbus.23":{"roles":["dev:rgb_led.data"]}},"connectors":{"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"}},"devices":{"rgb_led":{"kind":"led_strip","part":"sk6812","spec":{"count":10},"verified":{"part":"datasheet"}}},"verified":{"host_pins":"datasheet"}},"m5go_bottom2":{"schema_version":1,"id":"m5go_bottom2","name":"M5GO Bottom2","origin":"official","attaches":{"connector_type":"mbus","occupies":"bottom"},"compatible_with":["m5stack_core2"],"host_pins":{"mbus.4":{"roles":["conn:port_b.1"]},"mbus.10":{"roles":["conn:port_b.2"]},"mbus.15":{"roles":["conn:port_c.1"]},"mbus.16":{"roles":["conn:port_c.2"]},"mbus.8":{"roles":["dev:rgb_led.data"]}},"connectors":{"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"}},"devices":{"rgb_led":{"kind":"led_strip","part":"sk6812","spec":{"count":10}}}},"tough_subboard":{"schema_version":1,"id":"tough_subboard","name":"M5Tough bundled subboard","origin":"official","bundled":true,"attaches":{"connector_type":"mbus","occupies":"bottom"},"compatible_with":["m5tough"],"host_pins":{"mbus.20":{"roles":["conn:port_a.1"]},"mbus.19":{"roles":["conn:port_a.2"]},"mbus.4":{"roles":["conn:port_b.1"]},"mbus.10":{"roles":["conn:port_b.2"]},"mbus.15":{"roles":["conn:port_c.1"]},"mbus.16":{"roles":["conn:port_c.2"]},"mbus.8":{"roles":["conn:reset_port.2"],"verified":{"roles":"datasheet"}},"mbus.21":{"roles":["bus:uart_rs485.rx"],"verified":{"roles":"datasheet"}},"mbus.22":{"roles":["bus:uart_rs485.tx"],"verified":{"roles":"datasheet"}}},"buses":{"uart_rs485":{"kind":"uart","signals":["tx","rx"],"fixed":false,"note":"Half-duplex auto-direction UART","verified":{"signals":"datasheet","note":"datasheet"}}},"devices":{"rs485_xcvr":{"kind":"transceiver","part":"sp485e","bus":"uart_rs485","pins":{"a":{"roles":["conn:rs485.2"],"verified":{"roles":"datasheet"}},"b":{"roles":["conn:rs485.1"],"verified":{"roles":"datasheet"}}},"note":"SP485E auto-direction: DI is tied to GND; GPIO19 TX drives combined DE/RE through Q1, so DE/RE have no separate GPIO role.","verified":{"part":"datasheet","note":"datasheet"}},"dcdc_in":{"kind":"regulator","part":"me3116","pins":{"vin":{"roles":["pwr:vin"],"note":"Shared by RS485 position 3 and M-Bus HPWR positions 25/27","verified":{"roles":"datasheet","note":"datasheet"}},"vout":{"roles":["pwr:5v"],"verified":{"roles":"datasheet"}}},"note":"ME3116 converts the 6–24V input rail to 5V.","verified":{"part":"datasheet","note":"datasheet"}}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"},"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"},"rs485":{"type":"hy2_4p","standard":"port_rs485","positions":{"3":"pwr:vin"},"verified":{"positions":"datasheet"}},"reset_port":{"type":"hy2_4p","standard":"port_reset","positions":{"1":"chip:en"},"verified":{"positions":"datasheet"}}},"note":"Official Tough Ext Board schematic: RS485 is B/A/24V/GND; GPIO27=RX and GPIO19=TX; HPWR and J4.3 feed the ME3116 input.","verified":{"host_pins":"datasheet","buses":"datasheet","devices":"datasheet","connectors":"datasheet","note":"datasheet"}}}</script>
-<script type="application/json" id="board-spec-targets">{"m5gfx_board_desc":{"emit":"m5gfx_desc","out_by_chip":{"esp32_d0wdq6":"esp32_d0wdq6_wiring.hpp","esp32s3":"esp32s3_wiring.hpp"},"options":{"m5atoms3":[{"name":"gc9107","bit":0,"select":{"lcd":"gc9107"}}],"m5stack":[{"name":"ips","bit":0,"select":{"lcd":"ips"}}],"m5stack_core2":[{"name":"new_pmic","bit":0,"select":{"pmic":"axp2101"}},{"name":"lcd_e","bit":1,"select":{"lcd":"ili9342e"}}],"m5tough":[{"name":"reserved","bit":0},{"name":"lcd_e","bit":1,"select":{"lcd":"ili9342e"}}]}},"m5unified_pin_table":{"emit":"m5unified_pin_table","allow_origins":["official","third_party"],"compositions":{"m5stack_core2":{"default":{"accessories":[{"id":"m5go_bottom2"},{"id":"extport_core2","use":["port_d","port_e"]}]}},"m5stack":{"default":{"accessories":[{"id":"m5go_bottom"},{"id":"m5basic_base_lite","use":["port_d","port_e"]}]}},"m5tough":{"default":{"accessories":[{"id":"tough_subboard"}]}}}}}</script>
+<script type="application/json" id="board-spec-targets">{"m5gfx_board_desc":{"emit":"m5gfx_desc","boards":{"m5station":{"chip":"esp32_d0wdq6","legacy_board_id":9,"cpp_namespace":"station","board_enum":"board_M5Station","desc_name":"desc_station","wiring_fields":["display","i2c","hold"],"reset":"display_rst","wiring_output":"esp32_d0wdq6_wiring.hpp"},"m5stack_core2":{"chip":"esp32_d0wdq6","legacy_board_id":2,"cpp_namespace":"core2","board_enum":"board_M5StackCore2","desc_name":"desc_core2","wiring_fields":["display","shared_sd","i2c","hold"],"wiring_output":"esp32_d0wdq6_wiring.hpp","options":[{"name":"new_pmic","bit":0,"select":{"pmic":"axp2101"}},{"name":"lcd_e","bit":1,"select":{"lcd":"ili9342e"}}]},"m5tough":{"chip":"esp32_d0wdq6","legacy_board_id":8,"cpp_namespace":"tough","board_enum":"board_M5Tough","desc_name":"desc_tough","wiring_fields":["display","shared_sd","i2c","hold"],"wiring_output":"esp32_d0wdq6_wiring.hpp","options":[{"name":"reserved","bit":0},{"name":"lcd_e","bit":1,"select":{"lcd":"ili9342e"}}]},"m5stack":{"chip":"esp32_d0wdq6","legacy_board_id":1,"cpp_namespace":"stack","board_enum":"board_M5Stack","desc_name":"desc_stack","wiring_fields":["display","shared_sd","hold"],"reset":"display_rst","wiring_output":"esp32_d0wdq6_wiring.hpp","options":[{"name":"ips","bit":0,"select":{"lcd":"ips"}}]},"m5paper":{"chip":"esp32_d0wdq6","legacy_board_id":7,"cpp_namespace":"paper","board_enum":"board_M5Paper","desc_name":"desc_paper","wiring_fields":["display","shared_sd","power","hold"],"reset":"display_rst","wiring_output":"esp32_d0wdq6_wiring.hpp"},"m5timercam":{"chip":"esp32_d0wdq6","legacy_board_id":132,"board_enum":"board_M5TimerCam"},"m5atoms3":{"chip":"esp32s3","legacy_board_id":11,"cpp_namespace":"atoms3","board_enum":"board_M5AtomS3","desc_name":"desc_atoms3","wiring_fields":["display","hold","backlight"],"reset":"display_rst","wiring_output":"esp32s3_wiring.hpp","specs_output":"esp32s3_specs.hpp","options":[{"name":"gc9107","bit":0,"select":{"lcd":"gc9107"}}]},"m5sticks3":{"chip":"esp32s3","legacy_board_id":26,"cpp_namespace":"sticks3","board_enum":"board_M5StickS3","desc_name":"desc_sticks3","wiring_fields":["display","i2c","hold","backlight","power"],"reset":"display_rst","wiring_output":"esp32s3_wiring.hpp","specs_output":"esp32s3_specs.hpp"}}},"m5unified_pin_table":{"emit":"m5unified_pin_table","allow_origins":["official","third_party"],"compositions":{"m5stack_core2":{"default":{"accessories":[{"id":"m5go_bottom2"},{"id":"extport_core2","use":["port_d","port_e"]}]}},"m5stack":{"default":{"accessories":[{"id":"m5go_bottom"},{"id":"m5basic_base_lite","use":["port_d","port_e"]}]}},"m5tough":{"default":{"accessories":[{"id":"tough_subboard"}]}}}}}</script>
 <script type="application/json" id="board-spec-boards">{"m5atoms3":{"schema_version":1,"id":"m5atoms3","name":"M5AtomS3","legacy_board_id":11,"chip":"esp32s3","spec":{"display":{"resolution":[128,128],"touch":false},"storage":{"psram_mb":0}},"pins":{"1":{"roles":["bus:port_a_i2c.scl","conn:port_a.1"],"verified":{"roles":"generated"}},"2":{"roles":["bus:port_a_i2c.sda","conn:port_a.2"],"verified":{"roles":"generated"}},"15":{"roles":["dev:lcd.cs"]},"16":{"roles":["dev:backlight.pwm"]},"17":{"roles":["bus:main_spi.sclk"],"verified":{"roles":"generated"}},"21":{"roles":["bus:main_spi.mosi"],"verified":{"roles":"generated"}},"33":{"roles":["dev:lcd.dc"]},"34":{"roles":["dev:lcd.rst"]},"38":{"roles":["bus:internal_i2c.sda"],"verified":{"roles":"generated"}},"39":{"roles":["bus:internal_i2c.scl"],"verified":{"roles":"generated"}}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi"],"preferred_host":"SPI3_HOST","fixed":false,"freq":40000000,"freq_read":16000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}},"port_a_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}}},"devices":{"lcd":{"kind":"display","bus":"main_spi","selected_by":"runtime","default":"st7735s","choices":{"st7735s":{"part":"st7735s","spec":{"width":128,"height":128,"memory_height":132,"offset_x":2,"offset_y":1,"rotation_offset":2,"invert":true,"readable":true,"panel_type":"st7735s"}},"gc9107":{"part":"gc9107","spec":{"width":128,"height":128,"offset_x":0,"offset_y":32,"rotation_offset":0,"invert":false,"readable":false,"panel_type":"gc9107"}}}},"backlight":{"kind":"backlight","spec":{"freq":256,"channel":7,"invert":false,"offset":48},"verified":{"spec":"generated"}}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"}}},"m5paper":{"schema_version":1,"id":"m5paper","name":"M5Paper","legacy_board_id":7,"chip":"esp32_d0wdq6","pins":{"2":{"roles":["dev:power_hold.enable"],"verified":{"roles":"generated"}},"4":{"roles":["dev:sd.d3"],"verified":{"roles":"generated"}},"12":{"roles":["bus:main_spi.mosi","dev:sd.cmd"],"verified":{"roles":"generated"}},"13":{"roles":["bus:main_spi.miso","dev:sd.d0"],"verified":{"roles":"generated"}},"14":{"roles":["bus:main_spi.sclk","dev:sd.clk"],"verified":{"roles":"generated"}},"15":{"roles":["dev:lcd.cs"]},"18":{"roles":["conn:port_c.2"],"verified":{"roles":"generated"}},"19":{"roles":["conn:port_c.1"],"verified":{"roles":"generated"}},"21":{"roles":["bus:internal_i2c.sda"],"verified":{"roles":"generated"}},"22":{"roles":["bus:internal_i2c.scl"],"verified":{"roles":"generated"}},"23":{"roles":["dev:lcd.rst"]},"25":{"roles":["bus:port_a_i2c.sda","conn:port_a.2"],"verified":{"roles":"generated"}},"26":{"roles":["conn:port_b.2"],"verified":{"roles":"generated"}},"27":{"roles":["dev:lcd.busy"]},"32":{"roles":["bus:port_a_i2c.scl","conn:port_a.1"],"verified":{"roles":"generated"}},"33":{"roles":["conn:port_b.1"],"verified":{"roles":"generated"}},"36":{"roles":["dev:touch.int"]}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi","miso"],"preferred_host":"SPI3_HOST","fixed":false,"freq":40000000,"freq_read":20000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"freq":400000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated"}},"port_a_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}}},"devices":{"lcd":{"kind":"display","part":"it8951","bus":"main_spi","spec":{"width":960,"height":540,"rotation_offset":3}},"sd":{"kind":"sd","part":"sd_slot","bus":"main_spi","verified":{"bus":"generated"}},"touch":{"kind":"touch","part":"gt911","bus":"internal_i2c","i2c_addr":"0x5D","spec":{"x_max":539,"y_max":959}},"power_hold":{"kind":"power_hold"}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"},"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"}}},"m5stack":{"schema_version":1,"id":"m5stack","name":"M5Stack BASIC/GRAY/FIRE","legacy_board_id":1,"chip":"esp32_d0wdq6","pins":{"0":{"roles":["conn:mbus.24"],"verified":{"roles":"generated"}},"1":{"roles":["conn:mbus.14"],"verified":{"roles":"generated"}},"2":{"roles":["conn:mbus.19"],"verified":{"roles":"generated"}},"3":{"roles":["conn:mbus.13"],"verified":{"roles":"generated"}},"4":{"roles":["dev:sd.d3"],"verified":{"roles":"generated"}},"5":{"roles":["conn:mbus.20"],"verified":{"roles":"generated"}},"12":{"roles":["conn:mbus.21"],"verified":{"roles":"generated"}},"13":{"roles":["conn:mbus.22"],"verified":{"roles":"generated"}},"14":{"roles":["dev:lcd.cs"]},"15":{"roles":["conn:mbus.23"],"verified":{"roles":"generated"}},"16":{"roles":["conn:mbus.15"],"verified":{"roles":"generated"}},"17":{"roles":["conn:mbus.16"],"verified":{"roles":"generated"}},"18":{"roles":["bus:main_spi.sclk","dev:sd.clk","conn:mbus.11"],"verified":{"roles":"generated"}},"19":{"roles":["bus:main_spi.miso","dev:sd.d0","conn:mbus.9"],"verified":{"roles":"generated"}},"21":{"roles":["bus:internal_i2c.sda","conn:port_a.2","conn:mbus.17"],"verified":{"roles":"generated"}},"22":{"roles":["bus:internal_i2c.scl","conn:port_a.1","conn:mbus.18"],"verified":{"roles":"generated"}},"23":{"roles":["bus:main_spi.mosi","dev:sd.cmd","conn:mbus.7"],"verified":{"roles":"generated"}},"25":{"roles":["dev:speaker.data_out","conn:mbus.8"],"verified":{"roles":"generated"}},"26":{"roles":["conn:mbus.10"],"verified":{"roles":"generated"}},"27":{"roles":["dev:lcd.dc"]},"32":{"roles":["dev:backlight.pwm"]},"33":{"roles":["dev:lcd.rst"]},"34":{"roles":["dev:mic.data_in","conn:mbus.26"],"verified":{"roles":"generated"}},"35":{"roles":["conn:mbus.2"],"verified":{"roles":"generated"}},"36":{"roles":["conn:mbus.4"],"verified":{"roles":"generated"}}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi","miso"],"preferred_host":"SPI3_HOST","fixed":false,"freq":40000000,"freq_read":16000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}}},"devices":{"lcd":{"kind":"display","bus":"main_spi","selected_by":"runtime","default":"tn","choices":{"tn":{"part":"ili9342c","spec":{"width":320,"height":240,"rotation_offset":0,"panel_type":"tn"}},"ips":{"part":"ili9342c","spec":{"width":320,"height":240,"rotation_offset":0,"panel_type":"ips"}}}},"sd":{"kind":"sd","part":"sd_slot","bus":"main_spi","verified":{"bus":"generated"}},"backlight":{"kind":"backlight","spec":{"freq":44100,"channel":7},"verified":{"spec":"generated"}},"speaker":{"kind":"speaker"},"mic":{"kind":"mic"}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"},"mbus":{"type":"mbus"}}},"m5stack_core2":{"schema_version":1,"id":"m5stack_core2","name":"M5Stack Core2","legacy_board_id":2,"chip":"esp32_d0wdq6","spec":{"display":{"size_inch":2,"resolution":[320,240]},"power":{"battery_mah":390,"usb":"type-c"},"storage":{"psram_mb":8,"flash_mb":16,"sd":true}},"pins":{"0":{"roles":["bus:i2s_spk.ws","bus:pdm_mic.ws","conn:mbus.24"],"pull":"none","note":"I2S WS shared by the speaker and PDM microphone","verified":{"roles":"generated"}},"1":{"roles":["conn:mbus.14"],"pull":"none","note":"TXD0","verified":{"roles":"generated"}},"2":{"roles":["bus:i2s_spk.data_out","conn:mbus.23"],"pull":"none","verified":{"roles":"generated"}},"3":{"roles":["conn:mbus.13"],"pull":"none","note":"RXD0","verified":{"roles":"generated"}},"4":{"roles":["dev:sd.d3"],"pull":"up","verified":{"roles":"generated"}},"5":{"roles":["dev:lcd.cs"],"pull":"up"},"12":{"roles":["bus:i2s_spk.bck"],"pull":"none"},"13":{"roles":["conn:mbus.15"],"pull":"none","verified":{"roles":"generated"}},"14":{"roles":["conn:mbus.16"],"pull":"none","verified":{"roles":"generated"}},"15":{"roles":["dev:lcd.dc"],"pull":"none"},"18":{"roles":["bus:main_spi.sclk","dev:sd.clk","conn:mbus.11"],"pull":"none","verified":{"roles":"generated"}},"19":{"roles":["conn:mbus.22"],"pull":"none","verified":{"roles":"generated"}},"21":{"roles":["bus:internal_i2c.sda","conn:mbus.17"],"pull":"up","verified":{"roles":"generated"}},"22":{"roles":["bus:internal_i2c.scl","conn:mbus.18"],"pull":"up","verified":{"roles":"generated"}},"23":{"roles":["bus:main_spi.mosi","dev:sd.cmd","conn:mbus.7"],"pull":"none","verified":{"roles":"generated"}},"25":{"roles":["conn:mbus.8"],"pull":"none","note":"Optional M5GO Bottom2 LED bar (M5Unified RGBLED column)","verified":{"roles":"generated"}},"26":{"roles":["conn:mbus.10"],"pull":"none","verified":{"roles":"generated"}},"27":{"roles":["conn:mbus.21"],"pull":"none","verified":{"roles":"generated"}},"32":{"roles":["bus:port_a_i2c.sda","conn:port_a.2","conn:mbus.19"],"pull":"up","verified":{"roles":"generated"}},"33":{"roles":["bus:port_a_i2c.scl","conn:port_a.1","conn:mbus.20"],"pull":"up","verified":{"roles":"generated"}},"34":{"roles":["bus:pdm_mic.data_in","conn:mbus.26"],"pull":"none","verified":{"roles":"generated"}},"35":{"roles":["conn:mbus.2"],"pull":"none","verified":{"roles":"generated"}},"36":{"roles":["conn:mbus.4"],"pull":"none","verified":{"roles":"generated"}},"38":{"roles":["bus:main_spi.miso","dev:sd.d0","conn:mbus.9"],"pull":"none","verified":{"roles":"generated"}},"39":{"roles":["dev:touch.int"],"pull":"up"}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi","miso"],"preferred_host":"SPI3_HOST","fixed":false,"freq":40000000,"freq_read":16000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"freq":400000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated"}},"port_a_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}},"i2s_spk":{"kind":"i2s","signals":["bck","ws","data_out"],"fixed":false},"pdm_mic":{"kind":"pdm","signals":["ws","data_in"],"fixed":false}},"devices":{"lcd":{"kind":"display","bus":"main_spi","spec":{"width":320,"height":240,"rotation_offset":0},"selected_by":"revision","default":"ili9342c","choices":{"ili9342c":{"part":"ili9342c"},"ili9342e":{"part":"ili9342e"}}},"sd":{"kind":"sd","part":"sd_slot","bus":"main_spi","verified":{"bus":"generated"}},"touch":{"kind":"touch","part":"ft5x06","bus":"internal_i2c","i2c_addr":"0x38","spec":{"x_max":319,"y_max":279}},"speaker":{"kind":"speaker","part":"ns4168","bus":"i2s_spk"},"mic":{"kind":"mic","part":"spm1423","bus":"pdm_mic"},"imu":{"kind":"imu","bus":"internal_i2c","i2c_addr":"0x68","selected_by":"revision","default":"mpu6886","choices":{"mpu6886":{"part":"mpu6886"},"bmi270":{"part":"bmi270"}}},"rtc":{"kind":"rtc","part":"bm8563","bus":"internal_i2c","i2c_addr":"0x51"},"pmic":{"kind":"pmic","bus":"internal_i2c","i2c_addr":"0x34","selected_by":"revision","default":"axp192","choices":{"axp192":{"part":"axp192","pins":{"gpio3":{"roles":["dev:lcd.rst"]},"gpio2":{"roles":["dev:speaker.enable"]},"dcdc3":{"roles":["dev:lcd.backlight"]},"ldo2":{"roles":["pwr:lcd_sd_3v3"]},"ldo3":{"roles":["dev:vibration.enable"]},"gpio1":{"roles":["dev:power_led.pwm"]},"dcdc1":{"roles":["pwr:esp_3v3"]},"gpio0":{"roles":["pwr:ext_ldo"]},"exten":{"roles":["pwr:ext_5v"]}}},"axp2101":{"part":"axp2101","pins":{"aldo2":{"roles":["dev:lcd.rst"]},"aldo3":{"roles":["dev:speaker.enable"]},"bldo1":{"roles":["dev:lcd.backlight"]},"dldo1":{"roles":["dev:vibration.enable"]},"bldo2":{"roles":["pwr:ext_5v"]},"chgled":{"roles":["dev:power_led.on"]}}}}},"vibration":{"kind":"vibration"},"power_led":{"kind":"led"}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"},"mbus":{"type":"mbus"}},"revisions":[{"id":"v1_0","name":"v1.0","select":{}},{"id":"v1_1","name":"v1.1","select":{"pmic":"axp2101"},"note":"AXP2101; IMU remains MPU6886"},{"id":"v1_2","name":"v1.2","select":{},"note":"AXP192 returned; IMU is unconfirmed"},{"id":"v1_3","name":"v1.3","select":{"lcd":"ili9342e","imu":"bmi270"},"note":"ILI9342E; BMI270 and the remaining combination are unconfirmed"}]},"m5station":{"schema_version":1,"id":"m5station","name":"M5Station","legacy_board_id":9,"chip":"esp32_d0wdq6","pins":{"4":{"roles":["dev:rgb_led.data"],"verified":{"roles":"generated"}},"5":{"roles":["dev:lcd.cs"]},"13":{"roles":["conn:port_c.1"],"verified":{"roles":"generated"}},"14":{"roles":["conn:port_c.2"],"verified":{"roles":"generated"}},"15":{"roles":["dev:lcd.rst"]},"16":{"roles":["conn:port_c2.1"],"verified":{"roles":"generated"}},"17":{"roles":["conn:port_c2.2"],"verified":{"roles":"generated"}},"18":{"roles":["bus:main_spi.sclk"],"verified":{"roles":"generated"}},"19":{"roles":["dev:lcd.dc"]},"21":{"roles":["bus:internal_i2c.sda"],"verified":{"roles":"generated"}},"22":{"roles":["bus:internal_i2c.scl"],"verified":{"roles":"generated"}},"23":{"roles":["bus:main_spi.mosi"],"verified":{"roles":"generated"}},"25":{"roles":["conn:port_b.2"],"verified":{"roles":"generated"}},"26":{"roles":["conn:port_b2.2"],"verified":{"roles":"generated"}},"32":{"roles":["bus:port_a_i2c.sda","conn:port_a.2"],"verified":{"roles":"generated"}},"33":{"roles":["bus:port_a_i2c.scl","conn:port_a.1"],"verified":{"roles":"generated"}},"35":{"roles":["conn:port_b.1"],"verified":{"roles":"generated"}},"36":{"roles":["conn:port_b2.1"],"verified":{"roles":"generated"}}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi"],"preferred_host":"SPI2_HOST","fixed":false,"freq":40000000,"freq_read":15000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}},"port_a_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}}},"devices":{"lcd":{"kind":"display","part":"st7789v2","bus":"main_spi","spec":{"width":135,"height":240,"rotation_offset":1}},"rgb_led":{"kind":"led_strip"}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"},"port_b":{"type":"hy2_4p","standard":"port_io"},"port_c":{"type":"hy2_4p","standard":"port_uart"},"port_b2":{"type":"hy2_4p","standard":"port_io"},"port_c2":{"type":"hy2_4p","standard":"port_uart"}}},"m5sticks3":{"schema_version":1,"id":"m5sticks3","name":"M5StickS3","legacy_board_id":26,"chip":"esp32s3","spec":{"display":{"resolution":[135,240],"touch":false}},"pins":{"9":{"roles":["bus:port_a_i2c.sda","conn:port_a.2"],"verified":{"roles":"generated"}},"10":{"roles":["bus:port_a_i2c.scl","conn:port_a.1"],"verified":{"roles":"generated"}},"11":{"roles":[],"note":"BtnA, active low"},"12":{"roles":[],"note":"BtnB, active low"},"14":{"roles":["bus:i2s_audio.data_out"]},"15":{"roles":["bus:i2s_audio.ws"]},"16":{"roles":["bus:i2s_audio.data_in"]},"17":{"roles":["bus:i2s_audio.bck"]},"18":{"roles":["bus:i2s_audio.mck"]},"21":{"roles":["dev:lcd.rst"]},"38":{"roles":["dev:backlight.pwm"]},"39":{"roles":["bus:main_spi.mosi"],"verified":{"roles":"generated"}},"40":{"roles":["bus:main_spi.sclk"],"verified":{"roles":"generated"}},"41":{"roles":["dev:lcd.cs"]},"45":{"roles":["dev:lcd.dc"]},"47":{"roles":["bus:internal_i2c.sda"],"pull":"up","pull_reliable":true,"verified":{"roles":"generated"}},"48":{"roles":["bus:internal_i2c.scl"],"pull":"up","pull_reliable":true,"verified":{"roles":"generated"}}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi"],"preferred_host":"SPI3_HOST","fixed":false,"freq":40000000,"freq_read":16000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"freq":100000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated"}},"port_a_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}},"i2s_audio":{"kind":"i2s","signals":["mck","bck","ws","data_out","data_in"],"fixed":false,"freq":22050,"note":"Speaker uses I2S0 and microphone uses I2S1; magnification is 1."}},"devices":{"lcd":{"kind":"display","part":"st7789v2","bus":"main_spi","spec":{"width":135,"height":240,"offset_x":52,"offset_y":40,"rotation_offset":0,"invert":true,"readable":true}},"backlight":{"kind":"backlight","spec":{"freq":256,"channel":7,"invert":false,"offset":16},"verified":{"spec":"generated"}},"pmic":{"kind":"pmic","part":"m5pm1","bus":"internal_i2c","pins":{"gpio2":{"roles":["dev:lcd.power"]},"gpio3":{"roles":["dev:speaker.enable"]}}},"speaker":{"kind":"speaker","bus":"i2s_audio","verified":{"bus":"datasheet"}},"mic":{"kind":"mic","bus":"i2s_audio","verified":{"bus":"datasheet"}}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"}}},"m5timercam":{"schema_version":1,"id":"m5timercam","name":"M5TimerCam","legacy_board_id":132,"chip":"esp32_d0wdq6","pins":{"4":{"roles":["bus:port_a_i2c.sda","conn:port_a.2"],"verified":{"roles":"generated"}},"12":{"roles":["bus:internal_i2c.sda"],"verified":{"roles":"generated"}},"13":{"roles":["bus:port_a_i2c.scl","conn:port_a.1"],"verified":{"roles":"generated"}},"14":{"roles":["bus:internal_i2c.scl"],"verified":{"roles":"generated"}},"33":{"roles":["dev:power_hold.enable"],"verified":{"roles":"generated"}}},"buses":{"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}},"port_a_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":0,"fixed":false,"verified":{"signals":"generated","preferred_host":"generated"}}},"devices":{"power_hold":{"kind":"power_hold"}},"connectors":{"port_a":{"type":"hy2_4p","standard":"port_i2c"}}},"m5tough":{"schema_version":1,"id":"m5tough","name":"M5Tough","legacy_board_id":8,"chip":"esp32_d0wdq6","pins":{"0":{"roles":["bus:i2s_spk.ws","bus:pdm_mic.ws","conn:mbus.24"],"verified":{"roles":"generated"}},"1":{"roles":["conn:mbus.14"],"verified":{"roles":"generated"}},"2":{"roles":["bus:i2s_spk.data_out","conn:mbus.23"],"verified":{"roles":"generated"}},"3":{"roles":["conn:mbus.13"],"verified":{"roles":"generated"}},"4":{"roles":["dev:sd.d3"],"verified":{"roles":"generated"}},"5":{"roles":["dev:lcd.cs"]},"12":{"roles":["bus:i2s_spk.bck"]},"13":{"roles":["conn:mbus.15"],"verified":{"roles":"generated"}},"14":{"roles":["conn:mbus.16"],"verified":{"roles":"generated"}},"15":{"roles":["dev:lcd.dc"]},"18":{"roles":["bus:main_spi.sclk","dev:sd.clk","conn:mbus.11"],"verified":{"roles":"generated"}},"19":{"roles":["conn:mbus.22"],"verified":{"roles":"generated"}},"21":{"roles":["bus:internal_i2c.sda","conn:mbus.17"],"verified":{"roles":"generated"}},"22":{"roles":["bus:internal_i2c.scl","conn:mbus.18"],"verified":{"roles":"generated"}},"23":{"roles":["bus:main_spi.mosi","dev:sd.cmd","conn:mbus.7"],"verified":{"roles":"generated"}},"25":{"roles":["conn:mbus.8"],"verified":{"roles":"generated"}},"26":{"roles":["conn:mbus.10"],"verified":{"roles":"generated"}},"27":{"roles":["conn:mbus.21"],"verified":{"roles":"generated"}},"32":{"roles":["conn:mbus.19"],"verified":{"roles":"generated"}},"33":{"roles":["conn:mbus.20"],"verified":{"roles":"generated"}},"34":{"roles":["bus:pdm_mic.data_in","conn:mbus.26"],"verified":{"roles":"generated"}},"35":{"roles":["conn:mbus.2"],"verified":{"roles":"generated"}},"36":{"roles":["conn:mbus.4"],"verified":{"roles":"generated"}},"38":{"roles":["bus:main_spi.miso","dev:sd.d0","conn:mbus.9"],"verified":{"roles":"generated"}},"39":{"roles":["dev:touch.int"]}},"buses":{"main_spi":{"kind":"spi","signals":["sclk","mosi","miso"],"preferred_host":"SPI3_HOST","fixed":false,"freq":40000000,"freq_read":16000000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated","freq_read":"generated"}},"internal_i2c":{"kind":"i2c","signals":["sda","scl"],"preferred_host":1,"fixed":false,"freq":400000,"verified":{"signals":"generated","preferred_host":"generated","freq":"generated"}},"i2s_spk":{"kind":"i2s","signals":["bck","ws","data_out"],"fixed":false},"pdm_mic":{"kind":"pdm","signals":["ws","data_in"],"fixed":false}},"devices":{"lcd":{"kind":"display","bus":"main_spi","spec":{"width":320,"height":240,"rotation_offset":0},"selected_by":"runtime","default":"ili9342c","choices":{"ili9342c":{"part":"ili9342c"},"ili9342e":{"part":"ili9342e"}}},"sd":{"kind":"sd","part":"sd_slot","bus":"main_spi","verified":{"bus":"generated"}},"touch":{"kind":"touch","part":"chsc6540","bus":"internal_i2c","i2c_addr":"0x2E","spec":{"x_max":319,"y_max":239}},"speaker":{"kind":"speaker","bus":"i2s_spk"},"mic":{"kind":"mic","bus":"pdm_mic"},"pmic":{"kind":"pmic","part":"axp192","bus":"internal_i2c","i2c_addr":"0x34","pins":{"gpio3":{"roles":["dev:lcd.rst"]},"gpio2":{"roles":["dev:speaker.enable"]},"ldo3":{"roles":["dev:lcd.backlight"]},"ldo2":{"roles":["pwr:lcd_sd_3v3"]},"dcdc1":{"roles":["pwr:esp_3v3"]},"gpio0":{"roles":["pwr:ext_ldo"]},"exten":{"roles":["pwr:ext_5v"]}}}},"connectors":{"mbus":{"type":"mbus"}}}}</script>
   <script>
 // lib/model.js
@@ -582,6 +670,82 @@ function assertChip(value, source = "<chip>") {
     throw new TypeError(`${source}: expected a chip object with gpio_count`);
   }
   return value;
+}
+
+
+// lib/schema.js
+function plainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function pointer(root, reference) {
+  if (!reference.startsWith("#/")) return null;
+  return reference.slice(2).split("/").reduce((value, key) => value?.[key.replace(/~1/g, "/").replace(/~0/g, "~")], root);
+}
+
+function matchesType(value, type) {
+  if (type === "null") return value === null;
+  if (type === "array") return Array.isArray(value);
+  if (type === "object") return plainObject(value);
+  if (type === "integer") return Number.isInteger(value);
+  if (type === "number") return typeof value === "number" && Number.isFinite(value);
+  return typeof value === type;
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function validateSchema(value, schema, root = schema, path = "") {
+  const issues = [];
+  const issue = (id, at, message) => issues.push({ id, path: at, message });
+  const visit = (item, node, at) => {
+    if (!node) return;
+    if (node.$ref) {
+      const target = pointer(root, node.$ref);
+      if (!target) issue("E_SCHEMA_REF", at, `unresolved schema reference ${node.$ref}`);
+      else visit(item, target, at);
+      return;
+    }
+    const types = node.type === undefined ? [] : (Array.isArray(node.type) ? node.type : [node.type]);
+    if (types.length && !types.some((type) => matchesType(item, type))) {
+      issue("E_SCHEMA_TYPE", at, `expected ${types.join(" or ")}`);
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(node, "const") && !sameJson(item, node.const)) {
+      issue("E_SCHEMA_CONST", at, `expected constant ${JSON.stringify(node.const)}`);
+    }
+    if (node.enum && !node.enum.some((candidate) => sameJson(item, candidate))) {
+      issue("E_SCHEMA_ENUM", at, `value is not one of ${node.enum.map(JSON.stringify).join(", ")}`);
+    }
+    if (typeof item === "string" && node.pattern !== undefined && !new RegExp(node.pattern).test(item)) {
+      issue("E_SCHEMA_PATTERN", at, `value does not match ${node.pattern}`);
+    }
+    if (typeof item === "number") {
+      if (node.minimum !== undefined && item < node.minimum) issue("E_SCHEMA_MINIMUM", at, `value must be at least ${node.minimum}`);
+      if (node.maximum !== undefined && item > node.maximum) issue("E_SCHEMA_MAXIMUM", at, `value must be at most ${node.maximum}`);
+    }
+    if (Array.isArray(item)) {
+      if (node.minItems !== undefined && item.length < node.minItems) issue("E_SCHEMA_MIN_ITEMS", at, `array needs at least ${node.minItems} item(s)`);
+      if (node.maxItems !== undefined && item.length > node.maxItems) issue("E_SCHEMA_MAX_ITEMS", at, `array permits at most ${node.maxItems} item(s)`);
+      if (node.uniqueItems && new Set(item.map(JSON.stringify)).size !== item.length) issue("E_SCHEMA_UNIQUE", at, "array items must be unique");
+      item.forEach((child, index) => visit(child, node.items, `${at}/${index}`));
+    }
+    if (plainObject(item)) {
+      for (const key of node.required ?? []) if (!Object.prototype.hasOwnProperty.call(item, key)) {
+        issue("E_SCHEMA_REQUIRED", `${at}/${key}`, "required property is missing");
+      }
+      const properties = node.properties ?? {};
+      for (const [key, child] of Object.entries(item)) {
+        if (node.propertyNames) visit(key, node.propertyNames, `${at}/${key}`);
+        if (Object.prototype.hasOwnProperty.call(properties, key)) visit(child, properties[key], `${at}/${key}`);
+        else if (plainObject(node.additionalProperties)) visit(child, node.additionalProperties, `${at}/${key}`);
+        else if (node.additionalProperties === false) issue("E_UNKNOWN_KEY", `${at}/${key}`, "key is not declared by the schema");
+      }
+    }
+  };
+  visit(value, schema, path);
+  return issues;
 }
 
 
@@ -722,17 +886,6 @@ const PIN_TABLE_TARGETS = {
   },
 };
 
-const CPP_BOARD_NAMES = {
-  m5stack: "board_M5Stack",
-  m5stack_core2: "board_M5StackCore2",
-  m5tough: "board_M5Tough",
-  m5station: "board_M5Station",
-  m5paper: "board_M5Paper",
-  m5timercam: "board_M5TimerCam",
-  m5atoms3: "board_M5AtomS3",
-  m5sticks3: "board_M5StickS3",
-};
-
 function stripRoleSource(role) {
   const slash = role.indexOf("/");
   return slash === -1 ? role : role.slice(slash + 1);
@@ -774,7 +927,12 @@ function pinTableAssignments(board) {
   const assignments = {};
   for (const [gpio, pin] of Object.entries(board.pins ?? {})) for (const role of pin.roles ?? []) {
     const name = pinNameForRole(board, role);
-    if (name) assignments[name] = Number(gpio);
+    if (name) {
+      if (assignments[name] !== undefined && assignments[name] !== Number(gpio)) {
+        throw new Error(`${board.id}: ${name} is assigned to both GPIO ${assignments[name]} and GPIO ${gpio}`);
+      }
+      assignments[name] = Number(gpio);
+    }
   }
   return assignments;
 }
@@ -801,10 +959,14 @@ function renderPinTableJson(entries) {
   return `${JSON.stringify(Object.fromEntries(entries.map(({ board, emitted }) => [board.id, emitted.values])), null, 2)}\n`;
 }
 
-function renderPinTableInl(entries, targetId = "esp32") {
+function renderPinTableInl(entries, targetId = "esp32", boardTarget = {}) {
   const target = PIN_TABLE_TARGETS[targetId];
   if (!target) throw new Error(`unknown pin-table target ${targetId}`);
-  const lines = ["// Generated from extras/board_spec; do not edit."];
+  const lines = [
+    "// Generated from extras/board_spec; do not edit.",
+    "// Unspecified values use target-specific unknown or sentinel values.",
+    "// Precedence: board value > part default > panel-class default.",
+  ];
   for (const group of PIN_TABLE_GROUPS) {
     const unknown = target.unknown[group.name] ?? group.unknown;
     lines.push("", `// ${group.name}[][${group.pins.length + 1}]`);
@@ -815,7 +977,9 @@ function renderPinTableInl(entries, targetId = "esp32") {
         .filter((name) => emitted.overrides[name])
         .map((name) => `${name}: ${emitted.overrides[name].reason}`);
       const suffix = comments.length ? ` // override: ${comments.join("; ")}` : "";
-      lines.push(`{ board_t::${CPP_BOARD_NAMES[board.id]}, ${values.join(", ")} },${suffix}`);
+      const boardEnum = boardTarget.boards?.[board.id]?.board_enum;
+      if (!boardEnum) throw new Error(`missing board enum for ${board.id}`);
+      lines.push(`{ board_t::${boardEnum}, ${values.join(", ")} },${suffix}`);
     }
     lines.push(`{ board_t::board_unknown, ${unknown.join(", ")} },`);
   }
@@ -824,15 +988,22 @@ function renderPinTableInl(entries, targetId = "esp32") {
 
 
 // lib/emit/m5gfx_board_wiring.js
-const M5GFX_WIRING_BOARDS = [
-  { boardId: "m5station", cppNamespace: "station", boardEnum: "board_M5Station", descName: "desc_station", fields: ["display", "i2c", "hold"], reset: "display_rst" },
-  { boardId: "m5stack_core2", cppNamespace: "core2", boardEnum: "board_M5StackCore2", descName: "desc_core2", fields: ["display", "shared_sd", "i2c", "hold"] },
-  { boardId: "m5tough", cppNamespace: "tough", boardEnum: "board_M5Tough", descName: "desc_tough", fields: ["display", "shared_sd", "i2c", "hold"] },
-  { boardId: "m5stack", cppNamespace: "stack", boardEnum: "board_M5Stack", descName: "desc_stack", fields: ["display", "shared_sd", "hold"], reset: "display_rst" },
-  { boardId: "m5paper", cppNamespace: "paper", boardEnum: "board_M5Paper", descName: "desc_paper", fields: ["display", "shared_sd", "power", "hold"], reset: "display_rst" },
-  { boardId: "m5atoms3", cppNamespace: "atoms3", boardEnum: "board_M5AtomS3", descName: "desc_atoms3", fields: ["display", "hold", "backlight"], reset: "display_rst" },
-  { boardId: "m5sticks3", cppNamespace: "sticks3", boardEnum: "board_M5StickS3", descName: "desc_sticks3", fields: ["display", "i2c", "hold", "backlight", "power"], reset: "display_rst" },
-];
+function m5gfxBoardMapping(target, boardId) {
+  const source = target.boards?.[boardId];
+  if (!source?.wiring_output) return null;
+  return {
+    boardId,
+    chip: source.chip,
+    cppNamespace: source.cpp_namespace,
+    boardEnum: source.board_enum,
+    descName: source.desc_name,
+    fields: source.wiring_fields ?? [],
+    reset: source.reset,
+    wiringOutput: source.wiring_output,
+    specsOutput: source.specs_output,
+    options: source.options ?? [],
+  };
+}
 
 // M5GFX board detection intentionally consumes only the base-board wiring.
 // Accessory/composition wiring is not an input to these board descriptors.
@@ -896,9 +1067,9 @@ function wiringAssignments(board, parts) {
   return values;
 }
 
-function emitM5GFXWiring(board, parts) {
+function emitM5GFXWiring(board, parts, target) {
   requireWiringParts(parts);
-  const mapping = M5GFX_WIRING_BOARDS.find((entry) => entry.boardId === board.id);
+  const mapping = m5gfxBoardMapping(target, board.id);
   if (!mapping) return null;
   return emitM5GFXWiringForMapping(board, parts, mapping);
 }
@@ -950,6 +1121,8 @@ function constant(name, value) {
 function renderM5GFXWiringHeader(entries) {
   const lines = [
     "// Generated from extras/board_spec; do not edit by hand.",
+    "// Unspecified values use target-specific unknown or sentinel values.",
+    "// Precedence: board value > part default > panel-class default.",
     "#pragma once",
     "",
     "#include <cstdint>",
@@ -973,11 +1146,25 @@ function renderM5GFXWiringHeader(entries) {
     if (fields.has("hold")) lines.push(`  constexpr std::int8_t hold[] = { ${value.hold.join(", ")} };`);
     lines.push(`} // namespace ${value.mapping.cppNamespace}`);
   }
-  lines.push("", "} } } } // namespace m5gfx::board_detect::m5::wiring", "");
+  lines.push("", "} // namespace wiring");
+  const optionEntries = entries.filter(({ emitted }) => emitted.mapping.options.length);
+  if (optionEntries.length) {
+    lines.push("", "namespace generated_options {");
+    for (const { emitted } of optionEntries) {
+      const { cppNamespace } = emitted.mapping;
+      const options = [...emitted.mapping.options].sort((left, right) => left.bit - right.bit);
+      lines.push(`namespace ${cppNamespace} {`);
+      for (const option of options) lines.push(`  constexpr std::uint32_t ${option.name} = 1u << ${option.bit};`);
+      lines.push(`  static const char* const names[] = { ${options.map((option) => `"${option.name}"`).join(", ")} };`);
+      lines.push(`} // namespace ${cppNamespace}`);
+    }
+    lines.push("} // namespace generated_options");
+  }
+  lines.push("", "} } } // namespace m5gfx::board_detect::m5", "");
   return lines.join("\n");
 }
 
-function selectM5GFXWiringBoards(boards, mappings = M5GFX_WIRING_BOARDS) {
+function selectM5GFXWiringBoards(boards, mappings) {
   return mappings.map((mapping) => {
     const matches = boards.filter((board) => board.id === mapping.boardId);
     if (matches.length !== 1) throw new Error(`M5GFX wiring board ${mapping.boardId} must appear exactly once; found ${matches.length}`);
@@ -1194,44 +1381,86 @@ function normalizeEndpoint(endpoint) {
 
 
 // lib/parts.js
+
 function busKind(board, device) {
   return device.bus ? board.buses?.[device.bus]?.kind : "none";
 }
 
 function validatePartCatalog(parts) {
   const issues = [];
+  const cppTypes = {
+    integer: new Set(["int", "std::int8_t", "std::int16_t", "std::int32_t", "std::uint8_t", "std::uint16_t", "std::uint32_t"]),
+    number: new Set(["float", "double"]),
+    boolean: new Set(["bool", "int"]),
+    string: new Set(["const char*"]),
+  };
   for (const [id, part] of Object.entries(parts ?? {})) {
     if (!/^[a-z][a-z0-9_]*$/.test(id) || part.id !== id || typeof part.name !== "string" || typeof part.kind !== "string") {
       issues.push({ id: "E_PART_FORMAT", path: `/${id}`, message: "part needs a matching lowercase ID, name, and kind" });
+    }
+    if (part.spec_keys !== undefined && (!part.spec_keys || Array.isArray(part.spec_keys) || typeof part.spec_keys !== "object")) {
+      issues.push({ id: "E_PART_FORMAT", path: `/${id}/spec_keys`, message: "spec_keys must map keys to schema definitions" });
+      continue;
+    }
+    for (const [key, definition] of Object.entries(part.spec_keys ?? {})) {
+      const path = `/${id}/spec_keys/${key}`;
+      if (!definition || Array.isArray(definition) || typeof definition !== "object" || typeof definition.type !== "string") {
+        issues.push({ id: "E_PART_SPEC_DEF", path, message: "spec definition needs a scalar type" });
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(definition, "default")) {
+        issues.push(...validateSchema(definition.default, definition, definition, `${path}/default`));
+      }
+      if (definition["x-cpp-type"] !== undefined && !cppTypes[definition.type]?.has(definition["x-cpp-type"])) {
+        issues.push({ id: "E_PART_CPP_TYPE", path: `${path}/x-cpp-type`, message: `${definition["x-cpp-type"]} is incompatible with ${definition.type}` });
+      }
     }
   }
   return issues;
 }
 
-function validateParts(board, parts) {
+function validateSpec(spec, part, path, issues) {
+  const definitions = part.spec_keys ?? {};
+  for (const [key, value] of Object.entries(spec ?? {})) {
+    const definition = definitions[key];
+    if (!definition) {
+      issues.push({ id: "E_UNKNOWN_KEY", path: `${path}/${key}`, message: `${key} is not declared by ${part.id}` });
+      continue;
+    }
+    issues.push(...validateSchema(value, definition, definition, `${path}/${key}`));
+  }
+}
+
+function validateParts(board, parts, { resolved = true } = {}) {
   const issues = [];
   const issue = (id, path, message, severity) => issues.push({ id, path, message, ...(severity ? { severity } : {}) });
   for (const [id, device] of Object.entries(board.devices ?? {})) {
-    if (!device.part) continue;
-    const part = parts?.[device.part];
     const path = `/devices/${id}`;
-    if (!part) {
-      issue("E_PART_MISSING", `${path}/part`, `part ${device.part} is not in the catalog`);
-      continue;
+    const fragments = [[device, path], ...Object.entries(device.choices ?? {}).map(([choice, fragment]) => [
+      { ...device, ...fragment, choices: undefined, selected_by: undefined, default: undefined }, `${path}/choices/${choice}`,
+    ])];
+    for (const [fragment, fragmentPath] of fragments) {
+      if (!fragment.part) continue;
+      const part = parts?.[fragment.part];
+      if (!part) {
+        issue("E_PART_MISSING", `${fragmentPath}/part`, `part ${fragment.part} is not in the catalog`);
+        continue;
+      }
+      if (part.kind !== fragment.kind) issue("E_PART_KIND", `${fragmentPath}/part`, `${fragment.part} is ${part.kind}, not ${fragment.kind}`);
+      const expectedBus = part.bus?.kind;
+      const actualBus = busKind(board, fragment);
+      if (expectedBus && expectedBus !== "any" && expectedBus !== actualBus) issue("E_PART_BUS_KIND", `${fragmentPath}/bus`, `${fragment.part} expects ${expectedBus}, got ${actualBus}`);
+      if (fragment.i2c_addr && Array.isArray(part.i2c_addr) && !part.i2c_addr.includes(fragment.i2c_addr)) {
+        issue("W_PART_ADDR_UNUSUAL", `${fragmentPath}/i2c_addr`, `${fragment.i2c_addr} is unusual for ${fragment.part}`, "warning");
+      }
+      validateSpec(fragment.spec, part, `${fragmentPath}/spec`, issues);
+      if (!resolved || fragmentPath !== path) continue;
+      const wired = new Set(Object.keys(fragment.signals ?? {}));
+      if (fragment.enable) wired.add("enable");
+      for (const signal of part.signals?.required ?? []) if (!wired.has(signal)) issue("E_PART_SIGNAL_MISSING", `${fragmentPath}/signals/${signal}`, `${fragment.part} requires ${signal}`);
+      const known = new Set([...(part.signals?.required ?? []), ...(part.signals?.optional ?? [])]);
+      if (known.size) for (const signal of wired) if (!known.has(signal)) issue("E_PART_SIGNAL_UNKNOWN", `${fragmentPath}/signals/${signal}`, `${signal} is not declared by ${fragment.part}`);
     }
-    if (part.kind !== device.kind) issue("E_PART_KIND", `${path}/part`, `${device.part} is ${part.kind}, not ${device.kind}`);
-    const expectedBus = part.bus?.kind;
-    const actualBus = busKind(board, device);
-    if (expectedBus && expectedBus !== "any" && expectedBus !== actualBus) issue("E_PART_BUS_KIND", `${path}/bus`, `${device.part} expects ${expectedBus}, got ${actualBus}`);
-    if (device.i2c_addr && Array.isArray(part.i2c_addr) && !part.i2c_addr.includes(device.i2c_addr)) {
-      issue("W_PART_ADDR_UNUSUAL", `${path}/i2c_addr`, `${device.i2c_addr} is unusual for ${device.part}`, "warning");
-    }
-    const wired = new Set(Object.keys(device.signals ?? {}));
-    if (device.enable) wired.add("enable");
-    for (const signal of part.signals?.required ?? []) if (!wired.has(signal)) issue("E_PART_SIGNAL_MISSING", `${path}/signals/${signal}`, `${device.part} requires ${signal}`);
-    const known = new Set([...(part.signals?.required ?? []), ...(part.signals?.optional ?? [])]);
-    if (known.size) for (const signal of wired) if (!known.has(signal)) issue("E_PART_SIGNAL_UNKNOWN", `${path}/signals/${signal}`, `${signal} is not declared by ${device.part}`);
-    for (const key of Object.keys(device.spec ?? {})) if (part.spec_keys && !part.spec_keys.includes(key)) issue("E_UNKNOWN_KEY", `${path}/spec/${key}`, `${key} is not declared by ${device.part}`);
   }
   return issues;
 }
@@ -1239,21 +1468,85 @@ function validateParts(board, parts) {
 
 // lib/targets.js
 
+const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "hold"]);
+const CPP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const OUTPUT_FILENAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.hpp$/;
+
+function targetBoard(target, boardId) {
+  return target.boards?.[boardId] ?? null;
+}
+
+function targetOptions(target, boardId) {
+  return targetBoard(target, boardId)?.options ?? [];
+}
+
 function validateTarget(board, target = {}) {
   const issues = [];
   const issue = (id, path, message, severity) => issues.push({ id, path, message, ...(severity ? { severity } : {}) });
-  const options = target.options?.[board.id] ?? [];
-  const slots = new Map();
-  for (const [index, option] of options.entries()) {
-    for (const [slot, choice] of Object.entries(option.select ?? {})) {
-      const device = board.devices?.[slot];
-      if (!device?.choices?.[choice]) issue("E_TGT_SELECT_UNKNOWN", `/targets/options/${board.id}/${index}/select/${slot}`, `${slot}:${choice} is not a board choice`);
-      if (slots.has(slot)) issue("E_TGT_SLOT_DUP", `/targets/options/${board.id}/${index}/select/${slot}`, `${slot} is also selected by ${slots.get(slot)}`);
-      else slots.set(slot, option.name);
+  const boardTarget = targetBoard(target, board.id);
+  const boardPath = `/targets/boards/${board.id}`;
+  if (!boardTarget) {
+    issue("E_TGT_BOARD_MISSING", boardPath, "board has no target metadata");
+    return issues;
+  }
+  if (boardTarget.chip !== board.chip) issue("E_TGT_CHIP", `${boardPath}/chip`, `${boardTarget.chip} does not match ${board.chip}`);
+  if (boardTarget.legacy_board_id !== board.legacy_board_id) issue("E_TGT_LEGACY_ID", `${boardPath}/legacy_board_id`, `${boardTarget.legacy_board_id} does not match ${board.legacy_board_id}`);
+  if (typeof boardTarget.board_enum !== "string" || !/^board_[A-Za-z][A-Za-z0-9_]*$/.test(boardTarget.board_enum)) {
+    issue("E_TGT_BOARD_ENUM", `${boardPath}/board_enum`, "board_enum must be a board_ C++ identifier");
+  }
+  for (const field of ["cpp_namespace", "desc_name"]) if (boardTarget[field] !== undefined && !CPP_IDENTIFIER.test(boardTarget[field])) {
+    issue("E_TGT_CPP_IDENTIFIER", `${boardPath}/${field}`, `${field} must be a C++ identifier`);
+  }
+  if (!Array.isArray(boardTarget.wiring_fields ?? [])) issue("E_TGT_WIRING_FIELD", `${boardPath}/wiring_fields`, "wiring_fields must be an array");
+  else {
+    const seenFields = new Set();
+    for (const field of boardTarget.wiring_fields ?? []) {
+      if (!WIRING_FIELDS.has(field) || seenFields.has(field)) issue("E_TGT_WIRING_FIELD", `${boardPath}/wiring_fields`, `${field} is unknown or duplicated`);
+      seenFields.add(field);
     }
   }
+  for (const field of ["wiring_output", "specs_output"]) if (boardTarget[field] !== undefined && !OUTPUT_FILENAME.test(boardTarget[field])) {
+    issue("E_TGT_OUTPUT", `${boardPath}/${field}`, `${field} must be a safe .hpp filename`);
+  }
+  if (boardTarget.wiring_output && (!boardTarget.cpp_namespace || !boardTarget.desc_name)) {
+    issue("E_TGT_GENERATION_FIELDS", boardPath, "generated wiring requires cpp_namespace and desc_name");
+  }
+  const options = targetOptions(target, board.id);
+  const slots = new Set();
+  const selections = new Map();
+  const names = new Set();
+  const bits = new Map();
+  for (const [index, option] of options.entries()) {
+    const path = `/targets/boards/${board.id}/options/${index}`;
+    if (typeof option.name !== "string" || !/^[a-z][a-z0-9_]*$/.test(option.name) || names.has(option.name)) {
+      issue("E_TGT_OPTION_NAME", `${path}/name`, "option name must be unique snake_case ASCII");
+    }
+    names.add(option.name);
+    if (!Number.isInteger(option.bit) || option.bit < 0 || option.bit > 31) {
+      issue("E_TGT_BIT_RANGE", `${path}/bit`, "option bit must be an integer from 0 to 31");
+    } else if (bits.has(option.bit)) {
+      issue("E_TGT_BIT_DUP", `${path}/bit`, `bit ${option.bit} is also used by ${bits.get(option.bit)}`);
+    } else bits.set(option.bit, option.name);
+    for (const [slot, choice] of Object.entries(option.select ?? {})) {
+      const device = board.devices?.[slot];
+      if (!device?.choices?.[choice]) issue("E_TGT_SELECT_UNKNOWN", `${path}/select/${slot}`, `${slot}:${choice} is not a board choice`);
+      const selection = `${slot}\0${choice}`;
+      if (selections.has(selection)) issue("E_TGT_SLOT_DUP", `${path}/select/${slot}`, `${slot}:${choice} is also selected by ${selections.get(selection)}`);
+      else selections.set(selection, option.name);
+      slots.add(slot);
+    }
+  }
+  if (bits.size && [...bits.keys()].some((bit) => bit >= bits.size)) {
+    issue("E_TGT_BIT_GAP", `/targets/boards/${board.id}/options`, "option bits must be contiguous from zero");
+  }
   for (const [slot, device] of choiceSlots(board)) {
-    if (device.selected_by === "runtime" && !slots.has(slot)) issue("W_TGT_SLOT_UNOBSERVED", `/devices/${slot}`, `${slot} is runtime-selected outside this target`, "warning");
+    if (device.selected_by === "runtime") {
+      const represented = new Set(options.flatMap((option) => Object.entries(option.select ?? {}))
+        .filter(([selectedSlot]) => selectedSlot === slot).map(([, choice]) => choice));
+      for (const choice of Object.keys(device.choices).filter((choice) => choice !== device.default && !represented.has(choice))) {
+        issue("E_TGT_CHOICE_UNREPRESENTED", `/devices/${slot}/choices/${choice}`, `${slot}:${choice} has no target option`);
+      }
+    }
     if (device.selected_by === "revision" && Object.keys(device.choices).length > 1 && !slots.has(slot)) {
       issue("W_TGT_REV_INDISTINGUISHABLE", `/devices/${slot}`, `${slot} revision choices are not represented by target options`, "warning");
     }
@@ -1261,9 +1554,28 @@ function validateTarget(board, target = {}) {
   return issues;
 }
 
+function validateTargets(boards, target = {}) {
+  const issues = [];
+  const catalog = new Map(boards.map((board) => [board.id, board]));
+  const enums = new Map();
+  const namespaces = new Map();
+  for (const [id, entry] of Object.entries(target.boards ?? {})) {
+    const path = `/targets/boards/${id}`;
+    if (!catalog.has(id)) issues.push({ id: "E_TGT_BOARD_UNKNOWN", path, message: `${id} is not in the board catalog` });
+    for (const [field, seen] of [["board_enum", enums], ["cpp_namespace", namespaces]]) {
+      const value = entry[field];
+      if (!value) continue;
+      if (seen.has(value)) issues.push({ id: field === "board_enum" ? "E_TGT_BOARD_ENUM_DUP" : "E_TGT_NAMESPACE_DUP", path: `${path}/${field}`, message: `${value} is also used by ${seen.get(value)}` });
+      else seen.set(value, id);
+    }
+  }
+  for (const board of boards) issues.push(...validateTarget(board, target));
+  return issues;
+}
+
 function revisionOptions(board, revision, target = {}) {
   const explicit = revision?.select ?? {};
-  return (target.options?.[board.id] ?? []).filter((option) => {
+  return targetOptions(target, board.id).filter((option) => {
     const selections = Object.entries(option.select ?? {});
     return selections.length > 0 && selections.every(([slot, choice]) => (explicit[slot] ?? board.devices?.[slot]?.default) === choice);
   }).map((option) => option.name);
@@ -1566,6 +1878,15 @@ function resolveBoard(board, selection = {}, connectorTypes = {}, catalogs = {})
 }
 
 function resolvedFilename(board, revision, runtime = {}) {
+  const requireId = (value, label) => {
+    if (typeof value !== "string" || !/^[a-z][a-z0-9_]*$/.test(value)) throw new Error(`${label} is not a safe ID`);
+  };
+  requireId(board.id, "board ID");
+  if (revision) requireId(revision.id, "revision ID");
+  for (const [slot, choice] of Object.entries(runtime)) {
+    requireId(slot, "runtime slot");
+    requireId(choice, "runtime choice");
+  }
   const revisionPart = revision ? `@${revision.id}` : "";
   const runtimePart = Object.entries(runtime).map(([slot, choice]) => `+${slot}=${choice}`).join("");
   return `${board.id}${revisionPart}${runtimePart}.json`;
@@ -1661,30 +1982,10 @@ function checkFormatIdempotent(board, formatter = formatBoard) {
 
 
 
+
 const error = (id, path, message) => ({ id, path, message });
 const warning = (id, path, message) => ({ id, path, message, severity: "warning" });
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
-
-function schemaAt(schema, node) {
-  if (!node?.$ref) return node ?? {};
-  const prefix = "#/definitions/";
-  return node.$ref.startsWith(prefix) ? schema.definitions[node.$ref.slice(prefix.length)] : {};
-}
-
-function unknownKeys(value, node, schema, path, errors) {
-  node = schemaAt(schema, node);
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => unknownKeys(item, node.items, schema, `${path}/${index}`, errors));
-    return;
-  }
-  if (!isPlainObject(value)) return;
-  const properties = node.properties ?? {};
-  for (const [key, item] of Object.entries(value)) {
-    if (own(properties, key)) unknownKeys(item, properties[key], schema, `${path}/${key}`, errors);
-    else if (isPlainObject(node.additionalProperties)) unknownKeys(item, node.additionalProperties, schema, `${path}/${key}`, errors);
-    else if (node.additionalProperties === false) errors.push(error("E_UNKNOWN_KEY", `${path}/${key}`, "key is not declared by the schema"));
-  }
-}
 
 function validateDeviceSpecKeys(board, schema, errors) {
   const allowedByKind = schema.definitions.deviceKind["x-spec-properties"];
@@ -1706,6 +2007,14 @@ function validateIds(board, schema, errors) {
   check(board.chip, "/chip");
   for (const group of ["buses", "devices", "connectors"]) for (const id of Object.keys(board[group] ?? {})) check(id, `/${group}/${id}`);
   for (const [index, revision] of (board.revisions ?? []).entries()) check(revision.id, `/revisions/${index}/id`);
+}
+
+function validatePinKeys(board, chip, errors) {
+  for (const pin of Object.keys(board.pins ?? {})) {
+    const path = `/pins/${pin}`;
+    if (!/^[0-9]+$/.test(pin)) errors.push(error("E_PIN_KEY", path, "SoC pin key must contain decimal digits only"));
+    else if (Number(pin) >= chip.gpio_count) errors.push(error("E_PIN_KEY", path, `GPIO ${pin} is outside chip range 0..${chip.gpio_count - 1}`));
+  }
 }
 
 function validateHex(value, schema, path, errors) {
@@ -1979,21 +2288,21 @@ function unique(errors) {
 }
 
 function validateBoard(board, { schema, chip, connectorTypes = {}, parts = {}, target = {}, resolved = false }) {
-  const errors = [...(board.__compositionIssues ?? [])];
-  unknownKeys(board, schema, schema, "", errors);
+  const errors = [...(board.__compositionIssues ?? []), ...validateSchema(board, schema)];
   validateDeviceSpecKeys(board, schema, errors);
   validateIds(board, schema, errors);
+  validatePinKeys(board, chip, errors);
   validateHexFields(board, schema, errors);
   validateRoles(board, chip, schema, errors, resolved);
   validateReferences(board, schema, errors);
   validateSdAliases(board, parts, errors);
+  errors.push(...validateParts(board, parts, { resolved }));
   validateConnectors(board, chip, connectorTypes, errors, resolved);
+  errors.push(...validateOwners(board, parts));
   walkVerified(board, board, "", errors);
   if (resolved) {
     validateEndpointOwners(board, errors);
     validateSdModes(board, errors);
-    errors.push(...validateOwners(board, parts));
-    errors.push(...validateParts(board, parts));
   } else {
     validateSourceDerivedFields(board, errors);
     errors.push(...validateChoices(board));
@@ -2038,7 +2347,7 @@ function validateResolvedVariants(board, context) {
   const wiringCatalogs = { chip: context.chip, parts: context.parts };
   const emitWiring = (resolved) => {
     try {
-      return emitM5GFXWiring(resolved, context.parts);
+      return emitM5GFXWiring(resolved, context.parts, context.target);
     } catch (failure) {
       errors.push(error("E_WIRING_GENERATION", "/pins", failure.message));
       return null;
@@ -2050,14 +2359,23 @@ function validateResolvedVariants(board, context) {
     for (const output of resolveAll(board, context.connectorTypes, wiringCatalogs)) {
       const actual = emitWiring(output.board);
       if (actual && JSON.stringify(actual) !== expected) {
-        errors.push(error("E_VARIANT_PINTABLE", `/revisions/${output.revision ?? "base"}`, "revision changes GPIO wiring consumed by a board-level generator"));
+        errors.push(error("E_CHOICE_PINTABLE", `/revisions/${output.revision ?? "base"}`, "choice changes GPIO wiring consumed by a board-level generator"));
       }
     }
   }
-  const expectedPinTable = JSON.stringify(emitPinTable(resolveBoard(board, {}, context.connectorTypes, fullCatalogs), context.pinTableTarget).values);
+  const emitPins = (resolved) => {
+    try {
+      return JSON.stringify(emitPinTable(resolved, context.pinTableTarget).values);
+    } catch (failure) {
+      errors.push(error("E_CHOICE_PINTABLE", "/pins", failure.message));
+      return null;
+    }
+  };
+  const expectedPinTable = emitPins(resolveBoard(board, {}, context.connectorTypes, fullCatalogs));
   for (const output of fullOutputs) {
-    if (JSON.stringify(emitPinTable(output.board, context.pinTableTarget).values) !== expectedPinTable) {
-      errors.push(error("E_VARIANT_PINTABLE", `/revisions/${output.revision ?? "base"}`, "revision changes GPIO wiring consumed by a board-level generator"));
+    const actualPinTable = emitPins(output.board);
+    if (expectedPinTable && actualPinTable && actualPinTable !== expectedPinTable) {
+      errors.push(error("E_CHOICE_PINTABLE", `/revisions/${output.revision ?? "base"}`, "choice changes GPIO wiring consumed by a board-level generator"));
     }
   }
   return unique(errors);
@@ -2079,6 +2397,329 @@ function pinChangeLayer({ base, defaults, revision, runtime, shown }) {
 }
 
 
+// DOM-free board editing operations shared by the browser editor and Node tests.
+
+const BOARD_ID_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+class BoardOperationError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = "BoardOperationError";
+    this.code = code;
+  }
+}
+
+function boardOpClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function requireId(id, label = "id") {
+  if (!BOARD_ID_PATTERN.test(id)) throw new BoardOperationError("E_ID_FORMAT", `${label} must be snake_case ASCII`);
+}
+
+function clearGeneratedStatus(object, field) {
+  if (object?.verified) {
+    delete object.verified[field];
+    if (!Object.keys(object.verified).length) delete object.verified;
+  }
+  if (object?.measured_by) {
+    delete object.measured_by[field];
+    if (!Object.keys(object.measured_by).length) delete object.measured_by;
+  }
+}
+
+function compactObject(root, keys) {
+  for (let index = keys.length - 1; index >= 0; index -= 1) {
+    const parent = keys.slice(0, index).reduce((value, key) => value?.[key], root);
+    const key = keys[index];
+    if (parent?.[key] && typeof parent[key] === "object" && !Array.isArray(parent[key]) && !Object.keys(parent[key]).length) delete parent[key];
+  }
+}
+
+function roleRecords(board) {
+  const records = [];
+  for (const [gpio, pin] of Object.entries(board.pins ?? {})) for (const role of pin.roles ?? []) records.push({ owner: "soc", pin: gpio, role });
+  for (const [deviceId, device] of Object.entries(board.devices ?? {})) {
+    for (const [pinId, pin] of Object.entries(device.pins ?? {})) for (const role of pin.roles ?? []) records.push({ owner: deviceId, pin: pinId, role });
+    for (const [choiceId, choice] of Object.entries(device.choices ?? {})) for (const [pinId, pin] of Object.entries(choice.pins ?? {})) {
+      for (const role of pin.roles ?? []) records.push({ owner: `${deviceId}:${choiceId}`, pin: pinId, role });
+    }
+  }
+  return records;
+}
+
+function boardRoleOptions(board, { schema, chip, parts = {}, connectorTypes = {}, resolveConnectorType: resolveType, currentGPIO = null }) {
+  const roles = [];
+  const busSignals = schema.definitions.busKind["x-signals"] ?? {};
+  for (const [id, bus] of Object.entries(board.buses ?? {})) for (const signal of bus.signals ?? []) {
+    if ((busSignals[bus.kind] ?? []).includes(signal)) roles.push(`bus:${id}.${signal}`);
+  }
+  for (const [id, device] of Object.entries(board.devices ?? {})) {
+    const selectedParts = [device.part, ...Object.values(device.choices ?? {}).map((choice) => choice.part)].filter(Boolean).map((partId) => parts[partId]).filter(Boolean);
+    const signals = selectedParts.length
+      ? selectedParts.flatMap((part) => [...(part.signals?.required ?? []), ...(part.signals?.optional ?? [])])
+      : schema.definitions.deviceKind["x-signals"]?.[device.kind] ?? [];
+    for (const signal of new Set(signals)) roles.push(`dev:${id}.${signal}`);
+  }
+  for (const [id, connector] of Object.entries(board.connectors ?? {})) {
+    const type = resolveType ? resolveType(connectorTypes, connector.type) : connectorTypes[connector.type];
+    const positions = new Set((type?.positions ?? []).filter((position) => !Object.hasOwn(type.fixed_positions ?? {}, position.id) && !Object.hasOwn(type.default_positions ?? {}, position.id) && !Object.hasOwn(connector.positions ?? {}, position.id)).map((position) => position.id));
+    for (const pin of Object.values(board.pins ?? {})) for (const role of pin.roles ?? []) {
+      const match = new RegExp(`^conn:${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.([a-z0-9_]+)$`).exec(role);
+      if (match) positions.add(match[1]);
+    }
+    for (const position of positions) roles.push(`conn:${id}.${position}`);
+  }
+  const assigned = new Set();
+  for (const [gpio, pin] of Object.entries(board.pins ?? {})) if (String(gpio) !== String(currentGPIO)) for (const role of pin.roles ?? []) {
+    const match = /^conn:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
+    if (!match || !(board.connectors?.[match[1]]?.multi_gpio ?? []).includes(match[2])) assigned.add(role);
+  }
+  for (const device of Object.values(board.devices ?? {})) {
+    for (const pin of Object.values(device.pins ?? {})) for (const role of pin.roles ?? []) assigned.add(role);
+    for (const choice of Object.values(device.choices ?? {})) for (const pin of Object.values(choice.pins ?? {})) for (const role of pin.roles ?? []) assigned.add(role);
+  }
+  let output = [...new Set(roles)].filter((role) => !assigned.has(role));
+  if (chip?.input_only?.includes(Number(currentGPIO))) {
+    const busOutputs = new Set(schema.definitions.busKind["x-output-signals"] ?? []);
+    const deviceOutputs = new Set(schema.definitions.deviceKind["x-output-signals"] ?? []);
+    output = output.filter((role) => {
+      const signal = role.slice(role.lastIndexOf(".") + 1);
+      return role.startsWith("bus:") ? !busOutputs.has(signal) : role.startsWith("dev:") ? !deviceOutputs.has(signal) : true;
+    });
+  }
+  return output.sort((a, b) => a.localeCompare(b));
+}
+
+function createBoard({ id, name, legacy_board_id, chip }) {
+  requireId(id);
+  requireId(chip, "chip");
+  if (!name?.trim()) throw new BoardOperationError("E_NAME_REQUIRED", "name is required");
+  if (!Number.isInteger(legacy_board_id)) throw new BoardOperationError("E_LEGACY_ID", "legacy_board_id must be an integer");
+  return { schema_version: 1, id, name: name.trim(), legacy_board_id, chip, pins: {}, buses: {}, devices: {}, connectors: {} };
+}
+
+function duplicateBoard(board, { id, name, legacy_board_id }) {
+  const output = boardOpClone(board);
+  requireId(id);
+  if (!name?.trim()) throw new BoardOperationError("E_NAME_REQUIRED", "name is required");
+  if (!Number.isInteger(legacy_board_id)) throw new BoardOperationError("E_LEGACY_ID", "legacy_board_id must be an integer");
+  output.id = id;
+  output.name = name.trim();
+  output.legacy_board_id = legacy_board_id;
+  return output;
+}
+
+function setBoardField(board, key, value) {
+  if (!["name", "legacy_board_id", "chip"].includes(key)) throw new BoardOperationError("E_FIELD", `unsupported board field ${key}`);
+  if (key === "chip") requireId(value, "chip");
+  if (key === "legacy_board_id" && !Number.isInteger(value)) throw new BoardOperationError("E_LEGACY_ID", "legacy_board_id must be an integer");
+  if (key === "name" && !String(value).trim()) throw new BoardOperationError("E_NAME_REQUIRED", "name is required");
+  board[key] = key === "name" ? String(value).trim() : value;
+  return board;
+}
+
+function setSpec(board, path, value) {
+  const keys = Array.isArray(path) ? path : String(path).split(".").filter(Boolean);
+  if (!keys.length) throw new BoardOperationError("E_FIELD", "spec path is required");
+  if (value === undefined || value === "") {
+    let parent = board.spec;
+    for (const key of keys.slice(0, -1)) parent = parent?.[key];
+    if (parent) delete parent[keys.at(-1)];
+    compactObject(board, ["spec", ...keys.slice(0, -1)]);
+    return board;
+  }
+  board.spec ??= {};
+  let target = board.spec;
+  for (const key of keys.slice(0, -1)) target = target[key] ??= {};
+  target[keys.at(-1)] = boardOpClone(value);
+  return board;
+}
+
+function addBus(board, id, { kind, signals = [], preferred_host, freq, freq_read, fixed = false }) {
+  requireId(id);
+  board.buses ??= {};
+  if (board.buses[id]) throw new BoardOperationError("E_ID_DUP", `bus ${id} already exists`);
+  const bus = { kind, signals: [...new Set(signals)], ...(preferred_host === undefined || preferred_host === "" ? {} : { preferred_host }), fixed: Boolean(fixed) };
+  if (freq !== undefined && freq !== "") bus.freq = Number(freq);
+  if (freq_read !== undefined && freq_read !== "") bus.freq_read = Number(freq_read);
+  board.buses[id] = bus;
+  return board;
+}
+
+function removeBus(board, id) {
+  if (!board.buses?.[id]) return board;
+  if (Object.values(board.devices ?? {}).some((device) => device.bus === id || Object.values(device.choices ?? {}).some((choice) => choice.bus === id))) {
+    throw new BoardOperationError("E_BUS_IN_USE", `bus ${id} is used by a device`);
+  }
+  if (roleRecords(board).some(({ role }) => role.startsWith(`bus:${id}.`))) throw new BoardOperationError("E_BUS_IN_USE", `bus ${id} has assigned roles`);
+  delete board.buses[id];
+  return board;
+}
+
+function setBusField(board, id, key, value) {
+  const bus = board.buses?.[id];
+  if (!bus) throw new BoardOperationError("E_REF_MISSING", `bus ${id} is missing`);
+  if (value === undefined || value === "") delete bus[key];
+  else bus[key] = boardOpClone(value);
+  clearGeneratedStatus(bus, key);
+  return board;
+}
+
+function addDevice(board, id, { kind, part, bus, spec }) {
+  requireId(id);
+  board.devices ??= {};
+  if (board.devices[id]) throw new BoardOperationError("E_ID_DUP", `device ${id} already exists`);
+  board.devices[id] = { kind, ...(part ? { part } : {}), ...(bus ? { bus } : {}), ...(spec && Object.keys(spec).length ? { spec: boardOpClone(spec) } : {}) };
+  return board;
+}
+
+function removeDevice(board, id) {
+  if (!board.devices?.[id]) return board;
+  if (roleRecords(board).some(({ role }) => role.startsWith(`dev:${id}.`))) throw new BoardOperationError("E_DEVICE_IN_USE", `device ${id} has assigned roles`);
+  for (const device of Object.values(board.devices)) {
+    const endpoints = [...Object.values(device.signals ?? {}), device.enable].filter(Boolean);
+    if (endpoints.some((endpoint) => String(endpoint).startsWith(`pin:${id}.`))) throw new BoardOperationError("E_DEVICE_IN_USE", `device ${id} owns referenced pins`);
+  }
+  delete board.devices[id];
+  return board;
+}
+
+function setDeviceField(board, deviceId, key, value) {
+  const device = board.devices?.[deviceId];
+  if (!device) throw new BoardOperationError("E_REF_MISSING", `device ${deviceId} is missing`);
+  if (value === undefined || value === "") delete device[key];
+  else device[key] = boardOpClone(value);
+  clearGeneratedStatus(device, key);
+  return board;
+}
+
+function addChoice(board, deviceId, choiceId, { part, spec, selected_by = "revision", default: defaultChoice } = {}) {
+  requireId(choiceId, "choice id");
+  const device = board.devices?.[deviceId];
+  if (!device) throw new BoardOperationError("E_REF_MISSING", `device ${deviceId} is missing`);
+  if (!device.choices) {
+    const originalId = device.part;
+    if (!originalId) throw new BoardOperationError("E_CHOICE_SOURCE", "the first choice needs an existing part");
+    const fragment = { part: originalId };
+    for (const key of ["i2c_addr", "pins", "rails", "spec", "note", "verified", "measured_by"]) {
+      if (Object.hasOwn(device, key)) { fragment[key] = device[key]; delete device[key]; }
+    }
+    delete device.part;
+    device.selected_by = selected_by;
+    device.default = defaultChoice ?? originalId;
+    device.choices = { [originalId]: fragment };
+  }
+  if (device.choices[choiceId]) throw new BoardOperationError("E_ID_DUP", `choice ${choiceId} already exists`);
+  device.choices[choiceId] = { ...(part ? { part } : {}), ...(spec && Object.keys(spec).length ? { spec: boardOpClone(spec) } : {}) };
+  if (defaultChoice) device.default = defaultChoice;
+  if (selected_by) device.selected_by = selected_by;
+  return board;
+}
+
+function removeChoice(board, deviceId, choiceId) {
+  const device = board.devices?.[deviceId];
+  if (!device?.choices?.[choiceId]) return board;
+  delete device.choices[choiceId];
+  if (Object.keys(device.choices).length === 1) {
+    const fragment = Object.values(device.choices)[0];
+    for (const key of ["part", "i2c_addr", "pins", "rails", "spec", "note", "verified", "measured_by"]) if (Object.hasOwn(fragment, key)) device[key] = fragment[key];
+    delete device.selected_by;
+    delete device.default;
+    delete device.choices;
+    return board;
+  }
+  if (device.default === choiceId) device.default = Object.keys(device.choices)[0];
+  return board;
+}
+
+function setChoiceDefaults(board, deviceId, { selected_by, default: defaultChoice }) {
+  const device = board.devices?.[deviceId];
+  if (!device?.choices) throw new BoardOperationError("E_REF_MISSING", `choice device ${deviceId} is missing`);
+  if (selected_by) device.selected_by = selected_by;
+  if (defaultChoice) device.default = defaultChoice;
+  return board;
+}
+
+function setDeviceSpec(board, deviceId, choiceId, key, value) {
+  const device = board.devices?.[deviceId];
+  const target = choiceId === null ? device : device?.choices?.[choiceId];
+  if (!target) throw new BoardOperationError("E_REF_MISSING", `device spec target ${deviceId}${choiceId === null ? "" : `:${choiceId}`} is missing`);
+  if (value === undefined || value === "") {
+    if (target.spec) {
+      delete target.spec[key];
+      if (!Object.keys(target.spec).length) delete target.spec;
+    }
+  } else {
+    target.spec ??= {};
+    target.spec[key] = value;
+  }
+  clearGeneratedStatus(target, "spec");
+  return board;
+}
+
+function addConnector(board, id, { type, standard } = {}) {
+  requireId(id);
+  board.connectors ??= {};
+  if (board.connectors[id]) throw new BoardOperationError("E_ID_DUP", `connector ${id} already exists`);
+  board.connectors[id] = { type, ...(standard ? { standard } : {}) };
+  return board;
+}
+
+function removeConnector(board, id) {
+  if (roleRecords(board).some(({ role }) => role.startsWith(`conn:${id}.`))) throw new BoardOperationError("E_CONNECTOR_IN_USE", `connector ${id} has assigned roles`);
+  delete board.connectors?.[id];
+  return board;
+}
+
+function addRole(board, gpio, role, { chip } = {}) {
+  const number = Number(gpio);
+  if (!Number.isInteger(number) || number < 0 || (chip && number >= chip.gpio_count)) throw new BoardOperationError("E_GPIO_RANGE", `GPIO ${gpio} is outside the chip`);
+  if (chip?.reserved?.includes(number)) throw new BoardOperationError("E_CHIP_RESERVED", `GPIO ${gpio} is reserved`);
+  const conditional = chip?.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
+  if (conditional.includes(number)) throw new BoardOperationError("E_CHIP_RESERVED_COND", `GPIO ${gpio} is conditionally reserved`);
+  board.pins ??= {};
+  const pin = board.pins[String(number)] ??= { roles: [] };
+  pin.roles ??= [];
+  if (!pin.roles.includes(role)) pin.roles.push(role);
+  clearGeneratedStatus(pin, "roles");
+  return board;
+}
+
+function setPin(board, gpio, fields) {
+  const key = String(gpio);
+  board.pins ??= {};
+  const pin = board.pins[key] ??= { roles: [] };
+  for (const [field, value] of Object.entries(fields)) {
+    if (value === undefined || value === "") delete pin[field];
+    else pin[field] = boardOpClone(value);
+    clearGeneratedStatus(pin, field);
+  }
+  return board;
+}
+
+function addOwnerRole(board, deviceId, pinId, role) {
+  const device = board.devices?.[deviceId];
+  if (!device) throw new BoardOperationError("E_REF_MISSING", `device ${deviceId} is missing`);
+  device.pins ??= {};
+  const pin = device.pins[pinId] ??= { roles: [] };
+  if (!pin.roles.includes(role)) pin.roles.push(role);
+  clearGeneratedStatus(pin, "roles");
+  return board;
+}
+
+function removeRoleFromBoard(board, gpio, role) {
+  const key = String(gpio);
+  const pin = board.pins?.[key];
+  if (!pin) return board;
+  pin.roles = (pin.roles ?? []).filter((item) => item !== role);
+  clearGeneratedStatus(pin, "roles");
+  if (!pin.roles.length && Object.keys(pin).every((field) => field === "roles")) delete board.pins[key];
+  return board;
+}
+
+
+
 
 
 
@@ -2094,10 +2735,18 @@ const targets = readEmbedded("board-spec-targets");
 const embeddedBoards = readEmbedded("board-spec-boards");
 const messages = readEmbedded("board-spec-i18n");
 const languageStorageKey = "m5-board-spec-language:v1";
+const draftIndexKey = "m5-board-spec-drafts:v1";
 let comboboxSerial = 0;
 
 const elements = {
   boardSelect: document.querySelector("#board-select"),
+  newBoard: document.querySelector("#new-board-button"),
+  duplicateBoard: document.querySelector("#duplicate-board-button"),
+  closeBoard: document.querySelector("#close-board-button"),
+  boardDialog: document.querySelector("#board-dialog"),
+  boardDialogTitle: document.querySelector("#board-dialog-title"),
+  boardDialogError: document.querySelector("#board-dialog-error"),
+  boardDialogForm: document.querySelector("#board-dialog-form"),
   languageSelect: document.querySelector("#language-select"),
   fileInput: document.querySelector("#file-input"),
   download: document.querySelector("#download-button"),
@@ -2143,6 +2792,7 @@ const state = {
   language: initialLanguage(),
   undo: null,
   toastTimer: null,
+  boardDialogMode: "new",
 };
 
 class SearchCombobox {
@@ -2311,11 +2961,21 @@ function readDraft(board) {
 
 function writeDraft(entry) {
   const stored = { board: entry.base, dirty: entry.dirty, expandedGPIO: entry.expandedGPIO };
-  try { localStorage.setItem(storageKey(entry.base.id), JSON.stringify(stored)); } catch { /* storage is optional */ }
+  try {
+    localStorage.setItem(storageKey(entry.base.id), JSON.stringify(stored));
+    const ids = new Set(JSON.parse(localStorage.getItem(draftIndexKey) ?? "[]"));
+    ids.add(entry.base.id);
+    localStorage.setItem(draftIndexKey, JSON.stringify([...ids]));
+  } catch { /* storage is optional */ }
 }
 
 function removeDraft(id) {
-  try { localStorage.removeItem(storageKey(id)); } catch { /* storage is optional */ }
+  try {
+    localStorage.removeItem(storageKey(id));
+    const ids = new Set(JSON.parse(localStorage.getItem(draftIndexKey) ?? "[]"));
+    ids.delete(id);
+    localStorage.setItem(draftIndexKey, JSON.stringify([...ids]));
+  } catch { /* storage is optional */ }
 }
 
 function addEmbeddedBoards() {
@@ -2330,12 +2990,84 @@ function addEmbeddedBoards() {
       source: "embedded",
     });
   }
+  try {
+    for (const id of JSON.parse(localStorage.getItem(draftIndexKey) ?? "[]")) {
+      if (state.documents.has(id)) continue;
+      const stored = parseJson(localStorage.getItem(storageKey(id)), `draft:${id}`);
+      const board = assertBoard(stored.board ?? stored);
+      if (!chips[board.chip]) continue;
+      state.documents.set(id, { base: clone(board), original: clone(board), dirty: true, expandedGPIO: stored.expandedGPIO ?? null, source: "draft" });
+    }
+  } catch { /* ignore stale draft indexes */ }
   for (const id of state.documents.keys()) {
     state.compositionEntries.set(id, clone(targets.m5unified_pin_table?.compositions?.[id]?.default?.accessories ?? []));
     const board = state.documents.get(id).base;
     state.runtimeSelections.set(id, Object.fromEntries(choiceSlots(board).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => [slot, device.default])));
   }
   state.currentId = state.documents.has("m5stack_core2") ? "m5stack_core2" : [...state.documents.keys()][0];
+}
+
+function initializeDocument(board, { original = board, dirty = true, source = "editor" } = {}) {
+  state.documents.set(board.id, { base: clone(board), original: clone(original), dirty, expandedGPIO: null, source });
+  state.runtimeSelections.set(board.id, Object.fromEntries(choiceSlots(board).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => [slot, device.default])));
+  state.compositionEntries.set(board.id, []);
+  state.currentId = board.id;
+  state.selectedOptions.clear();
+  state.connectorId = null;
+  state.connectorPosition = null;
+  state.undo = null;
+  if (dirty) writeDraft(state.documents.get(board.id));
+}
+
+function legacyIdWarning(value, currentId = null) {
+  const duplicate = [...state.documents.values()].find((entry) => entry.base.id !== currentId && entry.base.legacy_board_id === value);
+  return duplicate ? t("dialog.legacyWarning", { board: duplicate.base.name }) : "";
+}
+
+function validateBoardDialog() {
+  const form = elements.boardDialogForm;
+  const id = form.elements.id.value.trim();
+  const legacy = Number(form.elements.legacy_board_id.value);
+  let message = "";
+  if (!(new RegExp(schema.definitions.id.pattern)).test(id)) message = t("validation.E_ID_FORMAT");
+  else if (state.documents.has(id) && (state.boardDialogMode === "new" || id !== state.currentId)) message = t("dialog.idExists");
+  else if (!form.elements.name.value.trim()) message = t("dialog.nameRequired");
+  else if (!Number.isInteger(legacy)) message = t("dialog.legacyInteger");
+  else message = legacyIdWarning(legacy, state.boardDialogMode === "duplicate" ? state.currentId : null);
+  elements.boardDialogError.textContent = message;
+  elements.boardDialogError.classList.toggle("warning", message.startsWith("⚠"));
+  return !message || message.startsWith("⚠");
+}
+
+function openBoardDialog(mode) {
+  state.boardDialogMode = mode;
+  const source = currentBase();
+  const form = elements.boardDialogForm;
+  elements.boardDialogTitle.textContent = t(mode === "new" ? "dialog.newTitle" : "dialog.duplicateTitle");
+  form.elements.id.value = mode === "duplicate" ? `${source.id}_copy` : "";
+  form.elements.name.value = mode === "duplicate" ? `${source.name} copy` : "";
+  form.elements.legacy_board_id.value = mode === "duplicate" ? source.legacy_board_id : "";
+  form.elements.chip.innerHTML = Object.keys(chips).sort().map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
+  form.elements.chip.value = mode === "duplicate" ? source.chip : Object.keys(chips).sort()[0];
+  form.elements.chip.closest("label").hidden = mode === "duplicate";
+  elements.boardDialogError.textContent = "";
+  elements.boardDialog.showModal();
+  form.elements.id.focus();
+}
+
+function closeCurrentDocument() {
+  if (state.documents.size <= 1) return showToast(t("reason.lastBoard"));
+  const entry = currentEntry();
+  if (entry.dirty && !window.confirm(t("dialog.closeDirtyConfirm"))) return;
+  const id = state.currentId;
+  if (entry.dirty) removeDraft(id);
+  state.documents.delete(id);
+  state.runtimeSelections.delete(id);
+  state.compositionEntries.delete(id);
+  state.currentId = state.documents.keys().next().value;
+  state.selectedOptions.clear();
+  state.connectorId = null;
+  renderAll();
 }
 
 function currentEntry() {
@@ -2483,38 +3215,7 @@ function schemaSignals(definitionName) {
 }
 
 function allRoleOptions(board, currentGPIO = null) {
-  const roles = [];
-  const busSignals = schemaSignals("busKind");
-  for (const [id, bus] of Object.entries(board.buses ?? {})) {
-    const allowed = new Set(busSignals[bus.kind] ?? []);
-    for (const signal of bus.signals ?? []) if (allowed.has(signal)) roles.push(`bus:${id}.${signal}`);
-  }
-
-  for (const [id, device] of Object.entries(board.devices ?? {})) {
-    for (const signal of deviceSignals(device)) roles.push(`dev:${id}.${signal}`);
-  }
-
-  for (const [id, connector] of Object.entries(board.connectors ?? {})) {
-    const type = resolveConnectorType(connectorTypes, connector.type);
-    const positions = new Set((type?.positions ?? []).filter((position) => !Object.hasOwn(type.fixed_positions ?? {}, position.id) && !Object.hasOwn(type.default_positions ?? {}, position.id) && !Object.hasOwn(connector.positions ?? {}, position.id)).map((position) => position.id));
-    for (const pin of Object.values(board.pins ?? {})) {
-      for (const role of pin.roles ?? []) {
-        const match = new RegExp(`^conn:${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.([a-z0-9_]+)$`).exec(role);
-        if (match) positions.add(match[1]);
-      }
-    }
-    for (const position of positions) roles.push(`conn:${id}.${position}`);
-  }
-  const assignedElsewhere = new Set();
-  for (const [gpio, pin] of Object.entries(board.pins ?? {})) if (String(gpio) !== String(currentGPIO)) for (const role of pin.roles ?? []) {
-    const connector = /^conn:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
-    if (!connector || !(board.connectors?.[connector[1]]?.multi_gpio ?? []).includes(connector[2])) assignedElsewhere.add(role);
-  }
-  for (const device of Object.values(board.devices ?? {})) {
-    for (const pin of Object.values(device.pins ?? {})) for (const role of pin.roles ?? []) assignedElsewhere.add(role);
-    for (const choice of Object.values(device.choices ?? {})) for (const pin of Object.values(choice.pins ?? {})) for (const role of pin.roles ?? []) assignedElsewhere.add(role);
-  }
-  return [...new Set(roles)].filter((role) => !assignedElsewhere.has(role)).sort((a, b) => a.localeCompare(b));
+  return boardRoleOptions(board, { schema, chip: chips[board.chip], parts, connectorTypes, resolveConnectorType, currentGPIO });
 }
 
 function roleDisplay(board, role) {
@@ -2577,10 +3278,18 @@ function findRoleGPIO(board, prefix) {
   return result.sort((a, b) => Number(a) - Number(b));
 }
 
-function validationFor(board, resolved = isResolvedMode()) {
+function validationFor(board) {
   const chip = chips[board.chip];
   if (!chip) return [{ id: "E_REF_MISSING", path: "/chip", message: `embedded chip not found: ${board.chip}` }];
-  return validateBoard(board, { schema, chip, connectorTypes, parts, target: targets.m5gfx_board_desc, resolved });
+  const compositionTarget = targets.m5unified_pin_table ?? {};
+  const context = {
+    schema, chip, connectorTypes, parts, accessories,
+    target: targets.m5gfx_board_desc,
+    pinTableTarget: compositionTarget,
+    composition: compositionTarget.compositions?.[board.id]?.default,
+    allow_origins: compositionTarget.allow_origins,
+  };
+  return [...validateBoard(board, context), ...validateResolvedVariants(board, context)];
 }
 
 function renderBoardSelect() {
@@ -2629,12 +3338,13 @@ function renderTable(board, errors) {
   for (let gpio = 0; gpio < chip.gpio_count; gpio += 1) {
     const key = String(gpio);
     const pin = board.pins?.[key] ?? { roles: [] };
-    const readonlyReason = readonlyReasons.get(key) ?? "";
+    const conditionalReserved = (chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? []).includes(gpio);
+    const readonlyReason = readonlyReasons.get(key) ?? (chip.reserved.includes(gpio) ? t("reason.chipReserved") : conditionalReserved ? t("reason.chipReservedConditional") : "");
     const readonly = readonlyAttributes(readonlyReason);
     const expanded = currentEntry().expandedGPIO === key;
     const rowErrors = errorsByGPIO.get(key) ?? [];
     const classes = ["gpio-row", gpio % 2 ? "zebra-odd" : "zebra-even"];
-    if (chip.reserved.includes(gpio)) classes.push("gpio-reserved");
+    if (chip.reserved.includes(gpio) || conditionalReserved) classes.push("gpio-reserved");
     if (chip.input_only.includes(gpio)) classes.push("gpio-input");
     if (chip.strapping.includes(gpio)) classes.push("gpio-strapping");
     if (rowErrors.length) classes.push("row-error");
@@ -2648,7 +3358,7 @@ function renderTable(board, errors) {
       ? `<span class="error-indicator" title="${escapeHtml(rowErrors.map((item) => item.id).join(", "))}">! ${rowErrors.length}</span>`
       : '<span class="ok-indicator">✓</span>';
     const cells = {
-      gpio: `<td class="gpio-number">${key}</td>`,
+      gpio: `<td class="gpio-number">${key}${gpio === chip.usb?.dn ? '<small class="gpio-badge">USB D−</small>' : ""}${gpio === chip.usb?.dp ? '<small class="gpio-badge">USB D+</small>' : ""}${(chip.reserved_conditional?.opi ?? []).includes(gpio) && !conditionalReserved ? `<small class="gpio-badge">${escapeHtml(t("gpio.opiReserved"))}</small>` : ""}</td>`,
       roles: `<td><div class="compact-roles">${compactRoles || "<span>—</span>"}${overflow}</div></td>`,
       pull: `<td>${escapeHtml(pull || "—")}</td>`,
       verified: `<td class="compact-verified">${escapeHtml(compactVerification(pin))}</td>`,
@@ -2662,7 +3372,7 @@ function renderTable(board, errors) {
         <section class="detail-roles"><h3>${escapeHtml(t("column.roles"))}</h3><div class="role-list">${editableRoles || "<span>—</span>"}</div>
           <div class="search-combobox" data-role-combobox="${key}"><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${escapeHtml(t("detail.searchRole"))}" autocomplete="off"${readonly}><ul role="listbox"></ul></div>${readonlyNote(readonlyReason)}
         </section>
-        <label>${escapeHtml(t("column.pull"))}<select class="cell-select" data-pull data-gpio="${key}"${readonly}><option value=""${pull === "" ? " selected" : ""}>${escapeHtml(t("detail.empty"))}</option><option value="up"${pull === "up" ? " selected" : ""}>up</option><option value="down"${pull === "down" ? " selected" : ""}>down</option><option value="none"${pull === "none" ? " selected" : ""}>none</option></select>${readonlyNote(readonlyReason)}</label>
+        <label>${escapeHtml(t("column.pull"))}<select class="cell-select" data-pull data-gpio="${key}"${readonly}><option value=""${pull === "" ? " selected" : ""}>${escapeHtml(t("detail.empty"))}</option><option value="up"${pull === "up" ? " selected" : ""}>up</option><option value="down"${pull === "down" ? " selected" : ""}>down</option><option value="none"${pull === "none" ? " selected" : ""}>none</option></select>${chip.no_internal_pull?.includes(gpio) ? `<small class="readonly-note">${escapeHtml(t("gpio.noInternalPull"))}</small>` : ""}${readonlyNote(readonlyReason)}</label>
         <label>${escapeHtml(t("column.note"))}<input class="cell-input note-input" data-note data-gpio="${key}" type="text" value="${escapeHtml(pin.note ?? "")}"${readonly}>${readonlyNote(readonlyReason)}</label>
         <section><h3>${escapeHtml(t("column.verified"))}</h3><div class="verified">${verificationSummary(pin)}</div></section>
         <section><h3>${escapeHtml(t("detail.related"))}</h3><div class="detail-related">${related || `<span>${escapeHtml(t("common.none"))}</span>`}</div></section>
@@ -2674,7 +3384,7 @@ function renderTable(board, errors) {
   if (combobox) {
     const gpio = combobox.dataset.roleCombobox;
     const assigned = new Set(board.pins?.[gpio]?.roles ?? []);
-    new SearchCombobox(combobox, allRoleOptions(board, gpio).filter((role) => !assigned.has(role)).map((role) => ({ value: role, label: roleDisplay(board, role).plain, search: role })), (role) => addRole(gpio, role), readonlyReasons.get(gpio));
+    new SearchCombobox(combobox, allRoleOptions(board, gpio).filter((role) => !assigned.has(role)).map((role) => ({ value: role, label: roleDisplay(board, role).plain, search: role })), (role) => addRoleUI(gpio, role), readonlyReasons.get(gpio));
   }
 }
 
@@ -3009,17 +3719,94 @@ function roleAssigned(board, role) {
   ));
 }
 
+function valueAtPath(object, path) {
+  return path.split(".").reduce((value, key) => value?.[key], object);
+}
+
+function scalarInput(value, attributes, type = "string", placeholder = "", choices = null) {
+  if (type === "boolean") return `<select ${attributes}><option value="">—${placeholder !== "" ? ` (${escapeHtml(placeholder)})` : ""}</option><option value="true"${value === true ? " selected" : ""}>true</option><option value="false"${value === false ? " selected" : ""}>false</option></select>`;
+  if (choices) return `<select ${attributes}><option value="">—${placeholder !== "" ? ` (${escapeHtml(placeholder)})` : ""}</option>${choices.map((choice) => `<option value="${escapeHtml(choice)}"${value === choice ? " selected" : ""}>${escapeHtml(choice)}</option>`).join("")}</select>`;
+  return `<input ${attributes} type="${type === "number" ? "number" : "text"}" value="${escapeHtml(value ?? "")}"${placeholder !== "" ? ` placeholder="${escapeHtml(placeholder)}"` : ""}>`;
+}
+
+function boardSpecFields(board) {
+  const fields = [
+    ["display.touch", "boolean"], ["storage.psram_mb", "number"], ["storage.psram_mode", "string"],
+    ["storage.flash_mb", "number"], ["storage.sd", "boolean"], ["power.pmic_part", "string"],
+    ["power.battery_mah", "number"], ["power.usb", "string"], ["links.schematic", "string"], ["links.product", "string"],
+  ];
+  const resolution = valueAtPath(board.spec, "display.resolution") ?? [];
+  return `<div class="field-grid"><label>display.resolution<input data-board-resolution="0" type="number" value="${escapeHtml(resolution[0] ?? "")}" placeholder="width"></label><label>display.resolution<input data-board-resolution="1" type="number" value="${escapeHtml(resolution[1] ?? "")}" placeholder="height"></label>${fields.map(([path, type]) => `<label>${escapeHtml(path)}${scalarInput(valueAtPath(board.spec, path), `data-board-spec="${path}" data-value-type="${type}"`, type)}</label>`).join("")}</div>`;
+}
+
+function busRemovalReason(board, id) {
+  if (Object.values(board.devices ?? {}).some((device) => device.bus === id || Object.values(device.choices ?? {}).some((choice) => choice.bus === id))) return t("reason.busInUse");
+  if (Object.values(board.pins ?? {}).some((pin) => (pin.roles ?? []).some((role) => role.startsWith(`bus:${id}.`)))) return t("reason.busInUse");
+  return "";
+}
+
+function objectRemovalReason(board, prefix, id) {
+  if (Object.values(board.pins ?? {}).some((pin) => (pin.roles ?? []).some((role) => role.startsWith(`${prefix}:${id}.`)))) return t(prefix === "dev" ? "reason.deviceInUse" : "reason.connectorInUse");
+  return "";
+}
+
+function hostSuggestions(kind, chip) {
+  if (kind === "spi" && Number.isInteger(chip.spi_hosts)) return Array.from({ length: chip.spi_hosts }, (_, index) => `SPI${index + 2}_HOST`);
+  const count = kind === "i2c" ? chip.i2c_hosts : kind === "i2s" ? chip.i2s_ports : undefined;
+  return Number.isInteger(count) ? Array.from({ length: count }, (_, index) => index) : [];
+}
+
+function specKeys(device, fragment = device) {
+  const part = parts[fragment.part];
+  if (part?.spec_keys) return part.spec_keys;
+  return Object.fromEntries((schema.definitions.deviceKind["x-spec-properties"][fragment.kind ?? device.kind] ?? [])
+    .map((key) => [key, { type: ["invert", "readable"].includes(key) ? "boolean" : key === "panel_type" ? "string" : "number" }]));
+}
+
+function deviceSpecType(definition) {
+  return ["integer", "number"].includes(definition.type) ? "number" : definition.type;
+}
+
+function deviceSpecEditor(deviceId, device, choiceId = null) {
+  const fragment = choiceId === null ? device : device.choices[choiceId];
+  const part = parts[fragment.part];
+  const rows = Object.entries(specKeys(device, fragment)).map(([key, definition]) => {
+    const value = fragment.spec?.[key];
+    const fallback = definition.default;
+    const type = deviceSpecType(definition);
+    const attrs = `data-device-spec="${escapeHtml(deviceId)}" data-choice-id="${escapeHtml(choiceId ?? "")}" data-spec-key="${escapeHtml(key)}" data-value-type="${type}"`;
+    return `<label>${escapeHtml(key)}${scalarInput(value, attrs, type, fallback ?? "", definition.enum)}</label>`;
+  }).join("");
+  return `<div class="field-grid device-spec">${rows || `<span>${escapeHtml(t("configuration.noSpec"))}</span>`}</div>`;
+}
+
+function deviceRow(board, id, device) {
+  const required = requiredDeviceSignals(device);
+  const optional = deviceSignals(device).filter((signal) => !required.includes(signal));
+  const missing = required.filter((signal) => !roleAssigned(board, `dev:${id}.${signal}`));
+  const availableOptional = optional.filter((signal) => !roleAssigned(board, `dev:${id}.${signal}`));
+  const reason = objectRemovalReason(board, "dev", id);
+  const choices = device.choices ? Object.entries(device.choices).map(([choiceId, choice]) => `<section class="choice-editor"><div class="object-title"><code>${escapeHtml(choiceId)}</code><span>${escapeHtml(choice.part ?? "")}</span><button type="button" class="secondary" data-remove-choice="${escapeHtml(id)}" data-choice-id="${escapeHtml(choiceId)}">${escapeHtml(t("configuration.remove"))}</button></div>${deviceSpecEditor(id, device, choiceId)}</section>`).join("") : deviceSpecEditor(id, device);
+  const choiceControls = device.choices
+    ? `<div class="choice-settings"><label>${escapeHtml(t("configuration.selectedBy"))}<select data-choice-selected-by="${escapeHtml(id)}"><option value="revision"${device.selected_by === "revision" ? " selected" : ""}>revision</option><option value="runtime"${device.selected_by === "runtime" ? " selected" : ""}>runtime</option><option value="user"${device.selected_by === "user" ? " selected" : ""}>user</option></select></label><label>${escapeHtml(t("configuration.defaultChoice"))}<select data-choice-default="${escapeHtml(id)}">${Object.keys(device.choices).map((choice) => `<option value="${escapeHtml(choice)}"${choice === device.default ? " selected" : ""}>${escapeHtml(choice)}</option>`).join("")}</select></label></div>`
+    : "";
+  const partChoices = Object.values(parts).filter((part) => part.kind === device.kind && part.id !== device.part).map((part) => `<option value="${escapeHtml(part.id)}">${escapeHtml(part.name)}</option>`).join("");
+  return `<details class="config-object"><summary><code>${escapeHtml(id)}</code><span>${escapeHtml(device.part ?? device.kind)}</span><button type="button" class="secondary" data-remove-device="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></summary>${readonlyNote(reason)}${choiceControls}${choices}<div class="choice-add"><select data-new-choice-part="${escapeHtml(id)}">${partChoices}</select>${device.choices ? "" : `<select data-new-choice-selected-by="${escapeHtml(id)}"><option value="runtime">runtime</option><option value="revision">revision</option><option value="user">user</option></select>`}<button type="button" class="secondary" data-add-choice="${escapeHtml(id)}">${escapeHtml(t("configuration.addChoice"))}</button></div>${missing.length ? `<div class="unassigned"><strong>${escapeHtml(t("configuration.unassigned"))}:</strong>${missing.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}${availableOptional.length ? `<div class="unassigned optional"><strong>${escapeHtml(t("configuration.optional"))}:</strong>${availableOptional.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}</details>`;
+}
+
 function renderConfiguration() {
   const board = currentBase();
   const connectorRows = Object.entries(board.connectors ?? {}).map(([id, connector]) => {
     const type = connectorTypes[connector.type];
     const standards = Object.keys(type?.standards ?? {});
-    return `<div class="config-row"><code>${escapeHtml(id)}</code><span>${escapeHtml(connector.type)}</span><select data-config-standard="${escapeHtml(id)}"><option value="">—</option>${standards.map((standard) => `<option value="${escapeHtml(standard)}"${standard === connector.standard ? " selected" : ""}>${escapeHtml(standard)}</option>`).join("")}</select><button type="button" class="secondary" data-remove-connector="${escapeHtml(id)}">${escapeHtml(t("configuration.remove"))}</button></div>`;
+    const reason = objectRemovalReason(board, "conn", id);
+    return `<div class="config-row"><code>${escapeHtml(id)}</code><span>${escapeHtml(connector.type)}</span><select data-config-standard="${escapeHtml(id)}"><option value="">—</option>${standards.map((standard) => `<option value="${escapeHtml(standard)}"${standard === connector.standard ? " selected" : ""}>${escapeHtml(standard)}</option>`).join("")}</select><button type="button" class="secondary" data-remove-connector="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>${readonlyNote(reason)}`;
   }).join("");
-  const deviceRows = Object.entries(board.devices ?? {}).map(([id, device]) => {
-    const missing = requiredDeviceSignals(device).filter((signal) => !roleAssigned(board, `dev:${id}.${signal}`));
-    return `<div class="config-row config-device"><code>${escapeHtml(id)}</code><span>${escapeHtml(device.part ?? device.kind)}</span><button type="button" class="secondary" data-remove-device="${escapeHtml(id)}">${escapeHtml(t("configuration.remove"))}</button>${missing.length ? `<div class="unassigned"><strong>${escapeHtml(t("configuration.unassigned"))}:</strong>${missing.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}</div>`;
+  const busRows = Object.entries(board.buses ?? {}).map(([id, bus]) => {
+    const reason = busRemovalReason(board, id);
+    return `<div class="config-row"><code>${escapeHtml(id)}</code><span>${escapeHtml(bus.kind)}</span><span>${escapeHtml((bus.signals ?? []).join(", "))}</span><button type="button" class="secondary" data-remove-bus="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>${readonlyNote(reason)}`;
   }).join("");
+  const deviceRows = Object.entries(board.devices ?? {}).map(([id, device]) => deviceRow(board, id, device)).join("");
   const entries = state.compositionEntries.get(state.currentId) ?? [];
   const candidates = Object.values(accessories).filter((accessory) => !accessory.compatible_with || accessory.compatible_with.includes(state.currentId));
   const accessoryRows = candidates.map((accessory) => {
@@ -3031,11 +3818,67 @@ function renderConfiguration() {
     return `<div class="config-row accessory-row"><label><input type="checkbox" data-accessory="${escapeHtml(accessory.id)}"${entry ? " checked" : ""}>${escapeHtml(accessory.name)}</label><span class="origin-badge">${escapeHtml(accessory.origin)}${accessory.bundled ? " · bundled" : ""}</span>${settings}</div>`;
   }).join("");
   const typeOptions = Object.keys(connectorTypes).map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
-  const partOptions = Object.values(parts).map((part) => `<option value="${escapeHtml(part.id)}">${escapeHtml(part.kind)} · ${escapeHtml(part.name)}</option>`).join("");
+  const busKinds = schema.definitions.busKind.enum.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("");
+  const deviceKinds = schema.definitions.deviceKind.enum.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("");
+  const spiSignals = schemaSignals("busKind").spi.map((signal) => `<label><input type="checkbox" data-new-bus-signal value="${escapeHtml(signal)}"${["sclk", "mosi"].includes(signal) ? " checked" : ""}>${escapeHtml(signal)}</label>`).join("");
   elements.configurationList.innerHTML = `
+    <section class="config-group"><h3>${escapeHtml(t("configuration.basic"))}</h3><div class="field-grid"><label>${escapeHtml(t("field.name"))}<input data-board-field="name" value="${escapeHtml(board.name)}"></label><label>${escapeHtml(t("field.legacyId"))}<input data-board-field="legacy_board_id" data-value-type="number" type="number" value="${board.legacy_board_id}"></label><label>${escapeHtml(t("field.chip"))}<select data-board-field="chip">${Object.keys(chips).map((id) => `<option value="${escapeHtml(id)}"${id === board.chip ? " selected" : ""}>${escapeHtml(id)}</option>`).join("")}</select></label></div>${boardSpecFields(board)}</section>
+    <section class="config-group"><h3>${escapeHtml(t("configuration.buses"))}</h3>${busRows}<div class="config-add bus-add"><input data-new-bus-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-bus-kind>${busKinds}</select><div data-new-bus-signals class="signal-checks">${spiSignals}</div><input data-new-bus-host list="new-bus-hosts" placeholder="preferred_host"><datalist id="new-bus-hosts"></datalist><input data-new-bus-freq type="number" placeholder="freq"><input data-new-bus-freq-read type="number" placeholder="freq_read"><label><input data-new-bus-fixed type="checkbox">fixed</label><button type="button" data-add-bus>${escapeHtml(t("configuration.add"))}</button></div></section>
     <section class="config-group"><h3>${escapeHtml(t("configuration.connectors"))}</h3>${connectorRows}<div class="config-add"><input data-new-connector-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-connector-type>${typeOptions}</select><button type="button" data-add-connector>${escapeHtml(t("configuration.add"))}</button></div></section>
-    <section class="config-group"><h3>${escapeHtml(t("configuration.devices"))}</h3>${deviceRows}<div class="config-add"><input data-new-device-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-device-part>${partOptions}</select><button type="button" data-add-device>${escapeHtml(t("configuration.add"))}</button></div></section>
+    <section class="config-group"><h3>${escapeHtml(t("configuration.devices"))}</h3>${deviceRows}<div class="config-add device-add"><input data-new-device-id placeholder="${escapeHtml(t("configuration.idPrompt"))}"><select data-new-device-kind>${deviceKinds}</select><div class="search-combobox" data-new-device-part><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${escapeHtml(t("configuration.partOptional"))}" autocomplete="off"><ul role="listbox"></ul></div><select data-new-device-bus><option value="">—</option></select><button type="button" data-add-device>${escapeHtml(t("configuration.add"))}</button><small data-sd-note hidden></small></div></section>
     <section class="config-group"><h3>${escapeHtml(t("configuration.accessories"))}</h3>${accessoryRows || `<p>${escapeHtml(t("related.empty"))}</p>`}</section>`;
+  const partRoot = elements.configurationList.querySelector("[data-new-device-part]");
+  partRoot.dataset.value = "";
+  new SearchCombobox(partRoot, Object.values(parts).map((part) => ({ value: part.id, label: `${part.kind} · ${part.name}`, search: `${part.id} ${part.vendor ?? ""}` })), (partId) => {
+    partRoot.dataset.value = partId;
+    const part = parts[partId];
+    elements.configurationList.querySelector("[data-new-device-kind]").value = part.kind;
+    updateNewDeviceBuses();
+    partRoot.querySelector("input").placeholder = `${part.kind} · ${part.name}`;
+  });
+  updateNewBusSignals();
+  updateNewDeviceBuses();
+}
+
+function controlValue(control) {
+  if (control.value === "") return undefined;
+  if (control.dataset.valueType === "number") return Number(control.value);
+  if (control.dataset.valueType === "boolean") return control.value === "true";
+  return control.value;
+}
+
+function updateNewBusSignals() {
+  const kind = elements.configurationList.querySelector("[data-new-bus-kind]")?.value;
+  const root = elements.configurationList.querySelector("[data-new-bus-signals]");
+  if (!kind || !root) return;
+  const defaults = kind === "spi" ? new Set(["sclk", "mosi"]) : kind === "i2c" ? new Set(["sda", "scl"]) : new Set();
+  root.innerHTML = (schemaSignals("busKind")[kind] ?? []).map((signal) => `<label><input type="checkbox" data-new-bus-signal value="${escapeHtml(signal)}"${defaults.has(signal) ? " checked" : ""}>${escapeHtml(signal)}</label>`).join("");
+  const host = elements.configurationList.querySelector("[data-new-bus-host]");
+  const suggestions = hostSuggestions(kind, chips[currentBase().chip]);
+  host.placeholder = suggestions.join(" / ") || "preferred_host";
+  elements.configurationList.querySelector("#new-bus-hosts").innerHTML = suggestions.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+  elements.configurationList.querySelector("[data-new-bus-freq-read]").hidden = kind !== "spi";
+}
+
+function updateNewDeviceBuses() {
+  const partId = elements.configurationList.querySelector("[data-new-device-part]")?.dataset.value;
+  const kind = elements.configurationList.querySelector("[data-new-device-kind]")?.value;
+  const expected = parts[partId]?.bus?.kind;
+  const busKind = expected && !["none", "any"].includes(expected) ? expected : null;
+  const select = elements.configurationList.querySelector("[data-new-device-bus]");
+  if (!select) return;
+  const candidates = Object.entries(currentBase().buses ?? {}).filter(([, bus]) => !busKind || bus.kind === busKind);
+  select.innerHTML = `<option value="">—</option>${candidates.map(([id]) => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("")}`;
+  select.hidden = expected === "none";
+  if (!partId) select.hidden = !["display", "sd", "touch", "speaker", "mic", "pmic", "rtc", "imu"].includes(kind);
+  const sdNote = elements.configurationList.querySelector("[data-sd-note]");
+  sdNote.hidden = kind !== "sd";
+  sdNote.textContent = chips[currentBase().chip].sdmmc?.gpio_matrix ? t("configuration.sdMatrix") : t("configuration.sdFixed");
+}
+
+function operationFailure(failure) {
+  if (!(failure instanceof BoardOperationError)) throw failure;
+  showToast(messages[`validation.${failure.code}`] ? validationMessage(failure) : failure.message);
 }
 
 function revisionChoice(board, revision, slot, device) {
@@ -3118,7 +3961,7 @@ function renderAll() {
   try {
     applyStaticTranslations();
     const board = shownBoard();
-    const errors = validationFor(board);
+    const errors = validationFor(currentBase());
     renderBoardSelect();
     renderOptions();
     renderViews(board);
@@ -3156,18 +3999,18 @@ function removeRole(gpio, role) {
   renderAll();
 }
 
-function addRole(gpio, role) {
+function addRoleUI(gpio, role) {
   if (!role) return;
   const connectorRole = /^conn:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
   if (connectorRole) {
     assignConnectorPosition(currentBase(), connectorRole[1], connectorRole[2], `gpio:${gpio}`);
     return;
   }
-  const pin = editablePin(gpio);
-  if (!pin.roles.includes(role)) pin.roles.push(role);
-  clearVerification(pin, "roles");
-  markDirty();
-  renderAll();
+  try {
+    addRole(currentBase(), gpio, role, { chip: chips[currentBase().chip] });
+    markDirty();
+    renderAll();
+  } catch (failure) { operationFailure(failure); }
 }
 
 function rememberConnectorUndo(board) {
@@ -3286,7 +4129,8 @@ function openRoleChooser(role) {
   state.activeView = "configuration";
   clearResolvedMode();
   const chip = chips[currentBase().chip];
-  const gpio = Array.from({ length: chip.gpio_count }, (_, index) => String(index)).find((id) => !chip.reserved.includes(Number(id)) && !(currentBase().pins[id]?.roles?.length)) ?? "0";
+  const conditional = chip.reserved_conditional?.[currentBase().spec?.storage?.psram_mode] ?? [];
+  const gpio = Array.from({ length: chip.gpio_count }, (_, index) => String(index)).find((id) => !chip.reserved.includes(Number(id)) && !conditional.includes(Number(id)) && allRoleOptions(currentBase(), id).includes(role) && !(currentBase().pins[id]?.roles?.length)) ?? "0";
   currentEntry().expandedGPIO = gpio;
   renderAll();
   const input = elements.tableBody.querySelector(`[data-role-combobox="${gpio}"] input`);
@@ -3321,6 +4165,8 @@ async function openFile(file) {
 
 function downloadCurrent() {
   const entry = currentEntry();
+  const errors = validationFor(entry.base).filter((item) => item.severity !== "warning");
+  if (errors.length && !window.confirm(t("file.downloadErrorsConfirm", { count: errors.length }))) return;
   const formatted = formatBoard(entry.base);
   const normalized = JSON.parse(formatted);
   const blob = new Blob([formatted], { type: "application/json" });
@@ -3391,6 +4237,26 @@ elements.boardSelect.addEventListener("change", () => {
   renderAll();
 });
 
+elements.newBoard.addEventListener("click", () => openBoardDialog("new"));
+elements.duplicateBoard.addEventListener("click", () => openBoardDialog("duplicate"));
+elements.closeBoard.addEventListener("click", closeCurrentDocument);
+elements.boardDialogForm.addEventListener("input", validateBoardDialog);
+elements.boardDialogForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!validateBoardDialog()) return;
+  const form = elements.boardDialogForm;
+  const values = { id: form.elements.id.value.trim(), name: form.elements.name.value.trim(), legacy_board_id: Number(form.elements.legacy_board_id.value) };
+  try {
+    const board = state.boardDialogMode === "duplicate"
+      ? duplicateBoard(currentBase(), values)
+      : createBoard({ ...values, chip: form.elements.chip.value });
+    initializeDocument(board);
+    elements.boardDialog.close();
+    renderAll();
+  } catch (failure) { operationFailure(failure); }
+});
+elements.boardDialog.querySelector("[data-dialog-cancel]").addEventListener("click", () => elements.boardDialog.close());
+
 elements.languageSelect.addEventListener("change", () => {
   state.language = elements.languageSelect.value;
   saveLanguage(state.language);
@@ -3431,7 +4297,44 @@ elements.viewTabs.addEventListener("click", (event) => {
   renderAll();
 });
 
+elements.configurationList.addEventListener("focusout", (event) => {
+  if (event.target.matches("input[data-board-field], input[data-board-spec], [data-board-resolution], input[data-device-spec]")) {
+    event.target.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+});
+
 elements.configurationList.addEventListener("change", (event) => {
+  if (event.target.matches("[data-new-bus-kind]")) { updateNewBusSignals(); return; }
+  if (event.target.matches("[data-new-device-kind]")) { updateNewDeviceBuses(); return; }
+  if (event.target.matches("[data-board-field]")) {
+    const key = event.target.dataset.boardField;
+    const value = controlValue(event.target);
+    if (key === "chip" && value !== currentBase().chip && !window.confirm(t("dialog.chipChangeConfirm"))) { renderAll(); return; }
+    try { setBoardField(currentBase(), key, value); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); renderAll(); }
+    return;
+  }
+  if (event.target.matches("[data-board-spec]")) {
+    setSpec(currentBase(), event.target.dataset.boardSpec, controlValue(event.target));
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-board-resolution]")) {
+    const inputs = [...elements.configurationList.querySelectorAll("[data-board-resolution]")];
+    const values = inputs.map((input) => input.value === "" ? undefined : Number(input.value));
+    setSpec(currentBase(), "display.resolution", values[0] === undefined ? undefined : values[1] === undefined ? [values[0]] : values);
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-device-spec]")) {
+    setDeviceSpec(currentBase(), event.target.dataset.deviceSpec, event.target.dataset.choiceId || null, event.target.dataset.specKey, controlValue(event.target));
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-choice-selected-by]")) {
+    setChoiceDefaults(currentBase(), event.target.dataset.choiceSelectedBy, { selected_by: event.target.value });
+    markDirty(); renderAll(); return;
+  }
+  if (event.target.matches("[data-choice-default]")) {
+    setChoiceDefaults(currentBase(), event.target.dataset.choiceDefault, { default: event.target.value });
+    markDirty(); renderAll(); return;
+  }
   const accessoryId = event.target.dataset.accessory;
   if (accessoryId) {
     const entries = clone(state.compositionEntries.get(state.currentId) ?? []);
@@ -3455,24 +4358,48 @@ elements.configurationList.addEventListener("change", (event) => {
 elements.configurationList.addEventListener("click", (event) => {
   const roleButton = event.target.closest("[data-unassigned-role]");
   if (roleButton) return openRoleChooser(roleButton.dataset.unassignedRole);
-  const removeConnector = event.target.closest("[data-remove-connector]");
-  if (removeConnector) { delete currentBase().connectors[removeConnector.dataset.removeConnector]; markDirty(); renderAll(); return; }
-  const removeDevice = event.target.closest("[data-remove-device]");
-  if (removeDevice) { delete currentBase().devices[removeDevice.dataset.removeDevice]; markDirty(); renderAll(); return; }
+  const removeConnectorButton = event.target.closest("[data-remove-connector]");
+  if (removeConnectorButton) { try { removeConnector(currentBase(), removeConnectorButton.dataset.removeConnector); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
+  const removeDeviceButton = event.target.closest("[data-remove-device]");
+  if (removeDeviceButton) { try { removeDevice(currentBase(), removeDeviceButton.dataset.removeDevice); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
+  const removeBusButton = event.target.closest("[data-remove-bus]");
+  if (removeBusButton) { try { removeBus(currentBase(), removeBusButton.dataset.removeBus); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
+  const removeChoiceButton = event.target.closest("[data-remove-choice]");
+  if (removeChoiceButton) { try { removeChoice(currentBase(), removeChoiceButton.dataset.removeChoice, removeChoiceButton.dataset.choiceId); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return; }
   if (event.target.closest("[data-add-connector]")) {
     const id = elements.configurationList.querySelector("[data-new-connector-id]").value.trim();
     const type = elements.configurationList.querySelector("[data-new-connector-type]").value;
     if (!/^[a-z][a-z0-9_]*$/.test(id) || currentBase().connectors?.[id]) return showToast(t("validation.E_ID_FORMAT"));
-    currentBase().connectors ??= {};
-    currentBase().connectors[id] = { type };
-    markDirty(); renderAll(); return;
+    try { addConnector(currentBase(), id, { type }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); } return;
+  }
+  if (event.target.closest("[data-add-bus]")) {
+    const id = elements.configurationList.querySelector("[data-new-bus-id]").value.trim();
+    const kind = elements.configurationList.querySelector("[data-new-bus-kind]").value;
+    const signals = [...elements.configurationList.querySelectorAll("[data-new-bus-signal]:checked")].map((input) => input.value);
+    const rawHost = elements.configurationList.querySelector("[data-new-bus-host]").value.trim();
+    const preferred_host = ["i2c", "i2s"].includes(kind) && /^\d+$/.test(rawHost) ? Number(rawHost) : rawHost || undefined;
+    const freq = elements.configurationList.querySelector("[data-new-bus-freq]").value;
+    const freq_read = elements.configurationList.querySelector("[data-new-bus-freq-read]").value;
+    const fixed = elements.configurationList.querySelector("[data-new-bus-fixed]").checked;
+    try { addBus(currentBase(), id, { kind, signals, preferred_host, freq: freq || undefined, freq_read: freq_read || undefined, fixed }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); }
+    return;
   }
   if (event.target.closest("[data-add-device]")) {
     const id = elements.configurationList.querySelector("[data-new-device-id]").value.trim();
-    const partId = elements.configurationList.querySelector("[data-new-device-part]").value;
+    const partId = elements.configurationList.querySelector("[data-new-device-part]").dataset.value;
+    const kind = partId ? parts[partId].kind : elements.configurationList.querySelector("[data-new-device-kind]").value;
+    const bus = elements.configurationList.querySelector("[data-new-device-bus]").value;
     if (!/^[a-z][a-z0-9_]*$/.test(id) || currentBase().devices?.[id]) return showToast(t("validation.E_ID_FORMAT"));
-    currentBase().devices[id] = { kind: parts[partId].kind, part: partId };
-    markDirty(); renderAll();
+    try { addDevice(currentBase(), id, { kind, part: partId || undefined, bus: bus || undefined }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); }
+    return;
+  }
+  const addChoiceButton = event.target.closest("[data-add-choice]");
+  if (addChoiceButton) {
+    const id = addChoiceButton.dataset.addChoice;
+    const select = elements.configurationList.querySelector(`[data-new-choice-part="${id}"]`);
+    const partId = select.value;
+    const selectedBy = elements.configurationList.querySelector(`[data-new-choice-selected-by="${id}"]`)?.value;
+    try { addChoice(currentBase(), id, partId, { part: partId, selected_by: selectedBy }); markDirty(); renderAll(); } catch (failure) { operationFailure(failure); }
   }
 });
 
@@ -3553,7 +4480,7 @@ elements.validationList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-error-index]");
   if (!button) return;
   const board = shownBoard();
-  const errors = validationFor(board);
+  const errors = validationFor(currentBase());
   focusGPIO(gpioForError(errors[Number(button.dataset.errorIndex)], board));
 });
 

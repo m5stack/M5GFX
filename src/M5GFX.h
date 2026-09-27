@@ -60,8 +60,6 @@ namespace m5gfx
   using namespace lgfx;
 //----------------------------------------------------------------------------
 
-  namespace board_detect { struct board_result_t; }
-
   namespace ili9341_colors  // Color definitions for backwards compatibility with old sketches
   {
     #ifdef ILI9341_BLACK
@@ -197,12 +195,8 @@ namespace m5gfx
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
-    bool _setup_detected(const board_detect::board_result_t& result);
-    // Internal validation entry; this is not public API. Board-only validation
-    // can confirm another member of the same detector family before rejecting
-    // it, and no cleanup of that successful confirmation is currently provided.
-    bool _init_direct(board_t board, std::uint32_t option, bool option_known,
-                      bool use_reset = true, bool use_clear = true);
+    bool _adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
+                               lgfx::ILight* light, lgfx::ITouch* touch);
     void _set_backlight(lgfx::ILight* bl);
     void _set_pwm_backlight(int16_t pin, uint8_t ch, uint32_t freq = 12000, bool invert = false, uint8_t offset = 0);
 

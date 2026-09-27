@@ -55,10 +55,10 @@ async function readJsonDirectory(directory) {
 export async function renderBundle() {
   let html = await fs.readFile(path.join(root, "editor/index.html"), "utf8");
   const css = await fs.readFile(path.join(root, "editor/editor.css"), "utf8");
-  const editorNames = ["provenance.js", "editor.js"];
+  const editorNames = ["provenance.js", "board_ops.js", "editor.js"];
   const editorSources = await Promise.all(editorNames.map((name) => fs.readFile(path.join(root, "editor", name), "utf8")));
   assertUniqueFlattenedNames(editorNames.map((name, index) => [`editor/${name}`, editorSources[index]]));
-  const moduleNames = ["model.js", "ctypes.js", "emit/m5unified_pin_table.js", "emit/m5gfx_board_wiring.js", "pintable_roles.js", "choices.js", "owners.js", "parts.js", "targets.js", "compose.js", "derive/sd.js", "resolve.js", "format.js", "validate.js"];
+  const moduleNames = ["model.js", "schema.js", "ctypes.js", "emit/m5unified_pin_table.js", "emit/m5gfx_board_wiring.js", "pintable_roles.js", "choices.js", "owners.js", "parts.js", "targets.js", "compose.js", "derive/sd.js", "resolve.js", "format.js", "validate.js"];
   const moduleSources = await Promise.all(moduleNames.map((name) => fs.readFile(path.join(root, "lib", name), "utf8")));
   assertUniqueFlattenedNames(moduleNames.map((name, index) => [`lib/${name}`, moduleSources[index]]));
   const modules = moduleNames.map((name, index) => `// lib/${name}\n${flattenModule(moduleSources[index])}`);
