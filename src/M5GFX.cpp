@@ -510,7 +510,6 @@ namespace m5gfx
   static constexpr int32_t i2c_freq = 400000;
   static constexpr int_fast16_t aw9523_i2c_addr = 0x58; // AW9523B
   static constexpr int_fast16_t axp_i2c_addr = 0x34;    // AXP2101
-  static constexpr int_fast16_t gc0308_i2c_addr = 0x21; // GC0308
   static constexpr int_fast16_t i2c_port = I2C_NUM_1;
   static constexpr int_fast16_t i2c_sda = GPIO_NUM_12;
   static constexpr int_fast16_t i2c_scl = GPIO_NUM_11;
@@ -1169,6 +1168,8 @@ namespace m5gfx
       return false;
     }
     if (detector_matched != nullptr) { *detector_matched = true; }
+    // This is assigned before prepare/refine; for a family with a refine hook it
+    // is the representative family ID, not necessarily the final member ID.
     if (setup_board != nullptr) { *setup_board = static_cast<board_t>(result.def->id); }
 
     board_detect::prepare_ctx_t prepare_ctx;
@@ -1578,8 +1579,6 @@ namespace m5gfx
     bus_cfg.spi_host = SPI2_HOST;
     bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
 
-    std::uint32_t id;
-
     std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
 // ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x  /  board:%d", (int)pkg_ver, (int)board);
     switch (pkg_ver) {
@@ -1588,118 +1587,13 @@ namespace m5gfx
       if (board == 0 || board == board_t::board_M5StackCoreS3 || board == board_t::board_M5StackCoreS3SE
           || board == board_t::board_M5StackChan)
       {
-        static constexpr uint8_t i2c_addr_list[] = {
-          (uint8_t)axp_i2c_addr,
-          (uint8_t)aw9523_i2c_addr,
-          0u
-        };
-        uint32_t i2c_result = _detect_i2c_device(i2c_sda, i2c_scl, i2c_addr_list);
-
-        if (i2c_result == ~0u) {
-          probe_i2c_t probe(i2c_sda, i2c_scl);
-          auto chk_aw  = lgfx::i2c::readRegister8(probe_i2c_port, aw9523_i2c_addr, 0x10, i2c_freq);
-          if (chk_aw .has_value() && chk_aw .value() == 0x23)
-          {
-            auto result = lgfx::gpio::command(
-              (const uint8_t[]) {
-              lgfx::gpio::command_mode_input_pullup, GPIO_NUM_35,
-              lgfx::gpio::command_mode_input_pullup, GPIO_NUM_36,
-              lgfx::gpio::command_mode_input_pullup, GPIO_NUM_37,
-              lgfx::gpio::command_read             , GPIO_NUM_35,
-              lgfx::gpio::command_read             , GPIO_NUM_36,
-              lgfx::gpio::command_read             , GPIO_NUM_37,
-              lgfx::gpio::command_end
-              }
-            );
-            /// SPIバスのプルアップが効いていない場合はVBUS 5V出力を有効化する。
-            /// (USBホストモジュール等、5Vが出ていないと信号線の電気を吸い込む組合せがあるため)
-            uint8_t reg0x02 = (result == 0) ? 0b00000111 : 0b00000101;
-            uint8_t reg0x03 = (result == 0) ? 0b10000011 : 0b00000011;
-            m5gfx::i2c::bitOn(probe_i2c_port, aw9523_i2c_addr, 0x02, reg0x02); //port0 output ctrl
-            m5gfx::i2c::bitOn(probe_i2c_port, aw9523_i2c_addr, 0x03, reg0x03); //port1 output ctrl
-            m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x04, 0b00011000);  // CONFIG_P0
-            m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x05, 0b00001100);  // CONFIG_P1
-            m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x11, 0b00010000);  // GCR P0 port is Push-Pull mode.
-            m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x12, 0b11111111);  // LEDMODE_P0
-            m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x13, 0b11111111);  // LEDMODE_P1
-            m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x90, 0xBF); // LDOS ON/OFF control 0
-            m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x94, 33 - 5); // ALDO3 set to 3.3v // for GC0308 Camera
-            m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x95, 33 - 5); // ALDO4 set to 3.3v // for TF card slot
-
-            bus_cfg.pin_mosi = GPIO_NUM_37;
-            bus_cfg.pin_miso = GPIO_NUM_35;
-            bus_cfg.pin_sclk = GPIO_NUM_36;
-            bus_cfg.pin_dc   = GPIO_NUM_35;// MISOとLCD D/CをGPIO35でシェアしている;
-            bus_cfg.spi_mode = 0;
-            bus_cfg.spi_3wire = true;
-            bus_spi->config(bus_cfg);
-            bus_spi->init();
-
-            _set_sd_spimode(bus_cfg.spi_host, GPIO_NUM_4);
-
-            id = _read_panel_id(bus_spi, GPIO_NUM_3);
-            if ((id & 0xFF) == 0xE3)
-            {  //  check panel (ILI9342)
-              board = board_t::board_M5StackCoreS3;
-              // ボードが確定したので常用するハードウェアポートへ引き継ぐ (バックライトとタッチが使う)
-              probe.handover(i2c_port);
-              // Camera GC0308 check (not found == M5StackCoreS3SE)
-              auto chk_gc  = lgfx::i2c::readRegister8(i2c_port, gc0308_i2c_addr, 0x00, i2c_freq);
-              if (chk_gc.has_value() && chk_gc.value() == 0x9b) {
-                auto chk_m5ioe1 = lgfx::i2c::readRegister8(i2c_port, 0x6F, 0x02, 100000); // Read firmware version (NOTE: stackchan m5ioe1 i2c address is 0x6F)
-                if (chk_m5ioe1.has_value() && (((uint8_t)chk_m5ioe1.value()) >= 0x04)) {
-                  board = board_M5StackChan;
-                  ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StackChan");
-                } else {
-                  board = board_M5StackCoreS3;
-                  ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StackCoreS3");
-                }     
-              } else {
-                board = board_M5StackCoreS3SE;
-                ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5StackCoreS3SE");
-              }
-          
-              bus_cfg.freq_write = 40000000;
-              bus_cfg.freq_read  = 16000000;
-              bus_spi->config(bus_cfg);
-              lgfx::Panel_ILI9342* p;
-              {
-                Panel_M5StackCoreS3 panel_probe;
-                panel_probe.bus(bus_spi);
-                std::uint32_t keys[4] = { 0, 0, 0, 0 };
-                auto variant = _identify_ili9342(&panel_probe, keys, 1);   // no LCD reset on this board: one repeat
-                _log_ili9342_variant(variant, keys);
-                if (variant == ili9342_variant_t::e)
-                {
-                  p = new Panel_M5StackCoreS3E();
-                  _set_ili9342e_read(p, bus_cfg.freq_read);
-                  auto cfg = p->config();
-                  cfg.readable = false;   // the frame memory cannot be read back on this combination yet
-                  p->config(cfg);
-                }
-                else
-                {
-                  p = new Panel_M5StackCoreS3();
-                }
-              }
-              p->bus(bus_spi);
-              _panel_last.reset(p);
-
-              _set_backlight(new Light_M5StackCoreS3());
-
-              {
-                auto t = new Touch_M5StackCoreS3();
-                _touch_last.reset(t);
-                _panel_last->touch(t);
-              }
-
-              goto init_clear;
-            }
-            bus_spi->release();
-            lgfx::pinMode(GPIO_NUM_4, lgfx::pin_mode_t::input); // TF card CS
-            lgfx::pinMode(GPIO_NUM_3, lgfx::pin_mode_t::input); // LCD CS
-          }
-          probe.release();
+        if (try_setup_detected(board_detect::m5::esp32s3_detectors_cores3,
+                               board, use_reset, false, &board,
+                               [this](board_detect::m5::display_parts_t& parts)
+                               { return _adopt_detected_parts(parts.bus, parts.panel,
+                                                              parts.light, parts.touch); }))
+        {
+          goto init_clear;
         }
       }
 

@@ -7,6 +7,7 @@
 #include <initializer_list>
 
 #include "../lgfx/v1/platforms/esp32/common.hpp"
+#include "dedicated_release_probe.hpp"
 #include "ops.hpp"
 
 namespace m5gfx
@@ -50,6 +51,11 @@ namespace board_detect
     // have been allowed. Keep this distinct from prepared_reset so a later
     // reset-enabled prepare can still pulse the panel reset.
     prepared_reset_line = 1u << 4,
+    // A confirmed family's post-power refinement has been resolved (run, or
+    // deliberately skipped after a failed retained power sequence).
+    prepared_refine = 1u << 5,
+    // The confirmed board was retained after its power operation list stopped.
+    prepared_power_failed = 1u << 6,
   };
 
   enum class detect_status_t : std::uint8_t
@@ -60,7 +66,10 @@ namespace board_detect
   };
 
   struct board_desc_t;
+  struct prepare_ctx_t;
   class detection_transaction_t;
+  struct board_result_t;
+  using refine_fn_t = bool (*)(board_result_t&, const prepare_ctx_t&);
 
   struct board_result_t
   {
@@ -72,6 +81,8 @@ namespace board_detect
     std::uint32_t option = 0;
     std::uint32_t prepared = 0;
     detect_status_t status = detect_status_t::no_match;
+    // Optional read-only member refinement after power preparation.
+    refine_fn_t refine = nullptr;
 
     void assign(const board_desc_t* value);
   };
@@ -223,6 +234,10 @@ namespace board_detect
     ops::op_list_t reset_release;
     register_list_t restore_registers;
     std::uint32_t detected_option;
+    // Confirmed multi-variant power descriptions select one operation list
+    // from the detector's option bits. A zero mask selects unconditionally.
+    std::uint32_t option_select_mask;
+    std::uint32_t option_select_value;
   };
 
   struct power_desc_t
@@ -338,7 +353,7 @@ namespace board_detect
   {
     return { addr, id_reg, id_value, 0xFF, power_on, power_state, reset_state,
              reset_assert, reset_release,
-             restore_registers, detected_option };
+             restore_registers, detected_option, 0, 0 };
   }
 
   constexpr pmic_variant_t pmic_variant_ack_only(
@@ -350,7 +365,20 @@ namespace board_detect
   {
     return { addr, id_reg, 0, 0, power_on, power_state, reset_state,
              reset_assert, reset_release,
-             restore_registers, detected_option };
+             restore_registers, detected_option, 0, 0 };
+  }
+
+  constexpr pmic_variant_t pmic_variant_confirmed_option(
+    std::uint8_t addr, std::uint8_t id_reg,
+    ops::op_list_t power_on,
+    reg_bit_t power_state, reg_bit_t reset_state,
+    ops::op_list_t reset_assert, ops::op_list_t reset_release,
+    register_list_t restore_registers, std::uint32_t option_mask,
+    std::uint32_t option_value)
+  {
+    return { addr, id_reg, 0, 0, power_on, power_state, reset_state,
+             reset_assert, reset_release, restore_registers, 0,
+             option_mask, option_value };
   }
 
   constexpr power_desc_t no_power()
@@ -573,6 +601,14 @@ namespace board_detect
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
   pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask);
+
+  // Uses one CPU-local dedicated-GPIO bundle to release and sample up to eight
+  // pads together. One cache-warming measurement is discarded. Hardware and
+  // timing success make the capture available; the summarizer separately
+  // requires every retained sample to observe every pin.
+  dedicated_release_result_t probe_dedicated_pin_release(
+    probe_ctx_t& ctx, const std::int8_t* pins, std::uint8_t pin_count,
+    std::uint16_t reads, std::uint8_t samples, std::uint32_t settle_us);
 
   // Mode-0 software SPI used only while detecting and preparing a board. Data
   // is laid out like Bus_SPI: low byte first, MSB first within each byte. On a

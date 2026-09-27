@@ -14,6 +14,9 @@
 { board_t::board_M5PaperDIY, 42, 41, 42, 41 },
 { board_t::board_M5PaperMono, 48, 47, 255, 255 },
 { board_t::board_M5PaperS3, 42, 41, 1, 2 },
+{ board_t::board_M5StackCoreS3, 11, 12, 1, 2 },
+{ board_t::board_M5StackCoreS3SE, 11, 12, 1, 2 },
+{ board_t::board_M5StackChan, 11, 12, 1, 2 },
 { board_t::board_M5StamPLC, 15, 13, 1, 2 },
 { board_t::board_M5StickS3, 48, 47, 10, 9 },
 { board_t::board_M5StopWatch, 48, 47, 11, 10 },
@@ -24,9 +27,15 @@
 { board_t::board_M5ChainCaptain, 17, 18, 255, 255 },
 { board_t::board_M5Dial, 1, 2, 255, 255 },
 { board_t::board_M5DinMeter, 1, 2, 255, 255 },
+{ board_t::board_M5StackCoreS3, 8, 9, 18, 17 },
+{ board_t::board_M5StackCoreS3SE, 8, 9, 18, 17 },
+{ board_t::board_M5StackChan, 8, 9, 18, 17 },
 { board_t::board_unknown, 255, 255, 255, 255 },
 
 // _pin_table_port_de[][5]
+{ board_t::board_M5StackCoreS3, 14, 10, 18, 17 },
+{ board_t::board_M5StackCoreS3SE, 14, 10, 18, 17 },
+{ board_t::board_M5StackChan, 14, 10, 18, 17 },
 { board_t::board_unknown, 255, 255, 255, 255 },
 
 // _pin_table_sd[][7]
@@ -36,6 +45,9 @@
 { board_t::board_M5PaperDIY, 39, 38, 40, 255, 255, 47 },
 { board_t::board_M5PaperMono, 13, 12, 11, 10, 9, 8 },
 { board_t::board_M5PaperS3, 39, 38, 40, 255, 255, 47 },
+{ board_t::board_M5StackCoreS3, 36, 37, 35, 255, 255, 4 },
+{ board_t::board_M5StackCoreS3SE, 36, 37, 35, 255, 255, 4 },
+{ board_t::board_M5StackChan, 36, 37, 35, 255, 255, 4 },
 { board_t::board_M5StamPLC, 7, 8, 9, 255, 255, 10 },
 { board_t::board_unknown, 255, 255, 255, 255, 255, 255 },
 
@@ -57,4 +69,7 @@
 { board_t::board_unknown, 255 },
 
 // _pin_table_mbus[][31]
+{ board_t::board_M5StackCoreS3, 255, 10, 255, 8, 255, 255, 37, 5, 35, 9, 36, 255, 44, 43, 18, 17, 12, 11, 2, 1, 6, 7, 13, 0, 255, 14, 255, 255, 255, 255 },
+{ board_t::board_M5StackCoreS3SE, 255, 10, 255, 8, 255, 255, 37, 5, 35, 9, 36, 255, 44, 43, 18, 17, 12, 11, 2, 1, 6, 7, 13, 0, 255, 14, 255, 255, 255, 255 },
+{ board_t::board_M5StackChan, 255, 10, 255, 8, 255, 255, 37, 5, 35, 9, 36, 255, 44, 43, 18, 17, 12, 11, 2, 1, 6, 7, 13, 0, 255, 14, 255, 255, 255, 255 },
 { board_t::board_unknown, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 },

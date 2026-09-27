@@ -14,6 +14,8 @@ export function m5gfxBoardMapping(target, boardId) {
     options: source.options ?? [],
     descInternalI2c: source.desc_internal_i2c ?? false,
     cardputerSubdivision: source.cardputer_subdivision ?? null,
+    identityDevices: source.identity_devices ?? [],
+    releaseProbe: source.release_probe ?? null,
   };
 }
 
@@ -66,6 +68,7 @@ export function wiringFieldsForRole(board, sourceRole, parts) {
   if (kind === "power_hold" && deviceRole[2] === "enable") fields.push("power_gpio");
   if (kind === "backlight" && deviceRole[2] === "pwm") fields.push("backlight_gpio");
   if (kind === "touch" && deviceRole[2] === "int") fields.push("touch_int");
+  if (kind === "camera") fields.push(`camera_${deviceRole[2]}`);
   return fields;
 }
 
@@ -119,6 +122,9 @@ export function emitM5GFXWiringForMapping(board, parts, mapping) {
   const i2c = board.buses?.internal_i2c ? {
     sda: value("internal_i2c_sda"), scl: value("internal_i2c_scl"), port: preferredHost ?? -1,
   } : null;
+  const camera = Object.fromEntries(Object.entries(assigned)
+    .filter(([name]) => name.startsWith("camera_"))
+    .map(([name, pin]) => [name.slice("camera_".length), pin]));
   let resetGpio = -1;
   if (mapping.reset === "display_rst") {
     if (display.rst < 0) throw new Error(`${board.id}: reset uses display_rst but the display reset GPIO is unavailable`);
@@ -134,6 +140,7 @@ export function emitM5GFXWiringForMapping(board, parts, mapping) {
     powerGpio: value("power_gpio"),
     backlightGpio: value("backlight_gpio"),
     touchInt: value("touch_int"),
+    camera,
     hold: hold.filter((pin) => pin >= 0),
   };
 }
@@ -187,6 +194,7 @@ function descriptorPins(emitted) {
   if (fields.has("power")) values.push(emitted.powerGpio);
   if (fields.has("backlight")) values.push(emitted.backlightGpio);
   if (fields.has("touch")) values.push(emitted.touchInt);
+  if (fields.has("camera")) values.push(...Object.values(emitted.camera));
   if (fields.has("hold")) values.push(...emitted.hold);
   return [...new Set(values.filter((pin) => Number.isInteger(pin) && pin >= 0))].sort((left, right) => left - right);
 }
@@ -262,6 +270,7 @@ export function renderM5GFXWiringHeader(entries) {
     if (fields.has("power")) lines.push(`  ${constant("power_gpio", value.powerGpio)}`);
     if (fields.has("backlight")) lines.push(`  ${constant("backlight_gpio", value.backlightGpio)}`);
     if (fields.has("touch")) lines.push(`  ${constant("touch_int", value.touchInt)}`);
+    if (fields.has("camera")) for (const [name, pin] of Object.entries(value.camera)) lines.push(`  ${constant(`camera_${name}`, pin)}`);
     if (fields.has("hold")) lines.push(`  constexpr std::int8_t hold[] = { ${value.hold.join(", ")} };`);
     for (const [mode, pins] of Object.entries(chip.reserved_conditional ?? {})) {
       lines.push(`  constexpr bool touches_${mode}_pins = ${boardPins.some((pin) => pins.includes(pin))};`);

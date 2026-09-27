@@ -145,7 +145,7 @@
         "sd": [],
         "touch": ["x_min", "x_max", "y_min", "y_max", "rotation_offset"],
         "pmic": [],
-        "io_expander": [],
+        "io_expander": ["probe_freq", "firmware_reg", "firmware_min"],
         "sensor": [],
         "speaker": [],
         "mic": [],

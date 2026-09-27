@@ -1,6 +1,6 @@
 import { choiceSlots } from "./choices.js";
 
-const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "touch", "hold"]);
+const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "touch", "camera", "hold"]);
 const CPP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const CPP_KEYWORDS = new Set((
   "alignas alignof and and_eq asm auto bitand bitor bool break "
@@ -78,6 +78,36 @@ export function validateTarget(board, target = {}) {
      || subdivision.vameter_i2c_devices.some((id) => typeof id !== "string")) {
       issue("E_TGT_CARDPUTER_SUBDIVISION", `${boardPath}/cardputer_subdivision`,
             "Cardputer subdivision needs sense boards, a VAMeter board, and named I2C devices");
+    }
+  }
+  if (boardTarget.identity_devices !== undefined) {
+    if (!Array.isArray(boardTarget.identity_devices)
+     || boardTarget.identity_devices.some((id) => typeof id !== "string" || !board.devices?.[id])) {
+      issue("E_TGT_IDENTITY_DEVICE", `${boardPath}/identity_devices`,
+            "identity_devices must name devices present on the board");
+    }
+  }
+  if (boardTarget.release_probe !== undefined) {
+    const probe = boardTarget.release_probe;
+    const validRole = (role) => typeof role === "string" && /^dev:[a-z][a-z0-9_]*\.[a-z0-9_]+$/.test(role);
+    const boardRoles = new Set(Object.values(board.pins ?? {}).flatMap((row) => row.roles ?? []));
+    const rolePins = new Map(Object.entries(board.pins ?? {}).flatMap(([pin, row]) =>
+      (row.roles ?? []).map((role) => [role, Number(pin)])));
+    if (!probe || typeof probe !== "object" || Array.isArray(probe)
+     || !Array.isArray(probe.pins) || probe.pins.length !== 8
+     || new Set(probe.pins).size !== probe.pins.length
+     || probe.pins.some((role) => !validRole(role) || !boardRoles.has(role))
+     || probe.pins.some((role) => !Number.isInteger(rolePins.get(role))
+                                  || rolePins.get(role) < 0 || rolePins.get(role) > 48
+                                  || (rolePins.get(role) >= 22 && rolePins.get(role) <= 25))
+     || !Number.isInteger(probe.reads) || probe.reads < 1 || probe.reads > 256
+     || !Number.isInteger(probe.samples) || probe.samples < 1 || probe.samples > 15
+     || !Number.isInteger(probe.settle_us) || probe.settle_us < 1
+     || !Number.isInteger(probe.short_max_ns) || probe.short_max_ns < 0
+     || !Number.isInteger(probe.long_min_ns)
+     || probe.long_min_ns <= probe.short_max_ns) {
+      issue("E_TGT_RELEASE_PROBE", `${boardPath}/release_probe`,
+            "release_probe needs exactly 8 unique valid ESP32-S3 GPIO roles, bounded reads/samples, settle_us, and valid ns thresholds");
     }
   }
   const options = targetOptions(target, board.id);

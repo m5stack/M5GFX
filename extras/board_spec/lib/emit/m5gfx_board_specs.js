@@ -123,6 +123,40 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
     rotationOffset: optionalInteger(touchSpec.rotation_offset, `${board.id}.${touchDevice.part}.rotation_offset`),
   } : null;
   const powerHold = Object.values(board.devices ?? {}).find((device) => device.kind === "power_hold");
+  const identityDevices = Object.fromEntries((mapping.identityDevices ?? []).map((deviceId) => {
+    const device = board.devices?.[deviceId];
+    const part = parts[device?.part];
+    const bus = board.buses?.[device?.bus];
+    if (!device || !part?.id_probe || bus?.kind !== "i2c") {
+      throw new Error(`${board.id}.${deviceId} is not an identifiable I2C device`);
+    }
+    const address = device.i2c_addr ?? part.i2c_addr?.[0];
+    return [deviceId, {
+      i2cAddr: hex(address, `${board.id}.${deviceId}.i2c_addr`),
+      i2cFreq: integer(device.spec?.probe_freq ?? bus.freq, `${board.id}.${deviceId}.probe_freq`),
+      idReg: hex(part.id_probe.reg, `${board.id}.${deviceId}.id_probe.reg`),
+      ...(part.id_probe.match === "ack_only" ? {} : {
+        idValue: hex(part.id_probe.value, `${board.id}.${deviceId}.id_probe.value`),
+      }),
+      ...(device.spec?.firmware_reg === undefined ? {} : {
+        firmwareReg: integer(device.spec.firmware_reg, `${board.id}.${deviceId}.firmware_reg`),
+        firmwareMin: integer(device.spec.firmware_min, `${board.id}.${deviceId}.firmware_min`),
+      }),
+    }];
+  }));
+  const assignments = Object.fromEntries(Object.entries(board.pins ?? {}).flatMap(([pin, row]) =>
+    (row.roles ?? []).map((role) => [role, Number(pin)])));
+  const releaseProbe = mapping.releaseProbe ? {
+    pins: mapping.releaseProbe.pins.map((role) => {
+      if (!Object.prototype.hasOwnProperty.call(assignments, role)) throw new Error(`${board.id}: release probe role ${role} has no GPIO`);
+      return assignments[role];
+    }),
+    reads: integer(mapping.releaseProbe.reads, `${board.id}.release_probe.reads`),
+    samples: integer(mapping.releaseProbe.samples, `${board.id}.release_probe.samples`),
+    settleUs: integer(mapping.releaseProbe.settle_us, `${board.id}.release_probe.settle_us`),
+    shortMaxNs: integer(mapping.releaseProbe.short_max_ns, `${board.id}.release_probe.short_max_ns`),
+    longMinNs: integer(mapping.releaseProbe.long_min_ns, `${board.id}.release_probe.long_min_ns`),
+  } : null;
   return {
     namespace: mapping.cppNamespace,
     bus: bus.kind === "parallel_epd" ? {
@@ -152,6 +186,8 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
     backlightI2c,
     pmic,
     touch,
+    identityDevices,
+    releaseProbe,
   };
 }
 
@@ -246,6 +282,28 @@ export function renderM5GFXSpecsHeader(specs) {
         `  constexpr int y_max = ${entry.touch.yMax};`,
         `  constexpr int rotation_offset = ${entry.touch.rotationOffset ?? "setup_sentinel::keep_u8"};`,
         "} // namespace touch");
+    }
+    for (const [name, value] of Object.entries(entry.identityDevices ?? {})) {
+      lines.push("", `namespace i2c_${name} {`,
+        `  constexpr std::uint8_t i2c_addr = ${uint(value.i2cAddr)};`,
+        `  constexpr std::uint32_t i2c_freq = ${value.i2cFreq};`,
+        `  constexpr std::uint8_t id_reg = ${uint(value.idReg)};`,
+        ...(value.idValue === undefined ? [] : [`  constexpr std::uint8_t id_value = ${uint(value.idValue)};`]),
+        ...(value.firmwareReg === undefined ? [] : [
+          `  constexpr std::uint8_t firmware_reg = ${uint(value.firmwareReg)};`,
+          `  constexpr std::uint8_t firmware_min = ${uint(value.firmwareMin)};`,
+        ]),
+        `} // namespace i2c_${name}`);
+    }
+    if (entry.releaseProbe) {
+      lines.push("", "namespace release_probe {",
+        `  constexpr std::int8_t pins[] = { ${entry.releaseProbe.pins.join(", ")} };`,
+        `  constexpr std::uint16_t reads = ${entry.releaseProbe.reads};`,
+        `  constexpr std::uint8_t samples = ${entry.releaseProbe.samples};`,
+        `  constexpr std::uint32_t settle_us = ${entry.releaseProbe.settleUs};`,
+        `  constexpr std::uint32_t short_max_ns = ${entry.releaseProbe.shortMaxNs};`,
+        `  constexpr std::uint32_t long_min_ns = ${entry.releaseProbe.longMinNs};`,
+        "} // namespace release_probe");
     }
     lines.push("", `} } } } } // namespace m5gfx::board_detect::m5::specs::${entry.namespace}`);
   }

@@ -1,4 +1,5 @@
 #include "board_detect/ops.hpp"
+#include "board_detect/dedicated_release_probe.hpp"
 #include "board_detect/m5/pmic_ops.hpp"
 
 #include <cassert>
@@ -10,6 +11,7 @@
 
 namespace bdops = m5gfx::board_detect::ops;
 namespace pmicops = m5gfx::board_detect::m5::pmic_ops;
+namespace bdetect = m5gfx::board_detect;
 
 struct fake_write_t
 {
@@ -550,6 +552,53 @@ static void test_paper_family_sequences()
   assert(fake.writes[5].reg == 0x11 && fake.writes[5].new_value == 0x04);
 }
 
+static void test_dedicated_release_summary()
+{
+  const std::uint16_t samples[] = { 3, 4, 0, 3, bdetect::dedicated_release_no_high };
+  std::uint8_t valid = 0;
+  assert(bdetect::median_dedicated_release_samples(samples, 5, 256, &valid)
+         == bdetect::dedicated_release_no_high);
+  assert(valid == 4);
+  const std::uint16_t complete[] = { 13, 15, 11, 14, 12 };
+  assert(bdetect::median_dedicated_release_samples(complete, 5, 256, &valid) == 13);
+  assert(valid == 5);
+
+  bdetect::dedicated_release_result_t result;
+  result.available = true;
+  result.pin_count = 8;
+  result.requested_samples = 9;
+  result.reads = 256;
+  result.cpu_hz = 240000000;
+  result.total_cycles = 18524;  // 9 passes at about 8.04 cycles/read.
+  const auto set_values = [&](std::uint16_t value)
+  {
+    for (std::uint8_t index = 0; index < result.pin_count; ++index)
+    {
+      result.valid_samples[index] = result.requested_samples;
+      result.median_first_high[index] = value;
+    }
+  };
+  set_values(6);
+  auto summary = bdetect::summarize_dedicated_release(result, 260, 330);
+  assert(summary.average_ns == 201 && summary.valid_pins == 8 && summary.pin_count == 8);
+  assert(summary.band == bdetect::pin_release_band_t::short_release);
+
+  set_values(10);
+  summary = bdetect::summarize_dedicated_release(result, 260, 330);
+  assert(summary.average_ns == 335 && summary.band == bdetect::pin_release_band_t::long_release);
+
+  set_values(8);
+  summary = bdetect::summarize_dedicated_release(result, 260, 330);
+  assert(summary.average_ns == 268 && summary.band == bdetect::pin_release_band_t::ambiguous);
+
+  result.valid_samples[3] = 8;
+  summary = bdetect::summarize_dedicated_release(result, 260, 330);
+  assert(summary.valid_pins == 7 && summary.band == bdetect::pin_release_band_t::ambiguous);
+  result.valid_samples[3] = 9;
+  summary = bdetect::summarize_dedicated_release(result, 330, 260);
+  assert(summary.band == bdetect::pin_release_band_t::ambiguous);
+}
+
 int main()
 {
   static_assert(sizeof(bdops::op_t) <= 16, "source IR operation grew beyond its ROM budget");
@@ -562,5 +611,6 @@ int main()
   test_pm1_family_sequences();
   test_pm1_ext_family_sequences();
   test_paper_family_sequences();
+  test_dedicated_release_summary();
   return 0;
 }

@@ -7,6 +7,80 @@
 
 namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {
 
+namespace cores3 {
+  constexpr std::int8_t display_sclk = 36;
+  constexpr std::int8_t display_mosi = 37;
+  constexpr std::int8_t display_miso = 35;
+  constexpr std::int8_t display_dc = 35;
+  constexpr std::int8_t display_cs = 3;
+  constexpr std::int8_t display_rst = -1;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t shared_sd_sclk = 36;
+  constexpr std::int8_t shared_sd_mosi = 37;
+  constexpr std::int8_t shared_sd_miso = 35;
+  constexpr std::int8_t shared_sd_sd_cs = 4;
+  constexpr std::int8_t shared_sd_other_cs = 3;
+  constexpr std::int8_t internal_i2c_sda = 12;
+  constexpr std::int8_t internal_i2c_scl = 11;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t touch_int = 21;
+  constexpr std::int8_t camera_d4 = 15;
+  constexpr std::int8_t camera_d5 = 16;
+  constexpr std::int8_t camera_href = 38;
+  constexpr std::int8_t camera_d0 = 39;
+  constexpr std::int8_t camera_d1 = 40;
+  constexpr std::int8_t camera_d2 = 41;
+  constexpr std::int8_t camera_d3 = 42;
+  constexpr std::int8_t camera_pclk = 45;
+  constexpr std::int8_t camera_vsync = 46;
+  constexpr std::int8_t camera_d7 = 47;
+  constexpr std::int8_t camera_d6 = 48;
+  constexpr std::int8_t hold[] = { 4, 3 };
+  constexpr bool touches_opi_pins = true;
+} // namespace cores3
+
+namespace cores3se {
+  constexpr std::int8_t display_sclk = 36;
+  constexpr std::int8_t display_mosi = 37;
+  constexpr std::int8_t display_miso = 35;
+  constexpr std::int8_t display_dc = 35;
+  constexpr std::int8_t display_cs = 3;
+  constexpr std::int8_t display_rst = -1;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t shared_sd_sclk = 36;
+  constexpr std::int8_t shared_sd_mosi = 37;
+  constexpr std::int8_t shared_sd_miso = 35;
+  constexpr std::int8_t shared_sd_sd_cs = 4;
+  constexpr std::int8_t shared_sd_other_cs = 3;
+  constexpr std::int8_t internal_i2c_sda = 12;
+  constexpr std::int8_t internal_i2c_scl = 11;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t touch_int = 21;
+  constexpr std::int8_t hold[] = { 4, 3 };
+  constexpr bool touches_opi_pins = true;
+} // namespace cores3se
+
+namespace stackchan {
+  constexpr std::int8_t display_sclk = 36;
+  constexpr std::int8_t display_mosi = 37;
+  constexpr std::int8_t display_miso = 35;
+  constexpr std::int8_t display_dc = 35;
+  constexpr std::int8_t display_cs = 3;
+  constexpr std::int8_t display_rst = -1;
+  constexpr std::int8_t display_busy = -1;
+  constexpr std::int8_t shared_sd_sclk = 36;
+  constexpr std::int8_t shared_sd_mosi = 37;
+  constexpr std::int8_t shared_sd_miso = 35;
+  constexpr std::int8_t shared_sd_sd_cs = 4;
+  constexpr std::int8_t shared_sd_other_cs = 3;
+  constexpr std::int8_t internal_i2c_sda = 12;
+  constexpr std::int8_t internal_i2c_scl = 11;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t touch_int = 21;
+  constexpr std::int8_t hold[] = { 4, 3 };
+  constexpr bool touches_opi_pins = true;
+} // namespace stackchan
+
 namespace atoms3 {
   constexpr std::int8_t display_sclk = 17;
   constexpr std::int8_t display_mosi = 21;
@@ -305,6 +379,19 @@ namespace detection {
 } // namespace wiring
 
 namespace generated_options {
+namespace cores3 {
+  constexpr std::uint32_t vbus_5v = 1u << 0;
+  constexpr std::uint32_t internal_camera_confirmed = 1u << 1;
+  static const char* const names[] = { "vbus_5v", "internal_camera_confirmed" };
+} // namespace cores3
+namespace cores3se {
+  constexpr std::uint32_t vbus_5v = 1u << 0;
+  static const char* const names[] = { "vbus_5v" };
+} // namespace cores3se
+namespace stackchan {
+  constexpr std::uint32_t vbus_5v = 1u << 0;
+  static const char* const names[] = { "vbus_5v" };
+} // namespace stackchan
 namespace atoms3 {
   constexpr std::uint32_t gc9107 = 1u << 0;
   static const char* const names[] = { "gc9107" };

@@ -9,11 +9,116 @@
 #include <cstring>
 #include <driver/gpio.h>
 #include <esp_log.h>
+#if defined (CONFIG_IDF_TARGET_ESP32S3) \
+ && __has_include(<driver/dedic_gpio.h>) \
+ && (__has_include(<hal/dedic_gpio_cpu_ll.h>) || __has_include(<hal/cpu_ll.h>)) \
+ && (__has_include(<esp_private/esp_clk.h>) || __has_include(<esp_clk.h>))
+ #define M5GFX_HAS_S3_DEDICATED_GPIO_RELEASE_PROBE
+ #include <driver/dedic_gpio.h>
+ #include <esp_cpu.h>
+ #include <esp_idf_version.h>
+ #if __has_include(<esp_private/esp_clk.h>)
+  #include <esp_private/esp_clk.h>
+ #else
+  #include <esp_clk.h>
+ #endif
+ #include <freertos/FreeRTOS.h>
+ #if __has_include(<hal/dedic_gpio_cpu_ll.h>)
+  #include <hal/dedic_gpio_cpu_ll.h>
+ #else
+  // IDF 4.4 exposes the same S3 instructions through cpu_ll.h and reports
+  // allocated channels as masks rather than offsets.
+  #define M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL
+  #include <hal/cpu_ll.h>
+ #endif
+ #include <hal/gpio_ll.h>
+ #include <soc/gpio_periph.h>
+ #include <soc/gpio_reg.h>
+ #include <soc/io_mux_reg.h>
+ #include <soc/system_reg.h>
+#endif
 
 namespace m5gfx
 {
 namespace board_detect
 {
+#if defined (M5GFX_HAS_S3_DEDICATED_GPIO_RELEASE_PROBE)
+  static inline std::uint32_t dedicated_release_read_in()
+  {
+#if defined (M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL)
+    return cpu_ll_read_dedic_gpio_in();
+#else
+    return dedic_gpio_cpu_ll_read_in();
+#endif
+  }
+
+  static inline void dedicated_release_write_mask(std::uint32_t mask, std::uint32_t value)
+  {
+#if defined (M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL)
+    cpu_ll_write_dedic_gpio_mask(mask, value);
+#else
+    dedic_gpio_cpu_ll_write_mask(mask, value);
+#endif
+  }
+
+  static void dedicated_release_channel_masks(
+    dedic_gpio_bundle_handle_t bundle, std::uint8_t pin_count,
+    std::uint32_t* in_mask, std::uint32_t* out_mask,
+    esp_err_t* in_error, esp_err_t* out_error)
+  {
+#if defined (M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL)
+    *in_error = dedic_gpio_get_in_mask(bundle, in_mask);
+    *out_error = dedic_gpio_get_out_mask(bundle, out_mask);
+#else
+    std::uint32_t in_offset = 0;
+    std::uint32_t out_offset = 0;
+    *in_error = dedic_gpio_get_in_offset(bundle, &in_offset);
+    *out_error = dedic_gpio_get_out_offset(bundle, &out_offset);
+    const std::uint32_t channel_mask = (1u << pin_count) - 1u;
+    *in_mask = channel_mask << in_offset;
+    *out_mask = channel_mask << out_offset;
+#endif
+  }
+
+  static inline int dedicated_release_core_id()
+  {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    return esp_cpu_get_core_id();
+#else
+    return xPortGetCoreID();
+#endif
+  }
+
+  static inline std::uint32_t dedicated_release_cycle_count()
+  {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    return esp_cpu_get_cycle_count();
+#else
+    return esp_cpu_get_ccount();
+#endif
+  }
+
+  static inline int dedicated_release_task_core()
+  {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+    return xTaskGetCoreID(nullptr);
+#else
+    return xTaskGetAffinity(nullptr);
+#endif
+  }
+
+  static bool delete_dedicated_release_bundle(dedic_gpio_bundle_handle_t bundle)
+  {
+    const esp_err_t error = dedic_gpio_del_bundle(bundle);
+    if (error != ESP_OK)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO bundle cleanup failed (%d)", int(error));
+      return false;
+    }
+    return true;
+  }
+#endif
+
   static void restore_if_changed(lgfx::gpio::pin_backup_t& saved)
   {
     // restore() briefly disables output driving. Skip it when every saved
@@ -479,6 +584,211 @@ namespace board_detect
     return result;
   }
 
+  dedicated_release_result_t probe_dedicated_pin_release(
+    probe_ctx_t& ctx, const std::int8_t* pins, std::uint8_t pin_count,
+    std::uint16_t reads, std::uint8_t samples, std::uint32_t settle_us)
+  {
+    dedicated_release_result_t result;
+    result.pin_count = pin_count;
+    result.requested_samples = samples;
+    result.reads = reads;
+    for (auto& value : result.median_first_high) { value = dedicated_release_no_high; }
+#if defined (M5GFX_HAS_S3_DEDICATED_GPIO_RELEASE_PROBE)
+    if (ctx.transaction == nullptr || pins == nullptr || pin_count == 0
+     || pin_count > max_dedicated_release_pins || reads == 0
+     || reads > max_dedicated_release_reads || samples == 0
+     || samples > max_dedicated_release_samples || settle_us == 0)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe has invalid parameters");
+      return result;
+    }
+    const int pinned_core = dedicated_release_task_core();
+    if (pinned_core == static_cast<int>(tskNO_AFFINITY)
+     || dedicated_release_core_id() != pinned_core)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe requires a core-pinned task");
+      return result;
+    }
+    // The S3 dedicated-GPIO clock/reset bit is shared by both CPU cores.
+    // IDF 4.4-5.3 reaches it through periph_module's reference count, while
+    // IDF 5.5+ manipulates it directly, making this preflight check necessary
+    // to avoid resetting or stopping another live bundle. The check and
+    // new_bundle are not atomic: applications that initialize dedicated GPIO
+    // concurrently on another core during this brief M5.begin probe are not
+    // supported.
+    if (REG_GET_BIT(SYSTEM_CPU_PERI_CLK_EN_REG, SYSTEM_CLK_EN_DEDICATED_GPIO))
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO in use; skipping release probe");
+      return result;
+    }
+    int bundle_pins[max_dedicated_release_pins];
+    for (std::uint8_t index = 0; index < pin_count; ++index)
+    {
+      const int pin = pins[index];
+      if (pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin))
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe has invalid pin (%d)", pin);
+        return result;
+      }
+      bundle_pins[index] = pin;
+    }
+    for (std::uint8_t index = 0; index < pin_count; ++index)
+    {
+      const int pin = bundle_pins[index];
+      // input_pullup retains output-enable but sets OD with a High latch, so
+      // the pad is Hi-Z. Prepare the weakest drive before new_bundle connects
+      // its active output route to avoid a transient push-pull/strong drive.
+      lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
+      const auto io_mux = GPIO_PIN_MUX_REG[pin];
+      REG_WRITE(io_mux, (REG_READ(io_mux) & ~(FUN_PU | FUN_PD | FUN_DRV_M)) | FUN_PU);
+      gpio_ll_od_enable(&GPIO, static_cast<gpio_num_t>(pin));
+    }
+
+    dedic_gpio_bundle_handle_t bundle = nullptr;
+    dedic_gpio_bundle_config_t config = {};
+    config.gpio_array = bundle_pins;
+    config.array_size = pin_count;
+    config.flags.in_en = 1;
+    config.flags.out_en = 1;
+    const int creation_core = dedicated_release_core_id();
+    if (creation_core != pinned_core)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated before bundle creation");
+      ctx.transaction->restore_start(pins, pin_count);
+      return result;
+    }
+    const esp_err_t bundle_error = dedic_gpio_new_bundle(&config, &bundle);
+    if (bundle_error != ESP_OK)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO bundle creation failed (%d)", int(bundle_error));
+      ctx.transaction->restore_start(pins, pin_count);
+      return result;
+    }
+    if (dedicated_release_core_id() != pinned_core)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated after bundle creation");
+      delete_dedicated_release_bundle(bundle);
+      ctx.transaction->restore_start(pins, pin_count);
+      return result;
+    }
+    std::uint32_t input_mask = 0;
+    std::uint32_t output_mask = 0;
+    esp_err_t input_mask_error = ESP_OK;
+    esp_err_t output_mask_error = ESP_OK;
+    dedicated_release_channel_masks(bundle, pin_count, &input_mask, &output_mask,
+                                    &input_mask_error, &output_mask_error);
+    if (input_mask_error != ESP_OK || output_mask_error != ESP_OK)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO channel lookup failed (in=%d out=%d)",
+               int(input_mask_error), int(output_mask_error));
+      delete_dedicated_release_bundle(bundle);
+      ctx.transaction->restore_start(pins, pin_count);
+      return result;
+    }
+    const std::uint32_t channel_mask = (1u << pin_count) - 1u;
+    const std::uint32_t input_first_bit = input_mask & (~input_mask + 1u);
+    if (input_first_bit == 0 || input_mask != input_first_bit * channel_mask
+     || output_mask == 0)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO channel allocation is not contiguous");
+      delete_dedicated_release_bundle(bundle);
+      ctx.transaction->restore_start(pins, pin_count);
+      return result;
+    }
+    static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    const auto measure = [&](std::uint16_t* first_high, std::uint32_t* cycles)
+    {
+      volatile std::uint32_t raw[max_dedicated_release_reads];
+      taskENTER_CRITICAL(&mux);
+      // A dedicated bundle belongs to its creation core. Check immediately
+      // after scheduling is stopped and reject the measurement if it migrated.
+      if (dedicated_release_core_id() != creation_core)
+      {
+        taskEXIT_CRITICAL(&mux);
+        return false;
+      }
+      dedicated_release_write_mask(output_mask, 0);
+      lgfx::delayMicroseconds(settle_us);
+      const std::uint32_t started = dedicated_release_cycle_count();
+      dedicated_release_write_mask(output_mask, output_mask);
+      for (std::uint16_t read = 0; read < reads; ++read)
+      { raw[read] = dedicated_release_read_in(); }
+      const std::uint32_t stopped = dedicated_release_cycle_count();
+      taskEXIT_CRITICAL(&mux);
+      *cycles = stopped - started;
+      for (std::uint8_t index = 0; index < pin_count; ++index)
+      {
+        first_high[index] = dedicated_release_no_high;
+        const std::uint32_t bit = input_first_bit << index;
+        for (std::uint16_t read = 0; read < reads; ++read)
+        {
+          if (raw[read] & bit) { first_high[index] = read; break; }
+        }
+      }
+      return true;
+    };
+
+    bool complete = true;
+    std::uint16_t discarded[max_dedicated_release_pins];
+    std::uint32_t cycles = 0;
+    complete = measure(discarded, &cycles);  // Discard the first, cache-warming pass.
+    std::uint16_t measured[max_dedicated_release_pins][max_dedicated_release_samples];
+    for (std::uint8_t sample = 0; complete && sample < samples; ++sample)
+    {
+      std::uint16_t current[max_dedicated_release_pins];
+      complete = measure(current, &cycles);
+      if (!complete) { break; }
+      result.total_cycles += cycles;
+      for (std::uint8_t index = 0; index < pin_count; ++index)
+      { measured[index][sample] = current[index]; }
+    }
+    if (complete)
+    {
+      result.cpu_hz = static_cast<std::uint32_t>(esp_clk_cpu_freq());
+      result.available = result.cpu_hz != 0 && result.total_cycles != 0;
+      if (result.cpu_hz == 0)
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe CPU frequency is unavailable");
+      }
+      else if (result.total_cycles == 0)
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe cycle counter did not advance");
+      }
+      std::uint8_t missing_transitions = 0;
+      for (std::uint8_t index = 0; index < pin_count; ++index)
+      {
+        result.median_first_high[index] = median_dedicated_release_samples(
+          measured[index], samples, reads, &result.valid_samples[index]);
+        missing_transitions += result.valid_samples[index] != samples;
+      }
+      if (missing_transitions != 0)
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO release transition missing on %u/%u pins",
+                 unsigned(missing_transitions), unsigned(pin_count));
+      }
+    }
+    else
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated during capture");
+    }
+
+    if (!delete_dedicated_release_bundle(bundle)) { result.available = false; }
+    // del_bundle pin cleanup differs by IDF version (4.4/5.2/5.3 leave the
+    // pads alone; newer versions disable output), and out_sel is not restored.
+    // Dedicated input routing is peripheral-side. In every version,
+    // pin_backup_t::restore_start restores out_sel, GPIO_PINn, output-enable,
+    // latch, and the complete IO_MUX register (including temporary FUN_DRV).
+    ctx.transaction->restore_start(pins, pin_count);
+    return result;
+#else
+    ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO release probe is unavailable in this SDK");
+    (void)ctx;
+    (void)pins;
+    (void)settle_us;
+    return result;
+#endif
+  }
+
   void soft_spi_t::init()
   {
     lgfx::gpio_lo(pin_sclk_);
@@ -778,9 +1088,26 @@ namespace board_detect
     // Wake-up polling and every PMIC transaction share one retry window so a
     // partially responsive controller cannot multiply the configured delay.
     startup_detail::retry_budget_t retry_budget(power.wake_poll_ms);
-    const auto* variant = power.variant_confirmed && power.variant_count == 1
-                        ? &power.variants[0]
-                        : startup_detail::read_variant(power, i2c_port, retry_budget);
+    const pmic_variant_t* variant = nullptr;
+    if (power.variant_confirmed)
+    {
+      // The detector has already established the controller identity. Select
+      // the branch only from recorded option bits; operation lists themselves
+      // remain linear and contain no hardware-dependent conditionals.
+      for (std::uint_fast8_t i = 0; i < power.variant_count; ++i)
+      {
+        const auto& candidate = power.variants[i];
+        if ((result.option & candidate.option_select_mask) == candidate.option_select_value)
+        {
+          if (variant != nullptr) { return false; }
+          variant = &candidate;
+        }
+      }
+    }
+    else
+    {
+      variant = startup_detail::read_variant(power, i2c_port, retry_budget);
+    }
     if (variant == nullptr) { return false; }
     std::uint8_t power_state = variant->power_state.mask;
     if (variant->power_state.mask
@@ -802,6 +1129,8 @@ namespace board_detect
     if (power_result.status != ops::op_status_t::ok)
     {
       if (!retain_confirmed_board) { return false; }
+      // This flag is set-only and has the same lifetime as prepared_power.
+      result.prepared |= prepared_power_failed;
       // Detection has already established the board identity. Power/IOE writes
       // are post-identification setup, so a partial hardware failure must not
       // turn the confirmed board into a different model; stop the list, warn,
@@ -895,6 +1224,10 @@ namespace board_detect
                  || (desc.power.devices != nullptr && desc.power.device_count != 0))
                 && !(has_variants && desc.power.hold_pin >= 0)
                 && !(desc.reset.kind == reset_kind_t::i2c_regs && !has_variants)
+                // A confirmed multi-variant family cannot safely choose an I2C
+                // reset list without repeating the variant-identification read.
+                && !(desc.power.variant_confirmed && desc.power.variant_count > 1
+                  && desc.reset.kind == reset_kind_t::i2c_regs)
                 && !((has_variants || desc.reset.kind == reset_kind_t::i2c_regs)
                      && (desc.internal_i2c.sda < 0 || desc.internal_i2c.scl < 0))
                 && !(desc.reset.kind == reset_kind_t::custom && desc.reset.custom == nullptr)
@@ -946,6 +1279,7 @@ namespace board_detect
              && list_valid(variant.restore_registers)
              && variant_device_valid(desc.power, variant)
              && variant.restore_registers.size <= max_pmic_restore_registers
+             && (variant.option_select_value & ~variant.option_select_mask) == 0
              && (desc.reset.kind != reset_kind_t::i2c_regs
                  || (variant.reset_assert.size != 0 && variant.reset_release.size != 0));
       }
@@ -1179,6 +1513,7 @@ namespace board_detect
       return false;
     }
     if (!startup_detail::description_valid(desc)) { return false; }
+    const board_desc_t* current = &desc;
     if (!(result.prepared & prepared_power))
     {
       if (desc.power.variants != nullptr)
@@ -1189,50 +1524,72 @@ namespace board_detect
       }
       else if (!startup_detail::prepare_power(desc, result, ctx.i2c_port_probe, true)) { return false; }
     }
-    if (!startup_detail::prepare_sd_spi(desc, result, ctx)) { return false; }
+    if (!(result.prepared & prepared_refine) && result.refine != nullptr)
+    {
+      if (result.prepared & prepared_power_failed)
+      {
+        ESP_LOGW("board_detect",
+                 "member refinement skipped after retained power_on failure; board=%u",
+                 static_cast<unsigned>(result.def->id));
+      }
+      else
+      {
+        if (!result.refine(result, ctx)) { return false; }
+        if (result.desc == nullptr || result.def != &result.desc->def
+         || result.def->id == board_id_unknown
+         || !startup_detail::description_valid(*result.desc)) { return false; }
+        current = result.desc;
+      }
+      result.prepared |= prepared_refine;
+    }
+    else if (result.desc != nullptr)
+    {
+      current = result.desc;
+    }
+    if (!startup_detail::prepare_sd_spi(*current, result, ctx)) { return false; }
     const bool reset_was_prepared = result.prepared & prepared_reset;
     if (!reset_was_prepared)
     {
-      if (desc.reset.kind == reset_kind_t::i2c_regs)
+      if (current->reset.kind == reset_kind_t::i2c_regs)
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
-        if (!i2c.opened || !prepare_reset(desc, result, ctx, i2c.port, nullptr, true))
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, current->internal_i2c);
+        if (!i2c.opened || !prepare_reset(*current, result, ctx, i2c.port, nullptr, true))
         {
           return false;
         }
       }
-      else if (!prepare_reset(desc, result, ctx, ctx.i2c_port_probe, nullptr, true))
+      else if (!prepare_reset(*current, result, ctx, ctx.i2c_port_probe, nullptr, true))
       {
         return false;
       }
     }
     if (!reset_was_prepared && (result.prepared & prepared_reset)
-     && desc.direct_reset_panel_reload_wait_ms)
+     && current->direct_reset_panel_reload_wait_ms)
     {
-      lgfx::delay(desc.direct_reset_panel_reload_wait_ms);
+      lgfx::delay(current->direct_reset_panel_reload_wait_ms);
     }
-    if (!startup_detail::hold_chip_selects(desc)) { return false; }
+    if (!startup_detail::hold_chip_selects(*current)) { return false; }
     // The internal port is taken over here and handed to later users. Opening it
     // on other pins before autodetect is a misuse; it is reported, not restored.
-    if (desc.internal_i2c.hw_port >= 0
-     && lgfx::i2c::isInitialized(desc.internal_i2c.hw_port))
+    if (current->internal_i2c.hw_port >= 0
+     && lgfx::i2c::isInitialized(current->internal_i2c.hw_port))
     {
-      const auto sda = lgfx::i2c::getPinSDA(desc.internal_i2c.hw_port);
-      const auto scl = lgfx::i2c::getPinSCL(desc.internal_i2c.hw_port);
+      const auto sda = lgfx::i2c::getPinSDA(current->internal_i2c.hw_port);
+      const auto scl = lgfx::i2c::getPinSCL(current->internal_i2c.hw_port);
       if (sda.has_value() && scl.has_value()
-       && (sda.value() != desc.internal_i2c.sda || scl.value() != desc.internal_i2c.scl))
+       && (sda.value() != current->internal_i2c.sda || scl.value() != current->internal_i2c.scl))
       {
         ESP_LOGW("board_detect", "I2C%d was open on SDA=%d SCL=%d; moving it to SDA=%d SCL=%d",
-                 desc.internal_i2c.hw_port, sda.value(), scl.value(),
-                 desc.internal_i2c.sda, desc.internal_i2c.scl);
+                 current->internal_i2c.hw_port, sda.value(), scl.value(),
+                 current->internal_i2c.sda, current->internal_i2c.scl);
       }
     }
-    if (desc.internal_i2c.hw_port >= 0
-     && !lgfx::i2c::init(desc.internal_i2c.hw_port, desc.internal_i2c.sda,
-                         desc.internal_i2c.scl).has_value())
+    if (current->internal_i2c.hw_port >= 0
+     && !lgfx::i2c::init(current->internal_i2c.hw_port, current->internal_i2c.sda,
+                         current->internal_i2c.scl).has_value())
     {
       ESP_LOGW("board_detect", "I2C%d could not be opened for SDA=%d SCL=%d",
-               desc.internal_i2c.hw_port, desc.internal_i2c.sda, desc.internal_i2c.scl);
+               current->internal_i2c.hw_port, current->internal_i2c.sda, current->internal_i2c.scl);
     }
     return true;
   }

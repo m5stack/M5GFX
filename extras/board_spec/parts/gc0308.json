@@ -1,0 +1,7 @@
+{
+  "id": "gc0308", "name": "GC0308", "kind": "camera", "vendor": "GalaxyCore",
+  "bus": { "kind": "i2c" }, "i2c_addr": ["0x21"],
+  "id_probe": { "reg": "0x00", "value": "0x9B" },
+  "signals": { "required": [], "optional": ["vsync", "href", "pclk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"] },
+  "pins": {}
+}

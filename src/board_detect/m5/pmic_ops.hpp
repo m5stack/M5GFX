@@ -26,6 +26,24 @@ namespace pmic_ops
     { pm1_i2c_freq, 0, pm1_i2c_addr, 0, 1, 0 },
     { pm1_i2c_freq, 0, ioe1_i2c_addr, 0, 1, 0 },
   };
+  static constexpr ops::i2c_device_t cores3_devices[] = {
+    { 400000, 0, 0x58, 0, 1, 0 },
+    { 400000, 0, 0x34, 0, 1, 0 },
+  };
+  static constexpr ops::op_t cores3_vbus_off_power_on[] = {
+    ops::i2c_bit_on(0, 0x02, 0x05), ops::i2c_bit_on(0, 0x03, 0x03),
+    ops::i2c_write8(0, 0x04, 0x18), ops::i2c_write8(0, 0x05, 0x0C),
+    ops::i2c_write8(0, 0x11, 0x10), ops::i2c_write8(0, 0x12, 0xFF),
+    ops::i2c_write8(0, 0x13, 0xFF), ops::i2c_write8(1, 0x90, 0xBF),
+    ops::i2c_write8(1, 0x94, 28), ops::i2c_write8(1, 0x95, 28),
+  };
+  static constexpr ops::op_t cores3_vbus_5v_power_on[] = {
+    ops::i2c_bit_on(0, 0x02, 0x07), ops::i2c_bit_on(0, 0x03, 0x83),
+    ops::i2c_write8(0, 0x04, 0x18), ops::i2c_write8(0, 0x05, 0x0C),
+    ops::i2c_write8(0, 0x11, 0x10), ops::i2c_write8(0, 0x12, 0xFF),
+    ops::i2c_write8(0, 0x13, 0xFF), ops::i2c_write8(1, 0x90, 0xBF),
+    ops::i2c_write8(1, 0x94, 28), ops::i2c_write8(1, 0x95, 28),
+  };
 
   static constexpr ops::op_t power192[] = {
     ops::i2c_masked8(0, 0x95, 0x84, 0x8D), ops::i2c_bit_on(0, 0x28, 0xF0),

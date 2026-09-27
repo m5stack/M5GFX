@@ -6,7 +6,8 @@
     "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
     "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
     "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
-    "panel_type": { "type": "string", "enum": ["tn", "ips"] }
+    "panel_type": { "type": "string", "enum": ["tn", "ips"] },
+    "three_wire": { "type": "boolean" }
   },
   "id_probe": { "reg": "0x04", "mask": "0xFF", "value": "0xE3" },
   "verified": { "id_probe": null }
