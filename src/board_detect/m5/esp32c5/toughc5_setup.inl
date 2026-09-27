@@ -60,7 +60,7 @@ namespace m5
     return construct_status(out.release_to(parts));
   }
 
-  construct_status_t setup_esp32c5(const board_result_t& result, display_parts_t* parts)
+  construct_status_t setup_detected_board(const board_result_t& result, display_parts_t* parts)
   {
     return setup_board(esp32c5_boards, result, parts);
   }

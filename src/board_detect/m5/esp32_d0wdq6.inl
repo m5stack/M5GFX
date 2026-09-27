@@ -61,7 +61,7 @@ namespace m5
     pins(wiring::station::hold),
     internal_i2c(wiring::station::internal_i2c_sda, wiring::station::internal_i2c_scl,
                  wiring::station::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::station::hold),
+    no_options(), pins(wiring::station::hold),
   };
   static constexpr board_desc_t desc_core2 = {
     { id(lgfx::board_M5StackCore2), "M5StackCore2", 0 },
@@ -76,7 +76,6 @@ namespace m5
     pins(wiring::core2::hold),
     internal_i2c(wiring::core2::internal_i2c_sda, wiring::core2::internal_i2c_scl,
                  wiring::core2::internal_i2c_port),
-    direct_reset_panel_reload_wait(110),
     options(generated_options::core2::names), pins(wiring::core2::hold),
   };
   static constexpr board_desc_t desc_tough = {
@@ -92,7 +91,6 @@ namespace m5
     pins(wiring::tough::hold),
     internal_i2c(wiring::tough::internal_i2c_sda, wiring::tough::internal_i2c_scl,
                  wiring::tough::internal_i2c_port),
-    direct_reset_panel_reload_wait(110),
     options(generated_options::tough::names), pins(wiring::tough::hold),
   };
   static constexpr board_desc_t desc_stack = {
@@ -105,8 +103,7 @@ namespace m5
                  wiring::stack::display_miso, wiring::stack::display_dc,
                  wiring::stack::display_cs, wiring::stack::display_rst,
                  wiring::stack::display_busy),
-    pins(wiring::stack::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::stack::names), pins(wiring::stack::hold),
+    pins(wiring::stack::hold), no_internal_i2c(), options(generated_options::stack::names), pins(wiring::stack::hold),
   };
   static constexpr board_desc_t desc_paper = {
     { id(lgfx::board_M5Paper), "M5Paper", 0 },
@@ -118,15 +115,9 @@ namespace m5
                  wiring::paper::display_miso, wiring::paper::display_dc,
                  wiring::paper::display_cs, wiring::paper::display_rst,
                  wiring::paper::display_busy),
-    pins(wiring::paper::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(), no_options(),
+    pins(wiring::paper::hold), no_internal_i2c(), no_options(),
     pins(wiring::paper::hold),
   };
-
-  static const board_def_t& board_station = desc_station.def;
-  static const board_def_t& board_core2 = desc_core2.def;
-  static const board_def_t& board_tough = desc_tough.def;
-  static const board_def_t& board_stack = desc_stack.def;
-  static const board_def_t& board_paper = desc_paper.def;
   // gpio_power() keeps its active-high meaning; only gpio_power_low() holds low.
   static_assert(desc_paper.power.hold_high, "Paper power hold stays active high");
 
@@ -157,31 +148,12 @@ namespace m5
       return true;
     }
 
-    void pin_level(int pin, bool high)
-    {
-      if (high) { lgfx::gpio_hi(pin); }
-      else      { lgfx::gpio_lo(pin); }
-      lgfx::pinMode(pin, lgfx::pin_mode_t::output);
-    }
-
-    void pin_reset(int pin, bool reset)
-    {
-      lgfx::gpio_hi(pin);
-      lgfx::pinMode(pin, lgfx::pin_mode_t::output);
-      lgfx::delay(1);
-      if (!reset) { return; }
-      lgfx::gpio_lo(pin);
-      lgfx::delay(2);
-      lgfx::gpio_hi(pin);
-      lgfx::delay(10);
-    }
-
     std::uint32_t read_panel_id(soft_spi_t& bus, int pin_cs,
                                 std::uint8_t cmd = panel_id_command,
                                 std::uint8_t dummy_bits = 1)
     {
       bus.beginTransaction();
-      pin_level(pin_cs, true);
+      startup_detail::pin_level(pin_cs, true);
       bus.writeCommand(0, 8);
       bus.wait();
       lgfx::gpio_lo(pin_cs);
@@ -400,7 +372,7 @@ namespace m5
                                     std::uint32_t* detected_option)
     {
       const auto& reset = desc.reset;
-      pin_level(reset.pin, true);
+      startup_detail::pin_level(reset.pin, true);
       lgfx::delay(1);
       lgfx::gpio_lo(reset.pin);
       lgfx::delay(reset.low_ms);
@@ -437,11 +409,6 @@ namespace m5
     { &desc_atompsram, construct_atompsram, "", nullptr },
   };
 
-  const board_desc_t* find_board_desc(board_id_t board)
-  {
-    return find_board_desc(esp32_d0wdq6_boards, board);
-  }
-
   class axp_family_detector_t final : public board_detector_t
   {
   public:
@@ -449,15 +416,6 @@ namespace m5
 
     bool signature(probe_ctx_t& ctx) const override
     {
-      if (!startup_detail::description_valid(desc_station)
-       || !startup_detail::description_valid(desc_core2)
-       || !startup_detail::description_valid(desc_tough)
-       || !startup_detail::gpio_valid(desc_station.display.dc)
-       || !startup_detail::gpio_valid(desc_core2.display.dc)
-       || !startup_detail::gpio_valid(desc_tough.display.dc))
-      {
-        return false;
-      }
       // Station deliberately uses the Core2 family's internal-I2C pins and
       // first PMIC address: its AXP192 ACK is the shared family signature.
       return probe_i2c_ack(ctx, desc_core2.internal_i2c.sda, desc_core2.internal_i2c.scl,
@@ -478,10 +436,8 @@ namespace m5
       startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
                                       desc_core2.internal_i2c);
       if (!i2c.opened) { return false; }
-      prepare_ctx_t prepare_ctx;
-      prepare_ctx.allow_reset = ctx.allow_reset;
+      prepare_ctx_t prepare_ctx = ctx;
       prepare_ctx.i2c_port_probe = i2c.port;
-      prepare_ctx.transaction = ctx.transaction;
       const auto* pmic = startup_detail::read_variant(desc_core2.power, i2c.port);
       if (pmic == nullptr) { return false; }
       ESP_LOGD("board_detect_m5", "power controller id=%02x", pmic->id_value);
@@ -489,7 +445,7 @@ namespace m5
       std::uint64_t sd_mask;
       if (!detail::sd_pull_mask(desc_core2, &sd_mask)) { return false; }
       // Even pull probing toggles shared clocks, so deselect the LCD first.
-      detail::pin_level(desc_core2.display.cs, true);
+      startup_detail::pin_level(desc_core2.display.cs, true);
       const auto sd_pulls = probe_pin_pulls(ctx, sd_mask);
       const bool sd_present = sd_pulls.pulldown_high == sd_mask
                            && sd_pulls.pullup_high == sd_mask;
@@ -498,7 +454,7 @@ namespace m5
       {
         // This exceptional pre-power transition protects the Station probe on
         // powered Core2 revisions. Unpowered cards transition after PMIC power.
-        detail::pin_level(desc_core2.sd.sd_cs, true);
+        startup_detail::pin_level(desc_core2.sd.sd_cs, true);
         board_result_t sd_result;
         sd_result.assign(&desc_core2);
         if (!startup_detail::prepare_sd_spi(desc_core2, sd_result, prepare_ctx))
@@ -588,9 +544,9 @@ namespace m5
         return core_first && try_station();
       };
       if (!startup_detail::prepare_power(desc_core2, *result, i2c.port)) { return restore_and_fail(); }
-      detail::pin_level(desc_core2.sd.sd_cs, true);
+      startup_detail::pin_level(desc_core2.sd.sd_cs, true);
       if (!startup_detail::prepare_sd_spi(desc_core2, *result, prepare_ctx)) { return restore_and_fail(); }
-      if (!startup_detail::hold_chip_selects(desc_core2)) { return restore_and_fail(); }
+      startup_detail::hold_chip_selects(desc_core2);
 
       const auto& display = desc_core2.display;
       soft_spi_t bus(display.sclk, display.mosi, display.mosi, display.dc);
@@ -673,7 +629,7 @@ namespace m5
   };
 
   const board_def_t* const axp_family_detector_t::members_[] = {
-    &board_station, &board_core2, &board_tough, nullptr
+    &desc_station.def, &desc_core2.def, &desc_tough.def, nullptr
   };
 
   class stack_family_detector_t final : public board_detector_t
@@ -688,13 +644,13 @@ namespace m5
       std::uint64_t sd_mask;
       if (!detail::sd_pull_mask(desc_stack, &sd_mask) || sd_mask == 0) { return false; }
       auto& values = ctx.detector_workspace.values;
-      detail::pin_level(desc_stack.display.cs, true);
+      startup_detail::pin_level(desc_stack.display.cs, true);
       const auto pulls = probe_pin_pulls(ctx, sd_mask);
       values[0] = pulls.pulldown_high;
       values[1] = pulls.pullup_high;
       ctx.transaction->restore_start(desc_stack.display.cs);
       const bool pull_match = values[0] == sd_mask && values[1] == sd_mask;
-      const bool bypassed = !pull_match && (ctx.final_attempt || ctx.hint == board_stack.id);
+      const bool bypassed = !pull_match && (ctx.final_attempt || ctx.hint == desc_stack.def.id);
       values[2] = (pull_match ? 1u : 0u) | (bypassed ? 2u : 0u);
       if (!pull_match)
       {
@@ -714,23 +670,20 @@ namespace m5
        || !startup_detail::gpio_valid(desc_stack.display.dc)) { return false; }
       *result = {};
       result->assign(&desc_stack);
-      prepare_ctx_t prepare_ctx;
-      prepare_ctx.allow_reset = ctx.allow_reset;
-      prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
-      prepare_ctx.transaction = ctx.transaction;
+      const prepare_ctx_t& prepare_ctx = ctx;
       const std::int8_t signals[] = {
         desc_stack.display.sclk, desc_stack.display.miso,
         desc_stack.display.mosi, desc_stack.display.dc
       };
       // Both devices are deselected before the first shared-wire operation.
-      detail::pin_level(desc_stack.sd.sd_cs, true);
-      detail::pin_level(desc_stack.display.cs, true);
+      startup_detail::pin_level(desc_stack.sd.sd_cs, true);
+      startup_detail::pin_level(desc_stack.display.cs, true);
       if (!startup_detail::prepare_power(desc_stack, *result, ctx.i2c_port_probe)
        || !startup_detail::prepare_sd_spi(desc_stack, *result, prepare_ctx)) { return false; }
-      detail::pin_level(desc_stack.reset.pin, true);
+      startup_detail::pin_level(desc_stack.reset.pin, true);
       if (!prepare_reset(desc_stack, *result, prepare_ctx, ctx.i2c_port_probe, &result->option))
       { return false; }
-      if (!startup_detail::hold_chip_selects(desc_stack)) { return false; }
+      startup_detail::hold_chip_selects(desc_stack);
       const auto& display = desc_stack.display;
       const auto panel_id = soft_spi_read32(
         ctx, display.sclk, display.mosi, display.mosi, display.dc, display.cs,
@@ -755,7 +708,7 @@ namespace m5
     static const board_def_t* const members_[];
   };
 
-  const board_def_t* const stack_family_detector_t::members_[] = { &board_stack, nullptr };
+  const board_def_t* const stack_family_detector_t::members_[] = { &desc_stack.def, nullptr };
 
   class paper_family_detector_t final : public board_detector_t
   {
@@ -768,7 +721,7 @@ namespace m5
        || !startup_detail::gpio_valid(desc_paper.display.busy)) { return false; }
       // This family contract keeps the mandatory reset from stage 1 through
       // stage 2, where prepared_reset records that it already completed.
-      detail::pin_reset(desc_paper.reset.pin, true);
+      startup_detail::pin_reset(desc_paper.reset, true);
       lgfx::pinMode(desc_paper.display.busy, lgfx::pin_mode_t::input_pullup);
       const bool matched = !lgfx::gpio_in(desc_paper.display.busy);
       ctx.transaction->restore_start(desc_paper.display.busy);
@@ -793,10 +746,7 @@ namespace m5
         desc_paper.display.mosi, desc_paper.display.miso,
         desc_paper.display.sclk, desc_paper.display.busy
       };
-      prepare_ctx_t prepare_ctx;
-      prepare_ctx.allow_reset = ctx.allow_reset;
-      prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
-      prepare_ctx.transaction = ctx.transaction;
+      const prepare_ctx_t& prepare_ctx = ctx;
       auto restore_and_fail = [&]() -> bool
       {
         ctx.transaction->restore_start(pins);
@@ -809,7 +759,7 @@ namespace m5
       if (!startup_detail::prepare_power(desc_paper, *result, ctx.i2c_port_probe)
        || !startup_detail::prepare_sd_spi(desc_paper, *result, prepare_ctx))
       { return restore_and_fail(); }
-      if (!startup_detail::hold_chip_selects(desc_paper)) { return restore_and_fail(); }
+      startup_detail::hold_chip_selects(desc_paper);
       const auto& display = desc_paper.display;
       lgfx::pinMode(display.busy, lgfx::pin_mode_t::input);
 
@@ -855,7 +805,7 @@ namespace m5
     static const board_def_t* const members_[];
   };
 
-  const board_def_t* const paper_family_detector_t::members_[] = { &board_paper, nullptr };
+  const board_def_t* const paper_family_detector_t::members_[] = { &desc_paper.def, nullptr };
 
   static const axp_family_detector_t axp_family_detector;
   static const stack_family_detector_t stack_family_detector;
@@ -867,11 +817,6 @@ namespace m5
     &paper_family_detector,
     nullptr,
   };
-
-  board_result_t detect_board_family(board_id_t board, probe_ctx_t& ctx)
-  {
-    return detect_board_family(esp32_d0wdq6_detectors, board, ctx);
-  }
 
   success_log_t success_log(const board_result_t& result)
   {

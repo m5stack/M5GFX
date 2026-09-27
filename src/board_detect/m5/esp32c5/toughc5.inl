@@ -32,9 +32,8 @@
                  wiring::toughc5::display_busy),
     pins(toughc5_hold),
     internal_i2c(toughc5_detail::sda, toughc5_detail::scl, toughc5_detail::i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(toughc5_hold),
+    no_options(), pins(toughc5_hold),
   };
-  static const board_def_t& board_toughc5 = desc_toughc5.def;
 
   class toughc5_detector_t final : public board_detector_t
   {
@@ -80,7 +79,7 @@
   private:
     static const board_def_t* const members_[2];
   };
-  const board_def_t* const toughc5_detector_t::members_[2] = { &board_toughc5, nullptr };
+  const board_def_t* const toughc5_detector_t::members_[2] = { &desc_toughc5.def, nullptr };
   static const toughc5_detector_t toughc5_detector;
   static const board_detector_t* const esp32c5_detectors[] = { &toughc5_detector, nullptr };
 
@@ -88,5 +87,4 @@
   static const board_entry_t esp32c5_boards[] = {
     { &desc_toughc5, construct_toughc5, "board_M5ToughC5", nullptr },
   };
-  const board_desc_t* find_board_desc(board_id_t board) { return find_board_desc(esp32c5_boards, board); }
   success_log_t success_log(const board_result_t& result) { return success_log(esp32c5_boards, result); }

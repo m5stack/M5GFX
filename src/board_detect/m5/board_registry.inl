@@ -30,19 +30,6 @@ namespace m5
   };
 
   template <std::size_t BoardCount>
-  const board_desc_t* find_board_desc(const board_entry_t (&boards)[BoardCount],
-                                      board_id_t board)
-  {
-    for (const auto& entry : boards)
-    {
-      if (entry.desc->def.id == board) { return entry.desc; }
-    }
-    ESP_LOGD("board_detect_m5", "board=%u is not available on the new detection path",
-             static_cast<unsigned>(board));
-    return nullptr;
-  }
-
-  template <std::size_t BoardCount>
   success_log_t success_log(const board_entry_t (&boards)[BoardCount],
                             const board_result_t& result)
   {
@@ -57,28 +44,6 @@ namespace m5
       }
     }
     return { result.def == nullptr ? "unknown" : result.def->name, "" };
-  }
-
-  inline bool prepare(board_result_t& result, const prepare_ctx_t& ctx)
-  {
-    if (result.desc == nullptr || result.def != &result.desc->def
-     || result.def->id == board_id_unknown) { return false; }
-    return board_detect::prepare(*result.desc, result, ctx);
-  }
-
-  template <std::size_t DetectorCount>
-  board_result_t detect_board_family(
-    const board_detector_t* const (&detectors)[DetectorCount], board_id_t board,
-    probe_ctx_t& ctx)
-  {
-    for (auto detector : detectors)
-    {
-      if (detector == nullptr) { break; }
-      if (!detector->has_member(board)) { continue; }
-      const board_detector_t* const family[] = { detector, nullptr };
-      return detect_board(family, board, ctx);
-    }
-    return {};
   }
 
   template <std::size_t BoardCount>

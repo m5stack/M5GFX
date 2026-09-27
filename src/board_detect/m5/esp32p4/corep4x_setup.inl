@@ -56,7 +56,7 @@ namespace m5
 #endif
   }
 
-  construct_status_t setup_esp32p4(const board_result_t& result, display_parts_t* parts)
+  construct_status_t setup_detected_board(const board_result_t& result, display_parts_t* parts)
   {
     return setup_board(esp32p4_boards, result, parts);
   }

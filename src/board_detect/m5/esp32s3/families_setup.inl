@@ -639,7 +639,7 @@ namespace m5
 #endif
   }
 
-  construct_status_t setup_esp32s3(const board_result_t& result, display_parts_t* parts)
+  construct_status_t setup_detected_board(const board_result_t& result, display_parts_t* parts)
   {
     return setup_board(esp32s3_boards, result, parts);
   }

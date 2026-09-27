@@ -38,26 +38,23 @@
                  wiring::cores3::display_busy),
     pins(wiring::cores3::hold),
     internal_i2c(cores3_detail::sda, cores3_detail::scl, wiring::cores3::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), options(generated_options::cores3::names),
+    options(generated_options::cores3::names),
     pins(wiring::cores3::hold),
   };
   static constexpr board_desc_t desc_cores3se = {
     { id(lgfx::board_M5StackCoreS3SE), "M5StackCoreS3SE", 0 },
     desc_cores3.power, desc_cores3.reset, desc_cores3.sd, desc_cores3.display,
     desc_cores3.hold_high_pins, desc_cores3.internal_i2c,
-    desc_cores3.direct_reset_panel_reload_wait_ms, desc_cores3.option_names,
+    desc_cores3.option_names,
     desc_cores3.op_gpio_pins,
   };
   static constexpr board_desc_t desc_stackchan = {
     { id(lgfx::board_M5StackChan), "M5StackChan", 0 },
     desc_cores3.power, desc_cores3.reset, desc_cores3.sd, desc_cores3.display,
     desc_cores3.hold_high_pins, desc_cores3.internal_i2c,
-    desc_cores3.direct_reset_panel_reload_wait_ms, desc_cores3.option_names,
+    desc_cores3.option_names,
     desc_cores3.op_gpio_pins,
   };
-  static const board_def_t& board_cores3 = desc_cores3.def;
-  static const board_def_t& board_cores3se = desc_cores3se.def;
-  static const board_def_t& board_stackchan = desc_stackchan.def;
   static_assert(wiring::cores3::display_miso == wiring::cores3::display_dc,
                 "CoreS3 deliberately shares LCD D/C with SPI MISO");
   static_assert(wiring::cores3::touches_opi_pins,
@@ -71,8 +68,7 @@
               std::uint8_t* value, std::uint32_t freq)
     {
       probe_ctx_t probe;
-      probe.i2c_port_probe = ctx.i2c_port_probe;
-      probe.transaction = ctx.transaction;
+      static_cast<prepare_ctx_t&>(probe) = ctx;
       return probe_i2c_read(probe, sda, scl, addr, reg, value, 1, freq, 0);
     }
 
@@ -100,8 +96,7 @@
         has_camera = false;
 #else
         probe_ctx_t probe;
-        probe.i2c_port_probe = ctx.i2c_port_probe;
-        probe.transaction = ctx.transaction;
+        static_cast<prepare_ctx_t&>(probe) = ctx;
         has_camera = camera_id(probe);
 #endif
         if (!has_camera)
@@ -231,9 +226,6 @@
     static const board_def_t* const members_[];
   };
   const board_def_t* const cores3_family_detector_t::members_[] = {
-    &board_cores3, &board_cores3se, &board_stackchan, nullptr,
+    &desc_cores3.def, &desc_cores3se.def, &desc_stackchan.def, nullptr,
   };
   static const cores3_family_detector_t cores3_family_detector;
-  static const board_detector_t* const esp32s3_detectors_cores3[] = {
-    &cores3_family_detector, nullptr,
-  };

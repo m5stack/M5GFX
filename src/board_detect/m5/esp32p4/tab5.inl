@@ -23,7 +23,7 @@ static constexpr board_desc_t desc_tab5 = {
                       pmic_ops::tab5_devices),
   no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
   internal_i2c(tab5_detail::sda, tab5_detail::scl, tab5_detail::i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), pins(tab5_detail::prepare_gpio_pins),
+  no_options(), pins(tab5_detail::prepare_gpio_pins),
   };
 static constexpr board_desc_t desc_tab5x = {
   { static_cast<board_id_t>(lgfx::board_M5Tab5X), "M5Tab5X", 0 },
@@ -31,10 +31,8 @@ static constexpr board_desc_t desc_tab5x = {
                       pmic_ops::tab5_devices),
   no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
   internal_i2c(tab5_detail::sda, tab5_detail::scl, tab5_detail::i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), pins(tab5_detail::prepare_gpio_pins),
+  no_options(), pins(tab5_detail::prepare_gpio_pins),
   };
-static const board_def_t& board_tab5 = desc_tab5.def;
-static const board_def_t& board_tab5x = desc_tab5x.def;
 
 class tab5_family_detector_t final : public board_detector_t
 {
@@ -64,7 +62,7 @@ private:
   static const board_def_t* const members_[3];
 };
 const board_def_t* const tab5_family_detector_t::members_[3] = {
-  &board_tab5, &board_tab5x, nullptr
+  &desc_tab5.def, &desc_tab5x.def, nullptr
 };
 static const tab5_family_detector_t tab5_family_detector;
 

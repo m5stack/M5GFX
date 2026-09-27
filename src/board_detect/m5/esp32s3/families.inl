@@ -29,10 +29,8 @@ namespace m5
                  wiring::atoms3::display_miso, wiring::atoms3::display_dc,
                  wiring::atoms3::display_cs, wiring::atoms3::display_rst,
                  wiring::atoms3::display_busy),
-    pins(wiring::atoms3::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::atoms3::names), pins(wiring::atoms3::hold),
+    pins(wiring::atoms3::hold), no_internal_i2c(), options(generated_options::atoms3::names), pins(wiring::atoms3::hold),
   };
-  static const board_def_t& board_atoms3 = desc_atoms3.def;
 
   static constexpr board_desc_t desc_atoms3r = {
     { id(lgfx::board_M5AtomS3R), "M5AtomS3R", 0 },
@@ -41,10 +39,8 @@ namespace m5
                  wiring::atoms3r::display_miso, wiring::atoms3r::display_dc,
                  wiring::atoms3r::display_cs, wiring::atoms3r::display_rst,
                  wiring::atoms3r::display_busy),
-    pins(wiring::atoms3r::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::atoms3r::names), pins(wiring::atoms3r::hold),
+    pins(wiring::atoms3r::hold), no_internal_i2c(), options(generated_options::atoms3r::names), pins(wiring::atoms3r::hold),
   };
-  static const board_def_t& board_atoms3r = desc_atoms3r.def;
 
   static constexpr board_desc_t desc_dinmeter = {
     { id(lgfx::board_M5DinMeter), "M5DinMeter", 0 },
@@ -53,10 +49,8 @@ namespace m5
                  wiring::dinmeter::display_miso, wiring::dinmeter::display_dc,
                  wiring::dinmeter::display_cs, wiring::dinmeter::display_rst,
                  wiring::dinmeter::display_busy),
-    pins(wiring::dinmeter::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    no_options(), pins(wiring::dinmeter::hold),
+    pins(wiring::dinmeter::hold), no_internal_i2c(), no_options(), pins(wiring::dinmeter::hold),
   };
-  static const board_def_t& board_dinmeter = desc_dinmeter.def;
 
   static constexpr board_desc_t desc_airq = {
     { id(lgfx::board_M5AirQ), "M5AirQ", 0 },
@@ -66,10 +60,8 @@ namespace m5
                  wiring::airq::display_miso, wiring::airq::display_dc,
                  wiring::airq::display_cs, wiring::airq::display_rst,
                  wiring::airq::display_busy),
-    pins(wiring::airq::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    options(generated_options::airq::names), pins(wiring::airq::hold),
+    pins(wiring::airq::hold), no_internal_i2c(), options(generated_options::airq::names), pins(wiring::airq::hold),
   };
-  static const board_def_t& board_airq = desc_airq.def;
   // gpio_power() keeps its active-high meaning; only gpio_power_low() holds low.
   static_assert(desc_airq.power.hold_high, "AirQ power hold stays active high");
 
@@ -83,10 +75,8 @@ namespace m5
                  wiring::stamplc::display_miso, wiring::stamplc::display_dc,
                  wiring::stamplc::display_cs, wiring::stamplc::display_rst,
                  wiring::stamplc::display_busy),
-    pins(wiring::stamplc::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    no_options(), pins(wiring::stamplc::hold),
+    pins(wiring::stamplc::hold), no_internal_i2c(), no_options(), pins(wiring::stamplc::hold),
   };
-  static const board_def_t& board_stamplc = desc_stamplc.def;
 
   static constexpr board_desc_t desc_dial = {
     { id(lgfx::board_M5Dial), "M5Dial", 0 },
@@ -98,9 +88,8 @@ namespace m5
     pins(wiring::dial::hold),
     internal_i2c(wiring::dial::internal_i2c_sda, wiring::dial::internal_i2c_scl,
                  wiring::dial::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::dial::hold),
+    no_options(), pins(wiring::dial::hold),
   };
-  static const board_def_t& board_dial = desc_dial.def;
 
   static constexpr board_desc_t desc_cardputer = {
     { id(lgfx::board_M5Cardputer), "M5Cardputer", 0 },
@@ -109,10 +98,8 @@ namespace m5
                  wiring::cardputer::display_miso, wiring::cardputer::display_dc,
                  wiring::cardputer::display_cs, wiring::cardputer::display_rst,
                  wiring::cardputer::display_busy),
-    pins(wiring::cardputer::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(),
-    no_options(), pins(wiring::cardputer::hold),
+    pins(wiring::cardputer::hold), no_internal_i2c(), no_options(), pins(wiring::cardputer::hold),
   };
-  static const board_def_t& board_cardputer = desc_cardputer.def;
 
   static constexpr board_desc_t desc_cardputer_adv = {
     { id(lgfx::board_M5CardputerADV), "M5CardputerADV", 0 },
@@ -122,9 +109,8 @@ namespace m5
                  wiring::cardputer_adv::display_cs, wiring::cardputer_adv::display_rst,
                  wiring::cardputer_adv::display_busy),
     pins(wiring::cardputer_adv::hold), no_internal_i2c(),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::cardputer_adv::hold),
+    no_options(), pins(wiring::cardputer_adv::hold),
   };
-  static const board_def_t& board_cardputer_adv = desc_cardputer_adv.def;
 
   static constexpr board_desc_t desc_vameter = {
     { id(lgfx::board_M5VAMeter), "M5VAMeter", 0 },
@@ -134,9 +120,8 @@ namespace m5
                  wiring::vameter::display_cs, wiring::vameter::display_rst,
                  wiring::vameter::display_busy),
     pins(wiring::vameter::hold), no_internal_i2c(),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::vameter::hold),
+    no_options(), pins(wiring::vameter::hold),
   };
-  static const board_def_t& board_vameter = desc_vameter.def;
 
   // Preserve the register order needed by future rollback support.
   static const std::uint8_t sticks3_restore_order[] = { 0x09, 0x11, 0x13, 0x10, 0x16 };
@@ -159,9 +144,8 @@ namespace m5
     pins(wiring::sticks3::hold),
     internal_i2c(wiring::sticks3::internal_i2c_sda, wiring::sticks3::internal_i2c_scl,
                  wiring::sticks3::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::sticks3::hold),
+    no_options(), pins(wiring::sticks3::hold),
   };
-  static const board_def_t& board_sticks3 = desc_sticks3.def;
 
   static const pmic_variant_t stopwatch_pmic_variants[] = {
     pmic_variant_ack_only(specs::stopwatch::pmic::i2c_addr,
@@ -194,9 +178,8 @@ namespace m5
     pins(wiring::stopwatch::hold),
     internal_i2c(wiring::stopwatch::internal_i2c_sda, wiring::stopwatch::internal_i2c_scl,
                  wiring::stopwatch::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::stopwatch::hold),
+    no_options(), pins(wiring::stopwatch::hold),
   };
-  static const board_def_t& board_stopwatch = desc_stopwatch.def;
   static constexpr board_desc_t desc_papermono = {
     { id(lgfx::board_M5PaperMono), "M5PaperMono", 0 },
     i2c_power_confirmed(specs::papermono::pmic::i2c_freq, papermono_pmic_variants,
@@ -209,9 +192,8 @@ namespace m5
     pins(wiring::papermono::hold),
     internal_i2c(wiring::papermono::internal_i2c_sda, wiring::papermono::internal_i2c_scl,
                  wiring::papermono::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::papermono::hold),
+    no_options(), pins(wiring::papermono::hold),
   };
-  static const board_def_t& board_papermono = desc_papermono.def;
 
   static const pmic_variant_t chaincaptain_pmic_variants[] = {
     pmic_variant_ack_only(specs::chaincaptain::pmic::i2c_addr,
@@ -255,9 +237,8 @@ namespace m5
     internal_i2c(wiring::chaincaptain::internal_i2c_sda,
                  wiring::chaincaptain::internal_i2c_scl,
                  wiring::chaincaptain::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::chaincaptain::hold),
+    no_options(), pins(wiring::chaincaptain::hold),
   };
-  static const board_def_t& board_chaincaptain = desc_chaincaptain.def;
   static constexpr board_desc_t desc_papercolor = {
     { id(lgfx::board_M5PaperColor), "M5PaperColor", 0 },
     i2c_power_confirmed(specs::papercolor::pmic::i2c_freq,
@@ -278,9 +259,8 @@ namespace m5
     internal_i2c(wiring::papercolor::internal_i2c_sda,
                  wiring::papercolor::internal_i2c_scl,
                  wiring::papercolor::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::papercolor::hold),
+    no_options(), pins(wiring::papercolor::hold),
   };
-  static const board_def_t& board_papercolor = desc_papercolor.def;
 
   // Paper family: a parallel EPD on the LCD peripheral, so the description
   // carries no SPI display pins. PaperS3 holds its power-off request line low
@@ -294,9 +274,8 @@ namespace m5
     no_display_pins(), no_pins(),
     internal_i2c(wiring::papers3::internal_i2c_sda, wiring::papers3::internal_i2c_scl,
                  wiring::papers3::internal_i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
+    no_options(), no_pins(),
   };
-  static const board_def_t& board_papers3 = desc_papers3.def;
   static const pmic_variant_t paperdiy_pmic_variants[] = {
     pmic_variant_ack_only(specs::paperdiy::pmic::i2c_addr, specs::paperdiy::pmic::id_reg,
                           ops::list(pmic_ops::paperdiy_power_on),
@@ -311,9 +290,8 @@ namespace m5
     // hw_port = -1: the legacy path released the probe port after the PM1
     // writes and never opened the hardware port (no touch on PaperDIY).
     internal_i2c(wiring::paperdiy::internal_i2c_sda, wiring::paperdiy::internal_i2c_scl, -1),
-    no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
+    no_options(), no_pins(),
   };
-  static const board_def_t& board_paperdiy = desc_paperdiy.def;
   static_assert(wiring::papers3::internal_i2c_sda == wiring::paperdiy::internal_i2c_sda
              && wiring::papers3::internal_i2c_scl == wiring::paperdiy::internal_i2c_scl,
                 "Paper family members share one internal I2C pin pair");
@@ -372,17 +350,10 @@ namespace m5
                         | (std::uint64_t(1) << (*desc)->internal_i2c.scl);
         auto pulls = probe_pin_pulls(ctx, mask);
         if (pulls.pulldown_high == mask) { return true; }
-        const auto sda_bit = std::uint64_t(1) << (*desc)->internal_i2c.sda;
-        const auto scl_bit = std::uint64_t(1) << (*desc)->internal_i2c.scl;
         // A reset may leave SDA held low even when there is no saved hint.
-        if ((pulls.pulldown_high & scl_bit) && !(pulls.pulldown_high & sda_bit))
-        {
-          release_held_sda((*desc)->internal_i2c.sda, (*desc)->internal_i2c.scl);
-          pulls = probe_pin_pulls(ctx, mask);
-          ctx.transaction->restore_start({ (*desc)->internal_i2c.sda,
-                                           (*desc)->internal_i2c.scl });
-          if (pulls.pulldown_high == mask) { return true; }
-        }
+        pulls = recover_held_sda_and_resample(
+          ctx, pulls, mask, (*desc)->internal_i2c.sda, (*desc)->internal_i2c.scl);
+        if (pulls.pulldown_high == mask) { return true; }
       }
       return false;
     }
@@ -537,15 +508,9 @@ namespace m5
       const auto mask = (std::uint64_t(1) << wiring::papers3::internal_i2c_sda)
                       | (std::uint64_t(1) << wiring::papers3::internal_i2c_scl);
       auto pulls = probe_pin_pulls(ctx, mask);
-      if ((pulls.pulldown_high & (std::uint64_t(1) << wiring::papers3::internal_i2c_scl))
-       && !(pulls.pulldown_high & (std::uint64_t(1) << wiring::papers3::internal_i2c_sda)))
-      {
-        release_held_sda(wiring::papers3::internal_i2c_sda,
-                         wiring::papers3::internal_i2c_scl);
-        pulls = probe_pin_pulls(ctx, mask);
-        ctx.transaction->restore_start({ wiring::papers3::internal_i2c_sda,
-                                         wiring::papers3::internal_i2c_scl });
-      }
+      pulls = recover_held_sda_and_resample(
+        ctx, pulls, mask, wiring::papers3::internal_i2c_sda,
+        wiring::papers3::internal_i2c_scl);
       return pulls.pulldown_high == mask;
     }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
@@ -576,10 +541,10 @@ namespace m5
         for (auto addr : gt911_addresses)
         {
           std::uint8_t product_id[4] = {};
-          if (probe_i2c_read16(ctx, wiring::papers3::internal_i2c_sda,
+          if (probe_i2c_read(ctx, wiring::papers3::internal_i2c_sda,
                                wiring::papers3::internal_i2c_scl, addr,
                                gt911_product_id_reg, product_id, sizeof(product_id),
-                               specs::papers3::touch::i2c_freq, 0)
+                               specs::papers3::touch::i2c_freq, 0, true)
            && product_id[0] == '9' && product_id[1] == '1'
            && product_id[2] == '1' && product_id[3] == 0)
           {
@@ -625,26 +590,13 @@ namespace m5
 
       // These pins also serve non-I2C variants. Recover a held SDA only when
       // SCL is already high; a low SCL must not add a clock-stretch wait.
-      if ((pulls.pulldown_high & vameter_mask) != vameter_mask
-       && (pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_scl))
-       && !(pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_sda)))
-      {
-        release_held_sda(wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
-                         wiring::cardputer::cardputer_subdivision::vameter_i2c_scl);
-        pulls = probe_pin_pulls(ctx, sense_mask);
-        ctx.transaction->restore_start({ wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
-                                         wiring::cardputer::cardputer_subdivision::vameter_i2c_scl });
-      }
-      if ((pulls.pulldown_high & adv_mask) != adv_mask
-       && (pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_scl))
-       && !(pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_sda)))
-      {
-        release_held_sda(wiring::cardputer_adv::internal_i2c_sda,
-                         wiring::cardputer_adv::internal_i2c_scl);
-        pulls = probe_pin_pulls(ctx, sense_mask);
-        ctx.transaction->restore_start({ wiring::cardputer_adv::internal_i2c_sda,
-                                         wiring::cardputer_adv::internal_i2c_scl });
-      }
+      pulls = recover_held_sda_and_resample(
+        ctx, pulls, sense_mask,
+        wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+        wiring::cardputer::cardputer_subdivision::vameter_i2c_scl);
+      pulls = recover_held_sda_and_resample(
+        ctx, pulls, sense_mask, wiring::cardputer_adv::internal_i2c_sda,
+        wiring::cardputer_adv::internal_i2c_scl);
 
       const board_desc_t* chosen = &desc_cardputer;
       if ((pulls.pulldown_high & vameter_mask) == vameter_mask
@@ -669,59 +621,50 @@ namespace m5
     static const board_def_t* const members_[];
   };
 #include "cores3.inl"
-  static const board_def_t* const spi_id_members[] = { &board_atoms3, &board_dinmeter, nullptr };
+  static const board_def_t* const spi_id_members[] = { &desc_atoms3.def, &desc_dinmeter.def, nullptr };
   static constexpr spi_id_member_t spi_id_member_descs[] = {
     { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]),
-      specs::atoms3::bus_three_wire, wiring::atoms3::touches_opi_pins, 0, false, false },
+      specs::atoms3::bus_three_wire, wiring::atoms3::touches_opi_pins, 0, false },
     { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
-      specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false, false },
+      specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false },
   };
   static const spi_id_detector_t spi_id_detector(
     spi_id_members, spi_id_member_descs,
     sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
-  static const board_detector_t* const esp32s3_detectors_spi_id[] = { &spi_id_detector, nullptr };
-  static const board_def_t* const dial_members[] = { &board_dial, nullptr };
+  static const board_def_t* const dial_members[] = { &desc_dial.def, nullptr };
   static constexpr spi_id_member_t dial_member_descs[] = {
     { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]),
-      specs::dial::bus_three_wire, wiring::dial::touches_opi_pins, 0, false, false },
+      specs::dial::bus_three_wire, wiring::dial::touches_opi_pins, 0, false },
   };
   static const spi_id_detector_t dial_detector(
     dial_members, dial_member_descs,
     sizeof(dial_member_descs) / sizeof(dial_member_descs[0]));
-  static const board_detector_t* const esp32s3_detectors_dial[] = { &dial_detector, nullptr };
-  static const board_def_t* const atoms3r_members[] = { &board_atoms3r, nullptr };
+  static const board_def_t* const atoms3r_members[] = { &desc_atoms3r.def, nullptr };
   static constexpr spi_id_member_t atoms3r_member_descs[] = {
     { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
-      specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false, false },
+      specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false },
   };
   static const spi_id_detector_t atoms3r_detector(
     atoms3r_members, atoms3r_member_descs,
     sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
-  static const board_detector_t* const esp32s3_detectors_atoms3r[] = { &atoms3r_detector, nullptr };
 
-  static const board_def_t* const airq_members[] = { &board_airq, nullptr };
+  static const board_def_t* const airq_members[] = { &desc_airq.def, nullptr };
   static constexpr spi_id_member_t airq_member_descs[] = {
     { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
-      specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0, false, false },
+      specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0, false },
   };
   static const spi_id_detector_t airq_detector(
     airq_members, airq_member_descs,
     sizeof(airq_member_descs) / sizeof(airq_member_descs[0]));
-  static const board_detector_t* const esp32s3_detectors_airq[] = {
-    &airq_detector, nullptr,
-  };
 
-  static const board_def_t* const stamplc_members[] = { &board_stamplc, nullptr };
+  static const board_def_t* const stamplc_members[] = { &desc_stamplc.def, nullptr };
   static constexpr spi_id_member_t stamplc_member_descs[] = {
     { &desc_stamplc, stamplc_probes, sizeof(stamplc_probes) / sizeof(stamplc_probes[0]),
-      specs::stamplc::bus_three_wire, wiring::stamplc::touches_opi_pins, 0, false, false },
+      specs::stamplc::bus_three_wire, wiring::stamplc::touches_opi_pins, 0, false },
   };
   static const spi_id_detector_t stamplc_detector(
     stamplc_members, stamplc_member_descs,
     sizeof(stamplc_member_descs) / sizeof(stamplc_member_descs[0]));
-  static const board_detector_t* const esp32s3_detectors_stamplc[] = {
-    &stamplc_detector, nullptr,
-  };
 
   // Shared-SD preparation must not add hardware steps to existing members.
   static_assert(desc_atoms3.sd.sd_cs < 0 && desc_dinmeter.sd.sd_cs < 0
@@ -729,41 +672,32 @@ namespace m5
                 "existing ESP32-S3 SPI ID members do not prepare shared SD");
 
   const board_def_t* const cardputer_family_detector_t::members_[] = {
-    &board_cardputer, &board_cardputer_adv, &board_vameter, nullptr,
+    &desc_cardputer.def, &desc_cardputer_adv.def, &desc_vameter.def, nullptr,
   };
   static const cardputer_family_detector_t cardputer_family_detector;
-  static const board_detector_t* const esp32s3_detectors_cardputer[] = {
-    &cardputer_family_detector, nullptr,
-  };
-  const board_def_t* const pmic_id_detector_t::members_[] = { &board_sticks3, nullptr };
+  const board_def_t* const pmic_id_detector_t::members_[] = { &desc_sticks3.def, nullptr };
   const board_desc_t* const pmic_id_detector_t::descriptions_[] = { &desc_sticks3, nullptr };
   static const pmic_id_detector_t pmic_id_detector;
-  static const board_detector_t* const esp32s3_detectors_pmic[] = { &pmic_id_detector, nullptr };
   const board_def_t* const pm1_family_detector_t::members_[] = {
-    &board_stopwatch, &board_papermono, nullptr,
+    &desc_stopwatch.def, &desc_papermono.def, nullptr,
   };
   static const pm1_family_detector_t pm1_family_detector;
-  static const board_detector_t* const esp32s3_detectors_pm1[] = {
-    &pm1_family_detector, nullptr,
-  };
   const board_def_t* const pm1_ext_family_detector_t::members_[] = {
-    &board_chaincaptain, &board_papercolor, nullptr,
+    &desc_chaincaptain.def, &desc_papercolor.def, nullptr,
   };
   static const pm1_ext_family_detector_t pm1_ext_family_detector;
-  static const board_detector_t* const esp32s3_detectors_pm1_ext[] = {
-    &pm1_ext_family_detector, nullptr,
-  };
   const board_def_t* const paper_family_detector_t::members_[] = {
-    &board_paperdiy, &board_papers3, nullptr,
+    &desc_paperdiy.def, &desc_papers3.def, nullptr,
   };
   static const paper_family_detector_t paper_family_detector;
-  static const board_detector_t* const esp32s3_detectors_paper[] = {
-    &paper_family_detector, nullptr,
+  // Detection order per package (QFN56 / LGA56).
+  static const board_detector_t* const esp32s3_detectors_qfn56[] = {
+    &cores3_family_detector, &dial_detector, &pm1_family_detector,
+    &pm1_ext_family_detector, &paper_family_detector, &spi_id_detector,
+    &cardputer_family_detector, &airq_detector, &stamplc_detector, nullptr,
   };
-  static const board_detector_t* const esp32s3_detectors[] = {
-    &cores3_family_detector, &dial_detector, &spi_id_detector, &cardputer_family_detector, &atoms3r_detector,
-    &pm1_family_detector, &pm1_ext_family_detector, &paper_family_detector,
-    &airq_detector, &stamplc_detector, &pmic_id_detector, nullptr,
+  static const board_detector_t* const esp32s3_detectors_lga56[] = {
+    &atoms3r_detector, &pmic_id_detector, nullptr,
   };
 
   construct_status_t construct_atoms3(const board_result_t& result, display_parts_t* parts);
@@ -815,16 +749,6 @@ namespace m5
     { &desc_papers3, construct_papers3, "board_M5PaperS3", nullptr },
     { &desc_paperdiy, construct_paperdiy, "board_M5PaperDIY", nullptr },
   };
-
-  const board_desc_t* find_board_desc(board_id_t board)
-  {
-    return find_board_desc(esp32s3_boards, board);
-  }
-
-  board_result_t detect_board_family(board_id_t board, probe_ctx_t& ctx)
-  {
-    return detect_board_family(esp32s3_detectors, board, ctx);
-  }
 
   success_log_t success_log(const board_result_t& result)
   {

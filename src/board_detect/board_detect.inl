@@ -265,7 +265,6 @@ namespace board_detect
   void detection_transaction_t::rollback()
   {
     if (!valid_ || committed_) { return; }
-    external_.rollback();
     buses_.rollback();
     gpio_.rollback();
   }
@@ -273,7 +272,6 @@ namespace board_detect
   void detection_transaction_t::commit()
   {
     if (!valid_ || committed_) { return; }
-    external_.commit();
     buses_.commit();
     committed_ = true;
   }
@@ -481,6 +479,21 @@ namespace board_detect
     return released;
   }
 
+  pin_pull_result_t recover_held_sda_and_resample(
+    probe_ctx_t& ctx, pin_pull_result_t pulls, std::uint64_t pin_mask,
+    int pin_sda, int pin_scl)
+  {
+    const auto high = pulls.pulldown_high;
+    if ((high & (std::uint64_t(1) << pin_scl))
+     && !(high & (std::uint64_t(1) << pin_sda)))
+    {
+      release_held_sda(pin_sda, pin_scl);
+      pulls = probe_pin_pulls(ctx, pin_mask);
+      ctx.transaction->restore_start({ pin_sda, pin_scl });
+    }
+    return pulls;
+  }
+
   bool probe_i2c_bus_present(probe_ctx_t& ctx, int pin_sda, int pin_scl)
   {
     const std::uint64_t sda_bit = std::uint64_t(1) << pin_sda;
@@ -565,28 +578,8 @@ namespace board_detect
   }
 
   bool probe_i2c_read(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
-                      std::uint8_t reg, std::uint8_t* data, std::size_t length,
-                      std::uint32_t freq, std::uint32_t poll_ms)
-  {
-    if (data == nullptr || length == 0 || addr < 0x08 || addr > 0x77) { return false; }
-    if (!lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value()) { return false; }
-    const auto started = lgfx::millis();
-    bool success = false;
-    do
-    {
-      success = !lgfx::i2c::readRegister(ctx.i2c_port_probe, addr, reg,
-                                         data, length, freq).has_error();
-      if (success) { break; }
-      lgfx::delay(1);
-    } while (lgfx::millis() - started < poll_ms);
-    lgfx::i2c::release(ctx.i2c_port_probe);
-    ctx.transaction->restore_start({ pin_sda, pin_scl });
-    return success;
-  }
-
-  bool probe_i2c_read16(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
-                        std::uint16_t reg, std::uint8_t* data, std::size_t length,
-                        std::uint32_t freq, std::uint32_t poll_ms)
+                      std::uint16_t reg, std::uint8_t* data, std::size_t length,
+                      std::uint32_t freq, std::uint32_t poll_ms, bool reg16)
   {
     if (data == nullptr || length == 0 || addr < 0x08 || addr > 0x77) { return false; }
     if (!lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value()) { return false; }
@@ -597,9 +590,9 @@ namespace board_detect
     bool success = false;
     do
     {
-      success = lgfx::i2c::transactionWriteRead(ctx.i2c_port_probe, addr, reg_bytes,
-                                                sizeof(reg_bytes), data, length,
-                                                freq).has_value();
+      success = lgfx::i2c::transactionWriteRead(
+        ctx.i2c_port_probe, addr, reg_bytes + !reg16, 1 + reg16,
+        data, length, freq).has_value();
       if (success) { break; }
       lgfx::delay(1);
     } while (lgfx::millis() - started < poll_ms);
@@ -1197,7 +1190,7 @@ namespace board_detect
       ESP_LOGW("board_detect",
                "power_on stopped after board confirmation: op=%u status=%u native=%d",
                static_cast<unsigned>(power_result.failed_index),
-               static_cast<unsigned>(power_result.status), power_result.native_error);
+               static_cast<unsigned>(power_result.status), 0);
     }
     if (power_was_off) { result.prepared &= ~prepared_sd_spi; }
     lgfx::delay(power_was_off || reset_was_low ? power.cold_wait_ms : power.warm_wait_ms);
@@ -1364,13 +1357,12 @@ namespace board_detect
       return valid;
     }
 
-    bool hold_chip_selects(const board_desc_t& desc)
+    void hold_chip_selects(const board_desc_t& desc)
     {
       for (std::size_t i = 0; i < desc.hold_high_pins.size; ++i)
       {
         pin_level(desc.hold_high_pins.data[i], true);
       }
-      return true;
     }
   }
 
@@ -1411,7 +1403,7 @@ namespace board_detect
                      "reset_release stopped after board confirmation: op=%u status=%u native=%d",
                      static_cast<unsigned>(release_result.failed_index),
                      static_cast<unsigned>(release_result.status),
-                     release_result.native_error);
+                     0);
           }
           lgfx::delay(reset.post_ms);
         }
@@ -1446,7 +1438,7 @@ namespace board_detect
         ESP_LOGW("board_detect",
                  "reset_assert stopped after board confirmation: op=%u status=%u native=%d",
                  static_cast<unsigned>(assert_result.failed_index),
-                 static_cast<unsigned>(assert_result.status), assert_result.native_error);
+                 static_cast<unsigned>(assert_result.status), 0);
       }
       if (ok || retain_confirmed_board)
       {
@@ -1462,7 +1454,7 @@ namespace board_detect
           ESP_LOGW("board_detect",
                    "reset_release stopped after board confirmation: op=%u status=%u native=%d",
                    static_cast<unsigned>(release_result.failed_index),
-                   static_cast<unsigned>(release_result.status), release_result.native_error);
+                   static_cast<unsigned>(release_result.status), 0);
         }
         if (ok || retain_confirmed_board) { lgfx::delay(reset.post_ms); }
       }
@@ -1485,8 +1477,7 @@ namespace board_detect
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
                     std::uint8_t slow_retry_half_us,
-                    bool legacy_zero_preamble,
-                    bool power_before_probe)
+                    bool legacy_zero_preamble)
   {
     if (probes == nullptr || probe_count == 0 || result == nullptr
      || !startup_detail::description_valid(desc)
@@ -1507,16 +1498,7 @@ namespace board_detect
     };
     board_result_t candidate;
     candidate.assign(&desc);
-    prepare_ctx_t prepare_ctx;
-    prepare_ctx.allow_reset = ctx.allow_reset;
-    prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
-    prepare_ctx.transaction = ctx.transaction;
-    if (power_before_probe
-     && !startup_detail::prepare_power(desc, candidate, ctx.i2c_port_probe))
-    {
-      restore_probe_pins();
-      return false;
-    }
+    const prepare_ctx_t& prepare_ctx = ctx;
     if (desc.sd.sd_cs >= 0)
     {
       // Keep both devices deselected while the shared SD bus is switched to
@@ -1596,18 +1578,16 @@ namespace board_detect
     bool touches_conditional_pins;
     std::uint8_t slow_retry_half_us;
     bool legacy_zero_preamble;
-    bool power_before_probe;
   };
 
   class spi_id_detector_t final : public board_detector_t
   {
   public:
     spi_id_detector_t(const board_def_t* const* members, const spi_id_member_t* members_desc,
-                      std::uint8_t member_count, bool try_others_after_hint = false,
-                      bool shared_id_read = false)
+                      std::uint8_t member_count, bool shared_id_read = false)
     : board_detector_t(members),
       members_desc_(members_desc), member_count_(member_count),
-      try_others_after_hint_(try_others_after_hint), shared_id_read_(shared_id_read) {}
+      shared_id_read_(shared_id_read) {}
     bool signature(probe_ctx_t&) const override { return true; }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
@@ -1619,14 +1599,12 @@ namespace board_detect
           const auto& member = members_desc_[index];
           if (member.desc->def.id != ctx.hint) { continue; }
           if (probe_member(ctx, member, result)) { return true; }
-          if (!try_others_after_hint_) { return false; }
-          break;
+          return false;
         }
       }
       for (std::uint8_t index = 0; index < member_count_; ++index)
       {
         const auto& member = members_desc_[index];
-        if (try_others_after_hint_ && member.desc->def.id == ctx.hint) { continue; }
         if (probe_member(ctx, member, result)) { return true; }
       }
       return false;
@@ -1648,10 +1626,7 @@ namespace board_detect
       };
       board_result_t candidate;
       candidate.assign(&desc);
-      prepare_ctx_t prepare_ctx;
-      prepare_ctx.allow_reset = ctx.allow_reset;
-      prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
-      prepare_ctx.transaction = ctx.transaction;
+      const prepare_ctx_t& prepare_ctx = ctx;
       if (!prepare_reset(desc, candidate, prepare_ctx, ctx.i2c_port_probe))
       {
         ctx.transaction->restore_start(pins);
@@ -1705,12 +1680,11 @@ namespace board_detect
       }
       return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result,
                           member.three_wire, member.slow_retry_half_us,
-                          member.legacy_zero_preamble, member.power_before_probe);
+                          member.legacy_zero_preamble);
     }
 
     const spi_id_member_t* members_desc_;
     std::uint8_t member_count_;
-    bool try_others_after_hint_;
     bool shared_id_read_;
   };
 
@@ -1776,12 +1750,7 @@ namespace board_detect
         return false;
       }
     }
-    if (!reset_was_prepared && (result.prepared & prepared_reset)
-     && current->direct_reset_panel_reload_wait_ms)
-    {
-      lgfx::delay(current->direct_reset_panel_reload_wait_ms);
-    }
-    if (!startup_detail::hold_chip_selects(*current)) { return false; }
+    startup_detail::hold_chip_selects(*current);
     // The internal port is taken over here and handed to later users. Opening it
     // on other pins before autodetect is a misuse; it is reported, not restored.
     if (current->internal_i2c.hw_port >= 0

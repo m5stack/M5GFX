@@ -37,7 +37,7 @@ static constexpr board_desc_t desc_unitc6l = {
   internal_i2c(wiring::unitc6l::internal_i2c_sda,
                wiring::unitc6l::internal_i2c_scl,
                c6_display_detail::i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::unitc6l::hold),
+  no_options(), pins(wiring::unitc6l::hold),
 };
 
 static constexpr board_desc_t desc_nesson1 = {
@@ -53,11 +53,8 @@ static constexpr board_desc_t desc_nesson1 = {
   pins(wiring::nesson1::hold),
   internal_i2c(c6_display_detail::sda, c6_display_detail::scl,
                c6_display_detail::i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
+  no_options(), no_pins(),
 };
-
-static const board_def_t& board_unitc6l = desc_unitc6l.def;
-static const board_def_t& board_nesson1 = desc_nesson1.def;
 
 class c6_display_family_detector_t final : public board_detector_t
 {
@@ -110,7 +107,7 @@ private:
 };
 
 const board_def_t* const c6_display_family_detector_t::members_[3] = {
-  &board_unitc6l, &board_nesson1, nullptr,
+  &desc_unitc6l.def, &desc_nesson1.def, nullptr,
 };
 static const c6_display_family_detector_t c6_display_family_detector;
 static const board_detector_t* const esp32c6_detectors[] = {
@@ -123,7 +120,5 @@ static const board_entry_t esp32c6_boards[] = {
   { &desc_unitc6l, construct_unitc6l, "board_M5UnitC6L", nullptr },
   { &desc_nesson1, construct_nesson1, "board_ArduinoNessoN1", nullptr },
 };
-const board_desc_t* find_board_desc(board_id_t board)
-{ return find_board_desc(esp32c6_boards, board); }
 success_log_t success_log(const board_result_t& result)
 { return success_log(esp32c6_boards, result); }

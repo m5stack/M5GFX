@@ -231,9 +231,6 @@ namespace ops
   {
     op_status_t status;
     std::uint16_t failed_index;
-    // The current bool-valued backends cannot expose a native code, so this is
-    // always zero until a backend with richer error reporting is introduced.
-    int native_error;
   };
 
   struct gpio_scope_t
@@ -314,9 +311,9 @@ namespace ops
     return true;
   }
 
-  inline run_result_t result(op_status_t status, std::size_t index, int native_error = 0)
+  inline run_result_t result(op_status_t status, std::size_t index)
   {
-    return { status, static_cast<std::uint16_t>(index), native_error };
+    return { status, static_cast<std::uint16_t>(index) };
   }
 
   inline bool gpio_allowed(const gpio_scope_t& scope, std::uint16_t pin)
@@ -404,6 +401,24 @@ namespace ops
     return static_cast<std::int32_t>(backend.millis(backend.ctx) - policy->deadline_ms) < 0;
   }
 
+  inline const retry_policy_t* operation_retry_policy(
+    const backend_t& backend, const i2c_device_t& device,
+    const retry_policy_t* policy, retry_policy_t& device_policy)
+  {
+    if (!(device.flags & i2c_device_retry_transient_nack)) { return policy; }
+    // MCU-based PM1/IOE1 slaves can NACK briefly while processing a write.
+    device_policy = { backend.millis(backend.ctx) + transient_nack_retry_ms,
+                      transient_nack_retry_interval_ms };
+    if (policy != nullptr)
+    {
+      if (static_cast<std::int32_t>(policy->deadline_ms - device_policy.deadline_ms) > 0)
+      { device_policy.deadline_ms = policy->deadline_ms; }
+      if (policy->interval_ms < device_policy.interval_ms)
+      { device_policy.interval_ms = policy->interval_ms; }
+    }
+    return &device_policy;
+  }
+
   inline void retry_delay(const backend_t& backend, const retry_policy_t& policy)
   {
     if (backend.delay_ms != nullptr) { backend.delay_ms(backend.ctx, policy.interval_ms); }
@@ -465,12 +480,10 @@ namespace ops
       const auto kind = operation.kind();
       if (kind == op_kind_t::delay_ms)
       {
-        if (backend.delay_ms == nullptr) { return result(op_status_t::unsupported, i); }
         backend.delay_ms(backend.ctx, op_access_t::milliseconds(operation));
       }
       else if (kind == op_kind_t::gpio_set_mode)
       {
-        if (backend.gpio_set_mode == nullptr) { return result(op_status_t::unsupported, i); }
         if (!backend.gpio_set_mode(backend.ctx, op_access_t::pin(operation),
                                    op_access_t::mode(operation)))
         {
@@ -479,7 +492,6 @@ namespace ops
       }
       else if (kind == op_kind_t::gpio_write_high || kind == op_kind_t::gpio_write_low)
       {
-        if (backend.gpio_write == nullptr) { return result(op_status_t::unsupported, i); }
         if (!backend.gpio_write(backend.ctx, op_access_t::pin(operation),
                                 kind == op_kind_t::gpio_write_high))
         {
@@ -488,10 +500,6 @@ namespace ops
       }
       else if (kind == op_kind_t::i2c_wait_ready)
       {
-        if (backend.i2c_ready == nullptr || backend.millis == nullptr)
-        {
-          return result(op_status_t::unsupported, i);
-        }
         const auto& device = devices[op_access_t::dev(operation)];
         const auto started = backend.millis(backend.ctx);
         const auto deadline = started + op_access_t::timeout(operation);
@@ -509,7 +517,6 @@ namespace ops
           {
             return result(op_status_t::timeout, i);
           }
-          if (backend.delay_ms == nullptr) { return result(op_status_t::unsupported, i); }
           const auto left = deadline - backend.millis(backend.ctx);
           const auto interval = op_access_t::interval(operation);
           backend.delay_ms(backend.ctx, interval < left ? interval : left);
@@ -522,27 +529,8 @@ namespace ops
           const auto write = op_access_t::reg16(operation);
           const auto& device = devices[write.dev];
           retry_policy_t device_retry_policy {};
-          const retry_policy_t* operation_policy = policy;
-          if ((device.flags & i2c_device_retry_transient_nack) != 0)
-          {
-            device_retry_policy = {
-              backend.millis(backend.ctx) + transient_nack_retry_ms,
-              transient_nack_retry_interval_ms,
-            };
-            if (policy != nullptr)
-            {
-              if (static_cast<std::int32_t>(policy->deadline_ms
-                                           - device_retry_policy.deadline_ms) > 0)
-              {
-                device_retry_policy.deadline_ms = policy->deadline_ms;
-              }
-              if (policy->interval_ms < device_retry_policy.interval_ms)
-              {
-                device_retry_policy.interval_ms = policy->interval_ms;
-              }
-            }
-            operation_policy = &device_retry_policy;
-          }
+          const auto* operation_policy = operation_retry_policy(
+            backend, device, policy, device_retry_policy);
           while (!backend.i2c_write16le(backend.ctx, device, write.reg, write.value))
           {
             if (!retry_available(backend, operation_policy))
@@ -554,35 +542,11 @@ namespace ops
           }
           continue;
         }
-        if (backend.i2c_write8 == nullptr) { return result(op_status_t::unsupported, i); }
         const auto write = op_access_t::reg8(operation);
         const auto& device = devices[write.dev];
         retry_policy_t device_retry_policy {};
-        const retry_policy_t* operation_policy = policy;
-        if ((device.flags & i2c_device_retry_transient_nack) != 0)
-        {
-          // PM1/IOE1 are MCU-based slaves and NACK for a few milliseconds
-          // while processing a write (measured recovery <= 5 ms).
-          device_retry_policy = {
-            backend.millis(backend.ctx) + transient_nack_retry_ms,
-            transient_nack_retry_interval_ms,
-          };
-          // Keep a longer caller-wide wake deadline (notably StickS3 waking
-          // PM1 from I2C sleep), but use one loop and the shorter interval.
-          if (policy != nullptr)
-          {
-            if (static_cast<std::int32_t>(policy->deadline_ms
-                                       - device_retry_policy.deadline_ms) > 0)
-            {
-              device_retry_policy.deadline_ms = policy->deadline_ms;
-            }
-            if (policy->interval_ms < device_retry_policy.interval_ms)
-            {
-              device_retry_policy.interval_ms = policy->interval_ms;
-            }
-          }
-          operation_policy = &device_retry_policy;
-        }
+        const auto* operation_policy = operation_retry_policy(
+          backend, device, policy, device_retry_policy);
         for (;;)
         {
           bool ok = false;

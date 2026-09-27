@@ -11,7 +11,7 @@ static constexpr board_desc_t desc_stickc = {
   pins(wiring::stickc::hold),
   internal_i2c(wiring::stickc::internal_i2c_sda, wiring::stickc::internal_i2c_scl,
                wiring::stickc::internal_i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::stickc::hold),
+  no_options(), pins(wiring::stickc::hold),
 };
 
 static constexpr board_desc_t desc_stickcplus = {
@@ -25,7 +25,7 @@ static constexpr board_desc_t desc_stickcplus = {
   pins(wiring::stickcplus::hold),
   internal_i2c(wiring::stickcplus::internal_i2c_sda, wiring::stickcplus::internal_i2c_scl,
                wiring::stickcplus::internal_i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::stickcplus::hold),
+  no_options(), pins(wiring::stickcplus::hold),
 };
 
 static constexpr board_desc_t desc_coreink = {
@@ -38,7 +38,7 @@ static constexpr board_desc_t desc_coreink = {
                wiring::coreink::display_cs, wiring::coreink::display_rst,
                wiring::coreink::display_busy),
   pins(wiring::coreink::hold), no_internal_i2c(),
-  no_direct_reset_panel_reload_wait(), options(generated_options::coreink::names),
+  options(generated_options::coreink::names),
   pins(wiring::coreink::hold),
 };
 
@@ -52,13 +52,13 @@ static constexpr board_desc_t desc_stickcplus2 = {
                wiring::stickcplus2::display_cs, wiring::stickcplus2::display_rst,
                wiring::stickcplus2::display_busy),
   pins(wiring::stickcplus2::hold), no_internal_i2c(),
-  no_direct_reset_panel_reload_wait(), no_options(), pins(wiring::stickcplus2::hold),
+  no_options(), pins(wiring::stickcplus2::hold),
 };
 
 static constexpr board_desc_t desc_atompsram = {
   { id(lgfx::board_M5AtomPsram), "M5AtomPsram", def_flag_fallback },
   no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
-  no_internal_i2c(), no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
 };
 
 static constexpr std::uint32_t stickc_id_values[] = { 0x7C };
@@ -93,21 +93,21 @@ static const board_def_t* const stickc_family_members[] = {
   &desc_stickcplus.def, &desc_stickc.def, nullptr,
 };
 static const spi_id_member_t stickc_family_member_descs[] = {
-  { &desc_stickcplus, stickcplus_probes, 1, true, false, 0, true, false },
-  { &desc_stickc, stickc_probes, 1, true, false, 0, true, false },
+  { &desc_stickcplus, stickcplus_probes, 1, true, false, 0, true },
+  { &desc_stickc, stickc_probes, 1, true, false, 0, true },
 };
 static const spi_id_detector_t stickc_family_detector(
-  stickc_family_members, stickc_family_member_descs, 2, true, true);
+  stickc_family_members, stickc_family_member_descs, 2, true);
 
 static const board_def_t* const coreink_members[] = { &desc_coreink.def, nullptr };
 static const spi_id_member_t coreink_member_descs[] = {
-  { &desc_coreink, coreink_probes, 2, true, false, 0, true, false },
+  { &desc_coreink, coreink_probes, 2, true, false, 0, true },
 };
 static const spi_id_detector_t coreink_detector(coreink_members, coreink_member_descs, 1);
 
 static const board_def_t* const stickcplus2_members[] = { &desc_stickcplus2.def, nullptr };
 static const spi_id_member_t stickcplus2_member_descs[] = {
-  { &desc_stickcplus2, stickcplus2_probes, 1, true, false, 0, true, false },
+  { &desc_stickcplus2, stickcplus2_probes, 1, true, false, 0, true },
 };
 static const spi_id_detector_t stickcplus2_detector(
   stickcplus2_members, stickcplus2_member_descs, 1);

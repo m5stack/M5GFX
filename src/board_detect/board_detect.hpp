@@ -89,6 +89,7 @@ namespace board_detect
 
   struct prepare_ctx_t
   {
+    // A retry must not override the caller's reset policy.
     bool allow_reset = true;
     int i2c_port_probe = -1;
     // Non-null while board-detection components are running.
@@ -158,15 +159,6 @@ namespace board_detect
     std::uint8_t count_ = 0;
   };
 
-  // External PMIC/IO-expander register restoration is added by the next stage.
-  // Keeping it as a participant now fixes its place before bus and GPIO rollback.
-  class detection_external_journal_t
-  {
-  public:
-    void rollback() {}
-    void commit() {}
-  };
-
   class detection_bus_journal_t
   {
   public:
@@ -177,19 +169,6 @@ namespace board_detect
   private:
     std::int8_t i2c_ports_[2] = { -1, -1 };
     std::uint8_t i2c_count_ = 0;
-  };
-
-  class detection_irreversible_journal_t
-  {
-  public:
-    void declare_prepared(std::uint32_t prepared)
-    {
-      operations_ |= prepared & (prepared_sd_spi | panel_dirty);
-    }
-    std::uint32_t operations() const { return operations_; }
-
-  private:
-    std::uint32_t operations_ = 0;
   };
 
   class detection_transaction_t
@@ -208,14 +187,10 @@ namespace board_detect
     void rollback();
     void commit();
     detection_bus_journal_t& buses() { return buses_; }
-    detection_external_journal_t& external() { return external_; }
-    detection_irreversible_journal_t& irreversible() { return irreversible_; }
 
   private:
     detection_gpio_snapshot_t gpio_;
-    detection_external_journal_t external_;
     detection_bus_journal_t buses_;
-    detection_irreversible_journal_t irreversible_;
     bool valid_ = false;
     bool committed_ = false;
   };
@@ -328,8 +303,6 @@ namespace board_detect
     display_pins_t display;
     pin_list_t hold_high_pins;
     i2c_desc_t internal_i2c;
-    // Remaining settle time after a direct reset before panel settings are reread.
-    std::uint16_t direct_reset_panel_reload_wait_ms;
     option_list_t option_names;
     // GPIOs that typed operation lists may access. This is intentionally
     // separate from hold_high_pins: an operation may restore a pin to input.
@@ -431,13 +404,6 @@ namespace board_detect
              0, 0, 0, true };
   }
 
-  constexpr std::uint16_t direct_reset_panel_reload_wait(std::uint16_t milliseconds)
-  {
-    return milliseconds;
-  }
-
-  constexpr std::uint16_t no_direct_reset_panel_reload_wait() { return 0; }
-
   constexpr reset_desc_t no_reset()
   {
     return { reset_kind_t::none, -1, 0, 0, reset_no_flags, nullptr };
@@ -530,11 +496,8 @@ namespace board_detect
     std::uint64_t values[4] = {};
   };
 
-  struct probe_ctx_t
+  struct probe_ctx_t : prepare_ctx_t
   {
-    // This is the caller's reset policy. A retry must not turn it on: callers
-    // that preserve a displayed image depend on every attempt honoring it.
-    bool allow_reset = true;
     // The hint moves its detector family forward. Candidate selection within
     // that family is detector-specific: the S3 SPI-ID family probes only the
     // hinted member, while legacy families retain their established ordering.
@@ -543,11 +506,8 @@ namespace board_detect
     // The caller's last retry may relax exclusions based only on negative
     // evidence, retaining the legacy broad probe as a final safety net.
     bool final_attempt = false;
-    int i2c_port_probe = -1;
     i2c_scan_cache_t i2c_cache;
     detector_workspace_t detector_workspace;
-    // Non-null while board-detection components are running.
-    detection_transaction_t* transaction = nullptr;
     bool conditional_pins_unavailable = false;
     const board_id_t* enabled_ids = nullptr;
   };
@@ -585,14 +545,9 @@ namespace board_detect
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr);
   bool probe_i2c_bus_present(probe_ctx_t& ctx, int pin_sda, int pin_scl);
   bool probe_i2c_read(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
-                      std::uint8_t reg, std::uint8_t* data, std::size_t length,
-                      std::uint32_t freq, std::uint32_t poll_ms);
-  // Same contract with a 16-bit register address sent MSB first (the
-  // i2c_device_t::register_address_bytes == 2 layout). The 8-bit overload
-  // above is unchanged.
-  bool probe_i2c_read16(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
-                        std::uint16_t reg, std::uint8_t* data, std::size_t length,
-                        std::uint32_t freq, std::uint32_t poll_ms);
+                      std::uint16_t reg, std::uint8_t* data, std::size_t length,
+                      std::uint32_t freq, std::uint32_t poll_ms,
+                      bool reg16 = false);
 
   // Recover a slave that retained SDA after the controller was reset during a
   // transaction. Leaves both pins as inputs so the caller can inspect them;
@@ -605,6 +560,12 @@ namespace board_detect
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
   pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask);
+
+  // On an already high SCL, release a held SDA and resample the same pins.
+  // Reuse the previous sample so successive candidate pairs do not probe twice.
+  pin_pull_result_t recover_held_sda_and_resample(
+    probe_ctx_t& ctx, pin_pull_result_t pulls, std::uint64_t pin_mask,
+    int pin_sda, int pin_scl);
 
   // Uses one CPU-local dedicated-GPIO bundle to release and sample up to eight
   // pads together. One cache-warming measurement is discarded. Hardware and
@@ -685,8 +646,7 @@ namespace board_detect
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
                     std::uint8_t slow_retry_half_us = 0,
-                    bool legacy_zero_preamble = false,
-                    bool power_before_probe = false);
+                    bool legacy_zero_preamble = false);
 
   // Kept callable by family detectors; validates desc before touching hardware.
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,

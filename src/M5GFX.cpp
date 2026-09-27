@@ -1061,25 +1061,6 @@ namespace m5gfx
   }
 #endif
 
-  static board_detect::m5::construct_status_t construct_detected(
-    const board_detect::board_result_t& result,
-    board_detect::m5::display_parts_t* parts)
-  {
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-    return board_detect::m5::setup_esp32_d0wdq6(result, parts);
-#elif defined (CONFIG_IDF_TARGET_ESP32S3)
-    return board_detect::m5::setup_esp32s3(result, parts);
-#elif defined (CONFIG_IDF_TARGET_ESP32C5)
-    return board_detect::m5::setup_esp32c5(result, parts);
-#elif defined (CONFIG_IDF_TARGET_ESP32C6)
-    return board_detect::m5::setup_esp32c6(result, parts);
-#elif defined (CONFIG_IDF_TARGET_ESP32C61)
-    return board_detect::m5::setup_esp32c61(result, parts);
-#else
-    return board_detect::m5::setup_esp32p4(result, parts);
-#endif
-  }
-
   template <class SetupDetected>
   static bool try_setup_detected(const board_detect::board_detector_t* const* detectors,
                                  board_t hint, bool allow_reset, bool final_attempt,
@@ -1134,7 +1115,6 @@ namespace m5gfx
 #endif
     auto result = board_detect::detect_board(
       detectors, static_cast<board_detect::board_id_t>(hint), probe);
-    transaction.irreversible().declare_prepared(result.prepared);
     if (result.status == board_detect::detect_status_t::excluded)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] detected board:%u is excluded",
@@ -1152,21 +1132,17 @@ namespace m5gfx
     // is the representative family ID, not necessarily the final member ID.
     if (setup_board != nullptr) { *setup_board = static_cast<board_t>(result.def->id); }
 
-    board_detect::prepare_ctx_t prepare_ctx;
-    prepare_ctx.allow_reset = allow_reset;
-    prepare_ctx.i2c_port_probe = probe_i2c_port;
-    prepare_ctx.transaction = &transaction;
+    const board_detect::prepare_ctx_t& prepare_ctx = probe;
     const int adopted_i2c_port = result.desc->internal_i2c.hw_port;
     const bool adopted_i2c_was_open = adopted_i2c_port >= 0
                                    && lgfx::i2c::isInitialized(adopted_i2c_port);
-    if (!board_detect::m5::prepare(result, prepare_ctx))
+    if (result.desc == nullptr || !board_detect::prepare(*result.desc, result, prepare_ctx))
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] prepare failed for detected board:%u",
                static_cast<unsigned>(result.def->id));
       transaction.rollback();
       return false;
     }
-    transaction.irreversible().declare_prepared(result.prepared);
     if (adopted_i2c_port >= 0 && !adopted_i2c_was_open
      && lgfx::i2c::isInitialized(adopted_i2c_port))
     {
@@ -1178,7 +1154,7 @@ namespace m5gfx
                "[Autodetect] panel probe changed registers while reset was disabled");
     }
     board_detect::m5::display_parts_t parts;
-    const auto construct_result = construct_detected(result, &parts);
+    const auto construct_result = board_detect::m5::setup_detected_board(result, &parts);
     if (construct_result == board_detect::m5::construct_status_t::failed)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
@@ -1426,212 +1402,54 @@ namespace m5gfx
     bus_cfg.spi_host = SPI2_HOST;
     bus_cfg.dma_channel = SPI_DMA_CH_AUTO;
 
-    std::uint32_t pkg_ver = m5gfx::get_pkg_ver();
-// ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x  /  board:%d", (int)pkg_ver, (int)board);
-    switch (pkg_ver) {
-    case 0: // EFUSE_PKG_VERSION_ESP32S3:     // QFN56
-
-      if (board == 0 || board == board_t::board_M5StackCoreS3 || board == board_t::board_M5StackCoreS3SE
-          || board == board_t::board_M5StackChan)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_cores3,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               { return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch); }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5Dial)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_dial,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5StopWatch || board == board_t::board_M5PaperMono)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_pm1,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               {
-#if defined(M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_SETUP)
-                                 (void)parts;
-                                 return false;
-#else
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-#endif
-                               }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5ChainCaptain
-                     || board == board_t::board_M5PaperColor)
-      {
-        board_t setup_board = board_t::board_unknown;
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_pm1_ext,
-                               board, use_reset, false, &board,
-                               [this, &setup_board](board_detect::m5::display_parts_t& parts)
-                               {
-#if defined(M5GFX_AUTODETECT_TEST_FAIL_CHAINCAPTAIN_SETUP)
-                                 if (setup_board == board_t::board_M5ChainCaptain)
-                                 {
-                                   (void)parts;
-                                   return false;
-                                 }
-#endif
-#if defined(M5GFX_AUTODETECT_TEST_FAIL_PAPERCOLOR_SETUP)
-                                 if (setup_board == board_t::board_M5PaperColor)
-                                 {
-                                   (void)parts;
-                                   return false;
-                                 }
-#endif
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-                               }, nullptr, &setup_board))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5PaperS3 || board == board_t::board_M5PaperDIY)
-      {
-        board_t setup_board = board_t::board_unknown;
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_paper,
-                               board, use_reset, false, &board,
-                               [this, &setup_board](board_detect::m5::display_parts_t& parts)
-                               {
-#if defined(M5GFX_AUTODETECT_TEST_FAIL_PAPERS3_SETUP)
-                                 if (setup_board == board_t::board_M5PaperS3)
-                                 {
-                                   (void)parts;
-                                   return false;
-                                 }
-#endif
-#if defined(M5GFX_AUTODETECT_TEST_FAIL_PAPERDIY_SETUP)
-                                 if (setup_board == board_t::board_M5PaperDIY)
-                                 {
-                                   (void)parts;
-                                   return false;
-                                 }
-#endif
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-                               }, nullptr, &setup_board))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5AtomS3 || board == board_t::board_M5DinMeter)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_spi_id,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0
-       || board == board_t::board_M5Cardputer
-       || board == board_t::board_M5CardputerADV
-       || board == board_t::board_M5VAMeter)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_cardputer,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               {
-#if defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_SETUP)
-                                 (void)parts;
-                                 return false;
-#else
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-#endif
-                               }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5AirQ)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_airq,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               {
-#if defined (M5GFX_AUTODETECT_TEST_FAIL_AIRQ_SETUP)
-                                 (void)parts;
-                                 return false;
-#else
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-#endif
-                               }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5StamPLC)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_stamplc,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               {
-#if defined (M5GFX_AUTODETECT_TEST_FAIL_STAMPLC_SETUP)
-                                 (void)parts;
-                                 return false;
-#else
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-#endif
-                               }))
-        {
-          goto init_clear;
-        }
-      }
-
-      break;
-    case 1: // EFUSE_PKG_VERSION_ESP32S3PICO: // LGA56
-
-      if (board == 0 || board == board_t::board_M5AtomS3R)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_atoms3r,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
-        {
-          goto init_clear;
-        }
-      }
-
-      if (board == 0 || board == board_t::board_M5StickS3)
-      {
-        if (try_setup_detected(board_detect::m5::esp32s3_detectors_pmic,
-                               board, use_reset, false, &board,
-                               [this](board_detect::m5::display_parts_t& parts)
-                               { return _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch); }))
-        {
-          goto init_clear;
-        }
-      }
-
-      break;
-
+    const board_detect::board_detector_t* const* detectors = nullptr;
+    switch (m5gfx::get_pkg_ver())
+    {
+    case 0: detectors = board_detect::m5::esp32s3_detectors_qfn56; break;
+    case 1: detectors = board_detect::m5::esp32s3_detectors_lga56; break;
     default: break;
+    }
+    if (detectors != nullptr)
+    {
+      board_t setup_board = board_t::board_unknown;
+      // A hint tries its family first, then the remaining families in package
+      // order, within one GPIO transaction.
+      if (try_setup_detected(detectors, board, use_reset, false, &board,
+                             [this, &setup_board](board_detect::m5::display_parts_t& parts)
+                             {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_SETUP)
+                               if (setup_board == board_t::board_M5StopWatch
+                                || setup_board == board_t::board_M5PaperMono) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CHAINCAPTAIN_SETUP)
+                               if (setup_board == board_t::board_M5ChainCaptain) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERCOLOR_SETUP)
+                               if (setup_board == board_t::board_M5PaperColor) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERS3_SETUP)
+                               if (setup_board == board_t::board_M5PaperS3) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERDIY_SETUP)
+                               if (setup_board == board_t::board_M5PaperDIY) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_SETUP)
+                               if (setup_board == board_t::board_M5Cardputer
+                                || setup_board == board_t::board_M5CardputerADV
+                                || setup_board == board_t::board_M5VAMeter) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_AIRQ_SETUP)
+                               if (setup_board == board_t::board_M5AirQ) { return false; }
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_STAMPLC_SETUP)
+                               if (setup_board == board_t::board_M5StamPLC) { return false; }
+#endif
+                               return _adopt_detected_parts(parts.bus, parts.panel,
+                                                            parts.light, parts.touch);
+                             }, nullptr, &setup_board))
+      {
+        goto init_clear;
+      }
     }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32P4)

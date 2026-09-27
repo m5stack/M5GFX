@@ -19,9 +19,8 @@ static constexpr board_desc_t desc_corep4x = {
   no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
   internal_i2c(corep4x_detail::sda, corep4x_detail::scl,
                corep4x_detail::i2c_port),
-  no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
+  no_options(), no_pins(),
   };
-static const board_def_t& board_corep4x = desc_corep4x.def;
 
 class corep4x_detector_t final : public board_detector_t
 {
@@ -54,7 +53,7 @@ public:
 private:
   static const board_def_t* const members_[2];
   };
-const board_def_t* const corep4x_detector_t::members_[2] = { &board_corep4x, nullptr };
+const board_def_t* const corep4x_detector_t::members_[2] = { &desc_corep4x.def, nullptr };
 static const corep4x_detector_t corep4x_detector;
 
 construct_status_t construct_corep4x(const board_result_t&, display_parts_t*);

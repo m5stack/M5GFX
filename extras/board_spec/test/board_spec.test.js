@@ -1153,7 +1153,7 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
   assert.match(picoSource,
     /stickc_family_members\[] = \{\s*&desc_stickcplus\.def, &desc_stickc\.def/);
   assert.match(picoSource,
-    /stickc_family_detector\([\s\S]*?stickc_family_member_descs, 2, true, true\)/);
+    /stickc_family_detector\([\s\S]*?stickc_family_member_descs, 2, true\)/);
   assert.match(picoSource, /stickcplus_id_values\[] = \{ 0x81, 0x85 \}/);
   assert.match(picoSource,
     /coreink_probes\[] = \{[\s\S]*?probe_gdew0154d67[\s\S]*?probe_gdew0154m09/);
@@ -1213,7 +1213,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
                    [3, 6, 8, 10, 15, 16, 17, 18, 20, 21, 22]);
 
   assert.match(esp32c6Source,
-    /members_\[3\][\s\S]*?&board_unitc6l, &board_nesson1, nullptr/);
+    /members_\[3\][\s\S]*?&desc_unitc6l.def, &desc_nesson1.def, nullptr/);
   assert.match(esp32c6Source,
     /probe_i2c_bus_present\(ctx, c6_display_detail::sda,\s*c6_display_detail::scl\)[\s\S]*?probe_pin_pulls\(ctx, c6_display_detail::signature_bit\)/);
   assert.match(esp32c6Source,
@@ -1490,7 +1490,7 @@ test("ESP32-S3 detector filters hinted and OPI-conflicting candidates per model"
   assert.match(wiring, /namespace dinmeter \{[\s\S]*?touches_opi_pins = false/);
   assert.match(main, /ESP_IDF_VERSION_VAL\(5, 0, 0\)[\s\S]*?esp_psram_is_initialized\(\)[\s\S]*?esp_spiram_is_initialized\(\)/);
   assert.match(main, /opi_pins\),\s*!conditional_pins_unavailable/);
-  assert.match(s3, /cardputer_family_detector_t[\s\S]*?ctx\.conditional_pins_unavailable[\s\S]*?&board_cardputer, &board_cardputer_adv, &board_vameter/);
+  assert.match(s3, /cardputer_family_detector_t[\s\S]*?ctx\.conditional_pins_unavailable[\s\S]*?&desc_cardputer.def, &desc_cardputer_adv.def, &desc_vameter.def/);
 });
 
 test("detection transaction exposes non-consuming start-state restoration", async () => {
@@ -1512,7 +1512,7 @@ test("detection transaction exposes non-consuming start-state restoration", asyn
   assert.doesNotMatch(gpio, /SOC_RTCIO_PIN_COUNT must be defined before release_lp_pad/);
   assert.match(gpio, /LGFX_LP_I2C_NUM > 0 \|\| defined \(CONFIG_IDF_TARGET_ESP32C61\)[\s\S]*?defined \(SOC_RTCIO_PIN_COUNT\)[\s\S]*?SOC_RTCIO_PIN_COUNT > 0/);
   assert.match(gpio, /matches_current[\s\S]*?_io_mux_gpio_reg\s*==[\s\S]*?_gpio_pin_reg\s*==[\s\S]*?_gpio_func_out_reg\s*==[\s\S]*?_gpio_enable\s*==[\s\S]*?_gpio_out\s*==[\s\S]*?_in_func_num\s*==[\s\S]*?_gpio_func_in_reg\s*==/);
-  assert.match(main, /prepare_ctx\.transaction = &transaction/);
+  assert.match(main, /prepare_ctx = probe/);
 });
 
 test("confirmed boards survive post-detection power setup failures", async () => {
@@ -1520,7 +1520,7 @@ test("confirmed boards survive post-detection power setup failures", async () =>
   const setup = await fs.readFile(path.join(root, "../../src/board_detect/m5/setup_common.inl"), "utf8");
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(implementation, /prepare_power\(desc, result, i2c\.port, true\)/);
-  assert.match(implementation, /if \(!retain_confirmed_board\) \{ return false; \}[\s\S]*?power_on stopped after board confirmation:[\s\S]*?failed_index[\s\S]*?status[\s\S]*?native_error/);
+  assert.match(implementation, /if \(!retain_confirmed_board\) \{ return false; \}[\s\S]*?power_on stopped after board confirmation:[\s\S]*?failed_index[\s\S]*?status[\s\S]*?0/);
   assert.match(main, /construct_result == board_detect::m5::construct_status_t::no_display[\s\S]*?transaction\.restore_start\(result\.desc->hold_high_pins\.data,[\s\S]*?result\.desc->hold_high_pins\.size\)/);
   assert.match(main, /if \(!setup\(parts\)\)[\s\S]*?destroy_display_parts\(&parts\)[\s\S]*?transaction\.rollback\(\)/);
   assert.match(setup, /destroy_display_parts\(display_parts_t\* parts\)[\s\S]*?parts->bus->release\(\)[\s\S]*?delete parts->touch;[\s\S]*?delete parts->light;[\s\S]*?delete parts->panel;[\s\S]*?delete parts->bus;/);
@@ -2462,8 +2462,8 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
   assert.match(detector, /desc_paperdiy = \{[\s\S]*?i2c_power_confirmed\(specs::paperdiy::pmic::i2c_freq, paperdiy_pmic_variants,\n\s*pmic_ops::pm1_devices\)[\s\S]*?internal_i2c\(wiring::paperdiy::internal_i2c_sda, wiring::paperdiy::internal_i2c_scl, -1\)/);
   // PM1 first (skipped only when hinted PaperS3), then GT911 (skipped only when hinted PaperDIY).
   const confirm = /class paper_family_detector_t[\s\S]*?bool confirm[\s\S]*?\n  private:/.exec(detector)[0];
-  assert.match(confirm, /ctx\.hint != desc_papers3\.def\.id[\s\S]*?probe_i2c_read\([\s\S]*?pmic_ops::pm1_i2c_addr, 0, pm1_id, sizeof\(pm1_id\),\n\s*pmic_ops::pm1_i2c_freq, 200\)[\s\S]*?== pmic_ops::pm1_device_id[\s\S]*?assign\(&desc_paperdiy\)[\s\S]*?ctx\.hint != desc_paperdiy\.def\.id[\s\S]*?gt911_addresses\[\] = \{ 0x14, 0x5D \}[\s\S]*?gt911_product_id_reg = 0x8140[\s\S]*?probe_i2c_read16\([\s\S]*?specs::papers3::touch::i2c_freq, 0\)[\s\S]*?'9'[\s\S]*?assign\(&desc_papers3\)/);
-  assert.match(detector, /paper_family_detector_t::members_\[\] = \{\n\s*&board_paperdiy, &board_papers3, nullptr,/);
+  assert.match(confirm, /ctx\.hint != desc_papers3\.def\.id[\s\S]*?probe_i2c_read\([\s\S]*?pmic_ops::pm1_i2c_addr, 0, pm1_id, sizeof\(pm1_id\),\n\s*pmic_ops::pm1_i2c_freq, 200\)[\s\S]*?== pmic_ops::pm1_device_id[\s\S]*?assign\(&desc_paperdiy\)[\s\S]*?ctx\.hint != desc_paperdiy\.def\.id[\s\S]*?gt911_addresses\[\] = \{ 0x14, 0x5D \}[\s\S]*?gt911_product_id_reg = 0x8140[\s\S]*?probe_i2c_read\([\s\S]*?specs::papers3::touch::i2c_freq, 0, true\)[\s\S]*?'9'[\s\S]*?assign\(&desc_papers3\)/);
+  assert.match(detector, /paper_family_detector_t::members_\[\] = \{\n\s*&desc_paperdiy.def, &desc_papers3.def, nullptr,/);
   assert.match(detector, /&pm1_ext_family_detector, &paper_family_detector,/);
   assert.match(detector, /\{ &desc_papers3, construct_papers3, "board_M5PaperS3", nullptr \},\n\s*\{ &desc_paperdiy, construct_paperdiy, "board_M5PaperDIY", nullptr \},/);
 
@@ -2472,9 +2472,8 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
   assert.match(setup, /touch_papers3 =\n\s*i2c_touch_default_addr\(\)/);
   assert.match(setup, /construct_papers3[\s\S]*?make_epd_panel\(panel_papers3, specs::papers3::panel_ed047tc1::line_padding[\s\S]*?make_i2c_touch<lgfx::Touch_GT911>\(touch_papers3\)/);
   assert.match(setup, /construct_paperdiy[\s\S]*?make_epd_panel\(panel_paperdiy, specs::paperdiy::panel_ed047tc1::line_padding/);
-  assert.doesNotMatch(setup, /construct_paperdiy[\s\S]*?make_i2c_touch[\s\S]*?construct_status_t setup_esp32s3/);
-  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  assert.match(main, /esp32s3_detectors_pm1_ext[\s\S]*?esp32s3_detectors_paper[\s\S]*?esp32s3_detectors_spi_id/);
+  assert.doesNotMatch(setup, /construct_paperdiy[\s\S]*?make_i2c_touch[\s\S]*?construct_status_t setup_detected_board/);
+  assert.match(detector, /esp32s3_detectors_qfn56\[\][\s\S]*?&pm1_ext_family_detector, &paper_family_detector, &spi_id_detector/);
 });
 
 test("CoreS3 family catalog keeps shared wiring and option power variants", async () => {
@@ -2525,6 +2524,5 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   assert.match(coreSetup, /cores3_legacy_panel_id_freq = 8000000[\s\S]*?make_spi_bus\(bus_cores3_panel_id\)[\s\S]*?_read_panel_id[\s\S]*?freq_write = bus_cores3\.freq_write[\s\S]*?freq_read = bus_cores3\.freq_read[\s\S]*?_identify_ili9342/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /assigned before prepare\/refine[\s\S]*?representative family ID[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
-  const coreAutodetect = /try_setup_detected\(board_detect::m5::esp32s3_detectors_cores3[\s\S]*?try_setup_detected\(board_detect::m5::esp32s3_detectors_dial/.exec(main)[0];
-  assert.match(coreAutodetect, /try_setup_detected\(board_detect::m5::esp32s3_detectors_cores3/);
+  assert.match(main, /case 0: detectors = board_detect::m5::esp32s3_detectors_qfn56;[\s\S]*?case 1: detectors = board_detect::m5::esp32s3_detectors_lga56;[\s\S]*?try_setup_detected\(detectors, board/);
 });

@@ -19,9 +19,8 @@
     no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
     internal_i2c(corematrix_detail::sda, corematrix_detail::scl,
                  corematrix_detail::i2c_port),
-    no_direct_reset_panel_reload_wait(), no_options(), no_pins(),
+    no_options(), no_pins(),
   };
-  static const board_def_t& board_corematrix = desc_corematrix.def;
 
   class corematrix_detector_t final : public board_detector_t
   {
@@ -54,7 +53,7 @@
   private:
     static const board_def_t* const members_[2];
   };
-  const board_def_t* const corematrix_detector_t::members_[2] = { &board_corematrix, nullptr };
+  const board_def_t* const corematrix_detector_t::members_[2] = { &desc_corematrix.def, nullptr };
   static const corematrix_detector_t corematrix_detector;
   static const board_detector_t* const esp32c61_detectors[] = { &corematrix_detector, nullptr };
 
@@ -62,5 +61,4 @@
   static const board_entry_t esp32c61_boards[] = {
     { &desc_corematrix, construct_corematrix, "board_M5CoreMatrix", nullptr },
   };
-  const board_desc_t* find_board_desc(board_id_t board) { return find_board_desc(esp32c61_boards, board); }
   success_log_t success_log(const board_result_t& result) { return success_log(esp32c61_boards, result); }

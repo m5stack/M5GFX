@@ -24,7 +24,6 @@ static const board_entry_t esp32p4_boards[] = {
   { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr },
   { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr },
 };
-const board_desc_t* find_board_desc(board_id_t board) { return find_board_desc(esp32p4_boards, board); }
 success_log_t success_log(const board_result_t& result) { return success_log(esp32p4_boards, result); }
 }
 }
