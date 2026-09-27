@@ -2322,7 +2322,7 @@ test("CoreP4X generated DSI setup preserves the legacy fields", async () => {
   assert.match(main, /pkg_ver == 0[\s\S]*?try_setup_detected\(board_detect::m5::esp32p4_detectors/);
 });
 
-test("Tab5 generated DSI setup preserves all three legacy panels", () => {
+test("Tab5 touch identities select the three DSI panels", () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_tab5");
   const resolved = resolveCatalog(source).map((item) => item.board);
   const specs = emitM5GFXSpecs(source, resolved, parts, m5gfxBoardMapping(target, source.id));
@@ -2332,6 +2332,9 @@ test("Tab5 generated DSI setup preserves all three legacy panels", () => {
   // requires 900 Mbps after runtime touch-FW identification.
   assert.match(tab5SetupSource, /tab5_st7121_lane_mbps = 900/);
   assert.match(tab5SetupSource, /hit_st7121 \? tab5_st7121_lane_mbps : specs::tab5::bus_lane_mbps/);
+  assert.match(tab5SetupSource, /fw_version == 1[\s\S]*?hit_st7121 = true[\s\S]*?fw_version == 3[\s\S]*?hit_st7123 = true/);
+  assert.match(tab5SetupSource, /if \(!read_st_touch_fw && !found_gt911\)[\s\S]*?delay\(80\)[\s\S]*?i < 3 && !hit_ili9881[\s\S]*?id\[0\] == 0x98 && id\[1\] == 0x81/);
+  assert.match(tab5SetupSource, /if \(found_gt911 \|\| hit_ili9881\)[\s\S]*?Panel_ILI9881C/);
   assert.equal(specs.panels.ili9881c.dpi_freq_mhz, 80);
   assert.equal(specs.panels.st7121.dpi_freq_mhz, 70);
   assert.equal(specs.panels.st7123.vsync_back_porch + specs.panels.st7123.vsync_pulse_width, 10);
