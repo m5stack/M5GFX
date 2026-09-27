@@ -2,9 +2,33 @@
   "schema_version": 1,
   "id": "m5paper",
   "name": "M5Paper",
+  "official_name": "M5Stack Paper",
+  "official_name_verified": true,
+  "aliases": [
+    "paper",
+    "m5paper",
+    "paper v1.1",
+    "comm edition"
+  ],
   "legacy_board_id": 7,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "quad"
+    }
+  },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
     "2": {
       "roles": [
         "dev:power_hold.enable"
@@ -12,6 +36,11 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
     },
     "4": {
       "roles": [
@@ -51,6 +80,16 @@
     "15": {
       "roles": [
         "dev:lcd.cs"
+      ]
+    },
+    "16": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "17": {
+      "roles": [
+        "dev:psram.clk"
       ]
     },
     "18": {
@@ -133,9 +172,33 @@
       "roles": [
         "dev:touch.int"
       ]
+    },
+    "37": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "39": {
+      "roles": [
+        "dev:btn_c.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -184,6 +247,17 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "cp2104",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
     "lcd": {
       "kind": "display",
       "part": "it8951",
@@ -248,6 +322,56 @@
       },
       "verified": {
         "signals": "generated"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:37"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:38"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:16",
+        "clk": "gpio:17"
       }
     }
   },

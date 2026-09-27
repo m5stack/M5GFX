@@ -19,6 +19,7 @@
     "boost": { "cap": ["rail"] },
     "ldo": { "cap": ["rail"] },
     "dcdc_3v3": { "cap": ["rail"] },
-    "led_en": { "cap": ["output"] }
+    "led_en": { "cap": ["output"] },
+    "pwrkey": { "cap": ["output"] }
   }
 }

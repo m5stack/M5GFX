@@ -1,7 +1,16 @@
 {
   "schema_version": 1,
   "id": "m5stack_core2",
-  "name": "M5Stack Core2",
+  "name": "M5StackCore2",
+  "official_name": "M5Stack Core2",
+  "official_name_verified": true,
+  "aliases": [
+    "core2",
+    "core2 v1.1",
+    "core2 v1.3",
+    "core2 for aws",
+    "aws"
+  ],
   "legacy_board_id": 2,
   "chip": "esp32_d0wdq6",
   "spec": {
@@ -19,7 +28,8 @@
     "storage": {
       "psram_mb": 8,
       "flash_mb": 16,
-      "sd": true
+      "sd": true,
+      "psram_mode": "quad"
     }
   },
   "pins": {
@@ -27,7 +37,8 @@
       "roles": [
         "bus:i2s_spk.ws",
         "bus:pdm_mic.ws",
-        "conn:mbus.24"
+        "conn:mbus.24",
+        "dev:usb_serial.boot"
       ],
       "pull": "none",
       "note": "I2S WS shared by the speaker and PDM microphone",
@@ -37,7 +48,8 @@
     },
     "1": {
       "roles": [
-        "conn:mbus.14"
+        "conn:mbus.14",
+        "bus:console_uart.tx"
       ],
       "pull": "none",
       "note": "TXD0",
@@ -57,7 +69,8 @@
     },
     "3": {
       "roles": [
-        "conn:mbus.13"
+        "conn:mbus.13",
+        "bus:console_uart.rx"
       ],
       "pull": "none",
       "note": "RXD0",
@@ -111,6 +124,16 @@
         "dev:lcd.dc"
       ],
       "pull": "none"
+    },
+    "16": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "17": {
+      "roles": [
+        "dev:psram.clk"
+      ]
     },
     "18": {
       "roles": [
@@ -267,6 +290,15 @@
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -332,6 +364,17 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "part": "cp2104",
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
     "lcd": {
       "kind": "display",
       "bus": "main_spi",
@@ -466,6 +509,11 @@
           "roles": [
             "pwr:ext_5v"
           ]
+        },
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
         }
       }
     },
@@ -479,6 +527,28 @@
       "kind": "led",
       "signals": {
         "pwm": "pin:pmic.gpio1"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:16",
+        "clk": "gpio:17"
       }
     },
     "rgb_led": {

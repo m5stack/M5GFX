@@ -23,6 +23,11 @@ resolved combinations. Device `signals` and `enable` are derived from `dev:`
 roles across the SoC and device-owned pin tables; they are not written in board
 sources. `gpio:N` is the short form of `pin:soc.N`.
 
+`official_name_verified: true` means that the product-name portion matches the
+official documentation page title. The leading `M5Stack ` on M5Stack products
+is added by this catalog's naming rule and is not part of the verified title.
+An absent flag means that the spelling has not been verified.
+
 SD wiring uses card terminal names (`clk`, `cmd`, `d0` through `d3`). The
 `sd_slot` part defines their SPI aliases, and resolved boards report usable
 `spi`, `sdio1`, and `sdio4` modes in `devices.sd.derived`.
@@ -57,12 +62,14 @@ in-flight attempt can exceed the list deadline depends on the lower I2C
 implementation: hardware I2C is about 26 ms, while software I2C can take tens
 of milliseconds when SCL is stuck.
 
-### Migration behavior notes
+On the original ESP32 package, the PSRAM catalog lists only CS and CLK. Its
+data lines share the flash-only pads represented by the chip's reserved GPIOs.
+
+### Detection compatibility notes
 
 - ChainCaptain detection holds the generated display chip-select high during
-  prepare. The legacy block first drove it during panel initialization; the
-  earlier deselection is intentional and matches the transaction discipline
-  used by other migrated boards.
+  prepare. Earlier deselection is intentional and matches the transaction
+  discipline used by other detected boards.
 - Paper family (PaperS3 / PaperDIY) signature no longer drives the internal
   I2C lines high before the pull-up check; it only measures them against the
   internal pull-down (and pull-up) with a 10 us settle, which is read-only.

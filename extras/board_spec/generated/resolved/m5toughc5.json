@@ -2,6 +2,11 @@
   "schema_version": 1,
   "id": "m5toughc5",
   "name": "M5ToughC5",
+  "official_name": "M5Stack ToughC5",
+  "aliases": [
+    "toughc5",
+    "tough c5"
+  ],
   "legacy_board_id": 33,
   "chip": "esp32c5",
   "spec": {
@@ -15,7 +20,8 @@
     "storage": {
       "psram_mb": 8,
       "flash_mb": 8,
-      "sd": true
+      "sd": true,
+      "psram_mode": "quad"
     }
   },
   "pins": {
@@ -242,12 +248,37 @@
     "pmic": {
       "kind": "pmic",
       "part": "m5pm1",
-      "bus": "internal_i2c"
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
     },
     "ioe": {
       "kind": "io_expander",
       "part": "m5ioe1",
       "bus": "internal_i2c"
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

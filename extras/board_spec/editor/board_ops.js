@@ -92,31 +92,68 @@ export function boardRoleOptions(board, { schema, chip, parts = {}, connectorTyp
   return output.sort((a, b) => a.localeCompare(b));
 }
 
-export function createBoard({ id, name, legacy_board_id, chip }) {
+function normalizedAliases(aliases) {
+  if (aliases === undefined) return undefined;
+  if (!Array.isArray(aliases) || aliases.some((alias) => typeof alias !== "string" || !alias.trim())) throw new BoardOperationError("E_FIELD", "aliases must be non-empty strings");
+  const seen = new Set();
+  return aliases.map((alias) => alias.trim()).filter((alias) => {
+    const normalized = alias.toLowerCase();
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
+export function createBoard({ id, name, official_name = name, official_name_verified, aliases, legacy_board_id, chip }) {
   requireId(id);
   requireId(chip, "chip");
   if (!name?.trim()) throw new BoardOperationError("E_NAME_REQUIRED", "name is required");
+  if (!official_name?.trim()) throw new BoardOperationError("E_NAME_REQUIRED", "official_name is required");
   if (!Number.isInteger(legacy_board_id)) throw new BoardOperationError("E_LEGACY_ID", "legacy_board_id must be an integer");
-  return { schema_version: 1, id, name: name.trim(), legacy_board_id, chip, pins: {}, buses: {}, devices: {}, connectors: {} };
+  const output = { schema_version: 1, id, name: name.trim(), official_name: official_name.trim(), legacy_board_id, chip, pins: {}, buses: {}, devices: {}, connectors: {} };
+  if (official_name_verified === true) output.official_name_verified = true;
+  const normalized = normalizedAliases(aliases);
+  if (normalized?.length) output.aliases = normalized;
+  return output;
 }
 
-export function duplicateBoard(board, { id, name, legacy_board_id }) {
+export function duplicateBoard(board, { id, name, official_name = name, official_name_verified, aliases, legacy_board_id }) {
   const output = boardOpClone(board);
   requireId(id);
   if (!name?.trim()) throw new BoardOperationError("E_NAME_REQUIRED", "name is required");
+  if (!official_name?.trim()) throw new BoardOperationError("E_NAME_REQUIRED", "official_name is required");
   if (!Number.isInteger(legacy_board_id)) throw new BoardOperationError("E_LEGACY_ID", "legacy_board_id must be an integer");
   output.id = id;
   output.name = name.trim();
+  output.official_name = official_name.trim();
+  if (official_name_verified === true) output.official_name_verified = true;
+  else delete output.official_name_verified;
+  const normalized = normalizedAliases(aliases);
+  if (normalized !== undefined) {
+    if (normalized.length) output.aliases = normalized;
+    else delete output.aliases;
+  }
   output.legacy_board_id = legacy_board_id;
   return output;
 }
 
 export function setBoardField(board, key, value) {
-  if (!["name", "legacy_board_id", "chip"].includes(key)) throw new BoardOperationError("E_FIELD", `unsupported board field ${key}`);
+  if (!["name", "official_name", "official_name_verified", "aliases", "legacy_board_id", "chip"].includes(key)) throw new BoardOperationError("E_FIELD", `unsupported board field ${key}`);
   if (key === "chip") requireId(value, "chip");
   if (key === "legacy_board_id" && !Number.isInteger(value)) throw new BoardOperationError("E_LEGACY_ID", "legacy_board_id must be an integer");
-  if (key === "name" && !String(value).trim()) throw new BoardOperationError("E_NAME_REQUIRED", "name is required");
-  board[key] = key === "name" ? String(value).trim() : value;
+  if (["name", "official_name"].includes(key) && !String(value).trim()) throw new BoardOperationError("E_NAME_REQUIRED", `${key} is required`);
+  if (key === "official_name_verified") {
+    if (value) board.official_name_verified = true;
+    else delete board.official_name_verified;
+    return board;
+  }
+  if (key === "aliases") {
+    const aliases = normalizedAliases(value);
+    if (aliases.length) board.aliases = aliases;
+    else delete board.aliases;
+    return board;
+  }
+  board[key] = ["name", "official_name"].includes(key) ? String(value).trim() : value;
   return board;
 }
 
@@ -275,10 +312,13 @@ export function removeConnector(board, id) {
 
 export function addRole(board, gpio, role, { chip } = {}) {
   const number = Number(gpio);
+  const psramSignal = Object.entries(chip?.psram?.[board.spec?.storage?.psram_mode] ?? {}).find(([, pin]) => pin === number)?.[0];
+  const expectedPsramRole = psramSignal ? `dev:psram.${psramSignal}` : null;
   if (!Number.isInteger(number) || number < 0 || (chip && number >= chip.gpio_count)) throw new BoardOperationError("E_GPIO_RANGE", `GPIO ${gpio} is outside the chip`);
-  if (chip?.reserved?.includes(number)) throw new BoardOperationError("E_CHIP_RESERVED", `GPIO ${gpio} is reserved`);
+  if (chip?.absent?.includes(number)) throw new BoardOperationError("E_CHIP_ABSENT", `GPIO ${gpio} does not exist on this chip`);
+  if (chip?.reserved?.includes(number) && role !== expectedPsramRole) throw new BoardOperationError("E_CHIP_RESERVED", `GPIO ${gpio} is reserved`);
   const conditional = chip?.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
-  if (conditional.includes(number)) throw new BoardOperationError("E_CHIP_RESERVED_COND", `GPIO ${gpio} is conditionally reserved`);
+  if (conditional.includes(number) && role !== expectedPsramRole) throw new BoardOperationError("E_CHIP_RESERVED_COND", `GPIO ${gpio} is conditionally reserved`);
   board.pins ??= {};
   const pin = board.pins[String(number)] ??= { roles: [] };
   pin.roles ??= [];

@@ -2,9 +2,46 @@
   "schema_version": 1,
   "id": "m5atom_psram",
   "name": "M5AtomPsram",
+  "official_name": "M5Stack Atom PSRAM",
+  "aliases": [
+    "atom psram",
+    "atompsram",
+    "atom display"
+  ],
   "legacy_board_id": 129,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "storage": {
+      "psram_mb": 2,
+      "psram_mode": "quad"
+    }
+  },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
+    "9": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "10": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
     "21": {
       "roles": [
         "bus:internal_i2c.scl"
@@ -48,11 +85,21 @@
       }
     },
     "39": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "internal_i2c": {
       "kind": "i2c",
       "signals": [
@@ -81,8 +128,28 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch9102",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "rgb_led": {
       "kind": "led_strip"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {
@@ -90,5 +157,6 @@
       "type": "hy2_4p",
       "standard": "port_i2c"
     }
-  }
+  },
+  "chip_package": "pico_v3_02"
 }

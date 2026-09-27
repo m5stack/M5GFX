@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5stickc",
   "name": "M5StickC",
+  "official_name": "M5Stack StickC",
+  "official_name_verified": true,
+  "aliases": [
+    "stickc",
+    "m5stickc",
+    "stick c"
+  ],
   "legacy_board_id": 3,
   "chip": "esp32_d0wdq6",
   "spec": {
@@ -14,6 +21,21 @@
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
     "5": {
       "roles": [
         "dev:lcd.cs"
@@ -88,15 +110,26 @@
       }
     },
     "37": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "39": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -145,6 +178,14 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch552",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "lcd": {
       "kind": "display",
       "part": "st7735s",
@@ -169,7 +210,38 @@
       "kind": "pmic",
       "part": "axp192",
       "bus": "internal_i2c",
-      "i2c_addr": "0x34"
+      "i2c_addr": "0x34",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
     }
   },
   "connectors": {

@@ -2,6 +2,15 @@
   "schema_version": 1,
   "id": "m5stickcplus",
   "name": "M5StickCPlus",
+  "official_name": "M5Stack StickC-Plus",
+  "official_name_verified": true,
+  "aliases": [
+    "stickc plus",
+    "m5stickc plus",
+    "stickcplus",
+    "stickc-plus se",
+    "plus se"
+  ],
   "legacy_board_id": 4,
   "chip": "esp32_d0wdq6",
   "spec": {
@@ -14,6 +23,21 @@
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
     "5": {
       "roles": [
         "dev:lcd.cs"
@@ -88,15 +112,26 @@
       }
     },
     "37": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "39": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -145,6 +180,17 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch552",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
     "lcd": {
       "kind": "display",
       "part": "st7789v2",
@@ -175,7 +221,56 @@
       "kind": "pmic",
       "part": "axp192",
       "bus": "internal_i2c",
-      "i2c_addr": "0x34"
+      "i2c_addr": "0x34",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:37"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
     }
   },
   "connectors": {

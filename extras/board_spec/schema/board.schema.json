@@ -14,13 +14,20 @@
     ]
   },
   "additionalProperties": false,
-  "required": ["schema_version", "id", "name", "legacy_board_id", "chip", "pins", "buses", "devices"],
+  "required": ["schema_version", "id", "name", "official_name", "legacy_board_id", "chip", "pins", "buses", "devices"],
   "properties": {
     "schema_version": { "const": 1 },
     "id": { "$ref": "#/definitions/id" },
-    "name": { "type": "string" },
+    "name": { "type": "string", "minLength": 1 },
+    "official_name": { "type": "string", "minLength": 1 },
+    "official_name_verified": {
+      "type": "boolean",
+      "description": "True when the product-name portion matches the official documentation page title. For M5Stack products, the leading 'M5Stack ' is a catalog naming-rule prefix rather than part of the verified page title. Absence means unverified."
+    },
+    "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "legacy_board_id": { "type": "integer", "minimum": 0 },
     "chip": { "$ref": "#/definitions/id" },
+    "chip_package": { "$ref": "#/definitions/id" },
     "spec": { "$ref": "#/definitions/catalogSpec" },
     "pins": { "type": "object", "propertyNames": { "pattern": "^[0-9]+$" }, "additionalProperties": { "$ref": "#/definitions/pin" } },
     "buses": { "type": "object", "propertyNames": { "$ref": "#/definitions/id" }, "additionalProperties": { "$ref": "#/definitions/bus" } },
@@ -121,7 +128,7 @@
     },
     "deviceKind": {
       "type": "string",
-      "enum": ["display", "sd", "touch", "pmic", "io_expander", "sensor", "speaker", "mic", "imu", "rtc", "led_strip", "led", "vibration", "power_hold", "backlight", "camera", "transceiver", "regulator"],
+      "enum": ["display", "sd", "touch", "pmic", "io_expander", "sensor", "speaker", "mic", "imu", "rtc", "led_strip", "led", "vibration", "power_hold", "backlight", "camera", "transceiver", "regulator", "button", "usb_uart", "psram"],
       "x-signals": {
         "display": ["cs", "dc", "rst", "busy", "backlight", "power"],
         "sd": ["clk", "cmd", "d0", "d1", "d2", "d3", "cd", "wp"],
@@ -140,9 +147,12 @@
         "vibration": ["enable"],
         "camera": ["pwdn", "reset", "xclk", "vsync", "href", "pclk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"],
         "transceiver": ["de", "re"],
-        "regulator": ["en"]
+        "regulator": ["en"],
+        "button": ["in"],
+        "usb_uart": ["boot"],
+        "psram": ["cs", "clk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "dqs"]
       },
-      "x-output-signals": ["cs", "dc", "rst", "power", "data", "data_out", "enable", "pwm"],
+      "x-output-signals": ["cs", "dc", "rst", "power", "data", "data_out", "enable", "pwm", "boot"],
       "x-spec-properties": {
         "display": ["width", "height", "memory_width", "memory_height", "offset_x", "offset_y", "rotation_offset", "invert", "readable", "rgb_order", "three_wire", "panel_type", "line_padding", "dpi_freq_mhz", "hsync_back_porch", "hsync_pulse_width", "hsync_front_porch", "vsync_back_porch", "vsync_pulse_width", "vsync_front_porch"],
         "sd": [],
@@ -161,7 +171,10 @@
         "vibration": [],
         "camera": [],
         "transceiver": [],
-        "regulator": []
+        "regulator": [],
+        "button": ["active_low", "pull"],
+        "usb_uart": ["auto_reset"],
+        "psram": []
       }
     },
     "ownerPin": {
@@ -185,6 +198,9 @@
     "choice": {
       "type": "object", "additionalProperties": false,
       "properties": {
+        "present": { "type": "boolean" },
+        "soc_pins": { "type": "object", "propertyNames": { "pattern": "^[0-9]+$" }, "additionalProperties": { "$ref": "#/definitions/pin" } },
+        "catalog_spec": { "$ref": "#/definitions/catalogSpec" },
         "kind": { "$ref": "#/definitions/deviceKind" },
         "part": { "$ref": "#/definitions/id" },
         "bus": { "$ref": "#/definitions/id" },

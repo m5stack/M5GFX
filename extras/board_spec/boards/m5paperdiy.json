@@ -2,6 +2,11 @@
   "schema_version": 1,
   "id": "m5paperdiy",
   "name": "M5PaperDIY",
+  "official_name": "M5Stack PaperDIY",
+  "aliases": [
+    "paperdiy",
+    "paper diy"
+  ],
   "legacy_board_id": 34,
   "chip": "esp32s3",
   "spec": {
@@ -14,17 +19,20 @@
     },
     "storage": {
       "psram_mode": "opi",
-      "sd": true
+      "sd": true,
+      "psram_mb": 8
     }
   },
   "pins": {
     "3": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     },
     "4": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "6": {
       "roles": [
@@ -89,6 +97,61 @@
     "18": {
       "roles": [
         "bus:epd_bus.ckv"
+      ]
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
       ]
     },
     "38": {
@@ -233,7 +296,42 @@
     "pmic": {
       "kind": "pmic",
       "part": "m5pm1",
-      "bus": "internal_i2c"
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

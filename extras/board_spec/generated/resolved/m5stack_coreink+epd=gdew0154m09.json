@@ -2,6 +2,12 @@
   "schema_version": 1,
   "id": "m5stack_coreink",
   "name": "M5StackCoreInk",
+  "official_name": "M5Stack CoreInk",
+  "official_name_verified": true,
+  "aliases": [
+    "coreink",
+    "core ink"
+  ],
   "legacy_board_id": 6,
   "chip": "esp32_d0wdq6",
   "spec": {
@@ -16,7 +22,18 @@
   "pins": {
     "0": {
       "roles": [
-        "dev:epd.rst"
+        "dev:epd.rst",
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
       ]
     },
     "4": {
@@ -25,8 +42,9 @@
       ]
     },
     "5": {
-      "roles": [],
-      "note": "External/top button, active low"
+      "roles": [
+        "dev:btn_ext.in"
+      ]
     },
     "9": {
       "roles": [
@@ -79,8 +97,9 @@
       }
     },
     "27": {
-      "roles": [],
-      "note": "Power button, active low"
+      "roles": [
+        "dev:btn_pwr.in"
+      ]
     },
     "32": {
       "roles": [
@@ -109,19 +128,31 @@
       }
     },
     "37": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "38": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     },
     "39": {
-      "roles": [],
-      "note": "BtnC, active low"
+      "roles": [
+        "dev:btn_c.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -168,6 +199,17 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "cp2104",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
     "epd": {
       "kind": "display",
       "bus": "main_spi",
@@ -191,6 +233,76 @@
       "kind": "power_hold",
       "signals": {
         "enable": "gpio:12"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:37"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:38"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_ext": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:5"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:27"
       },
       "verified": {
         "signals": "generated"

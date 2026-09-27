@@ -2,9 +2,39 @@
   "schema_version": 1,
   "id": "m5timercam",
   "name": "M5TimerCam",
+  "official_name": "M5Stack TimerCamera",
+  "official_name_verified": true,
+  "aliases": [
+    "timercam",
+    "timer camera",
+    "timer cam",
+    "timercamera-x",
+    "timercamera-f"
+  ],
   "legacy_board_id": 132,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "quad"
+    }
+  },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
     "4": {
       "roles": [
         "bus:port_a_i2c.sda",
@@ -39,6 +69,16 @@
         "roles": "generated"
       }
     },
+    "16": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "17": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
     "33": {
       "roles": [
         "dev:power_hold.enable"
@@ -49,6 +89,15 @@
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "internal_i2c": {
       "kind": "i2c",
       "signals": [
@@ -77,8 +126,20 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch552",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "power_hold": {
       "kind": "power_hold"
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

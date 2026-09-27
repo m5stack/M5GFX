@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5airq",
   "name": "M5AirQ",
+  "official_name": "M5Stack Air Quality",
+  "official_name_verified": true,
+  "aliases": [
+    "airq",
+    "air quality",
+    "air quality kit"
+  ],
   "legacy_board_id": 15,
   "chip": "esp32s3",
   "spec": {
@@ -14,6 +21,11 @@
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
     "1": {
       "roles": [
         "dev:epd.busy"
@@ -49,6 +61,11 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "8": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
     },
     "11": {
       "roles": [
@@ -177,6 +194,22 @@
       "part": "sk6812",
       "verified": {
         "part": "datasheet"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
       }
     }
   },

@@ -1,13 +1,24 @@
 {
   "schema_version": 1,
   "id": "m5stack",
-  "name": "M5Stack BASIC/GRAY/FIRE",
+  "name": "M5Stack",
+  "official_name": "M5Stack Core (Basic/Gray/Fire)",
+  "aliases": [
+    "core",
+    "basic",
+    "gray",
+    "grey",
+    "fire",
+    "m5go",
+    "m5stack basic"
+  ],
   "legacy_board_id": 1,
   "chip": "esp32_d0wdq6",
   "pins": {
     "0": {
       "roles": [
-        "conn:mbus.24"
+        "conn:mbus.24",
+        "dev:usb_serial.boot"
       ],
       "verified": {
         "roles": "generated"
@@ -15,7 +26,8 @@
     },
     "1": {
       "roles": [
-        "conn:mbus.14"
+        "conn:mbus.14",
+        "bus:console_uart.tx"
       ],
       "verified": {
         "roles": "generated"
@@ -31,7 +43,8 @@
     },
     "3": {
       "roles": [
-        "conn:mbus.13"
+        "conn:mbus.13",
+        "bus:console_uart.rx"
       ],
       "verified": {
         "roles": "generated"
@@ -204,9 +217,33 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "37": {
+      "roles": [
+        "dev:btn_c.in"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "39": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -240,6 +277,23 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "bus": "console_uart",
+      "selected_by": "revision",
+      "default": "cp2104",
+      "choices": {
+        "cp2104": {
+          "part": "cp2104"
+        },
+        "ch9102f": {
+          "part": "ch9102f"
+        }
+      },
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "lcd": {
       "kind": "display",
       "bus": "main_spi",
@@ -289,6 +343,87 @@
     },
     "mic": {
       "kind": "mic"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "selected_by": "revision",
+      "default": "none",
+      "choices": {
+        "none": {
+          "present": false,
+          "catalog_spec": {
+            "storage": {
+              "psram_mb": 0
+            }
+          }
+        },
+        "fire_4mb": {
+          "part": "psram",
+          "catalog_spec": {
+            "storage": {
+              "psram_mb": 4,
+              "psram_mode": "quad"
+            }
+          },
+          "soc_pins": {
+            "16": {
+              "roles": [
+                "dev:psram.cs"
+              ]
+            },
+            "17": {
+              "roles": [
+                "dev:psram.clk"
+              ]
+            }
+          }
+        },
+        "fire_8mb": {
+          "part": "psram",
+          "catalog_spec": {
+            "storage": {
+              "psram_mb": 8,
+              "psram_mode": "quad"
+            }
+          },
+          "soc_pins": {
+            "16": {
+              "roles": [
+                "dev:psram.cs"
+              ]
+            },
+            "17": {
+              "roles": [
+                "dev:psram.clk"
+              ]
+            }
+          }
+        }
+      }
     }
   },
   "connectors": {
@@ -299,5 +434,60 @@
     "mbus": {
       "type": "mbus"
     }
-  }
+  },
+  "revisions": [
+    {
+      "id": "pre_v2_6_basic",
+      "name": "Basic before v2.6",
+      "select": {},
+      "note": "Basic: no PSRAM; CP2104"
+    },
+    {
+      "id": "pre_v2_6_gray",
+      "name": "Gray before v2.6",
+      "select": {},
+      "note": "Gray: no PSRAM; CP2104"
+    },
+    {
+      "id": "pre_2020_04_fire",
+      "name": "Fire before 2020-04",
+      "select": {
+        "psram": "fire_4mb"
+      },
+      "note": "Fire: 4MB Quad PSRAM; CP2104"
+    },
+    {
+      "id": "from_2020_04_to_v2_5_fire",
+      "name": "Fire 2020-04 through v2.5",
+      "select": {
+        "psram": "fire_8mb"
+      },
+      "note": "Fire: 8MB Quad PSRAM after the 2020-04 capacity change; CP2104"
+    },
+    {
+      "id": "v2_6_plus_basic",
+      "name": "Basic v2.6 and later",
+      "select": {
+        "usb_serial": "ch9102f"
+      },
+      "note": "Basic: no PSRAM; CH9102F"
+    },
+    {
+      "id": "v2_6_plus_gray",
+      "name": "Gray v2.6 and later",
+      "select": {
+        "usb_serial": "ch9102f"
+      },
+      "note": "Gray: no PSRAM; CH9102F"
+    },
+    {
+      "id": "v2_6_plus_fire",
+      "name": "Fire v2.6 and later",
+      "select": {
+        "usb_serial": "ch9102f",
+        "psram": "fire_8mb"
+      },
+      "note": "Fire: 8MB Quad PSRAM; CH9102F"
+    }
+  ]
 }

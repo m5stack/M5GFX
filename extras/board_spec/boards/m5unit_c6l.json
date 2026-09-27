@@ -2,6 +2,15 @@
   "schema_version": 1,
   "id": "m5unit_c6l",
   "name": "M5UnitC6L",
+  "official_name": "M5Stack Unit C6L",
+  "official_name_verified": true,
+  "aliases": [
+    "unitc6l",
+    "unit c6l",
+    "c6l",
+    "c6l unit",
+    "meshtastic"
+  ],
   "legacy_board_id": 25,
   "chip": "esp32c6",
   "spec": {
@@ -150,6 +159,27 @@
       "kind": "power_hold",
       "spec": {
         "active_low": false
+      }
+    },
+    "ioe": {
+      "kind": "io_expander",
+      "part": "pi4io",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x43",
+      "pins": {
+        "p0": {
+          "roles": [
+            "dev:btn_a.in"
+          ]
+        }
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "internal_up"
       }
     }
   },

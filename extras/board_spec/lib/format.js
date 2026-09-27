@@ -1,7 +1,7 @@
 import { clone, isPlainObject } from "./model.js";
 import { isGeneratedField } from "./pintable_roles.js";
 
-const TOP_LEVEL_ORDER = ["schema_version", "id", "name", "legacy_board_id", "chip", "spec", "pins", "buses", "devices", "connectors", "revisions"];
+const TOP_LEVEL_ORDER = ["schema_version", "id", "name", "official_name", "official_name_verified", "aliases", "legacy_board_id", "chip", "spec", "pins", "buses", "devices", "connectors", "revisions"];
 const PRIORITY_KEYS = ["id", "kind", "type", "name"];
 
 function orderedObject(value, priority = PRIORITY_KEYS) {

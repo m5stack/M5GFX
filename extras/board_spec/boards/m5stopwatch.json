@@ -2,6 +2,12 @@
   "schema_version": 1,
   "id": "m5stopwatch",
   "name": "M5StopWatch",
+  "official_name": "M5Stack StopWatch",
+  "official_name_verified": true,
+  "aliases": [
+    "stopwatch",
+    "stop watch"
+  ],
   "legacy_board_id": 30,
   "chip": "esp32s3",
   "spec": {
@@ -17,6 +23,16 @@
     }
   },
   "pins": {
+    "1": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "2": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
     "10": {
       "roles": [
         "bus:port_a_i2c.sda",
@@ -205,7 +221,14 @@
     "pmic": {
       "kind": "pmic",
       "part": "m5pm1",
-      "bus": "internal_i2c"
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
     },
     "ioe": {
       "kind": "io_expander",
@@ -226,6 +249,30 @@
       "kind": "sensor",
       "bus": "internal_i2c",
       "i2c_addr": "0x50"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
     }
   },
   "connectors": {

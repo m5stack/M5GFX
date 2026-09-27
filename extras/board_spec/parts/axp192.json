@@ -5,7 +5,8 @@
     "gpio0": { "cap": ["output", "input", "ldo"] }, "gpio1": { "cap": ["output", "input", "pwm"] },
     "gpio2": { "cap": ["output", "input"] }, "gpio3": { "cap": ["output"] }, "gpio4": { "cap": ["output"] },
     "dcdc1": { "cap": ["rail"] }, "dcdc2": { "cap": ["rail"] }, "dcdc3": { "cap": ["rail"] },
-    "ldo2": { "cap": ["rail"] }, "ldo3": { "cap": ["rail"] }, "exten": { "cap": ["output"] }
+    "ldo2": { "cap": ["rail"] }, "ldo3": { "cap": ["rail"] }, "exten": { "cap": ["output"] },
+    "pwrkey": { "cap": ["output"] }
   },
   "verified": { "pins": null }
 }

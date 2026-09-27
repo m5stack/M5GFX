@@ -1,6 +1,6 @@
 import { checkFormatIdempotent } from "./format.js";
 import { resolveConnectorType } from "./ctypes.js";
-import { isPlainObject } from "./model.js";
+import { effectiveChip, isPlainObject } from "./model.js";
 import { isGeneratedField } from "./pintable_roles.js";
 import { resolveAll, resolveBoard, resolveConnectorPositions } from "./resolve.js";
 import { validateChoices } from "./choices.js";
@@ -42,6 +42,7 @@ function validatePinKeys(board, chip, errors) {
     const path = `/pins/${pin}`;
     if (!/^[0-9]+$/.test(pin)) errors.push(error("E_PIN_KEY", path, "SoC pin key must contain decimal digits only"));
     else if (Number(pin) >= chip.gpio_count) errors.push(error("E_PIN_KEY", path, `GPIO ${pin} is outside chip range 0..${chip.gpio_count - 1}`));
+    else if (chip.absent.includes(Number(pin))) errors.push(error("E_CHIP_ABSENT", path, `GPIO ${pin} does not exist on ${chip.id}`));
   }
 }
 
@@ -106,9 +107,14 @@ function validateRoles(board, chip, schema, errors, resolved) {
     if (entry.owner === "soc") {
       const gpio = Number(entry.gpio);
       if (output && chip.input_only.includes(gpio)) errors.push(error("E_CHIP_INPUT_ONLY", entry.path, `output role ${entry.role} is on input-only GPIO ${gpio}`));
-      if (chip.reserved.includes(gpio)) errors.push(error("E_CHIP_RESERVED", entry.path, `GPIO ${gpio} is reserved by the chip/package`));
+      const expectedPsram = chip.psram?.[board.spec?.storage?.psram_mode] ?? {};
+      const psramSignal = Object.entries(expectedPsram).find(([, pin]) => pin === gpio)?.[0];
+      const pinRoles = board.pins?.[String(gpio)]?.roles ?? [];
+      const psramOwnsPin = psramSignal && pinRoles.includes(`dev:psram.${psramSignal}`);
+      const allowedPsramShare = psramOwnsPin && (entry.role === `dev:psram.${psramSignal}` || entry.parsed?.type === "conn");
+      if (chip.reserved.includes(gpio) && !allowedPsramShare) errors.push(error("E_CHIP_RESERVED", entry.path, `GPIO ${gpio} is reserved by the chip/package`));
       const conditional = chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
-      if (conditional.includes(gpio)) errors.push(error("E_CHIP_RESERVED_COND", entry.path, `GPIO ${gpio} is reserved when PSRAM mode is ${board.spec.storage.psram_mode}`));
+      if (conditional.includes(gpio) && !allowedPsramShare) errors.push(error("E_CHIP_RESERVED_COND", entry.path, `GPIO ${gpio} is reserved when PSRAM mode is ${board.spec.storage.psram_mode}`));
       if (gpio === chip.usb?.dn || gpio === chip.usb?.dp) errors.push(warning("W_CHIP_USB_PIN", entry.path, `GPIO ${gpio} is shared with native USB`));
     }
   }
@@ -123,6 +129,33 @@ function validateRoles(board, chip, schema, errors, resolved) {
       item.signal === "cs" || (board.devices?.[item.id]?.kind === "sd" && item.signal === "d3")
     ));
     if (chipSelects.length > 1) errors.push(error("E_CS_CONFLICT", `/pins/${gpio}/roles`, "multiple device chip-select roles share one GPIO"));
+    const psramRoles = parsed.filter((item) => item.type === "dev" && item.id === "psram");
+    const conflicting = parsed.filter((item) => item.type === "bus" || (item.type === "dev" && item.id !== "psram"));
+    if (psramRoles.length && conflicting.length) errors.push(error("E_PSRAM_CONFLICT", `/pins/${gpio}/roles`, "PSRAM may share a GPIO only with connector roles"));
+  }
+}
+
+function validatePsram(board, chip, errors, resolved) {
+  if (!resolved && board.devices?.psram?.choices) return;
+  const size = board.spec?.storage?.psram_mb ?? 0;
+  const mode = board.spec?.storage?.psram_mode;
+  const device = board.devices?.psram;
+  if (size > 0 && !device) errors.push(error("E_PSRAM_DEVICE", "/devices/psram", "storage declares PSRAM but the psram device is missing"));
+  if (size <= 0 && device) errors.push(error("E_PSRAM_STORAGE", "/spec/storage/psram_mb", "psram device requires a positive storage.psram_mb"));
+  if (size <= 0 && mode) errors.push(error("E_PSRAM_STORAGE", "/spec/storage/psram_mode", "PSRAM mode requires a positive storage.psram_mb"));
+  if (size > 0 && !mode) errors.push(error("E_PSRAM_STORAGE", "/spec/storage/psram_mode", "PSRAM size requires storage.psram_mode"));
+  if (!device || !mode) return;
+  const expected = chip.psram?.[mode];
+  if (!expected) {
+    errors.push(error("E_PSRAM_MODE", "/spec/storage/psram_mode", `${chip.id}/${chip.package} does not declare ${mode} PSRAM wiring`));
+    return;
+  }
+  const actual = {};
+  for (const entry of roleEntries(board)) if (entry.owner === "soc" && entry.parsed?.type === "dev" && entry.parsed.id === "psram") {
+    actual[entry.parsed.signal] = Number(entry.pin);
+  }
+  if (JSON.stringify(Object.entries(actual).sort()) !== JSON.stringify(Object.entries(expected).sort())) {
+    errors.push(error("E_PSRAM_PINS", "/devices/psram", `PSRAM wiring ${JSON.stringify(actual)} does not match chip ${JSON.stringify(expected)}`));
   }
 }
 
@@ -332,12 +365,17 @@ function unique(errors) {
 }
 
 export function validateBoard(board, { schema, chip, connectorTypes = {}, parts = {}, target = {}, resolved = false }) {
+  const packageKnown = !board.chip_package || Object.hasOwn(chip.packages ?? {}, board.chip_package);
+  chip = effectiveChip(chip, board);
   const errors = [...(board.__compositionIssues ?? []), ...validateSchema(board, schema)];
+  if (!packageKnown) errors.push(error("E_CHIP_PACKAGE", "/chip_package", `${board.chip_package} is not declared by ${chip.id}`));
+  validateAliases(board, errors);
   validateDeviceSpecKeys(board, schema, errors);
   validateIds(board, schema, errors);
   validatePinKeys(board, chip, errors);
   validateHexFields(board, schema, errors);
   validateRoles(board, chip, schema, errors, resolved);
+  validatePsram(board, chip, errors, resolved);
   validateReferences(board, schema, errors);
   validateSdAliases(board, parts, errors);
   errors.push(...validateParts(board, parts, { resolved }));
@@ -354,6 +392,19 @@ export function validateBoard(board, { schema, chip, connectorTypes = {}, parts 
   }
   errors.push(...validateFormat(board));
   return unique(errors);
+}
+
+function validateAliases(board, errors) {
+  if (!Array.isArray(board.aliases)) return;
+  const seen = new Set();
+  board.aliases.forEach((alias, index) => {
+    if (typeof alias !== "string") return;
+    const normalized = alias.trim().toLowerCase();
+    if (!normalized || alias !== alias.trim() || seen.has(normalized)) {
+      errors.push(error("E_ALIAS_FORMAT", `/aliases/${index}`, "aliases must be trimmed, non-empty, and unique ignoring case"));
+    }
+    seen.add(normalized);
+  });
 }
 
 export function validateFormat(board, formatter) {

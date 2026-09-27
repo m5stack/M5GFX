@@ -2,14 +2,27 @@
   "schema_version": 1,
   "id": "m5tough",
   "name": "M5Tough",
+  "official_name": "M5Stack Tough",
+  "official_name_verified": true,
+  "aliases": [
+    "tough",
+    "m5tough"
+  ],
   "legacy_board_id": 8,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "quad"
+    }
+  },
   "pins": {
     "0": {
       "roles": [
         "bus:i2s_spk.ws",
         "bus:pdm_mic.ws",
-        "conn:mbus.24"
+        "conn:mbus.24",
+        "dev:usb_serial.boot"
       ],
       "verified": {
         "roles": "generated"
@@ -17,7 +30,8 @@
     },
     "1": {
       "roles": [
-        "conn:mbus.14"
+        "conn:mbus.14",
+        "bus:console_uart.tx"
       ],
       "verified": {
         "roles": "generated"
@@ -34,7 +48,8 @@
     },
     "3": {
       "roles": [
-        "conn:mbus.13"
+        "conn:mbus.13",
+        "bus:console_uart.rx"
       ],
       "verified": {
         "roles": "generated"
@@ -77,6 +92,16 @@
     "15": {
       "roles": [
         "dev:lcd.dc"
+      ]
+    },
+    "16": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "17": {
+      "roles": [
+        "dev:psram.clk"
       ]
     },
     "18": {
@@ -207,6 +232,15 @@
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -259,6 +293,14 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch9102",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "lcd": {
       "kind": "display",
       "bus": "main_spi",
@@ -344,8 +386,25 @@
           "roles": [
             "pwr:ext_5v"
           ]
+        },
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
         }
       }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

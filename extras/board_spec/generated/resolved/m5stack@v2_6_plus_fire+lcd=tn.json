@@ -1,13 +1,30 @@
 {
   "schema_version": 1,
   "id": "m5stack",
-  "name": "M5Stack BASIC/GRAY/FIRE",
+  "name": "M5Stack",
+  "official_name": "M5Stack Core (Basic/Gray/Fire)",
+  "aliases": [
+    "core",
+    "basic",
+    "gray",
+    "grey",
+    "fire",
+    "m5go",
+    "m5stack basic"
+  ],
   "legacy_board_id": 1,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "quad"
+    }
+  },
   "pins": {
     "0": {
       "roles": [
-        "conn:mbus.24"
+        "conn:mbus.24",
+        "dev:usb_serial.boot"
       ],
       "verified": {
         "roles": "generated"
@@ -15,7 +32,8 @@
     },
     "1": {
       "roles": [
-        "conn:mbus.14"
+        "conn:mbus.14",
+        "bus:console_uart.tx"
       ],
       "verified": {
         "roles": "generated"
@@ -31,7 +49,8 @@
     },
     "3": {
       "roles": [
-        "conn:mbus.13"
+        "conn:mbus.13",
+        "bus:console_uart.rx"
       ],
       "verified": {
         "roles": "generated"
@@ -88,6 +107,7 @@
     "16": {
       "roles": [
         "conn:mbus.15",
+        "dev:psram.cs",
         "m5go_bottom/conn:port_c.1"
       ],
       "verified": {
@@ -97,6 +117,7 @@
     "17": {
       "roles": [
         "conn:mbus.16",
+        "dev:psram.clk",
         "m5go_bottom/conn:port_c.2"
       ],
       "verified": {
@@ -213,9 +234,33 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "37": {
+      "roles": [
+        "dev:btn_c.in"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "39": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -249,6 +294,17 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      },
+      "part": "ch9102f",
+      "signals": {
+        "boot": "gpio:0"
+      }
+    },
     "lcd": {
       "kind": "display",
       "bus": "main_spi",
@@ -315,6 +371,56 @@
       "kind": "mic",
       "signals": {
         "data_in": "gpio:34"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:39"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:38"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:37"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:16",
+        "clk": "gpio:17"
       }
     },
     "rgb_led": {

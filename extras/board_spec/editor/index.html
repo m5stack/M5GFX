@@ -14,6 +14,7 @@
     </div>
     <div class="header-controls">
       <div id="save-state" class="save-state" aria-live="polite"></div>
+      <button id="onboarding-help" class="help-button" type="button" aria-expanded="false" data-i18n-aria-label="onboarding.open" data-i18n-title="onboarding.open" data-i18n="onboarding.guide">Guide</button>
       <label class="language-picker">
         <span aria-hidden="true">🌐</span>
         <select id="language-select" aria-label="Language" data-i18n-aria-label="toolbar.language">
@@ -25,70 +26,109 @@
     </div>
   </header>
 
+  <section id="onboarding" class="onboarding" aria-labelledby="onboarding-title" hidden>
+    <div class="onboarding-heading">
+      <div><p class="eyebrow" data-i18n="onboarding.eyebrow">Getting started</p><h2 id="onboarding-title" data-i18n="onboarding.heading">Edit a board JSON in four steps</h2></div>
+      <button id="onboarding-close" class="secondary" type="button" data-i18n="onboarding.close">Got it</button>
+    </div>
+    <p class="onboarding-purpose" data-i18n="onboarding.purpose">Review or correct the catalog wiring here, then download the JSON and place it back in the repository.</p>
+    <ol>
+      <li><strong>1</strong><span data-i18n="onboarding.step1">Choose a board.</span></li>
+      <li><strong>2</strong><span data-i18n="onboarding.step2">Click a GPIO row to inspect or edit its roles.</span></li>
+      <li><strong>3</strong><span data-i18n="onboarding.step3">Changes stay as a draft only in this browser and are removed when the board is removed.</span></li>
+      <li class="onboarding-export"><strong>4</strong><div><span data-i18n="onboarding.step4">Export the JSON, then update the repository yourself.</span><details><summary data-i18n="repository.showSteps">Repository steps</summary><ol><li data-i18n="repository.replaceGeneric">Replace extras/board_spec/boards/&lt;id&gt;.json.</li><li><code>node cli/spec.js check</code></li><li data-i18n="repository.commit">Review the diff, then commit and open a PR.</li></ol><p data-i18n="repository.notAutomatic">Downloading does not modify the repository.</p></details></div></li>
+    </ol>
+  </section>
+
   <section class="toolbar" aria-label="Files and board" data-i18n-aria-label="toolbar.label">
     <label><span data-i18n="toolbar.board">Board</span>
-      <select id="board-select"></select>
+      <span id="board-select" class="search-combobox board-combobox"><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off"><ul role="listbox"></ul></span>
     </label>
     <button id="new-board-button" type="button" data-i18n="toolbar.new">New</button>
     <button id="duplicate-board-button" type="button" class="secondary" data-i18n="toolbar.duplicate">Duplicate</button>
-    <button id="close-board-button" type="button" class="secondary" data-i18n="toolbar.close">Close</button>
-    <label class="file-button"><span data-i18n="toolbar.open">Open JSON</span>
+    <button id="close-board-button" type="button" class="secondary" data-i18n="toolbar.close" data-i18n-title="toolbar.closeHint">Remove board</button>
+    <div class="file-open-group"><label class="file-button"><span data-i18n="toolbar.open">Open JSON</span>
       <input id="file-input" type="file" accept="application/json,.json">
-    </label>
-    <button id="download-button" type="button" data-i18n="toolbar.download">Download formatted JSON</button>
+    </label><div id="drop-zone" class="drop-zone" tabindex="0" data-i18n="toolbar.drop">Drop JSON to open</div></div>
+    <button id="download-button" type="button" data-i18n="toolbar.download">Export repository JSON</button>
     <button id="discard-button" type="button" class="secondary" data-i18n="toolbar.discard">Discard draft</button>
-    <div id="drop-zone" class="drop-zone" tabindex="0" data-i18n="toolbar.drop">Drop JSON here</div>
   </section>
+
+  <section id="repository-next" class="repository-next" aria-live="polite" hidden></section>
 
   <section id="option-panel" class="option-panel" aria-label="Resolved revisions" data-i18n-aria-label="options.label"></section>
   <div class="mode-bar">
     <p id="mode-note" class="mode-note"></p>
-    <button id="edit-base-button" type="button" class="secondary" data-i18n="mode.editBase">Edit raw data</button>
+    <button id="edit-base-button" type="button" class="secondary" data-i18n="mode.editBase" data-i18n-title="help.rawData">Edit raw data</button>
+    <span class="help-mark" data-i18n-title="help.rawData" data-i18n-aria-label="help.rawData">?</span>
   </div>
 
   <nav id="view-tabs" class="view-tabs" aria-label="Editor views" data-i18n-aria-label="views.label">
-    <button type="button" data-view="configuration" class="active" data-i18n="views.configuration">Configuration</button>
-    <button type="button" data-view="revisions" data-i18n="views.revisions">Revisions</button>
-    <button type="button" data-view="owners" data-i18n="views.owners">Pin owners</button>
+    <button type="button" data-view="configuration" class="active"><span data-i18n="views.configuration">Configuration</span><span class="help-mark" data-i18n-title="help.configuration" data-i18n-aria-label="help.configuration">?</span></button>
+    <button type="button" data-view="revisions"><span data-i18n="views.revisions">Revisions</span><span class="help-mark" data-i18n-title="help.revisions" data-i18n-aria-label="help.revisions">?</span></button>
+    <button type="button" data-view="owners"><span data-i18n="views.owners">Pin owners</span><span class="help-mark" data-i18n-title="help.owners" data-i18n-aria-label="help.owners">?</span></button>
   </nav>
 
   <main id="configuration-view" class="workspace view-panel">
+    <details id="board-info" class="card board-info layout-disclosure" data-layout-section="boardInfo">
+      <summary><span data-i18n="layout.boardInfo">Board information</span><strong id="board-info-summary"></strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <div id="board-info-body" class="board-info-body"></div>
+    </details>
     <section class="card gpio-card">
       <div class="section-heading">
         <div>
           <p class="eyebrow" data-i18n="gpio.eyebrow">Main</p>
           <h2 data-i18n="gpio.heading">GPIO</h2>
+          <p class="section-description" data-i18n="gpio.description">Click a row to inspect or edit the roles assigned to that pin.</p>
         </div>
-        <div class="legend" aria-label="GPIO attribute legend" data-i18n-aria-label="gpio.legend">
-          <span class="legend-reserved" data-i18n="gpio.reserved">reserved</span>
-          <span class="legend-input" data-i18n="gpio.inputOnly">input only</span>
-          <span class="legend-strapping" data-i18n="gpio.strapping">strapping</span>
+        <div class="gpio-heading-tools">
+          <div class="legend" aria-label="GPIO attribute legend" data-i18n-aria-label="gpio.legend">
+            <span class="legend-reserved" data-i18n="gpio.reserved">reserved</span>
+            <span class="legend-input" data-i18n="gpio.inputOnly">input only</span>
+            <span class="legend-strapping" data-i18n="gpio.strapping">strapping</span>
+          </div>
+          <div class="gpio-filters">
+            <label><input id="gpio-assigned-only" type="checkbox"><span data-i18n="gpio.assignedOnly">Assigned pins only</span></label>
+            <label><span class="visually-hidden" data-i18n="gpio.filter">Filter GPIO rows</span><input id="gpio-filter" type="search" data-i18n-placeholder="gpio.filterPlaceholder" placeholder="GPIO / role"></label>
+          </div>
         </div>
       </div>
+      <div id="role-color-legend" class="role-color-legend"></div>
       <div class="table-wrap">
         <table id="gpio-table">
+          <colgroup>
+            <col class="gpio-col-gpio">
+            <col class="gpio-col-internal-roles">
+            <col id="gpio-connectors-column" class="gpio-col-connectors">
+            <col class="gpio-col-pull">
+            <col class="gpio-col-verified">
+            <col class="gpio-col-validation">
+          </colgroup>
           <thead><tr id="gpio-columns"></tr></thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
 
+    <div id="side-resizer" class="side-resizer" role="separator" aria-orientation="vertical" aria-valuemin="360" aria-valuemax="620" aria-valuenow="460" tabindex="0" data-i18n-aria-label="layout.resizeSidebar"></div>
+
     <aside class="side-column">
       <section class="card configuration-card">
-        <div class="section-heading"><div><p class="eyebrow" data-i18n="configuration.eyebrow">declared objects</p><h2 data-i18n="configuration.heading">Configuration</h2></div></div>
         <div id="configuration-list"></div>
       </section>
-      <section class="card validation-card">
-        <div class="section-heading">
-          <div><p class="eyebrow" data-i18n="validation.eyebrow">live</p><h2 data-i18n="validation.heading">Validation</h2></div>
+      <details id="validation-section" class="card sidebar-disclosure validation-card" data-layout-section="validation">
+        <summary>
+          <span><span data-i18n="validation.heading">Validation</span> <span class="help-mark" data-i18n-title="help.validation" data-i18n-aria-label="help.validation">?</span></span>
           <strong id="validation-count"></strong>
-        </div>
-        <div id="validation-list" aria-live="polite"></div>
-      </section>
+          <span class="disclosure-chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="sidebar-section-body"><p class="section-description" data-i18n="validation.description">Checks the draft continuously; ✓ means no problem was found.</p><div id="validation-list" aria-live="polite"></div></div>
+      </details>
 
-      <section class="card connector-card">
-        <div class="section-heading">
-          <div><p class="eyebrow" data-i18n="connector.eyebrow">catalog driven</p><h2 data-i18n="connector.heading">Connectors</h2></div>
+      <details id="connector-section" class="card sidebar-disclosure connector-card" data-layout-section="connectorMap">
+        <summary><strong id="connector-section-title"></strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="sidebar-section-body">
+          <p class="section-description" data-i18n="connector.description">Select a connector position to review or change its endpoint.</p>
           <div class="connector-actions">
             <div id="connector-view-toggle" class="connector-view-toggle" aria-label="View" data-i18n-aria-label="connector.view">
               <button type="button" data-connector-view="table" aria-pressed="true" data-i18n="connector.table">Table</button>
@@ -96,25 +136,25 @@
             </div>
             <button id="connector-undo" type="button" class="secondary" data-i18n="connector.undo">Undo</button>
           </div>
+          <div id="connector-tabs" class="connector-tabs" role="tablist"></div>
+          <div id="connector-diagram" class="connector-diagram"></div>
+          <div id="connector-editor" class="connector-editor"></div>
         </div>
-        <div id="connector-tabs" class="connector-tabs" role="tablist"></div>
-        <div id="connector-diagram" class="connector-diagram"></div>
-        <div id="connector-editor" class="connector-editor"></div>
-      </section>
+      </details>
 
-      <section class="card related-card">
-        <div class="section-heading"><div><p class="eyebrow" data-i18n="related.eyebrow">read only</p><h2 data-i18n="related.heading">Related objects</h2></div></div>
-        <div id="related-list"></div>
-      </section>
+      <details id="related-section" class="card sidebar-disclosure related-card" data-layout-section="related">
+        <summary><strong id="related-section-title"></strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="sidebar-section-body"><p class="section-description" data-i18n="related.description">Read-only summary of where declared objects are assigned.</p><div id="related-list"></div></div>
+      </details>
     </aside>
   </main>
 
   <main id="revisions-view" class="single-view view-panel" hidden>
-    <section class="card"><div class="section-heading"><div><p class="eyebrow" data-i18n="revisions.eyebrow">choices</p><h2 data-i18n="revisions.heading">Revisions</h2></div></div><div id="revision-editor"></div></section>
+    <section class="card"><div class="section-heading"><div><p class="eyebrow" data-i18n="revisions.eyebrow">choices</p><h2 data-i18n="revisions.heading">Revisions</h2><p class="section-description" data-i18n="revisions.description">Record which device choice belongs to each hardware revision.</p></div></div><div id="revision-editor"></div></section>
   </main>
 
   <main id="owners-view" class="single-view view-panel" hidden>
-    <section class="card owner-card"><div class="section-heading"><div><p class="eyebrow" data-i18n="owners.eyebrow">device pins</p><h2 data-i18n="owners.heading">Pin owners</h2></div></div><div id="owner-editor"></div></section>
+    <section class="card owner-card"><div class="section-heading"><div><p class="eyebrow" data-i18n="owners.eyebrow">device pins</p><h2 data-i18n="owners.heading">Pin owners</h2><p class="section-description" data-i18n="owners.description">Inspect terminals owned by devices such as PMICs and I/O expanders.</p></div></div><div id="owner-editor"></div></section>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -124,6 +164,7 @@
       <h2 id="board-dialog-title"></h2>
       <label><span data-i18n="field.id">ID</span><input name="id" required pattern="[a-z][a-z0-9_]*"></label>
       <label><span data-i18n="field.name">Name</span><input name="name" required></label>
+      <label><span data-i18n="field.officialName">Official name</span><input name="official_name" required></label>
       <label><span data-i18n="field.legacyId">Legacy board ID</span><input name="legacy_board_id" type="number" required step="1"></label>
       <label><span data-i18n="field.chip">Chip</span><select name="chip"></select></label>
       <p id="board-dialog-error" class="dialog-error" aria-live="polite"></p>
@@ -138,24 +179,67 @@
     "app.heading": { "en": "GPIO specification editor", "zh": "GPIO 规格编辑器", "ja": "GPIO 仕様エディタ" },
     "toolbar.label": { "en": "Files and board", "zh": "文件与板卡", "ja": "ファイルと機種" },
     "toolbar.board": { "en": "Board", "zh": "板卡", "ja": "機種" },
+    "toolbar.boardSearch": { "en": "Search board name, ID, or alias", "zh": "搜索板卡名称、ID 或别名", "ja": "機種名・ID・別名で検索" },
     "toolbar.language": { "en": "Language", "zh": "语言", "ja": "言語" },
     "toolbar.open": { "en": "Open JSON", "zh": "打开 JSON", "ja": "JSON を開く" },
-    "toolbar.download": { "en": "Download formatted JSON", "zh": "下载格式化 JSON", "ja": "format 済み JSON をダウンロード" },
+    "toolbar.download": { "en": "Export repository JSON", "zh": "导出仓库用 JSON", "ja": "リポジトリ用 JSON を書き出す" },
     "toolbar.discard": { "en": "Discard draft", "zh": "丢弃草稿", "ja": "下書きを破棄" },
-    "toolbar.drop": { "en": "Drop JSON here", "zh": "将 JSON 拖放到此处", "ja": "JSON をここへドロップ" },
+    "toolbar.drop": { "en": "Drop JSON to open", "zh": "拖放 JSON 以打开", "ja": "JSON をドロップして開く" },
     "toolbar.new": { "en": "New", "zh": "新建", "ja": "新規" },
     "toolbar.duplicate": { "en": "Duplicate", "zh": "复制", "ja": "複製" },
-    "toolbar.close": { "en": "Close", "zh": "关闭", "ja": "閉じる" },
+    "toolbar.close": { "en": "Remove board", "zh": "从列表移除板卡", "ja": "機種を一覧から外す" },
+    "toolbar.closeHint": { "en": "Remove this board from the open list; its browser draft is deleted", "zh": "从打开列表移除此板卡，并删除其浏览器草稿", "ja": "この機種を開いている一覧から外し、ブラウザ下書きを削除します" },
+    "toolbar.draftMarker": { "en": "draft", "zh": "草稿", "ja": "下書き" },
+    "file.replaceDirtyConfirm": { "en": "Replace the open {board} document and delete its browser draft?", "zh": "替换已打开的 {board} 文档并删除其浏览器草稿？", "ja": "開いている {board} を置き換え、ブラウザの下書きを削除しますか？" },
+    "onboarding.eyebrow": { "en": "Getting started", "zh": "快速入门", "ja": "はじめに" },
+    "onboarding.heading": { "en": "Edit a board JSON in four steps", "zh": "四步编辑板卡 JSON", "ja": "4 ステップで機種 JSON を編集" },
+    "onboarding.purpose": { "en": "Review or correct the catalog wiring here, then download the JSON and place it back in the repository.", "zh": "在这里检查或修正目录中的接线，然后下载 JSON 并放回仓库。", "ja": "カタログの配線をここで確認・修正し、JSON をダウンロードしてリポジトリへ戻す画面です。" },
+    "onboarding.step1": { "en": "Choose a board.", "zh": "选择板卡。", "ja": "機種を選ぶ。" },
+    "onboarding.step2": { "en": "Click a GPIO row to inspect or edit its roles.", "zh": "点击 GPIO 行来查看或编辑其角色。", "ja": "GPIO 行をクリックして役割を確認・編集する。" },
+    "onboarding.step3": { "en": "Changes stay only in this browser. Other browsers and PCs do not have the draft; removing the board deletes it.", "zh": "更改仅保存在此浏览器；其他浏览器和电脑没有此草稿，移除板卡会删除它。", "ja": "変更はこのブラウザだけに下書き保存される。別ブラウザ・別 PC にはなく、機種を一覧から外すと削除される。" },
+    "onboarding.step4": { "en": "Export the JSON, then update the repository yourself.", "zh": "导出 JSON，然后自行更新仓库。", "ja": "JSON を書き出し、リポジトリは手動で更新する。" },
+    "onboarding.close": { "en": "Got it", "zh": "知道了", "ja": "閉じる" },
+    "onboarding.open": { "en": "Show getting-started guide", "zh": "显示快速入门", "ja": "使い方を表示" },
+    "onboarding.guide": { "en": "Guide", "zh": "使用指南", "ja": "使い方" },
+    "repository.showSteps": { "en": "Repository steps", "zh": "仓库更新步骤", "ja": "リポジトリ反映手順" },
+    "repository.replaceGeneric": { "en": "Replace extras/board_spec/boards/<id>.json with the downloaded file.", "zh": "用下载的文件替换 extras/board_spec/boards/<id>.json。", "ja": "ダウンロードしたファイルで extras/board_spec/boards/<id>.json を置き換える。" },
+    "repository.replace": { "en": "Replace extras/board_spec/boards/{file} with the downloaded file.", "zh": "用下载的文件替换 extras/board_spec/boards/{file}。", "ja": "ダウンロードしたファイルで extras/board_spec/boards/{file} を置き換える。" },
+    "repository.check": { "en": "Run node cli/spec.js check.", "zh": "运行 node cli/spec.js check。", "ja": "node cli/spec.js check を実行する。" },
+    "repository.commit": { "en": "Review the diff, then commit and open a PR.", "zh": "检查差异，然后提交并创建 PR。", "ja": "差分を確認し、commit / PR する。" },
+    "repository.notAutomatic": { "en": "Downloading does not modify the repository.", "zh": "下载不会自动修改仓库。", "ja": "ダウンロードしてもリポジトリは自動では変わりません。" },
+    "repository.downloaded": { "en": "JSON exported: {file}", "zh": "已导出 JSON：{file}", "ja": "JSON を書き出しました: {file}" },
     "field.id": { "en": "ID", "zh": "ID", "ja": "ID" },
-    "field.name": { "en": "Name", "zh": "名称", "ja": "名前" },
-    "field.legacyId": { "en": "Legacy board ID", "zh": "旧版板卡 ID", "ja": "従来の board ID" },
+    "field.name": { "en": "Short name", "zh": "简称", "ja": "略称" },
+    "field.officialName": { "en": "Official name", "zh": "正式名称", "ja": "正式名称" },
+    "field.officialNameStatus": { "en": "Official spelling", "zh": "正式名称拼写", "ja": "公式表記" },
+    "field.officialNameVerified": { "en": "Official spelling verified", "zh": "已确认正式拼写", "ja": "公式表記を確認済み" },
+    "field.officialNameUnverified": { "en": "Unverified", "zh": "未确认", "ja": "未確認" },
+    "help.officialNameVerified": { "en": "Verified means the product-name portion matches the official documentation page title. The leading 'M5Stack ' is added by the catalog naming rule. An absent flag means unverified.", "zh": "已确认表示产品名称部分与官方文档页面标题一致；开头的“M5Stack ”由目录命名规则添加。没有此标志表示尚未确认。", "ja": "確認済みとは、製品名部分が公式ドキュメントのページ名と一致することです。先頭の「M5Stack 」はカタログの命名規則で付けます。フラグが無い場合は未確認です。" },
+    "field.aliases": { "en": "Search aliases", "zh": "搜索别名", "ja": "検索語 aliases" },
+    "field.aliasesPlaceholder": { "en": "Comma-separated search terms", "zh": "用逗号分隔搜索词", "ja": "検索語をカンマ区切りで入力" },
+    "field.legacyId": { "en": "M5Unified board_t number", "zh": "M5Unified board_t 编号", "ja": "M5Unified board_t 番号" },
     "field.chip": { "en": "Chip", "zh": "芯片", "ja": "チップ" },
+    "field.displayWidth": { "en": "Display width", "zh": "显示宽度", "ja": "画面の幅" },
+    "field.displayHeight": { "en": "Display height", "zh": "显示高度", "ja": "画面の高さ" },
+    "field.displayTouch": { "en": "Touchscreen", "zh": "触摸屏", "ja": "タッチ画面" },
+    "field.psramSize": { "en": "PSRAM (MB)", "zh": "PSRAM（MB）", "ja": "PSRAM (MB)" },
+    "field.psramMode": { "en": "PSRAM mode", "zh": "PSRAM 模式", "ja": "PSRAM モード" },
+    "field.flashSize": { "en": "Flash (MB)", "zh": "Flash（MB）", "ja": "Flash (MB)" },
+    "field.sdStorage": { "en": "SD storage", "zh": "SD 存储", "ja": "SD ストレージ" },
+    "field.pmicPart": { "en": "PMIC part", "zh": "PMIC 部件", "ja": "PMIC 部品" },
+    "field.batteryCapacity": { "en": "Battery (mAh)", "zh": "电池（mAh）", "ja": "バッテリー (mAh)" },
+    "field.usbPower": { "en": "USB power", "zh": "USB 电源", "ja": "USB 電源" },
+    "field.schematicLink": { "en": "Schematic link", "zh": "原理图链接", "ja": "回路図リンク" },
+    "field.productLink": { "en": "Product link", "zh": "产品链接", "ja": "製品リンク" },
+    "layout.boardInfo": { "en": "Board information", "zh": "板卡信息", "ja": "機種情報" },
+    "layout.resizeSidebar": { "en": "Resize the object panel", "zh": "调整对象面板宽度", "ja": "構成要素欄の幅を変更" },
     "dialog.cancel": { "en": "Cancel", "zh": "取消", "ja": "キャンセル" },
     "dialog.create": { "en": "Create", "zh": "创建", "ja": "作成" },
     "dialog.newTitle": { "en": "Create a board", "zh": "新建板卡", "ja": "機種を新規作成" },
     "dialog.duplicateTitle": { "en": "Duplicate this board", "zh": "复制此板卡", "ja": "この機種を複製" },
     "dialog.legacyWarning": { "en": "⚠ Legacy ID is also used by {board}; saving is allowed", "zh": "⚠ 旧版 ID 也被 {board} 使用；仍可保存", "ja": "⚠ 従来 ID は {board} でも使われています（保存可能）" },
     "dialog.idExists": { "en": "That ID is already open", "zh": "该 ID 已打开", "ja": "その ID は既に開かれています" },
+    "dialog.officialNameRequired": { "en": "Official name is required", "zh": "请输入正式名称", "ja": "正式名称を入力してください" },
     "dialog.nameRequired": { "en": "Name is required", "zh": "必须填写名称", "ja": "名前は必須です" },
     "dialog.legacyInteger": { "en": "Legacy board ID must be an integer", "zh": "旧版板卡 ID 必须是整数", "ja": "従来の board ID は整数で入力してください" },
     "dialog.closeDirtyConfirm": { "en": "Close this board and delete its browser draft?", "zh": "关闭此板卡并删除浏览器草稿？", "ja": "この機種を閉じ、ブラウザの下書きを削除しますか？" },
@@ -163,16 +247,16 @@
     "language.en": { "en": "English", "zh": "English", "ja": "English" },
     "language.zh": { "en": "中文 (简体)", "zh": "中文 (简体)", "ja": "中文 (简体)" },
     "language.ja": { "en": "日本語", "zh": "日本語", "ja": "日本語" },
-    "options.label": { "en": "Resolved revisions", "zh": "已解析版本", "ja": "版の表示切替" },
-    "options.none": { "en": "Base", "zh": "基本", "ja": "基本" },
-    "options.legend": { "en": "Display configuration", "zh": "显示配置", "ja": "表示する構成" },
+    "options.label": { "en": "Display variant preview", "zh": "显示变体预览", "ja": "表示バリエーションのプレビュー" },
+    "options.none": { "en": "Shared definition (no revision)", "zh": "共通定义（未选版本）", "ja": "共通定義（リビジョン指定なし）" },
+    "options.legend": { "en": "Preview a variant", "zh": "预览变体", "ja": "バリエーションを表示" },
     "composition.legend": { "en": "Composition", "zh": "组合", "ja": "構成" },
-    "options.revision": { "en": "Revision", "zh": "版本", "ja": "版" },
-    "options.runtime": { "en": "Detected hardware", "zh": "实机判别", "ja": "実機判別" },
-    "mode.base": { "en": "Editing the base definition. Changes are saved as a browser draft.", "zh": "正在编辑基本定义。更改会保存为浏览器草稿。", "ja": "基本定義を編集中。変更はブラウザの下書きに保存されます。" },
-    "mode.resolved": { "en": "Showing: {board} {revision} ({choices}). Unchanged GPIO rows remain editable; use Edit raw data to unlock everything.", "zh": "显示中：{board} {revision}（{choices}）。未被构成更改的 GPIO 行仍可编辑；选择“编辑原始数据”可解除全部限制。", "ja": "表示中: {board} {revision} ({choices})。構成で変わらない GPIO 行は編集できます。すべて解除するには「素のデータを編集」を押してください。" },
-    "mode.editBase": { "en": "Edit raw data", "zh": "编辑原始数据", "ja": "素のデータを編集" },
-    "readonly.configuration": { "en": "Configuration view — use Edit raw data to unlock this control", "zh": "正在显示构成 — 选择“编辑原始数据”可解除此控件的限制", "ja": "構成表示中 — 「素のデータを編集」で解除できます" },
+    "options.revision": { "en": "Board revision", "zh": "硬件版本", "ja": "基板リビジョン" },
+    "options.runtime": { "en": "Detected variant preview", "zh": "实机判别变体预览", "ja": "起動時判別バリエーション（表示のみ）" },
+    "mode.base": { "en": "Editing the shared definition. All GPIO rows are editable; changes are auto-saved only in this browser.", "zh": "正在编辑共通定义。所有 GPIO 行均可编辑；更改仅自动保存在此浏览器。", "ja": "共通定義を編集中。すべての GPIO 行を編集でき、変更はこのブラウザだけに自動下書き保存されます。" },
+    "mode.resolved": { "en": "Viewing {board} {revision} ({choices}). Values supplied by this selection are read-only.", "zh": "正在查看 {board} {revision}（{choices}）。由此选择提供的值为只读。", "ja": "{board} {revision} ({choices}) を表示中。この選択で決まる値は読み取り専用です。" },
+    "mode.editBase": { "en": "Clear preview and edit shared definition", "zh": "清除预览并编辑共通定义", "ja": "表示条件を解除して共通定義を編集" },
+    "readonly.configuration": { "en": "Supplied by the displayed variant; clear the preview to edit", "zh": "由当前显示变体提供；清除预览后可编辑", "ja": "表示中のバリエーション由来です。表示条件を解除すると編集できます" },
     "readonly.revision": { "en": "Changed by revision {revision}", "zh": "由版本 {revision} 的差分更改", "ja": "版 {revision} の差分で変わる値です" },
     "readonly.runtime": { "en": "Changed by detected-hardware choice {choice}", "zh": "来自实机判别选项 {choice}", "ja": "実機判別 {choice} で変わる値です" },
     "readonly.accessory": { "en": "Comes from accessory {accessory}", "zh": "来自配件 {accessory}", "ja": "アクセサリ {accessory} 由来です" },
@@ -180,15 +264,30 @@
     "unavailable.noUndo": { "en": "There is no connector change to undo", "zh": "没有可撤销的连接器更改", "ja": "元に戻せるコネクタ変更はありません" },
     "unavailable.noGPIO": { "en": "This validation item is not associated with a GPIO", "zh": "此验证项目未关联 GPIO", "ja": "この検証項目には対応する GPIO がありません" },
     "views.label": { "en": "Editor views", "zh": "编辑器视图", "ja": "編集画面" },
-    "views.configuration": { "en": "Configuration", "zh": "构成", "ja": "構成" },
-    "views.revisions": { "en": "Revisions", "zh": "版本", "ja": "版" },
-    "views.owners": { "en": "Pin owners", "zh": "引脚所有者", "ja": "持ち主" },
+    "views.configuration": { "en": "GPIO & objects", "zh": "GPIO 与对象", "ja": "GPIO・構成要素" },
+    "views.revisions": { "en": "Revision differences", "zh": "版本差异", "ja": "リビジョン差分" },
+    "views.owners": { "en": "Device-side pins", "zh": "设备侧引脚", "ja": "デバイス側端子" },
+    "help.configuration": { "en": "Board-level objects and GPIO assignments.", "zh": "板卡级对象与 GPIO 分配。", "ja": "機種単位のオブジェクトと GPIO 割当です。" },
+    "help.revisions": { "en": "Maps hardware revisions to selectable device variants.", "zh": "将硬件版本映射到可选设备变体。", "ja": "ハードウェア版とデバイス選択肢の対応です。" },
+    "help.owners": { "en": "Pins that belong to a PMIC, I/O expander, or another device rather than the SoC.", "zh": "属于 PMIC、I/O 扩展器等设备而非 SoC 的引脚。", "ja": "SoC ではなく PMIC や IO エキスパンダなどのデバイス側にある端子です。" },
+    "help.rawData": { "en": "Clear the revision/variant preview and edit the shared fields. This does not open a JSON text editor.", "zh": "清除版本/变体预览并编辑共通字段；不会打开 JSON 文本编辑器。", "ja": "リビジョン・バリエーションの表示条件を解除して共通項目を編集します。JSON テキスト編集画面ではありません。" },
+    "help.displayConfiguration": { "en": "Preview a board revision or startup-detected variant without changing the JSON. Values introduced by the preview are read-only.", "zh": "预览硬件版本或启动时判别变体，不会更改 JSON；预览带来的值为只读。", "ja": "基板リビジョンや起動時判別バリエーションを、JSON を変えずに表示します。表示条件由来の値は読み取り専用です。" },
+    "help.roles": { "en": "A role says what a GPIO does. Click a row to add or remove roles.", "zh": "角色表示 GPIO 的用途。点击行可添加或删除角色。", "ja": "役割は GPIO の用途です。行をクリックすると追加・削除できます。" },
+    "help.verification": { "en": "Evidence for each field: generated = derived by tools; datasheet = entered from documentation; measured = checked on hardware.", "zh": "各字段的依据：generated=工具推导，datasheet=来自资料，measured=实机测量。", "ja": "各項目の根拠です。generated=ツール生成、datasheet=資料記載、measured=実機測定。" },
+    "evidence.generated": { "en": "generated", "zh": "工具生成", "ja": "ツール生成" },
+    "evidence.datasheet": { "en": "datasheet", "zh": "资料", "ja": "資料" },
+    "evidence.measured": { "en": "measured", "zh": "实测", "ja": "実測" },
+    "help.validation": { "en": "Live consistency checks. ✓ means no issue; ! opens the related error.", "zh": "实时一致性检查。✓ 表示无问题，! 表示有关联错误。", "ja": "常時行う整合性チェックです。✓ は問題なし、! は関連エラーありです。" },
     "configuration.eyebrow": { "en": "declared objects", "zh": "已声明对象", "ja": "宣言済みオブジェクト" },
-    "configuration.heading": { "en": "Configuration", "zh": "构成", "ja": "構成" },
+    "configuration.heading": { "en": "Buses, connectors & devices", "zh": "总线、连接器与设备", "ja": "バス・コネクタ・デバイス" },
+    "configuration.description": { "en": "Define the buses, connectors, and devices referenced by GPIO roles.", "zh": "定义 GPIO 角色所引用的总线、连接器和设备。", "ja": "GPIO の役割から参照するバス・コネクタ・デバイスを定義します。" },
     "configuration.connectors": { "en": "Connectors", "zh": "连接器", "ja": "コネクタ" },
     "configuration.devices": { "en": "Devices", "zh": "设备", "ja": "デバイス" },
     "configuration.accessories": { "en": "Accessories", "zh": "配件", "ja": "アクセサリ" },
     "configuration.add": { "en": "Add", "zh": "添加", "ja": "追加" },
+    "configuration.addBus": { "en": "+ Add bus", "zh": "+ 添加总线", "ja": "＋ バスを追加" },
+    "configuration.addConnector": { "en": "+ Add connector", "zh": "+ 添加连接器", "ja": "＋ コネクタを追加" },
+    "configuration.addDevice": { "en": "+ Add device", "zh": "+ 添加设备", "ja": "＋ デバイスを追加" },
     "configuration.remove": { "en": "Remove", "zh": "删除", "ja": "削除" },
     "configuration.unassigned": { "en": "Unassigned", "zh": "未分配", "ja": "未割当" },
     "configuration.idPrompt": { "en": "ID", "zh": "ID", "ja": "ID" },
@@ -200,6 +299,27 @@
     "configuration.addChoice": { "en": "Add choice", "zh": "添加选项", "ja": "選択肢を追加" },
     "configuration.optional": { "en": "Optional", "zh": "可选", "ja": "任意" },
     "configuration.partOptional": { "en": "Search a part (optional)", "zh": "搜索部件（可选）", "ja": "部品を検索（任意）" },
+    "configuration.basicDescription": { "en": "Names, chip, and catalog-wide board properties.", "zh": "名称、芯片和目录级板卡属性。", "ja": "名称・チップ・機種全体の属性です。" },
+    "configuration.busesDescription": { "en": "Add a communication bus before assigning its bus: roles.", "zh": "在分配 bus: 角色前先添加通信总线。", "ja": "bus: の役割を割り当てる前に通信バスを追加します。" },
+    "configuration.connectorsDescription": { "en": "Declare physical connectors before assigning conn: roles.", "zh": "在分配 conn: 角色前先声明物理连接器。", "ja": "conn: の役割を割り当てる前に物理コネクタを定義します。" },
+    "configuration.devicesDescription": { "en": "Declare onboard parts before assigning dev: roles.", "zh": "在分配 dev: 角色前先声明板载部件。", "ja": "dev: の役割を割り当てる前に搭載部品を定義します。" },
+    "configuration.accessoriesDescription": { "en": "Preview optional accessories composed with this board.", "zh": "预览与此板卡组合的可选配件。", "ja": "この機種に合成する任意アクセサリを表示します。" },
+    "configuration.idLabel": { "en": "ID", "zh": "ID", "ja": "ID" },
+    "configuration.busIdPlaceholder": { "en": "e.g. main_spi", "zh": "例如 main_spi", "ja": "例: main_spi" },
+    "configuration.connectorIdPlaceholder": { "en": "e.g. port_a", "zh": "例如 port_a", "ja": "例: port_a" },
+    "configuration.deviceIdPlaceholder": { "en": "e.g. lcd", "zh": "例如 lcd", "ja": "例: lcd" },
+    "configuration.kindLabel": { "en": "Kind", "zh": "种类", "ja": "種類" },
+    "configuration.typeLabel": { "en": "Type", "zh": "类型", "ja": "型" },
+    "configuration.signalsLabel": { "en": "Signals", "zh": "信号", "ja": "信号" },
+    "configuration.hostLabel": { "en": "Preferred host", "zh": "首选 host", "ja": "優先 host" },
+    "configuration.hostPlaceholder": { "en": "e.g. SPI3_HOST or 0", "zh": "例如 SPI3_HOST 或 0", "ja": "例: SPI3_HOST / 0" },
+    "configuration.freqLabel": { "en": "Frequency (Hz)", "zh": "频率 (Hz)", "ja": "周波数 (Hz)" },
+    "configuration.freqPlaceholder": { "en": "e.g. 40000000", "zh": "例如 40000000", "ja": "例: 40000000" },
+    "configuration.freqReadLabel": { "en": "Read frequency (Hz)", "zh": "读取频率 (Hz)", "ja": "読出周波数 (Hz)" },
+    "configuration.freqReadPlaceholder": { "en": "e.g. 16000000", "zh": "例如 16000000", "ja": "例: 16000000" },
+    "configuration.fixedLabel": { "en": "Fixed pins", "zh": "固定引脚", "ja": "固定ピン" },
+    "configuration.partLabel": { "en": "Part (optional)", "zh": "部件（可选）", "ja": "部品（任意）" },
+    "configuration.busLabel": { "en": "Bus (optional)", "zh": "总线（可选）", "ja": "バス（任意）" },
     "configuration.sdMatrix": { "en": "SDMMC signals can use the GPIO matrix on this chip.", "zh": "此芯片的 SDMMC 信号可使用 GPIO 矩阵。", "ja": "このチップの SDMMC 信号は GPIO matrix を利用できます。" },
     "configuration.sdFixed": { "en": "Check this chip's fixed SDMMC pins.", "zh": "请确认此芯片的固定 SDMMC 引脚。", "ja": "このチップの SDMMC 固定ピンを確認してください。" },
     "reason.lastBoard": { "en": "At least one board must remain open", "zh": "至少需保留一个打开的板卡", "ja": "少なくとも 1 機種は開いたままにしてください" },
@@ -210,46 +330,79 @@
     "reason.chipReservedConditional": { "en": "Reserved by the selected PSRAM mode", "zh": "由所选 PSRAM 模式保留", "ja": "選択中の PSRAM モードで予約されています" },
     "revisions.eyebrow": { "en": "choices", "zh": "选择项", "ja": "選択枠" },
     "revisions.heading": { "en": "Revision matrix", "zh": "版本矩阵", "ja": "版マトリクス" },
+    "revisions.description": { "en": "Record which device choice belongs to each hardware revision.", "zh": "记录每个硬件版本对应的设备选项。", "ja": "ハードウェア版ごとのデバイス選択肢を記録します。" },
     "revisions.add": { "en": "Add revision", "zh": "添加版本", "ja": "版を追加" },
     "revisions.delete": { "en": "Delete revision", "zh": "删除版本", "ja": "版を削除" },
     "revisions.compare": { "en": "Compare", "zh": "比较", "ja": "比較" },
+    "revisions.compareLeft": { "en": "From", "zh": "比较源", "ja": "比較元" },
+    "revisions.compareRight": { "en": "To", "zh": "比较目标", "ja": "比較先" },
+    "revisions.compareHint": { "en": "When both are selected, only differing rows are shown.", "zh": "两者均选择后，仅显示不同的行。", "ja": "両方を選ぶと、差のある行だけを表示します。" },
+    "revisions.idLabel": { "en": "New revision ID", "zh": "新版本 ID", "ja": "新しいリビジョン ID" },
+    "revisions.nameLabel": { "en": "Display name", "zh": "显示名称", "ja": "表示名" },
+    "revisions.idPlaceholder": { "en": "e.g. v1_2", "zh": "例如 v1_2", "ja": "例: v1_2" },
+    "revisions.namePlaceholder": { "en": "e.g. v1.2", "zh": "例如 v1.2", "ja": "例: v1.2" },
+    "revisions.runtimeHint": { "en": "Detected at startup; edit choices in GPIO & objects.", "zh": "启动时判别；请在“GPIO 与对象”中编辑选项。", "ja": "起動時に判別します。選択肢は「GPIO・構成要素」で編集します。" },
     "revisions.all": { "en": "Show all", "zh": "显示全部", "ja": "すべて表示" },
     "revisions.default": { "en": "default", "zh": "默认", "ja": "既定" },
     "owners.eyebrow": { "en": "device pins", "zh": "设备引脚", "ja": "デバイス端子" },
-    "owners.heading": { "en": "Pin owners", "zh": "引脚所有者", "ja": "持ち主" },
-    "owners.none": { "en": "No device pin tables", "zh": "没有设备引脚表", "ja": "デバイス端子表はありません" },
+    "owners.heading": { "en": "Device-side pins", "zh": "设备侧引脚", "ja": "デバイス側端子" },
+    "owners.description": { "en": "Inspect terminals owned by devices such as PMICs and I/O expanders.", "zh": "查看 PMIC、I/O 扩展器等设备拥有的端子。", "ja": "PMIC や IO エキスパンダなど、デバイス側の端子を確認します。" },
+    "owners.none": { "en": "This board has no PMIC, I/O-expander, or other device-side pin table. GPIO assignments are available in GPIO & objects.", "zh": "此板卡没有 PMIC、I/O 扩展器或其他设备侧引脚表；GPIO 分配请查看“GPIO 与对象”。", "ja": "この機種には PMIC・IO エキスパンダ等のデバイス側端子表がありません。GPIO 割当は「GPIO・構成要素」で確認できます。" },
     "owners.pin": { "en": "Pin", "zh": "引脚", "ja": "端子" },
     "owners.inactive": { "en": "not in displayed configuration", "zh": "不在当前显示配置中", "ja": "表示中の構成にはありません" },
     "gpio.eyebrow": { "en": "Main", "zh": "主视图", "ja": "主画面" },
     "gpio.heading": { "en": "GPIO", "zh": "GPIO", "ja": "GPIO" },
+    "gpio.description": { "en": "Click a row to inspect or edit the roles assigned to that pin.", "zh": "点击一行以查看或编辑该引脚的角色。", "ja": "行をクリックすると、そのピンの役割を確認・編集できます。" },
+    "gpio.rowHint": { "en": "Click to edit", "zh": "点击编辑", "ja": "クリックして編集" },
     "gpio.legend": { "en": "GPIO attribute legend", "zh": "GPIO 属性图例", "ja": "GPIO 属性の凡例" },
-    "gpio.reserved": { "en": "reserved", "zh": "reserved", "ja": "reserved" },
-    "gpio.inputOnly": { "en": "input only", "zh": "仅输入", "ja": "input only" },
-    "gpio.strapping": { "en": "strapping", "zh": "strapping", "ja": "strapping" },
+    "gpio.reserved": { "en": "Reserved", "zh": "保留", "ja": "予約済み" },
+    "gpio.inputOnly": { "en": "Input only", "zh": "仅输入", "ja": "入力専用" },
+    "gpio.strapping": { "en": "Strapping", "zh": "启动配置", "ja": "ストラップ" },
+    "gpio.assignedOnly": { "en": "Assigned pins only", "zh": "仅显示已分配引脚", "ja": "割り当てのあるピンだけ表示" },
+    "gpio.filter": { "en": "Filter GPIO rows", "zh": "筛选 GPIO 行", "ja": "GPIO 行を絞り込む" },
+    "gpio.filterPlaceholder": { "en": "GPIO / role", "zh": "GPIO / role", "ja": "GPIO / role" },
+    "roleColors.heading": { "en": "Role colors", "zh": "角色颜色", "ja": "役割の色" },
+    "roleColors.reset": { "en": "Restore defaults", "zh": "恢复默认", "ja": "既定に戻す" },
+    "roleColors.pick": { "en": "Choose a color for {owner}", "zh": "为 {owner} 选择颜色", "ja": "{owner} の色を選択" },
+    "roleColors.empty": { "en": "No object roles", "zh": "没有对象角色", "ja": "オブジェクトの役割なし" },
+    "rolePrefixes.heading": { "en": "Role prefix", "zh": "角色前缀", "ja": "役割の接頭辞" },
+    "rolePrefixes.bus": { "en": "bus: communication signal", "zh": "bus: 通信信号", "ja": "bus: 通信信号" },
+    "rolePrefixes.dev": { "en": "dev: device signal", "zh": "dev: 设备信号", "ja": "dev: デバイス信号" },
+    "rolePrefixes.conn": { "en": "conn: connector.position", "zh": "conn: 连接器.位置编号", "ja": "conn: コネクタ.ピン番号" },
+    "rolePrefixes.source": { "en": "| name: supplied by an accessory", "zh": "| 名称：来自配件", "ja": "| 名前: アクセサリ由来" },
     "gpio.opiReserved": { "en": "reserved with OPI", "zh": "OPI 时保留", "ja": "OPI 時予約" },
+    "gpio.psramShared": { "en": "shared with PSRAM", "zh": "与 PSRAM 共用", "ja": "PSRAM と共用" },
+    "gpio.psramSharedDetail": { "en": "This connector position is unavailable while this PSRAM configuration is active.", "zh": "此 PSRAM 配置启用时，该连接器位置不可用。", "ja": "この PSRAM 構成では、このコネクタ位置は使用できません。" },
     "gpio.noInternalPull": { "en": "No reliable internal pull", "zh": "无可靠的内部上下拉", "ja": "内蔵 pull は信頼できません" },
     "column.gpio": { "en": "GPIO", "zh": "GPIO", "ja": "GPIO" },
-    "column.roles": { "en": "roles", "zh": "roles", "ja": "roles" },
-    "column.pull": { "en": "pull", "zh": "pull", "ja": "pull" },
-    "column.note": { "en": "note", "zh": "note", "ja": "note" },
-    "column.verified": { "en": "verified", "zh": "verified", "ja": "verified" },
-    "column.validation": { "en": "validation", "zh": "验证", "ja": "検証" },
+    "column.roles": { "en": "Roles", "zh": "角色", "ja": "役割" },
+    "column.internalRoles": { "en": "Internal roles", "zh": "内部角色", "ja": "内部の役割" },
+    "column.connectors": { "en": "Connectors", "zh": "连接器", "ja": "コネクタ" },
+    "column.pull": { "en": "Pull", "zh": "上下拉", "ja": "プル設定" },
+    "column.note": { "en": "Note", "zh": "备注", "ja": "メモ" },
+    "column.verified": { "en": "Evidence", "zh": "依据", "ja": "根拠" },
+    "column.validation": { "en": "Consistency", "zh": "一致性", "ja": "整合性" },
     "detail.removeRole": { "en": "Remove role", "zh": "移除 role", "ja": "role を削除" },
     "detail.searchRole": { "en": "Search and add a role", "zh": "搜索并添加 role", "ja": "role を検索して追加" },
+    "detail.noRoleMatches": { "en": "No unassigned role matches “{query}”. Matching signals may already be assigned; add a bus, connector, or device in the right-hand object panel.", "zh": "没有未分配的角色匹配“{query}”。匹配信号可能已全部分配；请在右侧对象面板添加总线、连接器或设备。", "ja": "未割当の役割に「{query}」はありません。該当信号は割当済みの可能性があります。新しいバス・コネクタ・デバイスは右側の構成要素で追加してください。" },
     "detail.empty": { "en": "Empty", "zh": "空", "ja": "空" },
     "detail.related": { "en": "Related", "zh": "相关", "ja": "関連" },
+    "detail.relatedButton": { "en": "Show related object: {object} →", "zh": "显示相关对象：{object} →", "ja": "関連オブジェクトを表示: {object} →" },
     "common.none": { "en": "None", "zh": "无", "ja": "なし" },
     "combobox.empty": { "en": "No matches", "zh": "无候选项", "ja": "候補なし" },
     "validation.eyebrow": { "en": "live", "zh": "实时", "ja": "live" },
     "validation.heading": { "en": "Validation", "zh": "验证", "ja": "検証" },
+    "validation.description": { "en": "Checks the draft continuously; ✓ means no problem was found.", "zh": "持续检查草稿；✓ 表示未发现问题。", "ja": "下書きを常時チェックします。✓ は問題なしを表します。" },
     "validation.count": { "en": "{count}", "zh": "{count} 项", "ja": "{count} 件" },
     "validation.ok": { "en": "✓ No errors", "zh": "✓ 没有错误", "ja": "✓ エラーはありません" },
-    "connector.eyebrow": { "en": "catalog driven", "zh": "目录驱动", "ja": "catalog driven" },
+    "connector.eyebrow": { "en": "positions and endpoints", "zh": "位置与连接目标", "ja": "位置と接続先" },
     "connector.heading": { "en": "Connectors", "zh": "connector", "ja": "コネクタ" },
+    "connector.pinoutHeading": { "en": "Connector diagrams & pinouts", "zh": "连接器图和引脚排列", "ja": "コネクタ図・ピン配置" },
+    "connector.description": { "en": "Select a connector position to review or change its endpoint.", "zh": "选择连接器位置以查看或更改其端点。", "ja": "コネクタ位置を選び、接続先を確認・変更します。" },
     "connector.view": { "en": "View", "zh": "显示方式", "ja": "表示形式" },
     "connector.table": { "en": "Table", "zh": "表格", "ja": "表" },
     "connector.diagram": { "en": "Diagram", "zh": "图", "ja": "図" },
-    "connector.undo": { "en": "Undo", "zh": "撤销", "ja": "元に戻す" },
+    "connector.undo": { "en": "Undo connector change", "zh": "撤销连接器更改", "ja": "直前のコネクタ変更を戻す" },
     "connector.noType": { "en": "Type data is unavailable", "zh": "没有类型数据", "ja": "型データがありません" },
     "connector.pinoutAria": { "en": "{id} connector pinout", "zh": "{id} connector 引脚排列", "ja": "{id} コネクタのピン配置" },
     "connector.prompt": { "en": "Select a position in the table or diagram to edit its assignment.", "zh": "在表格或图中选择位置以编辑分配。", "ja": "表または図の位置を選ぶと割当を編集できます。" },
@@ -270,12 +423,13 @@
     "connector.multiConfirm": { "en": "Register this position in multi_gpio and add the GPIO?", "zh": "将此位置注册到 multi_gpio 并添加 GPIO？", "ja": "この位置を multi_gpio に登録して GPIO を追加しますか？" },
     "related.eyebrow": { "en": "read only", "zh": "只读", "ja": "read only" },
     "related.heading": { "en": "Related objects", "zh": "相关对象", "ja": "関連オブジェクト" },
+    "related.description": { "en": "Read-only summary of where declared objects are assigned.", "zh": "只读显示已声明对象的分配位置。", "ja": "宣言済みオブジェクトの割当先を読み取り専用で表示します。" },
     "related.buses": { "en": "Buses", "zh": "bus", "ja": "バス" },
     "related.devices": { "en": "Devices", "zh": "device", "ja": "デバイス" },
     "related.noGPIO": { "en": "No GPIO assignment", "zh": "无 GPIO 分配", "ja": "GPIO 割当なし" },
     "related.empty": { "en": "None", "zh": "无", "ja": "なし" },
     "object.kind": { "en": "kind", "zh": "kind", "ja": "kind" },
-    "object.signals": { "en": "signals", "zh": "signals", "ja": "signals" },
+    "object.signals": { "en": "Signals", "zh": "信号", "ja": "信号" },
     "object.host": { "en": "host", "zh": "host", "ja": "host" },
     "object.freq": { "en": "freq", "zh": "freq", "ja": "freq" },
     "object.part": { "en": "part", "zh": "part", "ja": "part" },
@@ -284,8 +438,8 @@
     "object.type": { "en": "type", "zh": "type", "ja": "type" },
     "object.standard": { "en": "standard", "zh": "standard", "ja": "standard" },
     "object.noAttributes": { "en": "No attributes", "zh": "无属性", "ja": "属性なし" },
-    "save.saved": { "en": "Saved", "zh": "已保存", "ja": "保存済み" },
-    "save.dirty": { "en": "● Unsaved changes", "zh": "● 有未保存的更改", "ja": "● 未保存の変更あり" },
+    "save.saved": { "en": "Browser draft: none", "zh": "浏览器草稿：无", "ja": "ブラウザ下書き: なし" },
+    "save.dirty": { "en": "● Browser draft: auto-saved", "zh": "● 浏览器草稿：已自动保存", "ja": "● ブラウザ下書き: 自動保存済み" },
     "file.chipMissing": { "en": "{file}: embedded chip data is unavailable: {chip}", "zh": "{file}: 找不到嵌入的 chip 数据: {chip}", "ja": "{file}: chip data が埋め込まれていません: {chip}" },
     "file.opened": { "en": "Opened {file}", "zh": "已打开 {file}", "ja": "{file} を開きました" },
     "file.downloaded": { "en": "Downloaded {file}", "zh": "已下载 {file}", "ja": "{file} をダウンロードしました" },
@@ -304,7 +458,14 @@
     "validation.E_CHIP_INPUT_ONLY": { "en": "An output uses an input-only GPIO", "zh": "输出使用了仅输入 GPIO", "ja": "出力が入力専用 GPIO を使用しています" },
     "validation.E_CHIP_RESERVED": { "en": "A reserved GPIO is in use", "zh": "使用了 reserved GPIO", "ja": "reserved GPIO が使用されています" },
     "validation.E_CHIP_RESERVED_COND": { "en": "A conditionally reserved GPIO is in use", "zh": "使用了条件保留的 GPIO", "ja": "条件付き reserved GPIO が使用されています" },
+    "validation.E_PSRAM_DEVICE": { "en": "PSRAM storage has no device", "zh": "PSRAM 存储没有设备", "ja": "PSRAM storage にデバイスがありません" },
+    "validation.E_PSRAM_STORAGE": { "en": "PSRAM device and storage metadata disagree", "zh": "PSRAM 设备与存储元数据不一致", "ja": "PSRAM デバイスと storage 情報が一致しません" },
+    "validation.E_PSRAM_MODE": { "en": "The chip does not support this PSRAM mode", "zh": "芯片不支持此 PSRAM 模式", "ja": "チップがこの PSRAM mode に対応していません" },
+    "validation.E_PSRAM_PINS": { "en": "PSRAM pins do not match the chip definition", "zh": "PSRAM 引脚与芯片定义不一致", "ja": "PSRAM ピンがチップ定義と一致しません" },
+    "validation.E_PSRAM_CONFLICT": { "en": "PSRAM conflicts with another signal", "zh": "PSRAM 与其他信号冲突", "ja": "PSRAM が別の信号と衝突しています" },
     "validation.E_PIN_KEY": { "en": "A SoC pin key is invalid or outside the chip range", "zh": "SoC pin key 无效或超出芯片范围", "ja": "SoC pin key が不正かチップ範囲外です" },
+    "validation.E_CHIP_ABSENT": { "en": "This GPIO number does not exist on the chip", "zh": "该 GPIO 编号在芯片上不存在", "ja": "この GPIO 番号はチップに存在しません" },
+    "validation.E_CHIP_PACKAGE": { "en": "The chip package variant is unknown", "zh": "芯片封装变体未知", "ja": "チップの package variant が不明です" },
     "validation.W_CHIP_USB_PIN": { "en": "This GPIO is shared with native USB", "zh": "此 GPIO 与原生 USB 共用", "ja": "この GPIO はネイティブ USB と共用です" },
     "validation.E_HEX_FORMAT": { "en": "A hexadecimal value has an invalid format", "zh": "十六进制值格式无效", "ja": "16 進値の形式が不正です" },
     "validation.E_VERIFIED_FAKE": { "en": "Verification metadata claims unsupported evidence", "zh": "verified 元数据声明了不支持的证据", "ja": "verified メタデータが未対応の根拠を示しています" },
@@ -316,7 +477,9 @@
     "validation.E_TGT_CHOICE_UNREPRESENTED": { "en": "A runtime choice has no target option", "zh": "runtime choice 没有目标 option", "ja": "runtime choice に対応する target option がありません" },
     "validation.E_TGT_SELECT_UNKNOWN": { "en": "A target option selects an unknown choice", "zh": "目标 option 选择了未知 choice", "ja": "target option が未知の choice を選択しています" },
     "validation.E_TGT_SLOT_DUP": { "en": "More than one target option selects the same slot", "zh": "多个目标 option 选择同一 slot", "ja": "複数の target option が同じ slot を選択しています" },
+    "validation.E_TGT_BOARD_NAME": { "en": "Short name does not match the C++ board enum", "zh": "简称与 C++ board enum 不匹配", "ja": "略称が C++ board enum と一致しません" },
     "validation.W_TGT_REV_INDISTINGUISHABLE": { "en": "Revision choices are not represented by target options", "zh": "revision choice 未由目标 option 表示", "ja": "revision choice が target option に表現されていません" },
+    "validationAction.W_TGT_REV_INDISTINGUISHABLE": { "en": "Action: add the revision device option to targets.json for {board}, or confirm that it intentionally cannot be detected.", "zh": "处理：在 targets.json 的 {board} 中添加版本设备选项，或确认其有意无法判别。", "ja": "対処: targets.json の {board} にリビジョン対象デバイスの option を追加するか、判別不能が意図どおりか確認してください。" },
     "validation.E_VERIFIED_KEY": { "en": "Verification metadata contains an unknown key", "zh": "verified 元数据含未知 key", "ja": "verified メタデータに未知の key があります" },
     "validation.E_MEASURED_BY": { "en": "Measurement attribution is invalid", "zh": "测量归属无效", "ja": "測定者情報が不正です" },
     "validation.E_CONN_TYPE_MISSING": { "en": "Connector type or standard is missing", "zh": "connector type 或 standard 不存在", "ja": "コネクタ型または standard がありません" },
@@ -332,6 +495,7 @@
     "validation.E_UNKNOWN_KEY": { "en": "An unknown key is present", "zh": "存在未知 key", "ja": "未知の key があります" },
     "validation.E_FORMAT": { "en": "The document format is invalid", "zh": "文档格式无效", "ja": "ドキュメント形式が不正です" },
     "validation.E_ID_FORMAT": { "en": "An ID is invalid or duplicated", "zh": "ID 无效或重复", "ja": "ID が不正または重複しています" },
+    "validation.E_ALIAS_FORMAT": { "en": "Aliases must be trimmed, non-empty, and unique ignoring case", "zh": "别名不可为空、不得包含首尾空格，并且不区分大小写时必须唯一", "ja": "aliases は空でなく、前後空白なし、大文字小文字を無視して重複なしにしてください" },
     "validation.E_CTYPE_FORMAT": { "en": "Connector type format is invalid", "zh": "connector type 格式无效", "ja": "コネクタ型の形式が不正です" },
     "validation.E_CTYPE_EXTENDS": { "en": "Connector type inheritance is invalid", "zh": "connector type 继承无效", "ja": "コネクタ型の継承が不正です" },
     "validation.E_CONN_SAME_GPIO": { "en": "Two positions of one connector use the same GPIO", "zh": "同一连接器的两个位置使用相同 GPIO", "ja": "同じコネクタの複数位置が同じ GPIO を使用しています" },

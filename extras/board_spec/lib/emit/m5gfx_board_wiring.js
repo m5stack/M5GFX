@@ -226,6 +226,7 @@ export function validateDetectionPins(entries, chip, pins = detectionPinsForEntr
     const subdivision = cardputerSubdivisionForEntry(entry, entries);
     for (const pin of [...descriptorPins(emitted), ...(subdivision?.sensePins ?? [])]) {
       if (!available.has(pin)) throw new Error(`${board.id}: descriptor GPIO ${pin} is absent from the detection pin set`);
+      if (chip.absent?.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} does not exist on ${chip.id}`);
       if (chip.reserved?.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} is reserved by ${chip.id}`);
       const conditional = chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
       if (conditional.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} is reserved when PSRAM mode is ${board.spec.storage.psram_mode}`);

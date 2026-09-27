@@ -2,9 +2,31 @@
   "schema_version": 1,
   "id": "m5station",
   "name": "M5Station",
+  "official_name": "M5Stack Station (Bat/485)",
+  "aliases": [
+    "station",
+    "station-bat",
+    "station-485",
+    "rs485"
+  ],
   "legacy_board_id": 9,
   "chip": "esp32_d0wdq6",
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
     "4": {
       "roles": [
         "dev:rgb_led.data"
@@ -141,9 +163,33 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "37": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
+    "38": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "39": {
+      "roles": [
+        "dev:btn_c.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -189,6 +235,14 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch9102f",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "lcd": {
       "kind": "display",
       "part": "st7789v2",
@@ -201,6 +255,30 @@
     },
     "rgb_led": {
       "kind": "led_strip"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
     }
   },
   "connectors": {

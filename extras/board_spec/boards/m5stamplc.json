@@ -2,6 +2,12 @@
   "schema_version": 1,
   "id": "m5stamplc",
   "name": "M5StamPLC",
+  "official_name": "M5Stack StamPLC",
+  "official_name_verified": true,
+  "aliases": [
+    "stamplc",
+    "stamp plc"
+  ],
   "legacy_board_id": 21,
   "chip": "esp32s3",
   "spec": {
@@ -114,7 +120,7 @@
       "roles": [
         "dev:buzzer.data_out"
       ],
-      "note": "Internal buzzer; buttons and RS485 control are provided through the IO expander"
+      "note": "Internal buzzer"
     }
   },
   "buses": {
@@ -206,6 +212,53 @@
     },
     "buzzer": {
       "kind": "speaker"
+    },
+    "ioe": {
+      "kind": "io_expander",
+      "part": "pi4io",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x43",
+      "pins": {
+        "p2": {
+          "roles": [
+            "dev:btn_a.in"
+          ]
+        },
+        "p1": {
+          "roles": [
+            "dev:btn_b.in"
+          ]
+        },
+        "p0": {
+          "roles": [
+            "dev:btn_c.in"
+          ]
+        }
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "internal_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "internal_up"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "internal_up"
+      }
     }
   },
   "connectors": {

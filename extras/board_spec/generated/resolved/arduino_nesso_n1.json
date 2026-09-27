@@ -2,6 +2,14 @@
   "schema_version": 1,
   "id": "arduino_nesso_n1",
   "name": "ArduinoNessoN1",
+  "official_name": "Arduino Nesso N1",
+  "official_name_verified": true,
+  "aliases": [
+    "nesso",
+    "nesso n1",
+    "n1",
+    "arduinonesson1"
+  ],
   "legacy_board_id": 23,
   "chip": "esp32c6",
   "spec": {
@@ -228,7 +236,19 @@
       "part": "pi4io",
       "bus": "internal_i2c",
       "i2c_addr": "0x43",
-      "note": "P0 BTN1; P1 BTN2"
+      "note": "P0 BTN1; P1 BTN2",
+      "pins": {
+        "p0": {
+          "roles": [
+            "dev:btn_a.in"
+          ]
+        },
+        "p1": {
+          "roles": [
+            "dev:btn_b.in"
+          ]
+        }
+      }
     },
     "backlight": {
       "kind": "backlight",
@@ -243,6 +263,34 @@
       },
       "signals": {
         "pwm": "pin:pi4io2.p6"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "internal_up"
+      },
+      "signals": {
+        "in": "pin:pi4io1.p0"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "internal_up"
+      },
+      "signals": {
+        "in": "pin:pi4io1.p1"
+      },
+      "verified": {
+        "signals": "generated"
       }
     }
   },

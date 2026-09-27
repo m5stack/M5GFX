@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5sticks3",
   "name": "M5StickS3",
+  "official_name": "M5Stack StickS3",
+  "official_name_verified": true,
+  "aliases": [
+    "sticks3",
+    "m5sticks3",
+    "stick s3"
+  ],
   "legacy_board_id": 26,
   "chip": "esp32s3",
   "spec": {
@@ -11,6 +18,10 @@
         240
       ],
       "touch": false
+    },
+    "storage": {
+      "psram_mb": 8,
+      "psram_mode": "opi"
     }
   },
   "pins": {
@@ -33,12 +44,14 @@
       }
     },
     "11": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "12": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     },
     "14": {
       "roles": [
@@ -68,6 +81,61 @@
     "21": {
       "roles": [
         "dev:lcd.rst"
+      ]
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
       ]
     },
     "38": {
@@ -236,6 +304,11 @@
           "roles": [
             "dev:speaker.enable"
           ]
+        },
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
         }
       }
     },
@@ -253,6 +326,65 @@
       "bus": "i2s_audio",
       "verified": {
         "bus": "datasheet"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:11"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:12"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:26",
+        "d3": "gpio:27",
+        "d2": "gpio:28",
+        "clk": "gpio:30",
+        "d1": "gpio:31",
+        "d0": "gpio:32",
+        "d4": "gpio:33",
+        "d5": "gpio:34",
+        "d6": "gpio:35",
+        "d7": "gpio:36",
+        "dqs": "gpio:37"
       }
     }
   },

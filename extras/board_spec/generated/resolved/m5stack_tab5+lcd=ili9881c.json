@@ -2,6 +2,12 @@
   "schema_version": 1,
   "id": "m5stack_tab5",
   "name": "M5Tab5",
+  "official_name": "M5Stack Tab5",
+  "official_name_verified": true,
+  "aliases": [
+    "tab5",
+    "m5tab5"
+  ],
   "legacy_board_id": 22,
   "chip": "esp32p4",
   "spec": {
@@ -14,7 +20,8 @@
     },
     "storage": {
       "psram_mb": 32,
-      "sd": true
+      "sd": true,
+      "psram_mode": "opi"
     }
   },
   "pins": {
@@ -426,6 +433,10 @@
           "sdio4"
         ]
       }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

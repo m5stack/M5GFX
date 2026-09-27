@@ -3,6 +3,7 @@
   "soc": "esp32c6",
   "package": "generic",
   "gpio_count": 31,
+  "absent": [],
   "input_only": [],
   "strapping": [8, 9, 15],
   "no_internal_pull": [],

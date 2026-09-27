@@ -21,14 +21,38 @@ export function mergeChoice(device, choiceId) {
   delete base.choices;
   delete base.selected_by;
   delete base.default;
-  return { ...base, ...clone(fragment) };
+  const merged = { ...base, ...clone(fragment) };
+  delete merged.present;
+  delete merged.soc_pins;
+  delete merged.catalog_spec;
+  return merged;
+}
+
+function mergeCatalogSpec(target, fragment) {
+  for (const [key, value] of Object.entries(fragment ?? {})) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      target[key] ??= {};
+      mergeCatalogSpec(target[key], value);
+    } else target[key] = clone(value);
+  }
 }
 
 export function materializeChoices(board, selection = {}) {
   const resolved = clone(board);
   for (const [id, device] of Object.entries(resolved.devices ?? {})) {
     if (!isPlainObject(device.choices)) continue;
-    resolved.devices[id] = mergeChoice(device, selection[id] ?? device.default);
+    const choiceId = selection[id] ?? device.default;
+    const fragment = device.choices?.[choiceId] ?? {};
+    if (fragment.catalog_spec) {
+      resolved.spec ??= {};
+      mergeCatalogSpec(resolved.spec, fragment.catalog_spec);
+    }
+    for (const [gpio, pin] of Object.entries(fragment.soc_pins ?? {})) {
+      const current = resolved.pins[gpio] ?? { roles: [] };
+      resolved.pins[gpio] = { ...current, ...clone(pin), roles: [...new Set([...(current.roles ?? []), ...(pin.roles ?? [])])] };
+    }
+    if (fragment.present === false) delete resolved.devices[id];
+    else resolved.devices[id] = mergeChoice(device, choiceId);
   }
   delete resolved.revisions;
   return resolved;
@@ -54,7 +78,9 @@ export function validateChoices(board) {
       for (const key of Object.keys(fragment)) if (choiceOwn(device, key) && !["choices", "selected_by", "default"].includes(key)) {
         issue("E_CHOICE_KEY_OVERLAP", `${path}/choices/${choiceId}/${key}`, `${key} is also present on the device`);
       }
-      if (choiceOwn(fragment, "soc_pins")) issue("E_UNKNOWN_KEY", `${path}/choices/${choiceId}/soc_pins`, "choice fragments cannot change SoC pins");
+      if (fragment.present === false && (fragment.part || Object.keys(fragment.soc_pins ?? {}).length)) {
+        issue("E_CHOICE_ABSENT", `${path}/choices/${choiceId}`, "an absent device choice cannot declare a part or SoC pins");
+      }
     }
   }
   const revisionIds = new Set();

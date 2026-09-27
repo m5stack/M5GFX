@@ -50,6 +50,7 @@ export function isGeneratedField(board, objectPath, field) {
     led_strip: new Set(["signals"]),
     power_hold: new Set(["signals"]),
     backlight: new Set(["signals", "spec"]),
+    button: new Set(["signals"]),
   };
   return generatedByKind[board.devices?.[deviceMatch[1]]?.kind]?.has(field) ?? false;
 }

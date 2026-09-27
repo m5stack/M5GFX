@@ -1,4 +1,4 @@
-# M5Stack BASIC/GRAY/FIRE default composition
+# M5Stack Core (Basic/Gray/Fire) default composition
 
 | Accessory | Origin | Bundled | Settings | Use |
 |---|---|---|---|---|

@@ -16,6 +16,12 @@ export function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+export function effectiveChip(chip, board) {
+  const packageId = board?.chip_package;
+  const packageSpec = packageId ? chip?.packages?.[packageId] : null;
+  return packageSpec ? { ...chip, ...clone(packageSpec), id: chip.id, package: packageId } : chip;
+}
+
 export function assertBoard(value, source = "<board>") {
   if (!isPlainObject(value) || !isPlainObject(value.pins) || !isPlainObject(value.buses) || !isPlainObject(value.devices)) {
     throw new TypeError(`${source}: expected a board object with pins, buses, and devices`);
@@ -33,6 +39,18 @@ export function assertSchema(value, source = "<schema>") {
 export function assertChip(value, source = "<chip>") {
   if (!isPlainObject(value) || !Number.isInteger(value.gpio_count)) {
     throw new TypeError(`${source}: expected a chip object with gpio_count`);
+  }
+  if (!Array.isArray(value.absent)
+    || value.absent.some((gpio) => !Number.isInteger(gpio) || gpio < 0 || gpio >= value.gpio_count)
+    || new Set(value.absent).size !== value.absent.length) {
+    throw new TypeError(`${source}: expected unique absent GPIO numbers inside the chip range`);
+  }
+  for (const [id, packageSpec] of Object.entries(value.packages ?? {})) {
+    if (!/^[a-z][a-z0-9_]*$/.test(id) || !isPlainObject(packageSpec) || !Array.isArray(packageSpec.absent)
+      || packageSpec.absent.some((gpio) => !Number.isInteger(gpio) || gpio < 0 || gpio >= value.gpio_count)
+      || new Set(packageSpec.absent).size !== packageSpec.absent.length) {
+      throw new TypeError(`${source}: package ${id} needs unique absent GPIO numbers inside the chip range`);
+    }
   }
   return value;
 }

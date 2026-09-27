@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5dial",
   "name": "M5Dial",
+  "official_name": "M5Stack Dial",
+  "official_name_verified": true,
+  "aliases": [
+    "dial",
+    "m5dial",
+    "dial v1.1"
+  ],
   "legacy_board_id": 12,
   "chip": "esp32s3",
   "spec": {
@@ -15,8 +22,10 @@
   },
   "pins": {
     "0": {
-      "roles": [],
-      "note": "BtnB / encoder push, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ],
+      "note": "Encoder push"
     },
     "1": {
       "roles": [
@@ -123,8 +132,9 @@
       }
     },
     "42": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "46": {
       "roles": [
@@ -261,6 +271,34 @@
       "kind": "speaker",
       "signals": {
         "data_out": "gpio:3"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:42"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:0"
+      },
+      "verified": {
+        "signals": "generated"
       }
     }
   },

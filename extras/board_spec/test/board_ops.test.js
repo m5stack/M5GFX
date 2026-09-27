@@ -30,7 +30,7 @@ const sticks3Text = await fs.readFile(path.join(root, "boards/m5sticks3.json"), 
 const context = { schema, chip, connectorTypes, parts };
 
 function buildAtomS3(onMidway) {
-  const board = createBoard({ id: "m5atoms3", name: "M5AtomS3", legacy_board_id: 11, chip: "esp32s3" });
+  const board = createBoard({ id: "m5atoms3", name: "M5AtomS3", official_name: "M5Stack AtomS3", official_name_verified: true, aliases: ["atoms3", "atom s3"], legacy_board_id: 11, chip: "esp32s3" });
   setSpec(board, "display.resolution", [128, 128]);
   setSpec(board, "display.touch", false);
   setSpec(board, "storage.psram_mb", 0);
@@ -43,12 +43,15 @@ function buildAtomS3(onMidway) {
   for (const [key, value] of Object.entries({ width: 128, height: 128, offset_x: 0, offset_y: 32, rotation_offset: 0, invert: false, readable: false, panel_type: "gc9107" })) setDeviceSpec(board, "lcd", "gc9107", key, value);
   addDevice(board, "backlight", { kind: "backlight" });
   for (const [key, value] of Object.entries({ freq: 256, channel: 7, invert: false, offset: 48 })) setDeviceSpec(board, "backlight", null, key, value);
+  addDevice(board, "btn_a", { kind: "button", part: "button" });
+  for (const [key, value] of Object.entries({ active_low: true, pull: "external_up" })) setDeviceSpec(board, "btn_a", null, key, value);
   addConnector(board, "port_a", { type: "hy2_4p", standard: "port_i2c" });
   onMidway?.(board);
   for (const [gpio, roles] of Object.entries({
     1: ["bus:port_a_i2c.scl", "conn:port_a.1"], 2: ["bus:port_a_i2c.sda", "conn:port_a.2"],
     15: ["dev:lcd.cs"], 16: ["dev:backlight.pwm"], 17: ["bus:main_spi.sclk"], 21: ["bus:main_spi.mosi"],
     33: ["dev:lcd.dc"], 34: ["dev:lcd.rst"], 38: ["bus:internal_i2c.sda"], 39: ["bus:internal_i2c.scl"],
+    41: ["dev:btn_a.in"],
   })) for (const role of roles) addRole(board, gpio, role, { chip });
   return board;
 }
@@ -94,14 +97,16 @@ test("new buses, devices, and connectors immediately become role candidates", ()
 });
 
 test("duplicate operations can produce StickS3 byte-for-byte", () => {
-  const board = duplicateBoard(buildAtomS3(), { id: "m5sticks3", name: "M5StickS3", legacy_board_id: 26 });
+  const board = duplicateBoard(buildAtomS3(), { id: "m5sticks3", name: "M5StickS3", official_name: "M5Stack StickS3", official_name_verified: true, aliases: ["sticks3", "m5sticks3", "stick s3"], legacy_board_id: 26 });
   for (const [gpio, pin] of Object.entries(structuredClone(board.pins))) for (const role of pin.roles ?? []) removeRoleFromBoard(board, gpio, role);
   removeConnector(board, "port_a");
   removeDevice(board, "lcd");
   removeDevice(board, "backlight");
+  removeDevice(board, "btn_a");
   for (const id of ["main_spi", "internal_i2c", "port_a_i2c"]) removeBus(board, id);
   setSpec(board, "display.resolution", [135, 240]);
-  setSpec(board, "storage.psram_mb", undefined);
+  setSpec(board, "storage.psram_mb", 8);
+  setSpec(board, "storage.psram_mode", "opi");
 
   addBus(board, "main_spi", { kind: "spi", signals: ["sclk", "mosi"], preferred_host: "SPI3_HOST", freq: 40000000, freq_read: 16000000 });
   addBus(board, "internal_i2c", { kind: "i2c", signals: ["sda", "scl"], preferred_host: 1, freq: 100000 });
@@ -115,20 +120,28 @@ test("duplicate operations can produce StickS3 byte-for-byte", () => {
   addDevice(board, "pmic", { kind: "pmic", part: "m5pm1", bus: "internal_i2c" });
   addOwnerRole(board, "pmic", "gpio2", "dev:lcd.power");
   addOwnerRole(board, "pmic", "gpio3", "dev:speaker.enable");
+  addOwnerRole(board, "pmic", "pwrkey", "dev:btn_pwr.in");
   addDevice(board, "speaker", { kind: "speaker", bus: "i2s_audio" });
   setDeviceField(board, "speaker", "verified", { bus: "datasheet" });
   addDevice(board, "mic", { kind: "mic", bus: "i2s_audio" });
   setDeviceField(board, "mic", "verified", { bus: "datasheet" });
+  addDevice(board, "btn_a", { kind: "button", part: "button" });
+  for (const [key, value] of Object.entries({ active_low: true, pull: "external_up" })) setDeviceSpec(board, "btn_a", null, key, value);
+  addDevice(board, "btn_b", { kind: "button", part: "button" });
+  for (const [key, value] of Object.entries({ active_low: true, pull: "external_up" })) setDeviceSpec(board, "btn_b", null, key, value);
+  addDevice(board, "btn_pwr", { kind: "button", part: "button" });
+  for (const [key, value] of Object.entries({ active_low: true, pull: "pmic" })) setDeviceSpec(board, "btn_pwr", null, key, value);
+  addDevice(board, "psram", { kind: "psram", part: "psram" });
   addConnector(board, "port_a", { type: "hy2_4p", standard: "port_i2c" });
   const roles = {
-    9: ["bus:port_a_i2c.sda", "conn:port_a.2"], 10: ["bus:port_a_i2c.scl", "conn:port_a.1"],
+    9: ["bus:port_a_i2c.sda", "conn:port_a.2"], 10: ["bus:port_a_i2c.scl", "conn:port_a.1"], 11: ["dev:btn_a.in"], 12: ["dev:btn_b.in"],
     14: ["bus:i2s_audio.data_out"], 15: ["bus:i2s_audio.ws"], 16: ["bus:i2s_audio.data_in"], 17: ["bus:i2s_audio.bck"], 18: ["bus:i2s_audio.mck"],
-    21: ["dev:lcd.rst"], 38: ["dev:backlight.pwm"], 39: ["bus:main_spi.mosi"], 40: ["bus:main_spi.sclk"], 41: ["dev:lcd.cs"], 45: ["dev:lcd.dc"],
+    21: ["dev:lcd.rst"], 26: ["dev:psram.cs"], 27: ["dev:psram.d3"], 28: ["dev:psram.d2"], 30: ["dev:psram.clk"], 31: ["dev:psram.d1"], 32: ["dev:psram.d0"],
+    33: ["dev:psram.d4"], 34: ["dev:psram.d5"], 35: ["dev:psram.d6"], 36: ["dev:psram.d7"], 37: ["dev:psram.dqs"],
+    38: ["dev:backlight.pwm"], 39: ["bus:main_spi.mosi"], 40: ["bus:main_spi.sclk"], 41: ["dev:lcd.cs"], 45: ["dev:lcd.dc"],
     47: ["bus:internal_i2c.sda"], 48: ["bus:internal_i2c.scl"],
   };
   for (const [gpio, items] of Object.entries(roles)) for (const role of items) addRole(board, gpio, role, { chip });
-  setPin(board, 11, { note: "BtnA, active low" });
-  setPin(board, 12, { note: "BtnB, active low" });
   setPin(board, 47, { pull: "up", pull_reliable: true });
   setPin(board, 48, { pull: "up", pull_reliable: true });
   assert.equal(formatBoard(board), sticks3Text);

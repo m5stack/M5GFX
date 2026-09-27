@@ -2,6 +2,14 @@
   "schema_version": 1,
   "id": "m5cardputer_adv",
   "name": "M5CardputerADV",
+  "official_name": "M5Stack Cardputer-Adv",
+  "official_name_verified": true,
+  "aliases": [
+    "cardputer adv",
+    "cardputer-adv",
+    "cardputeradv",
+    "adv"
+  ],
   "legacy_board_id": 24,
   "chip": "esp32s3",
   "spec": {
@@ -18,6 +26,11 @@
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
     "1": {
       "roles": [
         "bus:port_a_i2c.scl",
@@ -242,6 +255,14 @@
       "part": "sk6812",
       "verified": {
         "part": "datasheet"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
       }
     }
   },

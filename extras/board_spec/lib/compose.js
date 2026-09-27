@@ -149,7 +149,7 @@ export function validateAccessory(accessory, catalogs) {
 export function renderCompositionDoc(board, composition, accessories) {
   if (!composition?.accessories?.length) return null;
   const lines = [
-    `# ${board.name} default composition`, "",
+    `# ${board.official_name} default composition`, "",
     "| Accessory | Origin | Bundled | Settings | Use |", "|---|---|---|---|---|",
   ];
   for (const entry of composition.accessories) {

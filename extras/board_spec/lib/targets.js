@@ -34,6 +34,8 @@ export function validateTarget(board, target = {}) {
   if (boardTarget.legacy_board_id !== board.legacy_board_id) issue("E_TGT_LEGACY_ID", `${boardPath}/legacy_board_id`, `${boardTarget.legacy_board_id} does not match ${board.legacy_board_id}`);
   if (typeof boardTarget.board_enum !== "string" || !/^board_[A-Za-z][A-Za-z0-9_]*$/.test(boardTarget.board_enum)) {
     issue("E_TGT_BOARD_ENUM", `${boardPath}/board_enum`, "board_enum must be a board_ C++ identifier");
+  } else if (board.name !== boardTarget.board_enum.slice("board_".length)) {
+    issue("E_TGT_BOARD_NAME", "/name", `name must match ${boardTarget.board_enum} without the board_ prefix`);
   }
   for (const field of ["cpp_namespace", "desc_name"]) if (boardTarget[field] !== undefined) {
     if (!CPP_IDENTIFIER.test(boardTarget[field])) {
@@ -202,7 +204,7 @@ export function revisionOptions(board, revision, target = {}) {
 export function renderRevisionDoc(board, target = {}) {
   if (!board.revisions?.length) return null;
   const lines = [
-    `# ${board.name} revisions`,
+    `# ${board.official_name} revisions`,
     "",
     "| Revision | Choices | M5GFX options | Note |",
     "|---|---|---|---|",

@@ -1,4 +1,4 @@
-# M5Tough default composition
+# M5Stack Tough default composition
 
 | Accessory | Origin | Bundled | Settings | Use |
 |---|---|---|---|---|

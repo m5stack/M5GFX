@@ -9,6 +9,10 @@ import vm from "node:vm";
 
 import { assertUniqueFlattenedNames, renderBundle } from "../build/bundle.js";
 import { pinChangeLayer } from "../editor/provenance.js";
+import { filterBoardOptions, gpioMatchesFilter, matchesSearchText } from "../editor/filters.js";
+import { assignConnectorLanes, connectorRolesByLane, defaultRoleColor, objectRoleOwner, roleColor, roleContrastColor, roleOwner } from "../editor/role_colors.js";
+import { escapeHtml, gpioTargetButton, ownerSignalsHtml } from "../editor/html.js";
+import { addRole, setBoardField } from "../editor/board_ops.js";
 import { validateChoices } from "../lib/choices.js";
 import { compose, validateAccessory, validateComposition } from "../lib/compose.js";
 import { isCompatible, validateConnectorTypes } from "../lib/ctypes.js";
@@ -17,7 +21,7 @@ import { consumesPinTableRole, emitPinTable, PIN_NAMES, pinNameForRole, pinTable
 import { detectionPinsForEntries, emitM5GFXWiring, emitM5GFXWiringForMapping, m5gfxBoardMapping, partitionDetectionPins, renderM5GFXWiringHeader, selectM5GFXWiringBoards, validateDetectionPins, wiringAssignments, wiringFieldsForRole } from "../lib/emit/m5gfx_board_wiring.js";
 import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { formatBoard } from "../lib/format.js";
-import { clone } from "../lib/model.js";
+import { clone, effectiveChip } from "../lib/model.js";
 import { isGeneratedField, pintableAssignments } from "../lib/pintable_roles.js";
 import { validateOwners } from "../lib/owners.js";
 import { validatePartCatalog, validateParts } from "../lib/parts.js";
@@ -57,6 +61,7 @@ const catalogFiles = (await fs.readdir(path.join(root, "boards"))).filter((name)
 const catalogBoards = await Promise.all(catalogFiles.map(async (name) => JSON.parse(await fs.readFile(path.join(root, "boards", name), "utf8"))));
 const editorHtml = await fs.readFile(path.join(root, "editor/index.html"), "utf8");
 const editorSource = await fs.readFile(path.join(root, "editor/editor.js"), "utf8");
+const editorCSS = await fs.readFile(path.join(root, "editor/editor.css"), "utf8");
 const cliSource = await fs.readFile(path.join(root, "cli/spec.js"), "utf8");
 const picoSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_pico.inl"), "utf8");
 const picoSetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_pico_setup.inl"), "utf8");
@@ -81,6 +86,188 @@ const resolveCatalog = (item) => resolveAll(item, connectorTypes, {
   chip: chips[item.chip], parts, accessories,
   composition: compositionTarget.compositions?.[item.id]?.default,
   allow_origins: compositionTarget.allow_origins,
+});
+
+test("board search matches name, board ID, chip, and legacy ID case-insensitively", () => {
+  const options = [
+    { value: "m5stack_core2", label: "M5StackCore2 — M5Stack Core2", officialName: "M5Stack Core2", chip: "esp32_d0wdq6", legacyId: 3, aliases: ["Core II", "second core"] },
+    { value: "m5stack_tab5", label: "M5Stack Tab5", chip: "esp32p4", legacyId: 55 },
+  ];
+  assert.deepEqual(filterBoardOptions(options, "CORE2").map((item) => item.value), ["m5stack_core2"]);
+  assert.deepEqual(filterBoardOptions(options, "tab5").map((item) => item.value), ["m5stack_tab5"]);
+  assert.deepEqual(filterBoardOptions(options, "ESP32P4").map((item) => item.value), ["m5stack_tab5"]);
+  assert.deepEqual(filterBoardOptions(options, "55").map((item) => item.value), ["m5stack_tab5"]);
+  assert.deepEqual(filterBoardOptions(options, "SECOND").map((item) => item.value), ["m5stack_core2"]);
+  assert.deepEqual(filterBoardOptions(options, "M5Stack Core2").map((item) => item.value), ["m5stack_core2"]);
+  assert.equal(matchesSearchText("M5Stack Core2 esp32", "m5 core"), true);
+});
+
+test("connector lanes use deterministic greedy coloring by shared GPIO", () => {
+  const pins = (entries) => Object.fromEntries(entries.map(([gpio, connectors]) => [gpio, { roles: connectors.map((id) => `conn:${id}.1`) }]));
+  assert.deepEqual(assignConnectorLanes({}), { lanes: [], laneByConnector: {} });
+  assert.deepEqual(assignConnectorLanes(pins([["1", ["a"]], ["2", ["a"]], ["3", ["b"]]])), {
+    lanes: [["a", "b"]], laneByConnector: { a: 0, b: 0 },
+  });
+  assert.deepEqual(assignConnectorLanes(pins([["1", ["a"]], ["2", ["a", "b"]]])), {
+    lanes: [["a"], ["b"]], laneByConnector: { a: 0, b: 1 },
+  });
+  const chain = pins([["1", ["a", "b"]], ["2", ["b", "c"]]]);
+  assert.deepEqual(assignConnectorLanes(chain), {
+    lanes: [["b"], ["a", "c"]], laneByConnector: { b: 0, a: 1, c: 1 },
+  });
+  const reordered = Object.fromEntries(Object.entries(chain).reverse().map(([gpio, pin]) => [gpio, { roles: [...pin.roles].reverse() }]));
+  assert.deepEqual(assignConnectorLanes(reordered), assignConnectorLanes(chain));
+  assert.deepEqual(assignConnectorLanes({ 7: { roles: ["m5go_bottom2/conn:port_c.1"] } }), {
+    lanes: [["port_c"]], laneByConnector: { port_c: 0 },
+  });
+});
+
+test("resolved catalog never places different connectors in one lane on one GPIO", () => {
+  for (const source of catalogBoards) {
+    for (const output of resolveCatalog(source)) {
+      const assignment = assignConnectorLanes(output.board.pins);
+      for (const [gpio, pin] of Object.entries(output.board.pins ?? {})) {
+        for (const lane of connectorRolesByLane(pin.roles, assignment)) {
+          const owners = new Set(lane.map((role) => roleOwner(role)?.id));
+          assert.ok(owners.size <= 1, `${output.filename} GPIO ${gpio}: ${lane.join(", ")}`);
+        }
+      }
+    }
+  }
+});
+
+test("board aliases validate, format after name, and never affect generated outputs", () => {
+  const withAliases = clone(board);
+  setBoardField(withAliases, "aliases", [" Core II ", "core ii", "second core"]);
+  assert.deepEqual(withAliases.aliases, ["Core II", "second core"]);
+  assert.deepEqual(validateBoard(withAliases, context).filter((item) => item.path.startsWith("/aliases")), []);
+  const formatted = formatBoard(withAliases);
+  assert.ok(formatted.indexOf('"name"') < formatted.indexOf('"aliases"'));
+  assert.ok(formatted.indexOf('"aliases"') < formatted.indexOf('"legacy_board_id"'));
+
+  const invalid = clone(board);
+  invalid.aliases = [" Core II", "core ii"];
+  assert.deepEqual(validateBoard(invalid, context).filter((item) => item.id === "E_ALIAS_FORMAT").map((item) => item.path), ["/aliases/0", "/aliases/1"]);
+
+  const originalResolved = resolveCatalog(board)[0].board;
+  const aliasResolved = resolveCatalog(withAliases)[0].board;
+  assert.deepEqual(emitPinTable(aliasResolved, compositionTarget), emitPinTable(originalResolved, compositionTarget));
+  assert.equal(
+    renderM5GFXWiringHeader([{ board: withAliases, chip, emitted: emitM5GFXWiring(aliasResolved, parts, target) }]),
+    renderM5GFXWiringHeader([{ board, chip, emitted: emitM5GFXWiring(originalResolved, parts, target) }]),
+  );
+  const specBoard = catalogBoards.find((item) => item.id === "m5stack_tab5");
+  const specWithAliases = clone(specBoard);
+  specWithAliases.aliases = ["Large P4 display"];
+  const mapping = m5gfxBoardMapping(target, specBoard.id);
+  assert.equal(
+    renderM5GFXSpecsHeader(emitM5GFXSpecs(specWithAliases, resolveCatalog(specWithAliases).map((item) => item.board), parts, mapping)),
+    renderM5GFXSpecsHeader(emitM5GFXSpecs(specBoard, resolveCatalog(specBoard).map((item) => item.board), parts, mapping)),
+  );
+});
+
+test("only catalog names confirmed against official sources carry the verified flag", () => {
+  const documentedProductNames = {
+    arduino_nesso_n1: "Arduino Nesso N1",
+    m5airq: "Air Quality",
+    m5atoms3: "AtomS3",
+    m5atoms3r: "AtomS3R",
+    m5cardputer: "Cardputer",
+    m5cardputer_adv: "Cardputer-Adv",
+    m5chaincaptain: "Chain Captain",
+    m5dial: "Dial",
+    m5dinmeter: "DinMeter",
+    m5paper: "Paper",
+    m5papercolor: "PaperColor",
+    m5papermono: "PaperMono",
+    m5papers3: "PaperS3",
+    m5stack_core2: "Core2",
+    m5stack_coreink: "CoreInk",
+    m5stack_corep4x: "CoreP4X",
+    m5stack_cores3: "CoreS3",
+    m5stack_cores3se: "CoreS3-SE",
+    m5stack_stackchan: "StackChan",
+    m5stack_tab5: "Tab5",
+    m5stamplc: "StamPLC",
+    m5stickc: "StickC",
+    m5stickcplus: "StickC-Plus",
+    m5stickcplus2: "StickC-Plus2",
+    m5sticks3: "StickS3",
+    m5stopwatch: "StopWatch",
+    m5timercam: "TimerCamera",
+    m5tough: "Tough",
+    m5unit_c6l: "Unit C6L",
+    m5vameter: "VAMeter",
+  };
+  const unverified = catalogBoards.filter((item) => item.official_name_verified !== true).map((item) => item.id).sort();
+  assert.deepEqual(unverified, [
+    "m5atom_psram", "m5paperdiy", "m5stack", "m5stack_corematrix", "m5stack_tab5x", "m5station", "m5toughc5",
+  ]);
+  const verified = catalogBoards.filter((item) => item.official_name_verified === true).map((item) => item.id).sort();
+  assert.deepEqual(verified, Object.keys(documentedProductNames).sort());
+  for (const source of catalogBoards.filter((item) => item.official_name_verified === true)) {
+    const productName = source.official_name.replace(/^M5Stack /, "");
+    assert.equal(productName, documentedProductNames[source.id], source.id);
+  }
+  assert.equal(catalogBoards.some((item) => item.official_name_verified === false), false);
+  assert.match(schema.properties.official_name_verified.description, /product-name portion.*official documentation page title/);
+  assert.match(editorHtml, /help\.officialNameVerified/);
+  const sample = clone(board);
+  setBoardField(sample, "official_name_verified", false);
+  assert.equal(Object.hasOwn(sample, "official_name_verified"), false);
+  setBoardField(sample, "official_name_verified", true);
+  assert.equal(sample.official_name_verified, true);
+});
+
+test("schema-invalid hostile board strings are escaped in every editor HTML sink", () => {
+  const payload = '\"><img src=x onerror="globalThis.__boardSpecPwned=1">';
+  const hostile = clone(board);
+  hostile.legacy_board_id = payload;
+  hostile.pins[payload] = { roles: [] };
+  hostile.devices.hostile = { kind: "unknown", signals: { [payload]: `pin:soc.${payload}` } };
+  const errors = validateBoard(hostile, context);
+  assert.ok(errors.some((item) => item.id === "E_SCHEMA_TYPE" && item.path === "/legacy_board_id"));
+  assert.ok(errors.some((item) => item.path.includes("/pins/")));
+
+  const rendered = [escapeHtml(hostile.legacy_board_id), gpioTargetButton(payload), ownerSignalsHtml(hostile.devices.hostile)].join("\n");
+  assert.doesNotMatch(rendered, /<img|onerror="globalThis/);
+  assert.match(rendered, /&lt;img/);
+  assert.match(rendered, /&quot;/);
+  assert.match(editorSource, /value="\$\{escapeHtml\(board\.legacy_board_id\)\}"/);
+  assert.match(editorSource, /pins\.map\(gpioTargetButton\)/);
+  assert.match(editorSource, /ownerSignalsHtml\(board\.devices\?\.\[current\.id\]\)/);
+  assert.match(editorSource, /const safeKey = escapeHtml\(key\)/);
+  assert.doesNotMatch(editorSource, /value="\$\{board\.legacy_board_id\}"/);
+});
+
+test("opening the same board asks before replacing dirty memory and draft state", () => {
+  const openFileSource = /async function openFile\(file\) \{([\s\S]*?)\n\}\n\nfunction downloadCurrent/.exec(editorSource)?.[1];
+  assert.ok(openFileSource);
+  const confirmAt = openFileSource.indexOf("existing?.dirty && !window.confirm");
+  assert.ok(confirmAt >= 0);
+  assert.ok(confirmAt < openFileSource.indexOf("state.documents.set"));
+  assert.ok(confirmAt < openFileSource.indexOf("removeDraft(value.id)"));
+  assert.match(editorHtml, /file\.replaceDirtyConfirm/);
+});
+
+test("GPIO filtering matches pin numbers and roles and can hide unassigned pins", () => {
+  assert.equal(gpioMatchesFilter("21", { roles: ["bus:internal_i2c.sda"] }, "21"), true);
+  assert.equal(gpioMatchesFilter("21", { roles: ["bus:internal_i2c.sda"] }, "I2C"), true);
+  assert.equal(gpioMatchesFilter("22", { roles: [] }, "i2c"), false);
+  assert.equal(gpioMatchesFilter("22", { roles: [] }, "", true), false);
+  assert.equal(gpioMatchesFilter("21", { roles: ["bus:internal_i2c.sda"] }, "", true), true);
+});
+
+test("role colors are stable per object and keep readable contrast", () => {
+  assert.deepEqual(roleOwner("bus:main_spi.sclk"), { kind: "bus", id: "main_spi", key: "bus:main_spi" });
+  assert.deepEqual(roleOwner("m5go_bottom2/conn:mbus.24"), { kind: "conn", id: "mbus", key: "conn:mbus" });
+  assert.equal(roleOwner("invalid"), null);
+  assert.equal(defaultRoleColor("mbus"), "#f6d6a8");
+  assert.equal(defaultRoleColor("custom_object"), defaultRoleColor("custom_object"));
+  assert.match(defaultRoleColor("custom_object"), /^#[0-9a-f]{6}$/);
+  assert.equal(roleContrastColor("#111111"), "#ffffff");
+  assert.equal(roleContrastColor("#eeeeee"), "#17212b");
+  assert.deepEqual(roleColor(objectRoleOwner("dev", "lcd"), { "dev:lcd": "#112233" }), { background: "#112233", foreground: "#ffffff" });
 });
 
 const legacyEsp32Wiring = {
@@ -185,12 +372,186 @@ function assertSingle(id, value) {
 }
 
 test("valid Core2 has only the expected target warning", () => {
-  assert.deepEqual(validateBoard(board, context).map((item) => item.id), ["W_TGT_REV_INDISTINGUISHABLE"]);
+  assert.deepEqual(validateBoard(board, context).map((item) => item.id), ["W_TGT_REV_INDISTINGUISHABLE", "W_TGT_REV_INDISTINGUISHABLE"]);
 });
 
 test("all catalog boards validate against their chip tables", () => {
   assert.deepEqual(catalogFiles, ["arduino_nesso_n1.json", "m5airq.json", "m5atom_psram.json", "m5atoms3.json", "m5atoms3r.json", "m5cardputer.json", "m5cardputer_adv.json", "m5chaincaptain.json", "m5dial.json", "m5dinmeter.json", "m5paper.json", "m5papercolor.json", "m5paperdiy.json", "m5papermono.json", "m5papers3.json", "m5stack.json", "m5stack_core2.json", "m5stack_coreink.json", "m5stack_corematrix.json", "m5stack_corep4x.json", "m5stack_cores3.json", "m5stack_cores3se.json", "m5stack_stackchan.json", "m5stack_tab5.json", "m5stack_tab5x.json", "m5stamplc.json", "m5station.json", "m5stickc.json", "m5stickcplus.json", "m5stickcplus2.json", "m5sticks3.json", "m5stopwatch.json", "m5timercam.json", "m5tough.json", "m5toughc5.json", "m5unit_c6l.json", "m5vameter.json"]);
   assert.deepEqual(validateCatalog(catalogBoards, (item) => ({ ...context, chip: chips[item.chip] })).filter((item) => item.severity !== "warning"), []);
+});
+
+test("catalog button devices match M5Unified GPIO, expander, and PMIC inputs", () => {
+  const gpioButtons = {
+    m5stack: { btn_a: 39, btn_b: 38, btn_c: 37 }, m5atom_psram: { btn_a: 39 },
+    m5paper: { btn_a: 37, btn_b: 38, btn_c: 39 }, m5station: { btn_a: 37, btn_b: 38, btn_c: 39 },
+    m5stack_coreink: { btn_a: 37, btn_b: 38, btn_c: 39, btn_ext: 5, btn_pwr: 27 },
+    m5stickc: { btn_a: 37, btn_b: 39 }, m5stickcplus: { btn_a: 37, btn_b: 39 },
+    m5stickcplus2: { btn_a: 37, btn_b: 39, btn_pwr: 35 }, m5airq: { btn_a: 0, btn_b: 8 },
+    m5vameter: { btn_a: 2, btn_b: 0 }, m5cardputer: { btn_a: 0 }, m5cardputer_adv: { btn_a: 0 },
+    m5atoms3: { btn_a: 41 }, m5atoms3r: { btn_a: 41 }, m5dial: { btn_a: 42, btn_b: 0 },
+    m5dinmeter: { btn_a: 42, btn_b: 0 }, m5sticks3: { btn_a: 11, btn_b: 12 },
+    m5paperdiy: { btn_a: 4, btn_b: 3 }, m5papercolor: { btn_a: 10, btn_b: 9, btn_c: 1 },
+    m5chaincaptain: { btn_a: 1, btn_b: 4, btn_c: 5 }, m5papermono: { btn_a: 2, btn_b: 3 },
+    m5stopwatch: { btn_a: 2, btn_b: 1 },
+  };
+  const ownedButtons = {
+    m5stamplc: { btn_a: "pin:ioe.p2", btn_b: "pin:ioe.p1", btn_c: "pin:ioe.p0" },
+    m5unit_c6l: { btn_a: "pin:ioe.p0" },
+    arduino_nesso_n1: { btn_a: "pin:pi4io1.p0", btn_b: "pin:pi4io1.p1" },
+    m5stack_corematrix: { btn_a: "pin:pmic.gpio0", btn_b: "pin:pmic.gpio1", btn_c: "pin:pmic.gpio2" },
+  };
+  const pmicPowerBoards = new Set([
+    "m5chaincaptain", "m5papercolor", "m5paperdiy", "m5papermono", "m5stack_core2",
+    "m5stack_corematrix", "m5stack_cores3", "m5stack_cores3se", "m5stack_stackchan",
+    "m5stickc", "m5stickcplus", "m5sticks3", "m5stopwatch", "m5tough", "m5toughc5",
+  ]);
+  for (const source of catalogBoards) for (const { board: resolved } of resolveCatalog(source)) {
+    const expected = Object.fromEntries(Object.entries(gpioButtons[source.id] ?? {}).map(([id, gpio]) => [id, `gpio:${gpio}`]));
+    Object.assign(expected, ownedButtons[source.id] ?? {});
+    if (pmicPowerBoards.has(source.id)) expected.btn_pwr = "pin:pmic.pwrkey";
+    const actualIds = Object.entries(resolved.devices).filter(([, device]) => device.kind === "button").map(([id]) => id).sort();
+    assert.deepEqual(actualIds, Object.keys(expected).sort(), source.id);
+    for (const [id, endpoint] of Object.entries(expected)) {
+      assert.equal(resolved.devices[id].part, "button", `${source.id}.${id}.part`);
+      assert.equal(resolved.devices[id].signals.in, endpoint, `${source.id}.${id}.in`);
+      assert.equal(resolved.devices[id].spec.active_low, true, `${source.id}.${id}.active_low`);
+    }
+  }
+});
+
+test("ESP32 USB-UART bridges use fixed UART0 wiring and automatic boot control", () => {
+  const expectedParts = {
+    m5atom_psram: "ch9102", m5paper: "cp2104", m5stack_coreink: "cp2104",
+    m5station: "ch9102f", m5stickc: "ch552", m5stickcplus: "ch552",
+    m5stickcplus2: "ch9102", m5timercam: "ch552", m5tough: "ch9102",
+  };
+  const expectedBoards = new Set([...Object.keys(expectedParts), "m5stack", "m5stack_core2"]);
+  const actualBoards = new Set(catalogBoards.filter((item) => item.devices.usb_serial).map((item) => item.id));
+  assert.deepEqual(actualBoards, expectedBoards);
+  for (const source of catalogBoards.filter((item) => expectedBoards.has(item.id))) {
+    assert.deepEqual(source.buses.console_uart, {
+      kind: "uart", signals: ["tx", "rx"], preferred_host: 0, fixed: true,
+    });
+    assert.ok(source.pins["0"].roles.includes("dev:usb_serial.boot"), source.id);
+    assert.ok(source.pins["1"].roles.includes("bus:console_uart.tx"), source.id);
+    assert.ok(source.pins["3"].roles.includes("bus:console_uart.rx"), source.id);
+    for (const { board: resolved } of resolveCatalog(source)) {
+      assert.equal(resolved.devices.usb_serial.kind, "usb_uart", source.id);
+      assert.equal(resolved.devices.usb_serial.bus, "console_uart", source.id);
+      assert.equal(resolved.devices.usb_serial.spec.auto_reset, true, source.id);
+      assert.equal(resolved.devices.usb_serial.signals.boot, "gpio:0", source.id);
+      if (expectedParts[source.id]) assert.equal(resolved.devices.usb_serial.part, expectedParts[source.id], source.id);
+    }
+  }
+  assert.equal(catalogBoards.find((item) => item.id === "m5stack").devices.usb_serial.choices.ch9102f.part, "ch9102f");
+  assert.equal(catalogBoards.find((item) => item.id === "m5stack_core2").devices.usb_serial.choices.ch9102f.part, "ch9102f");
+});
+
+test("catalog PSRAM devices match storage metadata and chip pin definitions", () => {
+  const fixed = {
+    m5atom_psram: [2, "quad"], m5paper: [8, "quad"], m5stack_core2: [8, "quad"],
+    m5stickcplus2: [2, "quad"], m5timercam: [8, "quad"], m5tough: [8, "quad"],
+    m5atoms3r: [8, "opi"], m5chaincaptain: [8, "opi"], m5papercolor: [8, "opi"],
+    m5paperdiy: [8, "opi"], m5papermono: [8, "opi"], m5papers3: [8, "opi"],
+    m5stack_cores3: [8, "quad"], m5stack_cores3se: [8, "quad"], m5stack_stackchan: [8, "quad"],
+    m5sticks3: [8, "opi"], m5stack_corep4x: [32, "opi"], m5stack_tab5: [32, "opi"],
+    m5stack_tab5x: [32, "opi"], m5toughc5: [8, "quad"],
+  };
+  for (const [id, [size, mode]] of Object.entries(fixed)) {
+    const source = catalogBoards.find((item) => item.id === id);
+    assert.equal(source.spec.storage.psram_mb, size, id);
+    assert.equal(source.spec.storage.psram_mode, mode, id);
+    assert.equal(source.devices.psram.part, "psram", id);
+    for (const output of resolveCatalog(source)) {
+      assert.equal(validateBoard(output.board, { ...context, chip: chips[source.chip], resolved: true }).filter((item) => item.id.startsWith("E_PSRAM")).length, 0, id);
+    }
+  }
+  const stack = catalogBoards.find((item) => item.id === "m5stack");
+  const variants = Object.fromEntries(resolveCatalog(stack).map((item) => [item.revision, item.board]));
+  assert.equal(variants.pre_v2_6_basic.devices.psram, undefined);
+  assert.equal(variants.pre_v2_6_gray.devices.psram, undefined);
+  assert.equal(variants.pre_2020_04_fire.spec.storage.psram_mb, 4);
+  assert.equal(variants.from_2020_04_to_v2_5_fire.spec.storage.psram_mb, 8);
+  assert.equal(variants.v2_6_plus_fire.spec.storage.psram_mb, 8);
+  for (const id of ["pre_2020_04_fire", "from_2020_04_to_v2_5_fire", "v2_6_plus_fire"]) {
+    assert.equal(variants[id].devices.psram.part, "psram");
+    assert.ok(variants[id].pins[16].roles.includes("conn:mbus.15"));
+    assert.ok(variants[id].pins[16].roles.includes("dev:psram.cs"));
+    assert.ok(variants[id].pins[17].roles.includes("conn:mbus.16"));
+    assert.ok(variants[id].pins[17].roles.includes("dev:psram.clk"));
+  }
+});
+
+test("PICO-V3-02 exposes GPIO20 without changing the generated chip target", () => {
+  for (const id of ["m5atom_psram", "m5stickcplus2"]) {
+    const source = clone(catalogBoards.find((item) => item.id === id));
+    source.pins[20] = { roles: [] };
+    assert.equal(validateBoard(source, { ...context, chip: chips[source.chip] }).some((item) => item.id === "E_CHIP_ABSENT"), false, id);
+    assert.equal(source.chip, "esp32_d0wdq6");
+    assert.equal(source.chip_package, "pico_v3_02");
+  }
+  const invalid = clone(catalogBoards.find((item) => item.id === "m5atom_psram"));
+  invalid.chip_package = "unknown_package";
+  assert.equal(validateBoard(invalid, { ...context, chip: chips[invalid.chip] }).some((item) => item.id === "E_CHIP_PACKAGE"), true);
+});
+
+test("PICO-V3-02 package overrides reserve and validate the integrated PSRAM pins", () => {
+  for (const id of ["m5atom_psram", "m5stickcplus2"]) {
+    const source = catalogBoards.find((item) => item.id === id);
+    const packageChip = effectiveChip(chips[source.chip], source);
+    assert.deepEqual(packageChip.psram.quad, { cs: 9, clk: 10 }, id);
+    assert.ok(packageChip.reserved.includes(9), id);
+    assert.ok(packageChip.reserved.includes(10), id);
+    assert.ok(source.pins[9].roles.includes("dev:psram.cs"), id);
+    assert.ok(source.pins[10].roles.includes("dev:psram.clk"), id);
+    const errors = validateBoard(source, { ...context, chip: chips[source.chip] });
+    assert.equal(errors.some((item) => ["E_PSRAM_PINS", "E_CHIP_RESERVED"].includes(item.id)), false, id);
+
+    const externalPins = clone(source);
+    externalPins.pins[9].roles = externalPins.pins[9].roles.filter((role) => role !== "dev:psram.cs");
+    externalPins.pins[10].roles = externalPins.pins[10].roles.filter((role) => role !== "dev:psram.clk");
+    externalPins.pins[16] ??= { roles: [] };
+    externalPins.pins[17] ??= { roles: [] };
+    externalPins.pins[16].roles.push("dev:psram.cs");
+    externalPins.pins[17].roles.push("dev:psram.clk");
+    assert.ok(validateBoard(externalPins, { ...context, chip: chips[source.chip] }).some((item) => item.id === "E_PSRAM_PINS"), id);
+
+    const conflict = clone(source);
+    conflict.pins[9].roles.push("dev:rgb_led.data");
+    assert.ok(validateBoard(conflict, { ...context, chip: chips[source.chip] }).some((item) => item.id === "E_CHIP_RESERVED"), id);
+  }
+});
+
+test("ESP32-S3 Quad and OPI PSRAM map IO2 to SPIWP and IO3 to SPIHD", () => {
+  assert.equal(chipS3.psram.quad.d2, 28);
+  assert.equal(chipS3.psram.quad.d3, 27);
+  assert.equal(chipS3.psram.opi.d2, 28);
+  assert.equal(chipS3.psram.opi.d3, 27);
+  const source = catalogBoards.find((item) => item.id === "m5sticks3");
+  assert.ok(source.pins[28].roles.includes("dev:psram.d2"));
+  assert.ok(source.pins[27].roles.includes("dev:psram.d3"));
+  const swapped = clone(source);
+  swapped.pins[28].roles = swapped.pins[28].roles.map((role) => role === "dev:psram.d2" ? "dev:psram.d3" : role);
+  swapped.pins[27].roles = swapped.pins[27].roles.map((role) => role === "dev:psram.d3" ? "dev:psram.d2" : role);
+  assert.ok(validateBoard(swapped, { ...context, chip: chipS3 }).some((item) => item.id === "E_PSRAM_PINS"));
+});
+
+test("PSRAM may share connector roles but rejects another device signal", () => {
+  const stack = catalogBoards.find((item) => item.id === "m5stack");
+  const fire = clone(resolveCatalog(stack).find((item) => item.revision === "pre_2020_04_fire").board);
+  assert.equal(validateBoard(fire, { ...context, chip: chips[stack.chip], resolved: true }).some((item) => item.id === "E_PSRAM_CONFLICT"), false);
+  fire.pins[16].roles.push("dev:lcd.cs");
+  assert.equal(validateBoard(fire, { ...context, chip: chips[stack.chip], resolved: true }).some((item) => item.id === "E_PSRAM_CONFLICT"), true);
+
+  const core2Source = catalogBoards.find((item) => item.id === "m5stack_core2");
+  const missingDevice = clone(core2Source);
+  delete missingDevice.devices.psram;
+  assert.equal(validateBoard(missingDevice, { ...context, chip: chips[core2Source.chip] }).some((item) => item.id === "E_PSRAM_DEVICE"), true);
+
+  const wrongPins = clone(core2Source);
+  wrongPins.pins[16].roles = wrongPins.pins[16].roles.filter((role) => role !== "dev:psram.cs");
+  wrongPins.pins[25].roles.push("dev:psram.cs");
+  assert.equal(validateBoard(wrongPins, { ...context, chip: chips[core2Source.chip] }).some((item) => item.id === "E_PSRAM_PINS"), true);
 });
 
 test("generated ESP32 wiring preserves the replaced board values", async () => {
@@ -199,9 +560,9 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
   assert.deepEqual(parseGeneratedWiring(source), legacyEsp32Wiring);
 });
 
-test("all 50 revision and runtime combinations match snapshots", async () => {
+test("all 62 revision and runtime combinations match snapshots", async () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 50);
+  assert.equal(outputs.length, 62);
   for (const output of outputs) {
     const snapshot = await fs.readFile(path.join(root, "generated/resolved", output.filename), "utf8");
     assert.equal(snapshot, formatBoard(output.board), output.filename);
@@ -246,12 +607,66 @@ test("editor translations are complete and every static reference exists", async
     assert.deepEqual(Object.keys(translations).sort(), ["en", "ja", "zh"], key);
     for (const value of Object.values(translations)) assert.ok(value.length > 0, key);
   }
+  assert.deepEqual(messages["gpio.rowHint"], { en: "Click to edit", zh: "点击编辑", ja: "クリックして編集" });
   const referenced = new Set([
     ...[...editorSource.matchAll(/\bt\("([^"]+)"/g)].map((match) => match[1]),
-    ...[...editorHtml.matchAll(/data-i18n(?:-aria-label)?="([^"]+)"/g)].map((match) => match[1]),
+    ...[...editorHtml.matchAll(/data-i18n(?:-aria-label|-placeholder|-title)?="([^"]+)"/g)].map((match) => match[1]),
   ]);
   assert.deepEqual([...referenced].filter((key) => !messages[key]), []);
   assert.equal(/[ぁ-んァ-ン一-龯]/.test(editorSource), false, "editor UI source has no hard-coded Japanese");
+  assert.match(editorHtml, /id="onboarding"[^>]*hidden/);
+  assert.match(editorSource, /m5-board-spec-onboarding:v1/);
+  assert.match(editorHtml, /id="repository-next"[^>]*hidden/);
+  assert.match(editorSource, /repository\.replace/);
+  assert.match(editorSource, /tabindex="0" role="button" aria-label="GPIO/);
+  assert.match(editorSource, /detail\.noRoleMatches/);
+  assert.match(editorCSS, /grid-template-rows:\s*0fr/);
+  assert.match(editorCSS, /grid-template-rows:\s*1fr/);
+  assert.match(editorSource, /function setDisclosureOpen\(details, open\)/);
+  assert.match(editorSource, /details\.classList\.add\("motion-opening"\)/);
+  assert.match(editorSource, /details\.classList\.add\("motion-closing"\)/);
+  assert.match(editorSource, /collapse\.addEventListener\("transitionend", motion\.finish\)/);
+  assert.match(editorSource, /setTimeout\(\(\) => motion\.finish\(\), motionDuration \+ 50\)/);
+  assert.match(editorCSS, /\.motion-details\[open\]:not\(\.motion-opening, \.motion-closing\)/);
+  assert.match(editorCSS, /prefers-reduced-motion:\s*reduce/);
+  assert.match(editorSource, /closingGPIOs/);
+  assert.match(editorSource, /renderWithFade/);
+  assert.match(editorCSS, /\.search-combobox ul \{[^}]*position:\s*fixed/s);
+  assert.match(editorSource, /const opensUpwards = spaceBelow < desiredHeight/);
+  assert.match(editorSource, /--combobox-max-height/);
+  assert.match(editorHtml, /<colgroup>[\s\S]*gpio-col-validation[\s\S]*<\/colgroup>/);
+  assert.match(editorCSS, /#gpio-table \{ table-layout: fixed; \}/);
+  assert.match(editorHtml, /id="board-info"[^>]*data-layout-section="boardInfo"/);
+  assert.match(editorHtml, /id="side-resizer"[^>]*role="separator"[^>]*aria-valuemin="360"[^>]*aria-valuemax="620"/);
+  assert.match(editorSource, /m5-board-spec-layout:v1/);
+  assert.match(editorSource, /sidebarWidthLimits = \{ min: 360, max: 620, default: 460 \}/);
+  assert.match(editorSource, /event\.key === "ArrowLeft" \? step : -step/);
+  assert.match(editorCSS, /\.side-column \{[^}]*position:\s*sticky[^}]*max-height:\s*100%[^}]*overflow-y:\s*auto/s);
+  assert.match(editorCSS, /@media \(max-width: 980px\)[\s\S]*?\.side-resizer \{ display: none; \}/);
+  assert.match(editorCSS, /\.workspace \{[^}]*--side-width, 460px/s);
+  assert.match(editorCSS, /\.row-edit-hint \{[^}]*opacity:\s*0[^}]*visibility:\s*hidden/s);
+  assert.doesNotMatch(editorCSS, /\.gpio-row:hover \.row-edit-hint \{\s*display:/);
+  assert.match(editorSource, /internalRoles: `<td class="gpio-roles-cell gpio-internal-roles-cell"><div class="role-row-main">[\s\S]*\$\{rowHint\}/);
+  assert.match(editorSource, /const compactInternalRoles = internalRoles\.map/);
+  assert.doesNotMatch(editorSource, /allRoles\.slice\(0, 3\)/);
+  assert.match(editorCSS, /\.compact-roles \{[^}]*flex-wrap:\s*wrap[^}]*overflow:\s*visible/s);
+  assert.match(editorCSS, /\.gpio-roles-cell:has\(\.row-readonly-origin, \.psram-shared-note\) \.row-edit-hint/);
+  assert.match(editorSource, /assignConnectorLanes\(board\.pins\)/);
+  assert.match(editorSource, /sizeConnectorLanes\(connectorLanes\.lanes\.length\)/);
+  assert.match(editorCSS, /\.connector-role-lanes \{[^}]*grid-template-columns:\s*var\(--connector-lane-columns\)/s);
+  assert.match(editorSource, /connector\.pinoutHeading/);
+  assert.match(editorSource, /validation: `<td>\$\{errorSummary\}<\/td>`/);
+  assert.doesNotMatch(editorSource, /row-disclosure/);
+  assert.match(editorSource, /\$\{expanded \? "▾" : "▸"\}/);
+  assert.match(editorSource, /function roleOwnerAttributes\(owner, connectorPosition = false\)/);
+  assert.match(editorSource, /class="related-object-link" \$\{roleOwnerAttributes\(owner\)\}/);
+  assert.match(editorSource, /roleOwnerLabel\(objectRoleOwner\("bus", id\)/);
+  assert.match(editorSource, /roleOwnerLabel\(objectRoleOwner\("conn", id\)/);
+  assert.match(editorSource, /roleOwnerLabel\(objectRoleOwner\("dev", id\)/);
+  assert.match(editorCSS, /\.related-object-link\[data-role-kind="conn"\]/);
+  assert.match(editorCSS, /\.config-object summary \.configuration-owner-label \{[^}]*justify-self:\s*start[^}]*inline-size:\s*max-content/s);
+  assert.match(editorSource, /class="reference-mark"[^>]*>🔗<\/span>/);
+  assert.doesNotMatch(editorSource, /class="reference-mark"[^>]*>●<\/span>/);
 
   const validatorSources = await Promise.all(["validate.js", "ctypes.js", "compose.js"].map((name) => fs.readFile(path.join(root, "lib", name), "utf8")));
   const validationIds = new Set(validatorSources.flatMap((source) => [...source.matchAll(/(?:error|issue)\("([EW]_[A-Z0-9_]+)"/g)].map((match) => match[1])));
@@ -574,13 +989,10 @@ test("ChainCaptain and PaperColor generated setup preserves legacy fields", asyn
     { sclk: 15, mosi: 13, miso: 14, sd_cs: 47, other_cs: 44 });
 
   const detector = await fs.readFile(esp32s3DetectorPath, "utf8");
-  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(detector, /chain_addresses\[\] = \{ 0x32, 0x4F, 0x68, 0x6E \}/);
   assert.match(detector, /paper_addresses\[\] = \{ 0x32, 0x44 \}/);
   assert.match(detector, /desc_chaincaptain[\s\S]*?i2c_reset\(10, 20, reset_hold_when_skipped\)/);
   assert.match(detector, /desc_papercolor[\s\S]*?shared_sd\(wiring::papercolor::shared_sd_sclk/);
-  assert.doesNotMatch(detector, /TEMP\(commit 1\)/);
-  assert.doesNotMatch(main, /chain_captain_i2c_addr_list|papercolor_i2c_addr_list|chain_captain_i2c_sda/);
   const setup = await fs.readFile(esp32s3SetupPath, "utf8");
   assert.match(setup, /panel_chaincaptain[\s\S]*?with_rgb_order[\s\S]*?with_bus_shared\(false\)/);
   assert.match(setup, /panel_papercolor[\s\S]*?display_rst[\s\S]*?with_bus_shared\(true\)/);
@@ -705,7 +1117,6 @@ test("AirQ generated specs preserve the legacy setup", async () => {
 });
 
 test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback", async () => {
-  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   const byId = Object.fromEntries(catalogBoards.map((item) => [item.id, item]));
   const specs = Object.fromEntries([
     "m5stickc", "m5stickcplus", "m5stack_coreink", "m5stickcplus2",
@@ -750,13 +1161,9 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
   assert.doesNotMatch(picoSource,
     /desc_(?:coreink|stickcplus2),[^\n]*true, true/);
   assert.equal(specs.m5stickc.probes.st7735s, undefined);
-  assert.doesNotMatch(main, /check PICO-D4|PICOV3_02 \(StickCPlus2/);
-  assert.doesNotMatch(main, /M5GFX_AUTODETECT_TEST_FAIL_STICKCPLUS_SETUP enabled/);
-  assert.doesNotMatch(picoSource, /TEMP:/);
-  assert.doesNotMatch(picoSetupSource, /TEMP:/);
 });
 
-test("ESP32-C6 catalogs and migrated detector preserve both display boards", async () => {
+test("ESP32-C6 catalogs and detector preserve both display boards", async () => {
   const byId = Object.fromEntries(catalogBoards.map((item) => [item.id, item]));
   const unitResolved = resolveCatalog(byId.m5unit_c6l)[0].board;
   const nessoResolved = resolveCatalog(byId.arduino_nesso_n1)[0].board;
@@ -823,9 +1230,6 @@ test("ESP32-C6 catalogs and migrated detector preserve both display boards", asy
 
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /pkg_ver == 0[\s\S]*?try_setup_detected\(board_detect::m5::esp32c6_detectors/);
-  assert.doesNotMatch(main, /M5GFX_AUTODETECT_TEST_FAIL_(?:UNITC6L|NESSON1)_SETUP/);
-  assert.doesNotMatch(esp32c6Source, /TEMP:/);
-  assert.doesNotMatch(esp32c6SetupSource, /TEMP:/);
 });
 
 test("M5GFX probe dummy bits reject invalid catalog values", () => {
@@ -1109,7 +1513,13 @@ test("confirmed boards survive post-detection power setup failures", async () =>
   assert.match(main, /construct_result == board_detect::m5::construct_status_t::no_display[\s\S]*?transaction\.restore_start\(result\.desc->hold_high_pins\.data,[\s\S]*?result\.desc->hold_high_pins\.size\)/);
   assert.match(main, /if \(!setup\(parts\)\)[\s\S]*?destroy_display_parts\(&parts\)[\s\S]*?transaction\.rollback\(\)/);
   assert.match(setup, /destroy_display_parts\(display_parts_t\* parts\)[\s\S]*?parts->bus->release\(\)[\s\S]*?delete parts->touch;[\s\S]*?delete parts->light;[\s\S]*?delete parts->panel;[\s\S]*?delete parts->bus;/);
-  assert.doesNotMatch(main, /Legacy fallback retained|stopwatch_i2c_addr_list/);
+});
+
+test("embedded autodetect routes detected boards through descriptor setup", async () => {
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  const autodetect = /board_t M5GFX::autodetect\(bool use_reset, board_t board\)\n  \{([\s\S]*?)\n  \}\n\n#else/.exec(main)?.[1];
+  assert.ok(autodetect, "embedded autodetect implementation is present");
+  assert.doesNotMatch(autodetect, /\bboard\s*=\s*board_t::board_(?!unknown\b)/);
 });
 
 test("confirmed boards tolerate reset-list faults while confirm remains strict", async () => {
@@ -1212,7 +1622,7 @@ test("Core2 revisions match all four snapshots and confirmed PMIC endpoints", as
   assert.equal(outputs[1].board.devices.imu.part, "mpu6886");
 });
 
-test("E_ROLE_DUP", () => assertSingle("E_ROLE_DUP", fixture((value) => value.pins[1].roles.push("bus:port_a_i2c.sda"))));
+test("E_ROLE_DUP", () => assertSingle("E_ROLE_DUP", fixture((value) => value.pins[25].roles.push("bus:port_a_i2c.sda"))));
 
 test("E_ROLE_DUP ignores accessory source prefixes", () => {
   const modifiedAccessory = clone(accessories.m5go_bottom2);
@@ -1390,6 +1800,9 @@ test("part catalog and board validation IDs", () => {
 });
 
 test("target option validation IDs", () => {
+  const wrongName = clone(board);
+  wrongName.name = "M5Stack Core2";
+  assert.ok(validateTarget(wrongName, target).some((item) => item.id === "E_TGT_BOARD_NAME" && item.path === "/name"));
   const duplicate = clone(target);
   duplicate.boards.m5stack_core2.options.push({ name: "duplicate", bit: 2, select: { pmic: "axp2101" } });
   assert.ok(validateTarget(board, duplicate).some((item) => item.id === "E_TGT_SLOT_DUP"));
@@ -1557,11 +1970,25 @@ test("unsafe choice IDs cannot escape resolved output directories", () => {
   assert.throws(() => resolvedFilename({ id: "../escape" }, null), /safe ID/);
 });
 
-test("SoC pin keys must be numeric and inside the chip GPIO range", () => {
+test("SoC pin keys must be numeric, in range, and present on the chip", () => {
   const malformed = fixture((value) => { value.pins.foo = { roles: [] }; });
   assert.ok(validateBoard(malformed, context).some((item) => item.id === "E_PIN_KEY"));
   const outside = fixture((value) => { value.pins[String(chip.gpio_count)] = { roles: [] }; });
   assert.ok(validateBoard(outside, context).some((item) => item.id === "E_PIN_KEY"));
+  const absent = fixture((value) => { value.pins[String(chip.absent[0])] = { roles: [] }; });
+  assert.ok(validateBoard(absent, context).some((item) => item.id === "E_CHIP_ABSENT"));
+  assert.throws(() => addRole(absent, chip.absent[0], "dev:lcd.cs", { chip }), /does not exist/);
+});
+
+test("chip catalogs distinguish absent GPIO numbers from reserved pads", () => {
+  assert.deepEqual(chip.absent, [20, 24, 28, 29, 30, 31]);
+  assert.deepEqual(chipS3.absent, [22, 23, 24, 25]);
+  assert.deepEqual(chipC5.absent, []);
+  assert.deepEqual(chipC6.absent, []);
+  assert.deepEqual(chipC61.absent, []);
+  assert.deepEqual(chipP4.absent, []);
+  assert.ok(!chip.absent.includes(9), "PICO-D4 GPIO9 is reserved separately from absent pads");
+  assert.ok(!chipS3.absent.some((gpio) => chipS3.reserved.includes(gpio)));
 });
 
 test("Core2 and Tough share the PMIC option bit at the C++ assumption", async () => {
@@ -1587,9 +2014,14 @@ test("M5Stack and Tough LCD choices are runtime-selected", () => {
   const tough = catalogBoards.find((item) => item.id === "m5tough");
   assert.equal(stack.devices.lcd.selected_by, "runtime");
   assert.equal(tough.devices.lcd.selected_by, "runtime");
-  assert.equal(stack.revisions, undefined);
+  assert.deepEqual(stack.revisions.map((revision) => revision.id), [
+    "pre_v2_6_basic", "pre_v2_6_gray", "pre_2020_04_fire", "from_2020_04_to_v2_5_fire",
+    "v2_6_plus_basic", "v2_6_plus_gray", "v2_6_plus_fire",
+  ]);
   assert.equal(tough.revisions, undefined);
-  assert.deepEqual(resolveCatalog(stack).map((item) => item.filename), ["m5stack+lcd=tn.json", "m5stack+lcd=ips.json"]);
+  assert.deepEqual(resolveCatalog(stack).map((item) => item.filename), stack.revisions.flatMap((revision) => [
+    `m5stack@${revision.id}+lcd=tn.json`, `m5stack@${revision.id}+lcd=ips.json`,
+  ]));
   assert.deepEqual(resolveCatalog(tough).map((item) => item.filename), ["m5tough+lcd=ili9342c.json", "m5tough+lcd=ili9342e.json"]);
   assert.equal(validateTarget(stack, target).some((item) => item.id === "E_TGT_CHOICE_UNREPRESENTED"), false);
   assert.equal(validateTarget(tough, target).some((item) => item.id === "E_TGT_CHOICE_UNREPRESENTED"), false);
@@ -1877,9 +2309,6 @@ test("CoreP4X generated DSI setup preserves the legacy fields", async () => {
   assert.match(esp32p4Source, /probe_i2c_read[\s\S]*?pm1_i2c_addr[\s\S]*?200[\s\S]*?probe_i2c_read[\s\S]*?ioe1_i2c_addr[\s\S]*?200/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /pkg_ver == 0[\s\S]*?try_setup_detected\(board_detect::m5::esp32p4_detectors/);
-  assert.doesNotMatch(main, /corep4x_i2c_addr_list|reg_data_io1_1|M5CoreP4X needs PSRAM enabled/);
-  assert.doesNotMatch(main, /#if !defined \(M5GFX_AUTODETECT_TEST_FAIL_(?:COREP4X|TAB5)_SETUP\)/);
-  assert.doesNotMatch(esp32p4Source, /TEMP\(commit 1\)/);
 });
 
 test("Tab5 generated DSI setup preserves all three legacy panels", () => {
@@ -1968,9 +2397,6 @@ test("CoreMatrix generated I2C setup preserves the legacy fields", async () => {
   assert.match(header, /bus_port = 0;[\s\S]*?bus_freq_write = 400000;[\s\S]*?bus_freq_read = 400000;[\s\S]*?bus_i2c_addr = 0x72;[\s\S]*?bus_prefix_len = 0;/);
   assert.match(esp32c61Source, /probe_i2c_bus_present\(ctx, corematrix_detail::sda, corematrix_detail::scl\)/);
   assert.match(esp32c61Source, /probe_i2c_read[\s\S]*?pm1_i2c_addr[\s\S]*?200[\s\S]*?probe_i2c_read[\s\S]*?ioe1_i2c_addr[\s\S]*?200/);
-  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  assert.doesNotMatch(main, /corematrix_i2c_sda|tm1680_i2c_addr|_check_m5pm1|_check_m5ioe1/);
-  assert.doesNotMatch(esp32c61Source, /TEMP\(commit 1\)/);
 });
 
 test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async () => {
@@ -2038,10 +2464,9 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
   assert.doesNotMatch(setup, /construct_paperdiy[\s\S]*?make_i2c_touch[\s\S]*?construct_status_t setup_esp32s3/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /esp32s3_detectors_pm1_ext[\s\S]*?esp32s3_detectors_paper[\s\S]*?esp32s3_detectors_spi_id/);
-  assert.doesNotMatch(main, /paper_i2c_sda|gt911_i2c_addr|paperdiy_found|TEMP\(commit 1\)/);
 });
 
-test("CoreS3 family catalog and migration keep shared wiring and option power variants", async () => {
+test("CoreS3 family catalog keeps shared wiring and option power variants", async () => {
   const members = ["m5stack_cores3", "m5stack_cores3se", "m5stack_stackchan"]
     .map((id) => catalogBoards.find((item) => item.id === id));
   assert.ok(members.every(Boolean));
@@ -2071,7 +2496,6 @@ test("CoreS3 family catalog and migration keep shared wiring and option power va
   assert.match(coreSource, /One post-power read is deliberately retained[\s\S]*?camera_id\(probe\)/);
   assert.match(coreSource, /camera_id\(ctx\)[\s\S]*?probe_dedicated_pin_release[\s\S]*?RELEASE_AMBIGUOUS[\s\S]*?biasing toward camera family/);
   assert.match(coreSource, /internal_camera_confirmed[\s\S]*?if \(!confirmed_before_power\)/);
-  assert.doesNotMatch(coreSource, /camera_powered|camera_poll_ms|camera_power_enable_reg/);
   assert.match(coreSource, /i2c_stackchan_ioe::i2c_addr[\s\S]*?i2c_stackchan_ioe::firmware_reg[\s\S]*?i2c_stackchan_ioe::firmware_min/);
   const generatedSpecs = await fs.readFile(
     path.join(root, "../../src/board_detect/m5/generated/esp32s3_specs.hpp"), "utf8");
@@ -2090,6 +2514,4 @@ test("CoreS3 family catalog and migration keep shared wiring and option power va
   assert.match(main, /assigned before prepare\/refine[\s\S]*?representative family ID[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
   const coreAutodetect = /try_setup_detected\(board_detect::m5::esp32s3_detectors_cores3[\s\S]*?try_setup_detected\(board_detect::m5::esp32s3_detectors_dial/.exec(main)[0];
   assert.match(coreAutodetect, /try_setup_detected\(board_detect::m5::esp32s3_detectors_cores3/);
-  assert.doesNotMatch(coreAutodetect, /_detect_i2c_device|gc0308_i2c_addr|readRegister8/);
-  assert.doesNotMatch(coreSource, /TEMP\(commit 1\)|retained legacy block/);
 });

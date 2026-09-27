@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5chaincaptain",
   "name": "M5ChainCaptain",
+  "official_name": "M5Stack Chain Captain",
+  "official_name_verified": true,
+  "aliases": [
+    "chaincaptain",
+    "chain captain",
+    "captain"
+  ],
   "legacy_board_id": 32,
   "chip": "esp32s3",
   "spec": {
@@ -19,8 +26,9 @@
   },
   "pins": {
     "1": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "2": {
       "roles": [
@@ -39,12 +47,14 @@
       }
     },
     "4": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     },
     "5": {
-      "roles": [],
-      "note": "BtnC, active low"
+      "roles": [
+        "dev:btn_c.in"
+      ]
     },
     "6": {
       "roles": [
@@ -99,6 +109,61 @@
     "21": {
       "roles": [],
       "note": "Audio PA control"
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
+      ]
     },
     "45": {
       "roles": [
@@ -185,7 +250,14 @@
     "pmic": {
       "kind": "pmic",
       "part": "m5pm1",
-      "bus": "internal_i2c"
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
     },
     "ioe": {
       "kind": "io_expander",
@@ -202,6 +274,42 @@
       "part": "bmi270",
       "bus": "internal_i2c",
       "i2c_addr": "0x68"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_c": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

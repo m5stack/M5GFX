@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5vameter",
   "name": "M5VAMeter",
+  "official_name": "M5Stack VAMeter",
+  "official_name_verified": true,
+  "aliases": [
+    "vameter",
+    "va meter",
+    "voltage and amperage meter"
+  ],
   "legacy_board_id": 16,
   "chip": "esp32s3",
   "spec": {
@@ -18,6 +25,16 @@
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "2": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
     "5": {
       "roles": [
         "bus:internal_i2c.sda"
@@ -183,6 +200,22 @@
       "i2c_addr": "0x41",
       "verified": {
         "i2c_addr": "datasheet"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
       }
     }
   },

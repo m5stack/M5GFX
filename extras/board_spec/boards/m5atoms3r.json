@@ -2,6 +2,14 @@
   "schema_version": 1,
   "id": "m5atoms3r",
   "name": "M5AtomS3R",
+  "official_name": "M5Stack AtomS3R",
+  "official_name_verified": true,
+  "aliases": [
+    "atoms3r",
+    "atom s3r",
+    "atoms3r-cam",
+    "atoms3r-m12"
+  ],
   "legacy_board_id": 18,
   "chip": "esp32s3",
   "spec": {
@@ -65,9 +73,65 @@
         "roles": "generated"
       }
     },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
+      ]
+    },
     "41": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "42": {
       "roles": [
@@ -178,6 +242,18 @@
       "verified": {
         "i2c_addr": "datasheet"
       }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

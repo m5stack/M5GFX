@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5stickcplus2",
   "name": "M5StickCPlus2",
+  "official_name": "M5Stack StickC-Plus2",
+  "official_name_verified": true,
+  "aliases": [
+    "stickc plus2",
+    "m5stickc plus2",
+    "stickcplus2"
+  ],
   "legacy_board_id": 5,
   "chip": "esp32_d0wdq6",
   "spec": {
@@ -11,9 +18,28 @@
         240
       ],
       "touch": false
+    },
+    "storage": {
+      "psram_mb": 2,
+      "psram_mode": "quad"
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "dev:usb_serial.boot"
+      ]
+    },
+    "1": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    },
+    "3": {
+      "roles": [
+        "bus:console_uart.rx"
+      ]
+    },
     "4": {
       "roles": [
         "dev:power_hold.enable"
@@ -25,6 +51,16 @@
     "5": {
       "roles": [
         "dev:lcd.cs"
+      ]
+    },
+    "9": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "10": {
+      "roles": [
+        "dev:psram.clk"
       ]
     },
     "12": {
@@ -93,19 +129,31 @@
       }
     },
     "35": {
-      "roles": [],
-      "note": "Power button, active low"
+      "roles": [
+        "dev:btn_pwr.in"
+      ]
     },
     "37": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "39": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     }
   },
   "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    },
     "main_spi": {
       "kind": "spi",
       "signals": [
@@ -151,6 +199,14 @@
     }
   },
   "devices": {
+    "usb_serial": {
+      "kind": "usb_uart",
+      "part": "ch9102",
+      "bus": "console_uart",
+      "spec": {
+        "auto_reset": true
+      }
+    },
     "lcd": {
       "kind": "display",
       "part": "st7789v2",
@@ -178,6 +234,34 @@
     },
     "power_hold": {
       "kind": "power_hold"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {
@@ -185,5 +269,6 @@
       "type": "hy2_4p",
       "standard": "port_i2c"
     }
-  }
+  },
+  "chip_package": "pico_v3_02"
 }

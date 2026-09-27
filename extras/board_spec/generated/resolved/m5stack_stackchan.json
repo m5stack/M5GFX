@@ -1,7 +1,15 @@
 {
   "schema_version": 1,
   "id": "m5stack_stackchan",
-  "name": "M5Stack StackChan",
+  "name": "M5StackChan",
+  "official_name": "M5Stack StackChan",
+  "official_name_verified": true,
+  "aliases": [
+    "stackchan",
+    "stack-chan",
+    "m5stackchan",
+    "stackchan core"
+  ],
   "legacy_board_id": 27,
   "chip": "esp32s3",
   "spec": {
@@ -172,6 +180,36 @@
         "dev:touch.int"
       ]
     },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
     "35": {
       "roles": [
         "bus:main_spi.miso",
@@ -329,7 +367,14 @@
     "pmic": {
       "kind": "pmic",
       "part": "axp2101",
-      "bus": "internal_i2c"
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
     },
     "io_expander": {
       "kind": "io_expander",
@@ -350,6 +395,32 @@
         "probe_freq": 100000,
         "firmware_reg": 2,
         "firmware_min": 4
+      }
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      },
+      "signals": {
+        "in": "pin:pmic.pwrkey"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:26",
+        "d3": "gpio:27",
+        "d2": "gpio:28",
+        "clk": "gpio:30",
+        "d1": "gpio:31",
+        "d0": "gpio:32"
       }
     }
   },

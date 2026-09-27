@@ -1,0 +1,8 @@
+{
+  "id": "button", "name": "Momentary push button", "kind": "button", "bus": { "kind": "none" },
+  "signals": { "required": ["in"], "optional": [] },
+  "spec_keys": {
+    "active_low": { "type": "boolean", "required": true },
+    "pull": { "type": "string", "enum": ["external_up", "internal_up", "pmic"], "required": true }
+  }
+}

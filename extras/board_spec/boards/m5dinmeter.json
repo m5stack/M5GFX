@@ -2,6 +2,12 @@
   "schema_version": 1,
   "id": "m5dinmeter",
   "name": "M5DinMeter",
+  "official_name": "M5Stack DinMeter",
+  "official_name_verified": true,
+  "aliases": [
+    "dinmeter",
+    "din meter"
+  ],
   "legacy_board_id": 13,
   "chip": "esp32s3",
   "spec": {
@@ -15,8 +21,9 @@
   },
   "pins": {
     "0": {
-      "roles": [],
-      "note": "BtnB, active low"
+      "roles": [
+        "dev:btn_b.in"
+      ]
     },
     "1": {
       "roles": [
@@ -118,8 +125,9 @@
       }
     },
     "42": {
-      "roles": [],
-      "note": "BtnA, active low"
+      "roles": [
+        "dev:btn_a.in"
+      ]
     },
     "46": {
       "roles": [
@@ -216,6 +224,22 @@
     },
     "buzzer": {
       "kind": "speaker"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
     }
   },
   "connectors": {

@@ -2,6 +2,13 @@
   "schema_version": 1,
   "id": "m5papers3",
   "name": "M5PaperS3",
+  "official_name": "M5Stack PaperS3",
+  "official_name_verified": true,
+  "aliases": [
+    "papers3",
+    "m5papers3",
+    "paper s3"
+  ],
   "legacy_board_id": 19,
   "chip": "esp32s3",
   "spec": {
@@ -106,6 +113,61 @@
     "21": {
       "roles": [],
       "note": "buzzer"
+    },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
+    "33": {
+      "roles": [
+        "dev:psram.d4"
+      ]
+    },
+    "34": {
+      "roles": [
+        "dev:psram.d5"
+      ]
+    },
+    "35": {
+      "roles": [
+        "dev:psram.d6"
+      ]
+    },
+    "36": {
+      "roles": [
+        "dev:psram.d7"
+      ]
+    },
+    "37": {
+      "roles": [
+        "dev:psram.dqs"
+      ]
     },
     "38": {
       "roles": [
@@ -315,6 +377,23 @@
       },
       "verified": {
         "signals": "generated"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram",
+      "signals": {
+        "cs": "gpio:26",
+        "d3": "gpio:27",
+        "d2": "gpio:28",
+        "clk": "gpio:30",
+        "d1": "gpio:31",
+        "d0": "gpio:32",
+        "d4": "gpio:33",
+        "d5": "gpio:34",
+        "d6": "gpio:35",
+        "d7": "gpio:36",
+        "dqs": "gpio:37"
       }
     }
   },

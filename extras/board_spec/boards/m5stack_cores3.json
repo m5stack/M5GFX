@@ -1,7 +1,13 @@
 {
   "schema_version": 1,
   "id": "m5stack_cores3",
-  "name": "M5Stack CoreS3",
+  "name": "M5StackCoreS3",
+  "official_name": "M5Stack CoreS3",
+  "official_name_verified": true,
+  "aliases": [
+    "cores3",
+    "core s3"
+  ],
   "legacy_board_id": 10,
   "chip": "esp32s3",
   "spec": {
@@ -182,6 +188,36 @@
         "dev:touch.int"
       ]
     },
+    "26": {
+      "roles": [
+        "dev:psram.cs"
+      ]
+    },
+    "27": {
+      "roles": [
+        "dev:psram.d3"
+      ]
+    },
+    "28": {
+      "roles": [
+        "dev:psram.d2"
+      ]
+    },
+    "30": {
+      "roles": [
+        "dev:psram.clk"
+      ]
+    },
+    "31": {
+      "roles": [
+        "dev:psram.d1"
+      ]
+    },
+    "32": {
+      "roles": [
+        "dev:psram.d0"
+      ]
+    },
     "35": {
       "roles": [
         "bus:main_spi.miso",
@@ -355,7 +391,14 @@
     "pmic": {
       "kind": "pmic",
       "part": "axp2101",
-      "bus": "internal_i2c"
+      "bus": "internal_i2c",
+      "pins": {
+        "pwrkey": {
+          "roles": [
+            "dev:btn_pwr.in"
+          ]
+        }
+      }
     },
     "io_expander": {
       "kind": "io_expander",
@@ -366,6 +409,18 @@
       "kind": "camera",
       "part": "gc0308",
       "bus": "internal_i2c"
+    },
+    "btn_pwr": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "pmic"
+      }
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
     }
   },
   "connectors": {

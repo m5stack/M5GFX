@@ -2,6 +2,12 @@
   "schema_version": 1,
   "id": "m5atoms3",
   "name": "M5AtomS3",
+  "official_name": "M5Stack AtomS3",
+  "official_name_verified": true,
+  "aliases": [
+    "atoms3",
+    "atom s3"
+  ],
   "legacy_board_id": 11,
   "chip": "esp32s3",
   "spec": {
@@ -86,6 +92,11 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "41": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
     }
   },
   "buses": {
@@ -179,6 +190,14 @@
       },
       "verified": {
         "spec": "generated"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
       }
     }
   },
