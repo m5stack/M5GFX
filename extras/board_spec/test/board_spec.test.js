@@ -1215,9 +1215,9 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.match(esp32c6Source,
     /members_\[3\][\s\S]*?&board_unitc6l, &board_nesson1, nullptr/);
   assert.match(esp32c6Source,
-    /probe_pin_pulls\(ctx, c6_display_detail::signature_mask\)/);
+    /probe_i2c_bus_present\(ctx, c6_display_detail::sda,\s*c6_display_detail::scl\)[\s\S]*?probe_pin_pulls\(ctx, c6_display_detail::signature_bit\)/);
   assert.match(esp32c6Source,
-    /pi4io_id_mask = 0xE0[\s\S]*?pi4io_id_value = 0xA0[\s\S]*?probe_i2c_bus_present[\s\S]*?i2c_pi4io2::id_reg[\s\S]*?is_pi4io\(value\)[\s\S]*?i2c_pi4io1::id_reg[\s\S]*?is_pi4io\(value\)/);
+    /pi4io_id_mask = 0xE0[\s\S]*?pi4io_id_value = 0xA0[\s\S]*?i2c_pi4io2::id_reg[\s\S]*?is_pi4io\(value\)[\s\S]*?i2c_pi4io1::id_reg[\s\S]*?is_pi4io\(value\)/);
   assert.match(esp32c6Source,
     /gpio_reset\(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped\)/);
   assert.match(esp32c6SetupSource,

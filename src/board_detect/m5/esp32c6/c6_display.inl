@@ -4,11 +4,7 @@ namespace c6_display_detail
   constexpr int scl = wiring::nesson1::internal_i2c_scl;
   constexpr int_fast16_t i2c_port = I2C_NUM_0;
   constexpr std::uint32_t pi4io_freq = 100000;
-  constexpr std::uint64_t sda_bit = std::uint64_t(1) << sda;
-  constexpr std::uint64_t scl_bit = std::uint64_t(1) << scl;
-  constexpr std::uint64_t family_bus_bits = sda_bit | scl_bit;
   constexpr std::uint64_t signature_bit = std::uint64_t(1) << 18;
-  constexpr std::uint64_t signature_mask = family_bus_bits | signature_bit;
   // PI4IOE5V6408 datasheet, "Device ID and Control" register (01h):
   // B7:B5 are the fixed manufacturer ID 101. Other bits are revision/control.
   constexpr std::uint8_t pi4io_id_mask = 0xE0;
@@ -20,15 +16,6 @@ namespace c6_display_detail
   }
 
   enum class candidate_t : std::uint8_t { none, unitc6l, nesson1 };
-
-  constexpr candidate_t classify_pulls(std::uint64_t pulldown_high,
-                                       std::uint64_t pullup_high)
-  {
-    return (pulldown_high & family_bus_bits) != family_bus_bits
-         ? candidate_t::none
-         : (pullup_high & signature_bit) ? candidate_t::unitc6l
-                                         : candidate_t::nesson1;
-  }
 
   static const pmic_variant_t nesson1_power_variants[] = {
     pmic_variant_ack_only(specs::nesson1::i2c_pi4io2::i2c_addr, 0,
@@ -80,10 +67,16 @@ public:
   bool signature(probe_ctx_t& ctx) const override
   {
     candidate_ = c6_display_detail::candidate_t::none;
-    const auto pulls = probe_pin_pulls(ctx, c6_display_detail::signature_mask);
-    candidate_ = c6_display_detail::classify_pulls(
-      pulls.pulldown_high, pulls.pullup_high);
-    return candidate_ != c6_display_detail::candidate_t::none;
+    // Both boards pull the internal I2C lines up. Check (and recover a slave
+    // holding SDA across a reset) before sampling, or a held bus stays unknown.
+    if (!probe_i2c_bus_present(ctx, c6_display_detail::sda,
+                               c6_display_detail::scl))
+    { return false; }
+    const auto pulls = probe_pin_pulls(ctx, c6_display_detail::signature_bit);
+    candidate_ = (pulls.pullup_high & c6_display_detail::signature_bit)
+               ? c6_display_detail::candidate_t::unitc6l
+               : c6_display_detail::candidate_t::nesson1;
+    return true;
   }
 
   bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
@@ -94,10 +87,7 @@ public:
       result->assign(&desc_unitc6l);
       return true;
     }
-    if (candidate_ != c6_display_detail::candidate_t::nesson1
-     || !probe_i2c_bus_present(ctx, c6_display_detail::sda,
-                               c6_display_detail::scl))
-    { return false; }
+    if (candidate_ != c6_display_detail::candidate_t::nesson1) { return false; }
     std::uint8_t value = 0;
     if (!probe_i2c_read(ctx, c6_display_detail::sda, c6_display_detail::scl,
                         specs::nesson1::i2c_pi4io2::i2c_addr,

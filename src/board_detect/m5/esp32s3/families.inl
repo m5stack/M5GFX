@@ -374,8 +374,8 @@ namespace m5
         if (pulls.pulldown_high == mask) { return true; }
         const auto sda_bit = std::uint64_t(1) << (*desc)->internal_i2c.sda;
         const auto scl_bit = std::uint64_t(1) << (*desc)->internal_i2c.scl;
-        if (ctx.hint == (*desc)->def.id
-         && (pulls.pulldown_high & scl_bit) && !(pulls.pulldown_high & sda_bit))
+        // A reset may leave SDA held low even when there is no saved hint.
+        if ((pulls.pulldown_high & scl_bit) && !(pulls.pulldown_high & sda_bit))
         {
           release_held_sda((*desc)->internal_i2c.sda, (*desc)->internal_i2c.scl);
           pulls = probe_pin_pulls(ctx, mask);
@@ -526,7 +526,8 @@ namespace m5
   // PaperDIY and PaperS3 share the internal I2C pins, and DinMeter's encoder
   // and button sit on the same GPIOs. The signature only checks that both
   // lines carry an external pull-up (they read high against the internal
-  // pull-down); confirmation reads device IDs and never writes.
+  // pull-down); confirmation reads device IDs and never writes. Recover only
+  // when SCL is high and SDA is low, so DinMeter's pins incur no SCL wait.
   class paper_family_detector_t final : public board_detector_t
   {
   public:
@@ -535,7 +536,17 @@ namespace m5
     {
       const auto mask = (std::uint64_t(1) << wiring::papers3::internal_i2c_sda)
                       | (std::uint64_t(1) << wiring::papers3::internal_i2c_scl);
-      return probe_pin_pulls(ctx, mask).pulldown_high == mask;
+      auto pulls = probe_pin_pulls(ctx, mask);
+      if ((pulls.pulldown_high & (std::uint64_t(1) << wiring::papers3::internal_i2c_scl))
+       && !(pulls.pulldown_high & (std::uint64_t(1) << wiring::papers3::internal_i2c_sda)))
+      {
+        release_held_sda(wiring::papers3::internal_i2c_sda,
+                         wiring::papers3::internal_i2c_scl);
+        pulls = probe_pin_pulls(ctx, mask);
+        ctx.transaction->restore_start({ wiring::papers3::internal_i2c_sda,
+                                         wiring::papers3::internal_i2c_scl });
+      }
+      return pulls.pulldown_high == mask;
     }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
@@ -604,13 +615,36 @@ namespace m5
       {
         sense_mask |= std::uint64_t(1) << pin;
       }
-      const auto pulls = probe_pin_pulls(ctx, sense_mask);
+      auto pulls = probe_pin_pulls(ctx, sense_mask);
       const std::uint64_t vameter_mask =
         (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_sda)
         | (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_scl);
       const std::uint64_t adv_mask =
         (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_sda)
         | (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_scl);
+
+      // These pins also serve non-I2C variants. Recover a held SDA only when
+      // SCL is already high; a low SCL must not add a clock-stretch wait.
+      if ((pulls.pulldown_high & vameter_mask) != vameter_mask
+       && (pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_scl))
+       && !(pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer::cardputer_subdivision::vameter_i2c_sda)))
+      {
+        release_held_sda(wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                         wiring::cardputer::cardputer_subdivision::vameter_i2c_scl);
+        pulls = probe_pin_pulls(ctx, sense_mask);
+        ctx.transaction->restore_start({ wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                                         wiring::cardputer::cardputer_subdivision::vameter_i2c_scl });
+      }
+      if ((pulls.pulldown_high & adv_mask) != adv_mask
+       && (pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_scl))
+       && !(pulls.pulldown_high & (std::uint64_t(1) << wiring::cardputer_adv::internal_i2c_sda)))
+      {
+        release_held_sda(wiring::cardputer_adv::internal_i2c_sda,
+                         wiring::cardputer_adv::internal_i2c_scl);
+        pulls = probe_pin_pulls(ctx, sense_mask);
+        ctx.transaction->restore_start({ wiring::cardputer_adv::internal_i2c_sda,
+                                         wiring::cardputer_adv::internal_i2c_scl });
+      }
 
       const board_desc_t* chosen = &desc_cardputer;
       if ((pulls.pulldown_high & vameter_mask) == vameter_mask
