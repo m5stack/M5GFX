@@ -118,6 +118,7 @@ namespace m5
   namespace detail
   {
     static constexpr std::uint8_t tough_touch_address = 0x2E;
+    static constexpr std::uint8_t core2_touch_address = 0x38;
     static constexpr std::uint8_t touch_probe_register = 0;
     static constexpr std::uint32_t tough_touch_i2c_frequency = 400000;
     static constexpr std::uint8_t panel_id_command = 0x04;
@@ -227,10 +228,11 @@ namespace m5
       const bool tough = lgfx::i2c::readRegister8(
         i2c.port, tough_touch_address, touch_probe_register,
         tough_touch_i2c_frequency).has_value();
-      // AXP192 is shared with Station. If neither LCD key answers and Tough's
-      // touch is absent, a transient Station probe miss must not become Core2.
-      if (!tough && variant == panel_variant_t::unknown
-       && !(result.option & generated_options::core2::new_pmic))
+      // Core2 requires its own touch response; a Station LCD miss on shared
+      // AXP192 must not be saved as Core2 when neither touch answers.
+      if (!tough && !lgfx::i2c::readRegister8(
+            i2c.port, core2_touch_address, touch_probe_register,
+            tough_touch_i2c_frequency).has_value())
       {
         ctx.transaction->restore_start(signals);
         return false;

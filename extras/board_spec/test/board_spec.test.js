@@ -71,6 +71,7 @@ const esp32s3DetectorPath = path.join(root, "../../src/board_detect/m5/esp32s3/f
 const esp32s3SetupPath = path.join(root, "../../src/board_detect/m5/esp32s3/families_setup.inl");
 const esp32s3Source = (await fs.readFile(esp32s3DetectorPath, "utf8"))
   + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3/cores3.inl"), "utf8"));
+const boardRegistrySource = await fs.readFile(path.join(root, "../../src/board_detect/m5/board_registry.inl"), "utf8");
 const esp32c5Source = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c5/toughc5.inl"), "utf8");
 const esp32c6Source = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6/c6_display.inl"), "utf8");
 const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6/c6_display_setup.inl"), "utf8");
@@ -1217,7 +1218,8 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.match(esp32c6Source,
     /probe_i2c_bus_present\(ctx, c6_display_detail::sda,\s*c6_display_detail::scl\)[\s\S]*?probe_pin_pulls\(ctx, c6_display_detail::signature_bit\)/);
   assert.match(esp32c6Source,
-    /pi4io_id_mask = 0xE0[\s\S]*?pi4io_id_value = 0xA0[\s\S]*?i2c_pi4io2::id_reg[\s\S]*?is_pi4io\(value\)[\s\S]*?i2c_pi4io1::id_reg[\s\S]*?is_pi4io\(value\)/);
+    /i2c_pi4io2::id_reg[\s\S]*?is_pi4io\(value\)[\s\S]*?i2c_pi4io1::id_reg[\s\S]*?is_pi4io\(value\)/);
+  assert.match(boardRegistrySource, /is_pi4io\(std::uint8_t value\).*?\(value & 0xE0\) == 0xA0/);
   assert.match(esp32c6Source,
     /gpio_reset\(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped\)/);
   assert.match(esp32c6SetupSource,
@@ -2344,7 +2346,7 @@ test("Tab5 touch identities select the three DSI panels", () => {
   assert.deepEqual(wiring.i2c, { sda: 31, scl: 32, port: 1 });
   assert.deepEqual(detectionPinsForEntries([{ board: source, chip: chipP4, emitted: wiring }]), [23, 31, 32]);
   assert.match(esp32p4Source, /probe_i2c_bus_present\(ctx, tab5_detail::sda, tab5_detail::scl\)/);
-  assert.match(esp32p4Source, /pi4io1_addr[\s\S]*?0x01[\s\S]*?pi4io2_addr[\s\S]*?0x01/);
+  assert.match(esp32p4Source, /pi4io1_addr, pi4io_id_register[\s\S]*?is_pi4io\(value\)[\s\S]*?pi4io2_addr, pi4io_id_register[\s\S]*?is_pi4io\(value\)/);
 });
 
 test("every descriptor operation GPIO is inside its execution and rollback scope", async () => {

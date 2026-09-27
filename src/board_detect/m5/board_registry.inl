@@ -8,6 +8,10 @@ namespace board_detect
 {
 namespace m5
 {
+  // PI4IOE5V6408 "Device ID and Control" register: B7:B5 are fixed at 101.
+  constexpr std::uint8_t pi4io_id_register = 0x01;
+  constexpr bool is_pi4io(std::uint8_t value) { return (value & 0xE0) == 0xA0; }
+
   struct display_parts_t;
   enum class construct_status_t : std::uint8_t { ok, no_display, failed };
   constexpr construct_status_t construct_status(bool success)

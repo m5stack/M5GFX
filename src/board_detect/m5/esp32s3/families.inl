@@ -368,6 +368,15 @@ namespace m5
         const auto& power = (*desc)->power;
         startup_detail::retry_budget_t retry_budget(power.wake_poll_ms);
         if (startup_detail::read_variant(power, i2c.port, retry_budget) == nullptr) { continue; }
+        // PM1 is identified by both bytes at register 0, not an ACK alone.
+        const std::uint8_t reg = specs::sticks3::pmic::id_reg;
+        std::uint8_t pm1_id[2] = {};
+        if (!lgfx::i2c::transactionWriteRead(
+              i2c.port, specs::sticks3::pmic::i2c_addr, &reg, 1,
+              pm1_id, sizeof(pm1_id), specs::sticks3::pmic::i2c_freq).has_value()
+         || (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0])
+              != pmic_ops::pm1_device_id)
+        { continue; }
         result->assign(*desc);
         return true;
       }
@@ -385,16 +394,10 @@ namespace m5
     pm1_family_detector_t() : board_detector_t(members_) {}
     bool signature(probe_ctx_t& ctx) const override
     {
-      static constexpr std::uint8_t addresses[] = { 0x32, 0x68, 0x15, 0x50 };
-      std::uint32_t bits = ~0u;
-      for (auto addr : addresses)
-      {
-        bits = (bits << 1)
-             + probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
-                             wiring::stopwatch::internal_i2c_scl, addr);
-      }
-      signature_bits_ = bits;
-      return bits == ~0b0001u || (bits & ~1u) == ~0b0011u;
+      return probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
+                           wiring::stopwatch::internal_i2c_scl, 0x32)
+          && probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
+                           wiring::stopwatch::internal_i2c_scl, 0x68);
     }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
@@ -414,13 +417,21 @@ namespace m5
       {
         return false;
       }
-      result->assign(signature_bits_ == ~0b0001u ? &desc_stopwatch : &desc_papermono);
+      // Each member must answer at its own touch address; two misses (or two
+      // answers) do not identify either board.
+      const bool stopwatch_touch = probe_i2c_ack(
+        ctx, wiring::stopwatch::internal_i2c_sda,
+        wiring::stopwatch::internal_i2c_scl, specs::stopwatch::touch::i2c_addr);
+      const bool papermono_touch = probe_i2c_ack(
+        ctx, wiring::papermono::internal_i2c_sda,
+        wiring::papermono::internal_i2c_scl, specs::papermono::touch::i2c_addr);
+      if (stopwatch_touch == papermono_touch) { return false; }
+      result->assign(stopwatch_touch ? &desc_stopwatch : &desc_papermono);
       return true;
     }
 
   private:
     static const board_def_t* const members_[];
-    mutable std::uint32_t signature_bits_ = 0;
   };
 
   class pm1_ext_family_detector_t final : public board_detector_t
@@ -467,23 +478,21 @@ namespace m5
       if (candidate_ == candidate_t::chaincaptain)
       {
         std::uint8_t ioe_id[2] = {};
-        if (!probe_i2c_read(ctx, wiring::chaincaptain::internal_i2c_sda,
-                            wiring::chaincaptain::internal_i2c_scl,
-                            pmic_ops::ioe1_i2c_addr, 0, ioe_id, sizeof(ioe_id),
-                            pmic_ops::pm1_i2c_freq, 200))
+        if (probe_i2c_read(ctx, wiring::chaincaptain::internal_i2c_sda,
+                           wiring::chaincaptain::internal_i2c_scl,
+                           pmic_ops::ioe1_i2c_addr, 0, ioe_id, sizeof(ioe_id),
+                           pmic_ops::pm1_i2c_freq, 200))
         {
-          // The legacy ChainCaptain block fell through to PaperColor here.
-          if (!probe_i2c_ack(ctx, wiring::papercolor::internal_i2c_sda,
-                             wiring::papercolor::internal_i2c_scl, 0x44))
-          {
-            return false;
-          }
-          result->assign(&desc_papercolor);
+          result->assign(&desc_chaincaptain);
           return true;
         }
-        result->assign(&desc_chaincaptain);
-        return true;
+        // PaperColor also answers the ChainCaptain addresses; without IOE1,
+        // accept only PaperColor's own SHT40 below.
       }
+      // 0x44 on PaperColor is the SHT40 humidity sensor (no ID register).
+      if (!probe_i2c_ack(ctx, wiring::papercolor::internal_i2c_sda,
+                         wiring::papercolor::internal_i2c_scl, 0x44))
+      { return false; }
       result->assign(&desc_papercolor);
       return true;
     }
@@ -599,18 +608,30 @@ namespace m5
         wiring::cardputer_adv::internal_i2c_scl);
 
       const board_desc_t* chosen = &desc_cardputer;
-      if ((pulls.pulldown_high & vameter_mask) == vameter_mask
-       && probe_i2c_ack(ctx, wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
-                       wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
-                       wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[0])
-       && probe_i2c_ack(ctx, wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
-                       wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
-                       wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]))
+      if ((pulls.pulldown_high & vameter_mask) == vameter_mask)
       {
+        // INA226 manufacturer ID register FEh is 5449h (TI). The second
+        // VAMeter device must also answer; a probe miss cannot prove Cardputer.
+        std::uint8_t manufacturer[2] = {};
+        if (!probe_i2c_read(ctx,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[0],
+                            0xFE, manufacturer, sizeof(manufacturer), 100000, 0, false)
+         || manufacturer[0] != 0x54 || manufacturer[1] != 0x49
+         || !probe_i2c_ack(ctx,
+                           wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                           wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
+                           wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]))
+        { return false; }
         chosen = &desc_vameter;
       }
       else if ((pulls.pulldown_high & adv_mask) == adv_mask)
       {
+        // The ADV keyboard scanner is a TCA8418 at its fixed 34h address.
+        if (!probe_i2c_ack(ctx, wiring::cardputer_adv::internal_i2c_sda,
+                           wiring::cardputer_adv::internal_i2c_scl, 0x34))
+        { return false; }
         chosen = &desc_cardputer_adv;
       }
       result->assign(chosen);
