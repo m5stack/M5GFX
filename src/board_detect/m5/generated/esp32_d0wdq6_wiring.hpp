@@ -95,6 +95,10 @@ namespace paper {
   constexpr std::int8_t hold[] = { 4, 15 };
 } // namespace paper
 
+namespace detection {
+  constexpr std::int8_t unconditional_pins[] = { 2, 4, 5, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 33, 38 };
+} // namespace detection
+
 } // namespace wiring
 
 namespace generated_options {

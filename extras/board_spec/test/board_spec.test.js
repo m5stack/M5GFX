@@ -14,7 +14,7 @@ import { compose, validateAccessory, validateComposition } from "../lib/compose.
 import { isCompatible, validateConnectorTypes } from "../lib/ctypes.js";
 import { deriveSd } from "../lib/derive/sd.js";
 import { consumesPinTableRole, emitPinTable, PIN_NAMES, pinNameForRole, pinTableAssignments } from "../lib/emit/m5unified_pin_table.js";
-import { emitM5GFXWiring, emitM5GFXWiringForMapping, m5gfxBoardMapping, renderM5GFXWiringHeader, selectM5GFXWiringBoards, wiringAssignments, wiringFieldsForRole } from "../lib/emit/m5gfx_board_wiring.js";
+import { detectionPinsForEntries, emitM5GFXWiring, emitM5GFXWiringForMapping, m5gfxBoardMapping, partitionDetectionPins, renderM5GFXWiringHeader, selectM5GFXWiringBoards, validateDetectionPins, wiringAssignments, wiringFieldsForRole } from "../lib/emit/m5gfx_board_wiring.js";
 import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { formatBoard } from "../lib/format.js";
 import { clone } from "../lib/model.js";
@@ -108,6 +108,7 @@ function parseGeneratedWiring(source) {
   const wiring = source.split("namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {")[1]
     .split("} // namespace wiring")[0];
   for (const match of wiring.matchAll(/namespace (\w+) \{([\s\S]*?)\n\} \/\/ namespace \1/g)) {
+    if (match[1] === "detection") continue;
     const values = {};
     for (const scalar of match[2].matchAll(/constexpr std::int8_t (\w+) = (-?\d+);/g)) {
       values[scalar[1]] = Number(scalar[2]);
@@ -367,9 +368,11 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
       hold: emitted.hold,
     };
     assert.deepEqual(flattened, expected[source.id], source.id);
-    entries.push({ board: source, emitted });
+    entries.push({ board: source, chip: chips[source.chip], emitted });
   }
-  assert.match(renderM5GFXWiringHeader(entries), /constexpr std::int8_t display_sclk = 18;/);
+  const header = renderM5GFXWiringHeader(entries.filter(({ board }) => board.chip === "esp32_d0wdq6"));
+  assert.match(header, /constexpr std::int8_t display_sclk = 18;/);
+  assert.match(header, /namespace detection \{\s+constexpr std::int8_t unconditional_pins\[] = \{ 2, 4, 5, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 33, 38 \};/);
   assert.deepEqual(wiringFieldsForRole(board, "bus:main_spi.sclk", parts), ["display_sclk", "shared_sd_sclk"]);
   assert.deepEqual(wiringFieldsForRole(board, "dev:lcd.rst", parts), ["display_rst"]);
   assert.deepEqual(wiringFieldsForRole(catalogBoards.find((item) => item.id === "m5dial"), "dev:touch.int", parts), ["touch_int"]);
@@ -555,15 +558,65 @@ test("M5GFX generated namespaces contain only fields consumed by their descripto
   const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, id)).filter(Boolean);
   const entries = selectM5GFXWiringBoards(catalogBoards, mappings).map((source) => ({
     board: source,
+    chip: chips[source.chip],
     emitted: emitM5GFXWiring(resolveBoard(source, {}, connectorTypes, { chip, parts }), parts, target),
   }));
-  const header = renderM5GFXWiringHeader(entries);
+  const header = ["esp32_d0wdq6", "esp32s3"].map((chipId) =>
+    renderM5GFXWiringHeader(entries.filter(({ board }) => board.chip === chipId))).join("\n");
   const scope = (name) => new RegExp(`namespace ${name} \\{([\\s\\S]*?)\\n\\} // namespace ${name}`).exec(header)[1];
   assert.doesNotMatch(scope("station"), /shared_sd_|power_gpio/);
   assert.doesNotMatch(scope("core2"), /reset_gpio|power_gpio/);
   assert.doesNotMatch(scope("tough"), /reset_gpio|power_gpio/);
   assert.doesNotMatch(scope("stack"), /internal_i2c_|power_gpio/);
   assert.doesNotMatch(scope("paper"), /internal_i2c_/);
+});
+
+test("M5GFX detection pin sets cover descriptors and reject reserved pins", () => {
+  const source = catalogBoards.find((item) => item.id === "m5atoms3");
+  const emitted = emitM5GFXWiring(resolveCatalog(source)[0].board, parts, target);
+  const entry = { board: source, chip: chipS3, emitted };
+  const pins = detectionPinsForEntries([entry]);
+  assert.ok(pins.includes(33));
+  assert.deepEqual(partitionDetectionPins([entry], chipS3), {
+    unconditional: [15, 16, 17, 21],
+    conditional: { opi: [33, 34] },
+  });
+  assert.throws(() => validateDetectionPins([entry], chipS3, pins.filter((pin) => pin !== 33)), /descriptor GPIO 33 is absent/);
+
+  const opi = clone(source);
+  opi.spec.storage = { psram_mb: 8, psram_mode: "opi" };
+  assert.throws(() => validateDetectionPins([{ board: opi, chip: chipS3, emitted }], chipS3), /GPIO 33 is reserved when PSRAM mode is opi/);
+
+  const usb = clone(emitted);
+  usb.display.sclk = chipS3.usb.dn;
+  assert.throws(() => validateDetectionPins([{ board: source, chip: chipS3, emitted: usb }], chipS3), /reserved for native USB/);
+});
+
+test("ESP32-S3 detector filters hinted and OPI-conflicting candidates per model", async () => {
+  const detector = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
+  const s3 = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3.inl"), "utf8");
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  assert.doesNotMatch(detector, /detector->touches_conditional_pins/);
+  assert.match(s3, /member\.desc->def\.id != ctx\.hint[\s\S]*?return probe_member\(ctx, member, result\)/);
+  assert.match(s3, /conditional_pins_unavailable && member\.touches_conditional_pins/);
+  assert.match(s3, /spi_id_member_descs[\s\S]*?wiring::atoms3::touches_opi_pins[\s\S]*?wiring::dinmeter::touches_opi_pins/);
+  const wiring = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  assert.match(wiring, /namespace atoms3 \{[\s\S]*?touches_opi_pins = true/);
+  assert.match(wiring, /namespace dinmeter \{[\s\S]*?touches_opi_pins = false/);
+  assert.match(main, /ESP_IDF_VERSION_VAL\(5, 0, 0\)[\s\S]*?esp_psram_is_initialized\(\)[\s\S]*?esp_spiram_is_initialized\(\)/);
+  assert.match(main, /opi_pins\),\s*!conditional_pins_unavailable/);
+  assert.match(main, /!conditional_detection_pins_unavailable\(\)[\s\S]*?board_M5Cardputer[\s\S]*?board_M5CardputerADV[\s\S]*?board_M5VAMeter/);
+});
+
+test("detection transaction exposes non-consuming start-state restoration", async () => {
+  const header = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.hpp"), "utf8");
+  const implementation = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  assert.match(header, /restore_start\(const std::int8_t\* pins, std::size_t count\)/);
+  assert.match(header, /restore_start\(std::initializer_list<int> pins\)/);
+  assert.match(header, /prepare_ctx_t[\s\S]*?detection_transaction_t\* transaction = nullptr/);
+  assert.match(implementation, /index = count_; index != 0; --index[\s\S]*?saved_\[index - 1\]\.restore\(\)/);
+  assert.match(main, /prepare_ctx\.transaction = &transaction/);
 });
 
 test("generated wiring header links from two translation units", async (t) => {
@@ -852,10 +905,26 @@ test("target generation controls reject mismatches and unsafe values", () => {
   malformed.boards.m5sticks3.cpp_namespace = "bad::namespace";
   malformed.boards.m5sticks3.wiring_fields.push("unknown");
   malformed.boards.m5sticks3.wiring_output = "../escape.hpp";
+  malformed.boards.m5sticks3.reset = "display_rts";
   const ids = new Set(validateTargets(catalogBoards, malformed).map((item) => item.id));
-  for (const id of ["E_TGT_BOARD_ENUM_DUP", "E_TGT_CHIP", "E_TGT_CPP_IDENTIFIER", "E_TGT_WIRING_FIELD", "E_TGT_OUTPUT"]) assert.ok(ids.has(id), id);
+  for (const id of ["E_TGT_BOARD_ENUM_DUP", "E_TGT_CHIP", "E_TGT_CPP_IDENTIFIER", "E_TGT_WIRING_FIELD", "E_TGT_OUTPUT", "E_TGT_RESET"]) assert.ok(ids.has(id), id);
   assert.match(cliSource, /validateGenerationInputs\([\s\S]*?await fs\.mkdir/);
   assert.match(cliSource, /fs\.writeFile\(safeOutputPath/);
+});
+
+test("target output filenames cannot collide across output kinds", () => {
+  const withinBoard = clone(target);
+  withinBoard.boards.m5atoms3.specs_output = withinBoard.boards.m5atoms3.wiring_output;
+  assert.ok(validateTarget(catalogBoards.find((item) => item.id === "m5atoms3"), withinBoard)
+    .some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
+
+  const acrossBoards = clone(target);
+  acrossBoards.boards.m5dial.specs_output = acrossBoards.boards.m5station.wiring_output;
+  assert.ok(validateTargets(catalogBoards, acrossBoards).some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
+
+  const acrossChips = clone(target);
+  acrossChips.boards.m5atoms3.wiring_output = acrossChips.boards.m5station.wiring_output;
+  assert.ok(validateTargets(catalogBoards, acrossChips).some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 });
 
 test("part defaults and C++ types validate their own definitions", () => {
@@ -865,6 +934,73 @@ test("part defaults and C++ types validate their own definitions", () => {
   const ids = new Set(validatePartCatalog(malformed).map((item) => item.id));
   assert.ok(ids.has("E_SCHEMA_MINIMUM"));
   assert.ok(ids.has("E_PART_CPP_TYPE"));
+});
+
+test("part schemas and values must fit their declared C++ type", () => {
+  const narrow = clone(parts);
+  narrow.st7735s.spec_keys.memory_width["x-cpp-type"] = "std::uint8_t";
+  narrow.st7735s.spec_keys.memory_width.default = 300;
+  const catalogErrors = validatePartCatalog(narrow);
+  assert.ok(catalogErrors.some((item) => item.id === "E_PART_CPP_RANGE" && item.path.endsWith("/memory_width/maximum")));
+  assert.ok(catalogErrors.some((item) => item.id === "E_PART_CPP_RANGE" && item.path.endsWith("/memory_width/default")));
+
+  const atoms3 = clone(catalogBoards.find((item) => item.id === "m5atoms3"));
+  atoms3.devices.lcd.choices.st7735s.spec.memory_width = 300;
+  const resolved = resolveCatalog(atoms3).find((item) => item.board.devices.lcd.part === "st7735s").board;
+  assert.ok(validateParts(resolved, narrow).some((item) => item.id === "E_PART_CPP_RANGE"
+    && item.path.endsWith("/lcd/spec/memory_width")));
+});
+
+test("generated C++ identifiers reject language keywords", () => {
+  const malformed = clone(target);
+  malformed.boards.m5sticks3.cpp_namespace = "class";
+  malformed.boards.m5atoms3.options[0].name = "delete";
+  const errors = validateTargets(catalogBoards, malformed);
+  assert.ok(errors.some((item) => item.id === "E_TGT_CPP_KEYWORD" && item.path.endsWith("/cpp_namespace")));
+  assert.ok(errors.some((item) => item.id === "E_TGT_CPP_KEYWORD" && item.path.endsWith("/options/0/name")));
+});
+
+test("M5GFX sentinel fields require a C++ type that preserves the sentinel", () => {
+  const malformed = clone(parts);
+  malformed.gc9a01.spec_keys.invert["x-cpp-type"] = "bool";
+  malformed.gc9a01.spec_keys.offset_x["x-cpp-type"] = "std::uint16_t";
+  const errors = validatePartCatalog(malformed);
+  assert.ok(errors.some((item) => item.id === "E_PART_CPP_SENTINEL" && item.path.endsWith("/invert/x-cpp-type")));
+  assert.ok(errors.some((item) => item.id === "E_PART_CPP_SENTINEL" && item.path.endsWith("/offset_x/x-cpp-type")));
+
+  const dial = catalogBoards.find((item) => item.id === "m5dial");
+  assert.throws(() => emitM5GFXSpecs(dial, resolveCatalog(dial).map((item) => item.board), malformed,
+    m5gfxBoardMapping(target, dial.id)), /cannot represent the -32768 sentinel/);
+});
+
+test("partless backlight specs use kind-wide types, ranges, and defaults", () => {
+  const malformed = clone(catalogBoards.find((item) => item.id === "m5dial"));
+  malformed.devices.backlight.spec.channel = 256;
+  malformed.devices.backlight.spec.offset = -1;
+  const errors = validateBoard(malformed, { ...context, chip: chipS3 });
+  assert.ok(errors.some((item) => item.id === "E_SCHEMA_MAXIMUM" && item.path.endsWith("/backlight/spec/channel")));
+  assert.ok(errors.some((item) => item.id === "E_SCHEMA_MINIMUM" && item.path.endsWith("/backlight/spec/offset")));
+
+  const defaults = clone(catalogBoards.find((item) => item.id === "m5dial"));
+  delete defaults.devices.backlight.spec.invert;
+  delete defaults.devices.backlight.spec.offset;
+  assert.equal(validateBoard(defaults, { ...context, chip: chipS3 }).some((item) => item.severity !== "warning"), false);
+  const emitted = emitM5GFXSpecs(defaults, resolveCatalog(defaults).map((item) => item.board), parts,
+    m5gfxBoardMapping(target, defaults.id));
+  assert.equal(emitted.backlight.invert, false);
+  assert.equal(emitted.backlight.offset, 0);
+});
+
+test("required generator specs fail validation before emission", () => {
+  const malformed = clone(catalogBoards.find((item) => item.id === "m5atoms3"));
+  delete malformed.devices.lcd.choices.gc9107.spec.width;
+  assert.ok(validateBoard(malformed, { ...context, chip: chipS3 })
+    .some((item) => item.id === "E_PART_SPEC_REQUIRED" && item.path.endsWith("/choices/gc9107/spec/width")));
+
+  const missingBacklight = clone(catalogBoards.find((item) => item.id === "m5dial"));
+  delete missingBacklight.devices.backlight.spec.freq;
+  assert.ok(validateBoard(missingBacklight, { ...context, chip: chipS3 })
+    .some((item) => item.id === "E_PART_SPEC_REQUIRED" && item.path.endsWith("/backlight/spec/freq")));
 });
 
 test("unsafe choice IDs cannot escape resolved output directories", () => {

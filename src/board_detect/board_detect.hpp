@@ -4,6 +4,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
+
+#include "../lgfx/v1/platforms/esp32/common.hpp"
 
 namespace m5gfx
 {
@@ -52,6 +55,7 @@ namespace board_detect
   };
 
   struct board_desc_t;
+  class detection_transaction_t;
 
   struct board_result_t
   {
@@ -71,6 +75,8 @@ namespace board_detect
   {
     bool allow_reset = true;
     int i2c_port_probe = -1;
+    // Non-null while board-detection components are running.
+    detection_transaction_t* transaction = nullptr;
   };
 
   struct pmic_write_t
@@ -136,6 +142,84 @@ namespace board_detect
   }
 
   constexpr option_list_t no_options() { return { nullptr, 0 }; }
+  constexpr pin_list_t no_pins() { return { nullptr, 0 }; }
+
+  static constexpr std::uint8_t max_detection_pins = 40;
+
+  class detection_gpio_snapshot_t
+  {
+  public:
+    bool capture(pin_list_t unconditional, pin_list_t conditional,
+                 bool include_conditional);
+    void restore_start(const std::int8_t* pins, std::size_t count);
+    void rollback();
+
+  private:
+    lgfx::gpio::pin_backup_t saved_[max_detection_pins];
+    std::uint8_t count_ = 0;
+  };
+
+  // External PMIC/IO-expander register restoration is added by the next stage.
+  // Keeping it as a participant now fixes its place before bus and GPIO rollback.
+  class detection_external_journal_t
+  {
+  public:
+    void rollback() {}
+    void commit() {}
+  };
+
+  class detection_bus_journal_t
+  {
+  public:
+    void opened_i2c(int port);
+    void rollback();
+    void commit();
+
+  private:
+    std::int8_t i2c_ports_[2] = { -1, -1 };
+    std::uint8_t i2c_count_ = 0;
+  };
+
+  class detection_irreversible_journal_t
+  {
+  public:
+    void declare_prepared(std::uint32_t prepared)
+    {
+      operations_ |= prepared & (prepared_sd_spi | panel_dirty);
+    }
+    std::uint32_t operations() const { return operations_; }
+
+  private:
+    std::uint32_t operations_ = 0;
+  };
+
+  class detection_transaction_t
+  {
+  public:
+    detection_transaction_t(pin_list_t unconditional, pin_list_t conditional,
+                            bool include_conditional);
+    ~detection_transaction_t();
+
+    bool valid() const { return valid_; }
+    void restore_start(const std::int8_t* pins, std::size_t count) { gpio_.restore_start(pins, count); }
+    void restore_start(std::int8_t pin) { restore_start(&pin, 1); }
+    void restore_start(std::initializer_list<int> pins);
+    template <std::size_t N>
+    void restore_start(const std::int8_t (&pins)[N]) { restore_start(pins, N); }
+    void rollback();
+    void commit();
+    detection_bus_journal_t& buses() { return buses_; }
+    detection_external_journal_t& external() { return external_; }
+    detection_irreversible_journal_t& irreversible() { return irreversible_; }
+
+  private:
+    detection_gpio_snapshot_t gpio_;
+    detection_external_journal_t external_;
+    detection_bus_journal_t buses_;
+    detection_irreversible_journal_t irreversible_;
+    bool valid_ = false;
+    bool committed_ = false;
+  };
 
   struct pmic_variant_t
   {
@@ -390,12 +474,9 @@ namespace board_detect
 
   struct detector_workspace_t
   {
-    // Opaque per-detection storage for state carried from signature() to its
-    // immediately following confirm(). Only one detector family owns it at a
-    // time; a family must release any live object before confirm() returns.
-    alignas(std::uint64_t) std::uint8_t object[64] = {};
+    // Per-detection scalar scratch carried from signature() to its immediately
+    // following confirm(). GPIO state is owned by detection_transaction_t.
     std::uint64_t values[4] = {};
-    bool active = false;
   };
 
   struct probe_ctx_t
@@ -403,9 +484,10 @@ namespace board_detect
     // This is the caller's reset policy. A retry must not turn it on: callers
     // that preserve a displayed image depend on every attempt honoring it.
     bool allow_reset = true;
-    // The hint moves its detector family forward and may also change the order
-    // within that family. It never removes candidates, and a family containing
-    // only fallback definitions is never moved forward.
+    // The hint moves its detector family forward. Candidate selection within
+    // that family is detector-specific: the S3 SPI-ID family probes only the
+    // hinted member, while legacy families retain their established ordering.
+    // A family containing only fallback definitions is never moved forward.
     board_id_t hint = board_id_unknown;
     // The caller's last retry may relax exclusions based only on negative
     // evidence, retaining the legacy broad probe as a final safety net.
@@ -413,13 +495,17 @@ namespace board_detect
     int i2c_port_probe = -1;
     i2c_scan_cache_t i2c_cache;
     detector_workspace_t detector_workspace;
+    // Non-null while board-detection components are running.
+    detection_transaction_t* transaction = nullptr;
+    bool conditional_pins_unavailable = false;
     const board_id_t* enabled_ids = nullptr;
   };
 
   class board_detector_t
   {
   public:
-    constexpr board_detector_t(const board_def_t* const* members_) : members { members_ } {}
+    constexpr board_detector_t(const board_def_t* const* members_)
+    : members { members_ } {}
     // Stage 1 is a non-destructive family signature and normally restores all
     // state. The sole general exception is releasing an unusable bus whose SDA
     // is held (up to 9 clocks plus STOP), intentionally changing slave state
@@ -434,10 +520,9 @@ namespace board_detect
     // levels until display construction takes ownership; restoring those pins
     // would power a confirmed device down, let another shared-bus device
     // select, or leave the confirmed display's reset input floating. An SD card
-    // moved to SPI mode is never moved back to native mode. A caller that
-    // rejects a successful result without constructing it cannot assume those
-    // retained states are rolled back; cleanup for that case is not provided.
-    // The same limitation applies if prepare() fails after confirmation.
+    // moved to SPI mode is never moved back to native mode. The surrounding
+    // detection transaction restores GPIO state if a successful result is
+    // excluded or its prepare/construction/setup subsequently fails.
     // PMIC-register restoration after a failed confirmation is best effort:
     // failures are warned and detection continues, since aborting would make
     // the transport failure appear to the caller as a different board.
@@ -449,7 +534,8 @@ namespace board_detect
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr);
 
   // Recover a slave that retained SDA after the controller was reset during a
-  // transaction. The pins are restored before return; true means both lines released.
+  // transaction. Leaves both pins as inputs so the caller can inspect them;
+  // true means both lines released. The caller owns restoration.
   bool release_held_sda(int pin_sda, int pin_scl);
 
   // Do not include pins that another device may drive (for example MISO), or
@@ -457,7 +543,7 @@ namespace board_detect
   // its rail is powered, but must not be used as a board signature. U is high
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
-  pin_pull_result_t probe_pin_pulls(std::uint64_t pin_mask);
+  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask);
 
   // Mode-0 software SPI used only while detecting and preparing a board. Data
   // is laid out like Bus_SPI: low byte first, MSB first within each byte. On a

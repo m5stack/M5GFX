@@ -174,7 +174,7 @@ function wiringEntries(boards, connectorTypes, contexts, mappings, target) {
   return selectM5GFXWiringBoards(boards, mappings).map((board) => {
     const ctx = contexts.get(board.id);
     const resolved = resolveBoard(board, {}, connectorTypes, { chip: ctx.chip, parts: ctx.parts });
-    return { board, emitted: emitM5GFXWiring(resolved, ctx.parts, target) };
+    return { board, chip: ctx.chip, emitted: emitM5GFXWiring(resolved, ctx.parts, target) };
   });
 }
 

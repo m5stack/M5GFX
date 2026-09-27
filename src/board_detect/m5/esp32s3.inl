@@ -109,6 +109,7 @@ namespace m5
     const board_desc_t* desc;
     const spi_id_probe_t* probes;
     std::uint8_t probe_count;
+    bool touches_conditional_pins;
   };
 
   class spi_id_detector_t final : public board_detector_t
@@ -116,19 +117,41 @@ namespace m5
   public:
     spi_id_detector_t(const board_def_t* const* members, const spi_id_member_t* members_desc,
                       std::uint8_t member_count)
-    : board_detector_t(members), members_desc_(members_desc), member_count_(member_count) {}
+    : board_detector_t(members),
+      members_desc_(members_desc), member_count_(member_count) {}
     bool signature(probe_ctx_t&) const override { return true; }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
+      if (ctx.hint != board_id_unknown)
+      {
+        for (std::uint8_t index = 0; index < member_count_; ++index)
+        {
+          const auto& member = members_desc_[index];
+          if (member.desc->def.id != ctx.hint) { continue; }
+          return probe_member(ctx, member, result);
+        }
+      }
       for (std::uint8_t index = 0; index < member_count_; ++index)
       {
         const auto& member = members_desc_[index];
-        if (probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result)) { return true; }
+        if (probe_member(ctx, member, result)) { return true; }
       }
       return false;
     }
 
   private:
+    static bool probe_member(probe_ctx_t& ctx, const spi_id_member_t& member,
+                             board_result_t* result)
+    {
+      if (ctx.conditional_pins_unavailable && member.touches_conditional_pins)
+      {
+        // OPI PSRAM owns GPIO33..37. Skip only the candidate that touches
+        // those pins; another member of the same family may remain safe.
+        return false;
+      }
+      return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result);
+    }
+
     const spi_id_member_t* members_desc_;
     std::uint8_t member_count_;
   };
@@ -143,7 +166,7 @@ namespace m5
       {
         const auto mask = (std::uint64_t(1) << (*desc)->internal_i2c.sda)
                         | (std::uint64_t(1) << (*desc)->internal_i2c.scl);
-        auto pulls = probe_pin_pulls(mask);
+        auto pulls = probe_pin_pulls(ctx, mask);
         if (pulls.pulldown_high == mask) { return true; }
         const auto sda_bit = std::uint64_t(1) << (*desc)->internal_i2c.sda;
         const auto scl_bit = std::uint64_t(1) << (*desc)->internal_i2c.scl;
@@ -151,7 +174,9 @@ namespace m5
          && (pulls.pulldown_high & scl_bit) && !(pulls.pulldown_high & sda_bit))
         {
           release_held_sda((*desc)->internal_i2c.sda, (*desc)->internal_i2c.scl);
-          pulls = probe_pin_pulls(mask);
+          pulls = probe_pin_pulls(ctx, mask);
+          ctx.transaction->restore_start({ (*desc)->internal_i2c.sda,
+                                           (*desc)->internal_i2c.scl });
           if (pulls.pulldown_high == mask) { return true; }
         }
       }
@@ -162,7 +187,8 @@ namespace m5
       if (result == nullptr) { return false; }
       for (auto desc = descriptions_; *desc != nullptr; ++desc)
       {
-        startup_detail::i2c_scope_t i2c(ctx.i2c_port_probe, (*desc)->internal_i2c);
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+                                        (*desc)->internal_i2c);
         if (!i2c.opened) { continue; }
         const auto& power = (*desc)->power;
         startup_detail::retry_budget_t retry_budget(power.wake_poll_ms);
@@ -179,8 +205,8 @@ namespace m5
   };
   static const board_def_t* const spi_id_members[] = { &board_atoms3, &board_dinmeter, nullptr };
   static const spi_id_member_t spi_id_member_descs[] = {
-    { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]) },
-    { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]) },
+    { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]), wiring::atoms3::touches_opi_pins },
+    { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]), wiring::dinmeter::touches_opi_pins },
   };
   static const spi_id_detector_t spi_id_detector(
     spi_id_members, spi_id_member_descs,
@@ -188,7 +214,7 @@ namespace m5
   static const board_detector_t* const esp32s3_detectors_spi_id[] = { &spi_id_detector, nullptr };
   static const board_def_t* const dial_members[] = { &board_dial, nullptr };
   static const spi_id_member_t dial_member_descs[] = {
-    { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]) },
+    { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]), wiring::dial::touches_opi_pins },
   };
   static const spi_id_detector_t dial_detector(
     dial_members, dial_member_descs,

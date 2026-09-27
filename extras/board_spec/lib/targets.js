@@ -2,6 +2,15 @@ import { choiceSlots } from "./choices.js";
 
 const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "touch", "hold"]);
 const CPP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const CPP_KEYWORDS = new Set((
+  "alignas alignof and and_eq asm auto bitand bitor bool break "
+  + "case catch char char8_t char16_t char32_t class compl concept const consteval constexpr constinit const_cast "
+  + "continue co_await co_return co_yield decltype default delete do double dynamic_cast else enum explicit export "
+  + "extern false float for friend goto if import inline int long module mutable namespace new noexcept not not_eq "
+  + "nullptr operator or or_eq private protected public register reinterpret_cast requires return short signed "
+  + "sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid "
+  + "typename union unsigned using virtual void volatile wchar_t while xor xor_eq"
+).split(" "));
 const OUTPUT_FILENAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.hpp$/;
 
 export function targetBoard(target, boardId) {
@@ -26,8 +35,12 @@ export function validateTarget(board, target = {}) {
   if (typeof boardTarget.board_enum !== "string" || !/^board_[A-Za-z][A-Za-z0-9_]*$/.test(boardTarget.board_enum)) {
     issue("E_TGT_BOARD_ENUM", `${boardPath}/board_enum`, "board_enum must be a board_ C++ identifier");
   }
-  for (const field of ["cpp_namespace", "desc_name"]) if (boardTarget[field] !== undefined && !CPP_IDENTIFIER.test(boardTarget[field])) {
-    issue("E_TGT_CPP_IDENTIFIER", `${boardPath}/${field}`, `${field} must be a C++ identifier`);
+  for (const field of ["cpp_namespace", "desc_name"]) if (boardTarget[field] !== undefined) {
+    if (!CPP_IDENTIFIER.test(boardTarget[field])) {
+      issue("E_TGT_CPP_IDENTIFIER", `${boardPath}/${field}`, `${field} must be a C++ identifier`);
+    } else if (CPP_KEYWORDS.has(boardTarget[field])) {
+      issue("E_TGT_CPP_KEYWORD", `${boardPath}/${field}`, `${field} must not be a C++ keyword`);
+    }
   }
   if (!Array.isArray(boardTarget.wiring_fields ?? [])) issue("E_TGT_WIRING_FIELD", `${boardPath}/wiring_fields`, "wiring_fields must be an array");
   else {
@@ -39,6 +52,12 @@ export function validateTarget(board, target = {}) {
   }
   for (const field of ["wiring_output", "specs_output"]) if (boardTarget[field] !== undefined && !OUTPUT_FILENAME.test(boardTarget[field])) {
     issue("E_TGT_OUTPUT", `${boardPath}/${field}`, `${field} must be a safe .hpp filename`);
+  }
+  if (boardTarget.wiring_output && boardTarget.wiring_output === boardTarget.specs_output) {
+    issue("E_TGT_OUTPUT_COLLISION", `${boardPath}/specs_output`, "wiring_output and specs_output must not use the same file");
+  }
+  if (boardTarget.reset !== undefined && boardTarget.reset !== "display_rst") {
+    issue("E_TGT_RESET", `${boardPath}/reset`, `${boardTarget.reset} is not a supported reset source`);
   }
   if (boardTarget.wiring_output && (!boardTarget.cpp_namespace || !boardTarget.desc_name)) {
     issue("E_TGT_GENERATION_FIELDS", boardPath, "generated wiring requires cpp_namespace and desc_name");
@@ -52,6 +71,8 @@ export function validateTarget(board, target = {}) {
     const path = `/targets/boards/${board.id}/options/${index}`;
     if (typeof option.name !== "string" || !/^[a-z][a-z0-9_]*$/.test(option.name) || names.has(option.name)) {
       issue("E_TGT_OPTION_NAME", `${path}/name`, "option name must be unique snake_case ASCII");
+    } else if (CPP_KEYWORDS.has(option.name)) {
+      issue("E_TGT_CPP_KEYWORD", `${path}/name`, "option name must not be a C++ keyword");
     }
     names.add(option.name);
     if (!Number.isInteger(option.bit) || option.bit < 0 || option.bit > 31) {
@@ -91,6 +112,7 @@ export function validateTargets(boards, target = {}) {
   const catalog = new Map(boards.map((board) => [board.id, board]));
   const enums = new Map();
   const namespaces = new Map();
+  const outputs = new Map();
   for (const [id, entry] of Object.entries(target.boards ?? {})) {
     const path = `/targets/boards/${id}`;
     if (!catalog.has(id)) issues.push({ id: "E_TGT_BOARD_UNKNOWN", path, message: `${id} is not in the board catalog` });
@@ -99,6 +121,14 @@ export function validateTargets(boards, target = {}) {
       if (!value) continue;
       if (seen.has(value)) issues.push({ id: field === "board_enum" ? "E_TGT_BOARD_ENUM_DUP" : "E_TGT_NAMESPACE_DUP", path: `${path}/${field}`, message: `${value} is also used by ${seen.get(value)}` });
       else seen.set(value, id);
+    }
+    for (const field of ["wiring_output", "specs_output"]) {
+      const value = entry[field];
+      if (!value) continue;
+      const prior = outputs.get(value);
+      if (prior && (prior.field !== field || prior.chip !== entry.chip)) {
+        issues.push({ id: "E_TGT_OUTPUT_COLLISION", path: `${path}/${field}`, message: `${value} is also ${prior.field} for ${prior.id} (${prior.chip})` });
+      } else if (!prior) outputs.set(value, { field, id, chip: entry.chip });
     }
   }
   for (const board of boards) issues.push(...validateTarget(board, target));

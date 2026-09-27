@@ -62,6 +62,14 @@ static constexpr int_fast16_t in_i2c_port = I2C_NUM_1;
 
 #include "lgfx/v1/panel/Panel_ED2208.hpp"
 
+#if defined (CONFIG_SPIRAM_MODE_OCT)
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  #include <esp_psram.h>
+ #else
+  #include <esp32s3/spiram.h>
+ #endif
+#endif
+
 // for M5PaperS3
 #if defined (CONFIG_ESP32S3_SPIRAM_SUPPORT) && defined (CONFIG_SPIRAM_MODE_OCT)
 
@@ -1026,6 +1034,21 @@ namespace m5gfx
 #endif
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+  static bool conditional_detection_pins_unavailable()
+  {
+#if defined (CONFIG_SPIRAM_MODE_OCT)
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    return esp_psram_is_initialized();
+ #else
+    return esp_spiram_is_initialized();
+ #endif
+#else
+    return false;
+#endif
+  }
+#endif
+
   static bool construct_detected(const board_detect::board_result_t& result,
                                  board_detect::m5::display_parts_t* parts)
   {
@@ -1043,29 +1066,86 @@ namespace m5gfx
                                  bool* detector_matched = nullptr)
   {
     if (detector_matched != nullptr) { *detector_matched = false; }
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+    board_detect::detection_transaction_t transaction(
+      board_detect::pins(board_detect::m5::wiring::detection::unconditional_pins),
+      board_detect::no_pins(), false);
+#else
+    const bool conditional_pins_unavailable = conditional_detection_pins_unavailable();
+    board_detect::detection_transaction_t transaction(
+      board_detect::pins(board_detect::m5::wiring::detection::unconditional_pins),
+      board_detect::pins(board_detect::m5::wiring::detection::opi_pins),
+      !conditional_pins_unavailable);
+#endif
+    if (!transaction.valid())
+    {
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] detection transaction could not capture GPIO state");
+      return false;
+    }
     board_detect::probe_ctx_t probe;
     probe.allow_reset = allow_reset;
     probe.final_attempt = final_attempt;
     probe.i2c_port_probe = probe_i2c_port;
+    probe.transaction = &transaction;
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+#if defined (M5GFX_AUTODETECT_TEST_STATION_TO_CORE2)
+    // Test-only: after the forced Station miss and Core2 match, convert the
+    // result to excluded so the retained success-state GPIOs are rolled back.
+    static const board_detect::board_id_t enabled_ids[] = {
+      board_detect::board_id_unknown,
+    };
+    probe.enabled_ids = enabled_ids;
+#endif
+#endif
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+    probe.conditional_pins_unavailable = conditional_pins_unavailable;
+#if defined (M5GFX_AUTODETECT_TEST_EXCLUDE_ATOMS3)
+    // Test-only failure injection for verifying excluded-result rollback.
+    static const board_detect::board_id_t enabled_ids[] = {
+      static_cast<board_detect::board_id_t>(board_t::board_M5Dial),
+      static_cast<board_detect::board_id_t>(board_t::board_M5DinMeter),
+      static_cast<board_detect::board_id_t>(board_t::board_M5StickS3),
+      board_detect::board_id_unknown,
+    };
+    probe.enabled_ids = enabled_ids;
+#endif
+#endif
     auto result = board_detect::detect_board(
       detectors, static_cast<board_detect::board_id_t>(hint), probe);
+    transaction.irreversible().declare_prepared(result.prepared);
     if (result.status == board_detect::detect_status_t::excluded)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] detected board:%u is excluded",
                static_cast<unsigned>(result.def->id));
+      transaction.rollback();
       return false;
     }
-    if (result.status != board_detect::detect_status_t::matched) { return false; }
+    if (result.status != board_detect::detect_status_t::matched)
+    {
+      transaction.rollback();
+      return false;
+    }
     if (detector_matched != nullptr) { *detector_matched = true; }
 
     board_detect::prepare_ctx_t prepare_ctx;
     prepare_ctx.allow_reset = allow_reset;
     prepare_ctx.i2c_port_probe = probe_i2c_port;
+    prepare_ctx.transaction = &transaction;
+    const int adopted_i2c_port = result.desc->internal_i2c.hw_port;
+    const bool adopted_i2c_was_open = adopted_i2c_port >= 0
+                                   && lgfx::i2c::isInitialized(adopted_i2c_port);
     if (!board_detect::m5::prepare(result, prepare_ctx))
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] prepare failed for detected board:%u",
                static_cast<unsigned>(result.def->id));
+      transaction.rollback();
       return false;
+    }
+    transaction.irreversible().declare_prepared(result.prepared);
+    if (adopted_i2c_port >= 0 && !adopted_i2c_was_open
+     && lgfx::i2c::isInitialized(adopted_i2c_port))
+    {
+      transaction.buses().opened_i2c(adopted_i2c_port);
     }
     if ((result.prepared & board_detect::panel_dirty) && !allow_reset)
     {
@@ -1073,13 +1153,26 @@ namespace m5gfx
                "[Autodetect] panel probe changed registers while reset was disabled");
     }
     board_detect::m5::display_parts_t parts;
-    if (!construct_detected(result, &parts)
-     || !setup(parts))
+    if (!construct_detected(result, &parts))
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
                static_cast<unsigned>(result.def->id));
+      transaction.rollback();
       return false;
     }
+    if (!setup(parts))
+    {
+      // A constructed SPI bus may have been initialized by a rejecting setup.
+      // Release it before the transaction restores its GPIO routing. The
+      // current adopter is infallible; a future rejecting adopter must ensure
+      // it initialized and owns this host before returning false.
+      if (parts.bus != nullptr) { parts.bus->release(); }
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
+               static_cast<unsigned>(result.def->id));
+      transaction.rollback();
+      return false;
+    }
+    transaction.commit();
     *detected_board = static_cast<board_t>(result.def->id);
     const auto log = board_detect::m5::success_log(result);
     ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s%s", log.name, log.annotation);
@@ -2157,10 +2250,13 @@ namespace m5gfx
         }
       }
 
-      if (board == 0
+      // Cardputer-family hardware uses an ESP32-S3FN8 without PSRAM.  If OPI
+      // PSRAM is already active, GPIO33..37 are its data/strobe bus instead.
+      if (!conditional_detection_pins_unavailable()
+       && (board == 0
        || board == board_t::board_M5Cardputer
        || board == board_t::board_M5CardputerADV
-       || board == board_t::board_M5VAMeter)
+       || board == board_t::board_M5VAMeter))
       {
         gpio::pin_backup_t backup_pins[] = { GPIO_NUM_33, GPIO_NUM_34, GPIO_NUM_35, GPIO_NUM_36, GPIO_NUM_37 };
         _pin_reset(GPIO_NUM_33, use_reset); // LCD RST

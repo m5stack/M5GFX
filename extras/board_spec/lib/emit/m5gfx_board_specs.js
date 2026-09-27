@@ -1,3 +1,5 @@
+import { assertM5GFXSentinelTypes, DEVICE_KIND_SPEC_KEYS } from "../parts.js";
+
 const SPI_HOSTS = { SPI1_HOST: 0, SPI2_HOST: 1, SPI3_HOST: 2 };
 
 function integer(value, label) {
@@ -43,6 +45,7 @@ function partDefault(definitions, key) {
 }
 
 function panel(spec, definitions, label) {
+  assertM5GFXSentinelTypes(definitions, label);
   const width = integer(spec.width, `${label}.width`);
   const height = integer(spec.height, `${label}.height`);
   const result = {
@@ -92,12 +95,13 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
   const touchPart = parts[touchDevice?.part];
   const touchBus = board.buses?.[touchDevice?.bus];
   const touchSpec = touchDevice?.spec ?? {};
+  if (touchDevice) assertM5GFXSentinelTypes(touchPart?.spec_keys, `${board.id}.${touchDevice.part}`);
   const touch = touchDevice ? {
     i2cAddr: hex(touchDevice.i2c_addr ?? touchPart?.i2c_addr?.[0], `${board.id}.${touchDevice.part}.i2c_addr`),
     i2cFreq: integer(touchBus?.freq, `${board.id}.${touchDevice.bus}.freq`),
-    xMin: integer(touchSpec.x_min, `${board.id}.${touchDevice.part}.x_min`),
+    xMin: integer(touchSpec.x_min ?? partDefault(touchPart?.spec_keys, "x_min"), `${board.id}.${touchDevice.part}.x_min`),
     xMax: integer(touchSpec.x_max, `${board.id}.${touchDevice.part}.x_max`),
-    yMin: integer(touchSpec.y_min, `${board.id}.${touchDevice.part}.y_min`),
+    yMin: integer(touchSpec.y_min ?? partDefault(touchPart?.spec_keys, "y_min"), `${board.id}.${touchDevice.part}.y_min`),
     yMax: integer(touchSpec.y_max, `${board.id}.${touchDevice.part}.y_max`),
     rotationOffset: optionalInteger(touchSpec.rotation_offset, `${board.id}.${touchDevice.part}.rotation_offset`),
   } : null;
@@ -115,8 +119,8 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
     backlight: {
       freq: integer(backlight.freq, `${board.id}.backlight.freq`),
       channel: integer(backlight.channel, `${board.id}.backlight.channel`),
-      invert: optionalBoolean(backlight.invert, `${board.id}.backlight.invert`),
-      offset: integer(backlight.offset, `${board.id}.backlight.offset`),
+      invert: optionalBoolean(backlight.invert ?? partDefault(DEVICE_KIND_SPEC_KEYS.backlight, "invert"), `${board.id}.backlight.invert`),
+      offset: integer(backlight.offset ?? partDefault(DEVICE_KIND_SPEC_KEYS.backlight, "offset"), `${board.id}.backlight.offset`),
     },
     pmic,
     touch,

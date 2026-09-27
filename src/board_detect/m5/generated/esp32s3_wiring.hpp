@@ -18,6 +18,7 @@ namespace atoms3 {
   constexpr std::int8_t reset_gpio = 34;
   constexpr std::int8_t backlight_gpio = 16;
   constexpr std::int8_t hold[] = { 15 };
+  constexpr bool touches_opi_pins = true;
 } // namespace atoms3
 
 namespace dial {
@@ -35,6 +36,7 @@ namespace dial {
   constexpr std::int8_t backlight_gpio = 9;
   constexpr std::int8_t touch_int = 14;
   constexpr std::int8_t hold[] = { 7 };
+  constexpr bool touches_opi_pins = false;
 } // namespace dial
 
 namespace dinmeter {
@@ -51,6 +53,7 @@ namespace dinmeter {
   constexpr std::int8_t reset_gpio = 8;
   constexpr std::int8_t backlight_gpio = 9;
   constexpr std::int8_t hold[] = { 7 };
+  constexpr bool touches_opi_pins = false;
 } // namespace dinmeter
 
 namespace sticks3 {
@@ -68,7 +71,13 @@ namespace sticks3 {
   constexpr std::int8_t power_gpio = -1;
   constexpr std::int8_t backlight_gpio = 38;
   constexpr std::int8_t hold[] = { 41 };
+  constexpr bool touches_opi_pins = false;
 } // namespace sticks3
+
+namespace detection {
+  constexpr std::int8_t unconditional_pins[] = { 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 21, 38, 39, 40, 41, 45, 47, 48 };
+  constexpr std::int8_t opi_pins[] = { 33, 34 };
+} // namespace detection
 
 } // namespace wiring
 

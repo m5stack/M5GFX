@@ -3,8 +3,8 @@
   "bus": { "kind": "spi", "modes": ["3wire"] },
   "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight"] },
   "spec_keys": {
-    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
-    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "x-cpp-type": "int" },
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
     "memory_width": { "type": "integer", "minimum": 1, "maximum": 4096, "default": 132, "x-cpp-type": "int" },
     "memory_height": { "type": "integer", "minimum": 1, "maximum": 4096, "default": 162, "x-cpp-type": "int" },
     "offset_x": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },

@@ -130,7 +130,60 @@ function constant(name, value) {
   return `constexpr std::int8_t ${name} = ${value};`;
 }
 
+function descriptorPins(emitted) {
+  // This is deliberately the union of every GPIO represented by the board
+  // description, not only pins currently driven by detection. It keeps the
+  // transaction and conditional-pin metadata conservative if construction
+  // starts initializing another described part in the future.
+  const fields = new Set(emitted.mapping.fields);
+  const values = [];
+  if (fields.has("display")) values.push(...Object.values(emitted.display));
+  if (fields.has("shared_sd") && emitted.sharedSd) values.push(...Object.values(emitted.sharedSd));
+  if (fields.has("i2c") && emitted.i2c) values.push(emitted.i2c.sda, emitted.i2c.scl);
+  if (emitted.mapping.reset) values.push(emitted.resetGpio);
+  if (fields.has("power")) values.push(emitted.powerGpio);
+  if (fields.has("backlight")) values.push(emitted.backlightGpio);
+  if (fields.has("touch")) values.push(emitted.touchInt);
+  if (fields.has("hold")) values.push(...emitted.hold);
+  return [...new Set(values.filter((pin) => Number.isInteger(pin) && pin >= 0))].sort((left, right) => left - right);
+}
+
+export function detectionPinsForEntries(entries) {
+  return [...new Set(entries.flatMap(({ emitted }) => descriptorPins(emitted)))].sort((left, right) => left - right);
+}
+
+export function partitionDetectionPins(entries, chip) {
+  const conditional = Object.fromEntries(Object.keys(chip.reserved_conditional ?? {}).map((mode) => [mode, []]));
+  const unconditional = [];
+  for (const pin of detectionPinsForEntries(entries)) {
+    const modes = Object.entries(chip.reserved_conditional ?? {})
+      .filter(([, pins]) => pins.includes(pin)).map(([mode]) => mode);
+    if (modes.length) for (const mode of modes) conditional[mode].push(pin);
+    else unconditional.push(pin);
+  }
+  return { unconditional, conditional };
+}
+
+export function validateDetectionPins(entries, chip, pins = detectionPinsForEntries(entries)) {
+  const available = new Set(pins);
+  for (const { board, emitted } of entries) {
+    for (const pin of descriptorPins(emitted)) {
+      if (!available.has(pin)) throw new Error(`${board.id}: descriptor GPIO ${pin} is absent from the detection pin set`);
+      if (chip.reserved?.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} is reserved by ${chip.id}`);
+      const conditional = chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? [];
+      if (conditional.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} is reserved when PSRAM mode is ${board.spec.storage.psram_mode}`);
+      if (pin === chip.usb?.dn || pin === chip.usb?.dp) throw new Error(`${board.id}: detection GPIO ${pin} is reserved for native USB`);
+    }
+  }
+  return pins;
+}
+
 export function renderM5GFXWiringHeader(entries) {
+  const chips = new Map(entries.map((entry) => [entry.chip?.id, entry.chip]));
+  if (chips.size !== 1 || chips.has(undefined)) throw new Error("M5GFX wiring output requires exactly one chip catalog");
+  const chip = chips.values().next().value;
+  validateDetectionPins(entries, chip);
+  const partitioned = partitionDetectionPins(entries, chip);
   const lines = [
     "// Generated from extras/board_spec; do not edit by hand.",
     "// Unspecified values use target-specific unknown or sentinel values.",
@@ -144,6 +197,7 @@ export function renderM5GFXWiringHeader(entries) {
   for (const entry of entries) {
     const value = entry.emitted;
     const fields = new Set(value.mapping.fields);
+    const boardPins = descriptorPins(value);
     lines.push("", `namespace ${value.mapping.cppNamespace} {`);
     if (fields.has("display")) for (const [name, pin] of Object.entries(value.display)) lines.push(`  ${constant(`display_${name}`, pin)}`);
     if (fields.has("shared_sd") && value.sharedSd) for (const [name, pin] of Object.entries(value.sharedSd)) lines.push(`  ${constant(`shared_sd_${name}`, pin)}`);
@@ -157,8 +211,17 @@ export function renderM5GFXWiringHeader(entries) {
     if (fields.has("backlight")) lines.push(`  ${constant("backlight_gpio", value.backlightGpio)}`);
     if (fields.has("touch")) lines.push(`  ${constant("touch_int", value.touchInt)}`);
     if (fields.has("hold")) lines.push(`  constexpr std::int8_t hold[] = { ${value.hold.join(", ")} };`);
+    for (const [mode, pins] of Object.entries(chip.reserved_conditional ?? {})) {
+      lines.push(`  constexpr bool touches_${mode}_pins = ${boardPins.some((pin) => pins.includes(pin))};`);
+    }
     lines.push(`} // namespace ${value.mapping.cppNamespace}`);
   }
+  lines.push("", "namespace detection {",
+    `  constexpr std::int8_t unconditional_pins[] = { ${partitioned.unconditional.join(", ")} };`);
+  for (const [mode, pins] of Object.entries(partitioned.conditional)) {
+    lines.push(`  constexpr std::int8_t ${mode}_pins[] = { ${pins.join(", ")} };`);
+  }
+  lines.push("} // namespace detection");
   lines.push("", "} // namespace wiring");
   const optionEntries = entries.filter(({ emitted }) => emitted.mapping.options.length);
   if (optionEntries.length) {

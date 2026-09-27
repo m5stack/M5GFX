@@ -13,6 +13,148 @@ namespace m5gfx
 {
 namespace board_detect
 {
+  bool detection_gpio_snapshot_t::capture(pin_list_t unconditional,
+                                          pin_list_t conditional,
+                                          bool include_conditional)
+  {
+    const std::size_t total = unconditional.size
+                            + (include_conditional ? conditional.size : 0);
+    if ((unconditional.data == nullptr && unconditional.size != 0)
+     || (conditional.data == nullptr && conditional.size != 0)
+     || total > max_detection_pins)
+    {
+      return false;
+    }
+    const pin_list_t lists[] = { unconditional, include_conditional ? conditional : pin_list_t { nullptr, 0 } };
+    for (const auto& list : lists)
+    {
+      for (std::size_t index = 0; index < list.size; ++index)
+      {
+        const auto pin = list.data[index];
+        if (pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin)) { return false; }
+        for (std::size_t prior = 0; prior < count_; ++prior)
+        {
+          if (saved_[prior].getPin() == pin) { return false; }
+        }
+        saved_[count_].setPin(pin);
+        saved_[count_].backup();
+        ++count_;
+      }
+    }
+    return true;
+  }
+
+  void detection_gpio_snapshot_t::rollback()
+  {
+    for (std::size_t index = count_; index != 0; --index) { saved_[index - 1].restore(); }
+  }
+
+  void detection_gpio_snapshot_t::restore_start(const std::int8_t* pins,
+                                                 std::size_t count)
+  {
+    if (pins == nullptr && count != 0)
+    {
+      ESP_LOGE("board_detect", "restore_start missing pin list");
+      return;
+    }
+    bool missing = false;
+    int missing_pin = -1;
+    for (std::size_t requested = 0; requested < count; ++requested)
+    {
+      const int pin = pins[requested];
+      if (pin < 0) { continue; }  // an unused optional signal
+      bool found = false;
+      if (pin >= 0 && pin < GPIO_NUM_MAX && GPIO_IS_VALID_GPIO(pin))
+      {
+        for (std::size_t index = count_; index != 0; --index)
+        {
+          if (saved_[index - 1].getPin() == pin) { found = true; break; }
+        }
+      }
+      if (!found && !missing) { missing = true; missing_pin = pin; }
+    }
+    // Match full rollback ordering while restoring each captured pin at most once.
+    for (std::size_t index = count_; index != 0; --index)
+    {
+      const auto pin = saved_[index - 1].getPin();
+      for (std::size_t requested = 0; requested < count; ++requested)
+      {
+        if (pins[requested] == pin)
+        {
+          saved_[index - 1].restore();
+          break;
+        }
+      }
+    }
+    if (missing)
+    {
+      ESP_LOGE("board_detect", "restore_start pin=%d is absent from snapshot", missing_pin);
+    }
+  }
+
+  void detection_bus_journal_t::opened_i2c(int port)
+  {
+    if (port < 0) { return; }
+    for (std::size_t index = 0; index < i2c_count_; ++index)
+    {
+      if (i2c_ports_[index] == port) { return; }
+    }
+    if (i2c_count_ < sizeof(i2c_ports_) / sizeof(i2c_ports_[0]))
+    {
+      i2c_ports_[i2c_count_++] = static_cast<std::int8_t>(port);
+    }
+  }
+
+  void detection_bus_journal_t::rollback()
+  {
+    while (i2c_count_ != 0) { lgfx::i2c::release(i2c_ports_[--i2c_count_]); }
+  }
+
+  void detection_bus_journal_t::commit()
+  {
+    i2c_count_ = 0;
+  }
+
+  detection_transaction_t::detection_transaction_t(
+    pin_list_t unconditional, pin_list_t conditional, bool include_conditional)
+  : valid_ { gpio_.capture(unconditional, conditional, include_conditional) }
+  {
+  }
+
+  detection_transaction_t::~detection_transaction_t()
+  {
+    rollback();
+  }
+
+  void detection_transaction_t::restore_start(std::initializer_list<int> pins)
+  {
+    std::int8_t values[max_detection_pins];
+    std::size_t count = 0;
+    for (auto pin : pins)
+    {
+      if (count == max_detection_pins) { break; }
+      // Anything outside int8_t is not a GPIO; keep it absent instead of aliasing.
+      values[count++] = (pin < -1 || pin > INT8_MAX) ? INT8_MAX : static_cast<std::int8_t>(pin);
+    }
+    gpio_.restore_start(values, count);
+  }
+
+  void detection_transaction_t::rollback()
+  {
+    if (!valid_ || committed_) { return; }
+    external_.rollback();
+    buses_.rollback();
+    gpio_.rollback();
+  }
+
+  void detection_transaction_t::commit()
+  {
+    if (!valid_ || committed_) { return; }
+    external_.commit();
+    buses_.commit();
+    committed_ = true;
+  }
+
   bool board_detector_t::has_member(board_id_t id) const
   {
     if (members == nullptr) { return false; }
@@ -49,12 +191,21 @@ namespace board_detect
 
     bool run_detector(const board_detector_t* detector, probe_ctx_t& ctx, board_result_t* result)
     {
+      if (ctx.transaction == nullptr)
+      {
+        ESP_LOGE(tag, "detector requires a detection transaction");
+        return false;
+      }
       const char* family = (detector->members && detector->members[0])
                          ? detector->members[0]->name : "empty";
       const bool signature = detector->signature(ctx);
       ESP_LOGD(tag, "stage=1 family=%s detector=%p match=%d", family,
                static_cast<const void*>(detector), signature);
-      if (!signature) { return false; }
+      if (!signature)
+      {
+        ctx.transaction->rollback();
+        return false;
+      }
 
       board_result_t candidate;
       const bool confirmed = detector->confirm(ctx, &candidate);
@@ -62,7 +213,11 @@ namespace board_detect
                static_cast<const void*>(detector), confirmed,
                static_cast<unsigned>(candidate.def ? candidate.def->id : board_id_unknown),
                candidate.def ? candidate.def->name : "invalid");
-      if (!confirmed) { return false; }
+      if (!confirmed)
+      {
+        ctx.transaction->rollback();
+        return false;
+      }
 
       if (candidate.desc == nullptr || candidate.def == nullptr
        || candidate.def != &candidate.desc->def
@@ -70,6 +225,7 @@ namespace board_detect
       {
         ESP_LOGW(tag, "detector=%p returned a match without a consistent board description",
                  static_cast<const void*>(detector));
+        ctx.transaction->rollback();
         return false;
       }
       candidate.status = enabled(ctx, candidate.def->id)
@@ -155,7 +311,6 @@ namespace board_detect
 
   bool release_held_sda(int pin_sda, int pin_scl)
   {
-    lgfx::gpio::pin_backup_t backup[] = { pin_sda, pin_scl };
     lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
     lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
     lgfx::delayMicroseconds(10);
@@ -199,7 +354,6 @@ namespace board_detect
       }
     }
     const bool released = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
-    for (auto& pin : backup) { pin.restore(); }
     return released;
   }
 
@@ -207,7 +361,6 @@ namespace board_detect
   {
     // Reserved addresses are never touched, even if requested accidentally.
     if (addr < 0x08 || addr > 0x77) { return false; }
-
     auto& cache = ctx.i2c_cache;
     if (cache.pin_sda != pin_sda || cache.pin_scl != pin_scl)
     {
@@ -215,7 +368,6 @@ namespace board_detect
       cache.pin_sda = pin_sda;
       cache.pin_scl = pin_scl;
 
-      lgfx::gpio::pin_backup_t backup[] = { pin_sda, pin_scl };
       lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input_pulldown);
       lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input_pulldown);
       lgfx::delayMicroseconds(10);
@@ -232,7 +384,7 @@ namespace board_detect
         bus_released = release_held_sda(pin_sda, pin_scl);
       }
       cache.pullup_ok = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
-      for (auto& pin : backup) { pin.restore(); }
+      ctx.transaction->restore_start({ pin_sda, pin_scl });
     }
 
     const std::uint32_t bit = 1u << (addr & 31);
@@ -241,7 +393,6 @@ namespace board_detect
       cache.checked[addr >> 5] |= bit;
       if (cache.pullup_ok)
       {
-        lgfx::gpio::pin_backup_t backup[] = { pin_sda, pin_scl };
         if (lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value())
         {
           const bool hit = lgfx::i2c::beginTransaction(ctx.i2c_port_probe, addr, 100000, false).has_value()
@@ -249,31 +400,29 @@ namespace board_detect
           if (hit) { cache.ack[addr >> 5] |= bit; }
           lgfx::i2c::release(ctx.i2c_port_probe);
         }
-        for (auto& pin : backup) { pin.restore(); }
+        ctx.transaction->restore_start({ pin_sda, pin_scl });
       }
     }
     return cache.pullup_ok && (cache.ack[addr >> 5] & bit);
   }
 
-  pin_pull_result_t probe_pin_pulls(std::uint64_t pin_mask)
+  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask)
   {
     static constexpr std::size_t max_pins = 64;
     pin_pull_result_t result;
-
     for (std::size_t pin = 0; pin < max_pins; ++pin)
     {
       const std::uint64_t bit = std::uint64_t(1) << pin;
       if (!(pin_mask & bit)) { continue; }
       // Measure one pin completely before touching the next. On a native-mode
       // SD bus this avoids raising CLK while CMD is temporarily pulled low.
-      lgfx::gpio::pin_backup_t backup(pin);
       lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
       lgfx::delayMicroseconds(10);
       if (lgfx::gpio_in(pin)) { result.pulldown_high |= bit; }
       lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
       lgfx::delayMicroseconds(10);
       if (lgfx::gpio_in(pin)) { result.pullup_high |= bit; }
-      backup.restore();
+      ctx.transaction->restore_start(static_cast<std::int8_t>(pin));
     }
     return result;
   }
@@ -379,15 +528,9 @@ namespace board_detect
     if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output); }
   }
 
-  std::uint32_t soft_spi_read32(probe_ctx_t&, int pin_sclk, int pin_mosi, int pin_miso,
+  std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
                                 int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits)
   {
-    lgfx::gpio::pin_backup_t backup_sclk(pin_sclk);
-    lgfx::gpio::pin_backup_t backup_mosi(pin_mosi);
-    lgfx::gpio::pin_backup_t backup_miso(pin_miso);
-    lgfx::gpio::pin_backup_t backup_dc(pin_dc);
-    lgfx::gpio::pin_backup_t backup_cs(pin_cs);
-
     lgfx::gpio_hi(pin_cs);
     lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
     soft_spi_t bus(pin_sclk, pin_mosi, pin_miso, pin_dc);
@@ -400,11 +543,9 @@ namespace board_detect
     lgfx::gpio_hi(pin_cs);
     bus.endTransaction();
 
-    backup_cs.restore();
-    backup_dc.restore();
-    backup_miso.restore();
-    backup_mosi.restore();
-    backup_sclk.restore();
+    // CS is owned by the caller. Restore only the shared bus signals that this
+    // helper borrowed, using their state at transaction start.
+    ctx.transaction->restore_start({ pin_sclk, pin_mosi, pin_miso, pin_dc });
     return value;
   }
 
@@ -522,9 +663,8 @@ namespace board_detect
       return read_variant(power, port, retry_budget);
     }
 
-    void set_sd_spi_mode(const shared_sd_desc_t& sd)
+    void set_sd_spi_mode(const shared_sd_desc_t& sd, const prepare_ctx_t& ctx)
     {
-      lgfx::gpio::pin_backup_t pins[] = { sd.sclk, sd.mosi, sd.miso };
       soft_spi_t bus(sd.sclk, sd.mosi, sd.miso, -1, 2);
       bus.init();
       bus.beginTransaction();
@@ -548,7 +688,7 @@ namespace board_detect
       }
       lgfx::gpio_hi(sd.sd_cs);
       bus.endTransaction();
-      for (auto& pin : pins) { pin.restore(); }
+      ctx.transaction->restore_start({ sd.sclk, sd.mosi, sd.miso });
     }
 
     void pin_reset(const reset_desc_t& reset, bool active)
@@ -566,8 +706,8 @@ namespace board_detect
     class i2c_scope_t
     {
     public:
-      i2c_scope_t(int port_, const i2c_desc_t& wiring)
-      : port(port_), pins { wiring.sda, wiring.scl }
+      i2c_scope_t(detection_transaction_t& transaction_, int port_, const i2c_desc_t& wiring)
+      : transaction(transaction_), port(port_), pins { wiring.sda, wiring.scl }
       {
         opened = lgfx::i2c::init(port, wiring.sda, wiring.scl).has_value();
       }
@@ -575,17 +715,19 @@ namespace board_detect
       ~i2c_scope_t()
       {
         if (opened) { lgfx::i2c::release(port); }
-        for (auto& pin : pins) { pin.restore(); }
+        transaction.restore_start(pins);
       }
 
+      detection_transaction_t& transaction;
       int port;
-      lgfx::gpio::pin_backup_t pins[2];
+      std::int8_t pins[2];
       bool opened = false;
     };
 
     // Unchecked primitives; callers must first pass description_valid().
     bool prepare_power(const board_desc_t& desc, board_result_t& result, int i2c_port);
-    bool prepare_sd_spi(const board_desc_t& desc, board_result_t& result);
+    bool prepare_sd_spi(const board_desc_t& desc, board_result_t& result,
+                        const prepare_ctx_t& ctx);
   }
 
   bool startup_detail::prepare_power(const board_desc_t& desc, board_result_t& result,
@@ -624,15 +766,15 @@ namespace board_detect
     return true;
   }
 
-  bool startup_detail::prepare_sd_spi(const board_desc_t& desc, board_result_t& result)
+  bool startup_detail::prepare_sd_spi(const board_desc_t& desc, board_result_t& result,
+                                      const prepare_ctx_t& ctx)
   {
     if (result.prepared & prepared_sd_spi) { return true; }
     const auto& sd = desc.sd;
     if (sd.sd_cs < 0) { return true; }
-    // Keep the other CS high; the detector's outer guard restores it on failure.
-    lgfx::gpio::pin_backup_t other_cs(sd.other_cs);
+    // Keep the other CS high; the detection transaction restores it on failure.
     startup_detail::pin_level(sd.other_cs, true);
-    startup_detail::set_sd_spi_mode(sd);
+    startup_detail::set_sd_spi_mode(sd, ctx);
     result.prepared |= prepared_sd_spi;
     return true;
   }
@@ -786,7 +928,7 @@ namespace board_detect
   {
     if (probes == nullptr || probe_count == 0 || result == nullptr
      || !startup_detail::description_valid(desc)) { return false; }
-    lgfx::gpio::pin_backup_t pins[] = {
+    const std::int8_t pins[] = {
       desc.display.cs, desc.display.sclk, desc.display.mosi,
       desc.display.dc, desc.display.rst,
     };
@@ -795,9 +937,10 @@ namespace board_detect
     prepare_ctx_t prepare_ctx;
     prepare_ctx.allow_reset = ctx.allow_reset;
     prepare_ctx.i2c_port_probe = ctx.i2c_port_probe;
+    prepare_ctx.transaction = ctx.transaction;
     if (!prepare_reset(desc, candidate, prepare_ctx, ctx.i2c_port_probe))
     {
-      for (auto& pin : pins) { pin.restore(); }
+      ctx.transaction->restore_start(pins);
       return false;
     }
     const int read_pin = desc.display.miso >= 0 ? desc.display.miso : desc.display.mosi;
@@ -822,12 +965,17 @@ namespace board_detect
         return true;
       }
     }
-    for (auto& pin : pins) { pin.restore(); }
+    ctx.transaction->restore_start(pins);
     return false;
   }
 
   bool prepare(const board_desc_t& desc, board_result_t& result, const prepare_ctx_t& ctx)
   {
+    if (ctx.transaction == nullptr)
+    {
+      ESP_LOGE("board_detect", "prepare requires a detection transaction");
+      return false;
+    }
     if (result.desc != &desc || result.def != &desc.def || result.def->id == board_id_unknown)
     {
       return false;
@@ -837,18 +985,18 @@ namespace board_detect
     {
       if (desc.power.variants != nullptr)
       {
-        startup_detail::i2c_scope_t i2c(ctx.i2c_port_probe, desc.internal_i2c);
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
         if (!i2c.opened || !startup_detail::prepare_power(desc, result, i2c.port)) { return false; }
       }
       else if (!startup_detail::prepare_power(desc, result, ctx.i2c_port_probe)) { return false; }
     }
-    if (!startup_detail::prepare_sd_spi(desc, result)) { return false; }
+    if (!startup_detail::prepare_sd_spi(desc, result, ctx)) { return false; }
     const bool reset_was_prepared = result.prepared & prepared_reset;
     if (!reset_was_prepared)
     {
       if (desc.reset.kind == reset_kind_t::i2c_regs)
       {
-        startup_detail::i2c_scope_t i2c(ctx.i2c_port_probe, desc.internal_i2c);
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
         if (!i2c.opened || !prepare_reset(desc, result, ctx, i2c.port)) { return false; }
       }
       else if (!prepare_reset(desc, result, ctx, ctx.i2c_port_probe)) { return false; }
@@ -859,6 +1007,21 @@ namespace board_detect
       lgfx::delay(desc.direct_reset_panel_reload_wait_ms);
     }
     if (!startup_detail::hold_chip_selects(desc)) { return false; }
+    // The internal port is taken over here and handed to later users. Opening it
+    // on other pins before autodetect is a misuse; it is reported, not restored.
+    if (desc.internal_i2c.hw_port >= 0
+     && lgfx::i2c::isInitialized(desc.internal_i2c.hw_port))
+    {
+      const auto sda = lgfx::i2c::getPinSDA(desc.internal_i2c.hw_port);
+      const auto scl = lgfx::i2c::getPinSCL(desc.internal_i2c.hw_port);
+      if (sda.has_value() && scl.has_value()
+       && (sda.value() != desc.internal_i2c.sda || scl.value() != desc.internal_i2c.scl))
+      {
+        ESP_LOGW("board_detect", "I2C%d was open on SDA=%d SCL=%d; moving it to SDA=%d SCL=%d",
+                 desc.internal_i2c.hw_port, sda.value(), scl.value(),
+                 desc.internal_i2c.sda, desc.internal_i2c.scl);
+      }
+    }
     if (desc.internal_i2c.hw_port >= 0
      && !lgfx::i2c::init(desc.internal_i2c.hw_port, desc.internal_i2c.sda,
                          desc.internal_i2c.scl).has_value())
