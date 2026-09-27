@@ -3,6 +3,7 @@
 #pragma once
 
 #include "board_detect.hpp"
+#include "i2c_bus_probe.hpp"
 #include "ops.inl"
 
 #include <cstdio>
@@ -153,6 +154,15 @@ namespace board_detect
         saved_[count_].backup();
         ++count_;
       }
+    }
+    // LP-I2C routing can survive a system reset and make ordinary GPIO reads
+    // observe a controller-held line instead of the pad.  Reclaim every pin
+    // only after the complete snapshot succeeds.  Like the legacy soft-I2C
+    // probe, rollback restores normal GPIO state but deliberately does not
+    // return pads to stale low-power ownership.
+    for (std::size_t index = 0; index < count_; ++index)
+    {
+      lgfx::gpio::release_lp_pad(saved_[index].getPin());
     }
     return true;
   }
@@ -468,6 +478,28 @@ namespace board_detect
     }
     const bool released = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
     return released;
+  }
+
+  bool probe_i2c_bus_present(probe_ctx_t& ctx, int pin_sda, int pin_scl)
+  {
+    const std::uint64_t sda_bit = std::uint64_t(1) << pin_sda;
+    const std::uint64_t scl_bit = std::uint64_t(1) << pin_scl;
+    const std::uint64_t mask = sda_bit | scl_bit;
+    auto sample = [&]() -> i2c_bus_probe_detail::line_state_t
+    {
+      const auto pulls = probe_pin_pulls(ctx, mask);
+      return { bool(pulls.pulldown_high & sda_bit), bool(pulls.pulldown_high & scl_bit) };
+    };
+    auto recover = [&]()
+    {
+      // A reset during a transaction can leave a slave holding SDA forever.
+      // The legacy soft-I2C startup recovered it before attempting detection.
+      ESP_LOGD("M5GFX", "[Autodetect] recovering held SDA on I2C pins SDA=%d SCL=%d",
+               pin_sda, pin_scl);
+      release_held_sda(pin_sda, pin_scl);
+      ctx.transaction->restore_start({ pin_sda, pin_scl });
+    };
+    return i2c_bus_probe_detail::probe_i2c_bus_present(sample, recover);
   }
 
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr)

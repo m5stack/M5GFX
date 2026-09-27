@@ -29,6 +29,15 @@ namespace ops
     std::uint8_t flags;
   };
 
+  enum i2c_device_flag_t : std::uint8_t
+  {
+    i2c_device_retry_transient_nack = 1u << 0,
+  };
+
+  static constexpr std::uint8_t i2c_device_known_flags = i2c_device_retry_transient_nack;
+  static constexpr std::uint16_t transient_nack_retry_ms = 20;
+  static constexpr std::uint16_t transient_nack_retry_interval_ms = 1;
+
   enum class op_kind_t : std::uint8_t
   {
     // Current PMIC descriptions use write8/masked8 (including bit helpers).
@@ -309,7 +318,9 @@ namespace ops
         const auto dev = op_access_t::dev(operations[i]);
         if (dev >= device_count) { return result(op_status_t::invalid_device, i); }
         const auto& device = devices[dev];
-        if (device.register_address_bytes != 1 || device.flags != 0 || device.addr > 0x7F)
+        if (device.register_address_bytes != 1
+         || (device.flags & static_cast<std::uint8_t>(~i2c_device_known_flags)) != 0
+         || device.addr > 0x7F)
         {
           return result(op_status_t::invalid_device, i);
         }
@@ -406,7 +417,10 @@ namespace ops
        && (backend.i2c_write8 == nullptr
         || (kind == op_kind_t::i2c_masked8
          && op_access_t::reg8(operations[i]).mask != 0xFF
-         && backend.i2c_read8 == nullptr)))
+         && backend.i2c_read8 == nullptr)
+        || ((devices[op_access_t::dev(operations[i])].flags
+             & i2c_device_retry_transient_nack) != 0
+         && (backend.millis == nullptr || backend.delay_ms == nullptr))))
       {
         return result(op_status_t::unsupported, i);
       }
@@ -472,6 +486,32 @@ namespace ops
         if (backend.i2c_write8 == nullptr) { return result(op_status_t::unsupported, i); }
         const auto write = op_access_t::reg8(operation);
         const auto& device = devices[write.dev];
+        retry_policy_t device_retry_policy {};
+        const retry_policy_t* operation_policy = policy;
+        if ((device.flags & i2c_device_retry_transient_nack) != 0)
+        {
+          // PM1/IOE1 are MCU-based slaves and NACK for a few milliseconds
+          // while processing a write (measured recovery <= 5 ms).
+          device_retry_policy = {
+            backend.millis(backend.ctx) + transient_nack_retry_ms,
+            transient_nack_retry_interval_ms,
+          };
+          // Keep a longer caller-wide wake deadline (notably StickS3 waking
+          // PM1 from I2C sleep), but use one loop and the shorter interval.
+          if (policy != nullptr)
+          {
+            if (static_cast<std::int32_t>(policy->deadline_ms
+                                       - device_retry_policy.deadline_ms) > 0)
+            {
+              device_retry_policy.deadline_ms = policy->deadline_ms;
+            }
+            if (policy->interval_ms < device_retry_policy.interval_ms)
+            {
+              device_retry_policy.interval_ms = policy->interval_ms;
+            }
+          }
+          operation_policy = &device_retry_policy;
+        }
         for (;;)
         {
           bool ok = false;
@@ -492,11 +532,12 @@ namespace ops
             }
           }
           if (ok) { break; }
-          if (!retry_available(backend, policy))
+          if (!retry_available(backend, operation_policy))
           {
-            return result(policy == nullptr ? op_status_t::i2c_nack : op_status_t::timeout, i);
+            return result(operation_policy == nullptr ? op_status_t::i2c_nack
+                                                       : op_status_t::timeout, i);
           }
-          retry_delay(backend, *policy);
+          retry_delay(backend, *operation_policy);
         }
       }
     }

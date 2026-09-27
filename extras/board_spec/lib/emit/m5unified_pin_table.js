@@ -25,6 +25,7 @@ export const PIN_TABLE_TARGETS = {
     define: "CONFIG_IDF_TARGET_ESP32S3",
     unknown: { _pin_table_i2c_ex_in: [39, 38, 1, 2] },
   },
+  esp32c5: { soc: "esp32c5", define: "CONFIG_IDF_TARGET_ESP32C5", unknown: {} },
 };
 
 export function stripRoleSource(role) {

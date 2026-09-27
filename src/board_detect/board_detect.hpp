@@ -580,6 +580,7 @@ namespace board_detect
   board_result_t detect_board(const board_detector_t* const* list, board_id_t hint, probe_ctx_t& ctx);
 
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr);
+  bool probe_i2c_bus_present(probe_ctx_t& ctx, int pin_sda, int pin_scl);
   bool probe_i2c_read(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
                       std::uint8_t reg, std::uint8_t* data, std::size_t length,
                       std::uint32_t freq, std::uint32_t poll_ms);

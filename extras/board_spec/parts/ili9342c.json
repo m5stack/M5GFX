@@ -6,6 +6,8 @@
     "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
     "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
     "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
+    "invert": { "type": "boolean" },
+    "readable": { "type": "boolean" },
     "panel_type": { "type": "string", "enum": ["tn", "ips"] },
     "three_wire": { "type": "boolean" }
   },

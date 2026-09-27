@@ -1,0 +1,15 @@
+{
+  "id": "esp32c5",
+  "soc": "esp32c5",
+  "package": "generic",
+  "gpio_count": 29,
+  "input_only": [],
+  "strapping": [2, 8, 9],
+  "no_internal_pull": [],
+  "reserved": [],
+  "reserved_conditional": {},
+  "usb": { "dn": 13, "dp": 14 },
+  "spi_hosts": 1,
+  "i2c_hosts": 2,
+  "i2s_ports": 1
+}

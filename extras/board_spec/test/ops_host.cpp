@@ -1,5 +1,6 @@
 #include "board_detect/ops.hpp"
 #include "board_detect/dedicated_release_probe.hpp"
+#include "board_detect/i2c_bus_probe.hpp"
 #include "board_detect/m5/pmic_ops.hpp"
 
 #include <cassert>
@@ -158,6 +159,12 @@ static void test_validation()
            == bdops::op_status_t::invalid_device);
   }
   {
+    const bdops::i2c_device_t invalid_device[] = { { 400000, 0, 0x34, 0, 1, 0x80 } };
+    const auto operation = bdops::i2c_write8(0, 0, 0);
+    assert(bdops::validate_ops(invalid_device, 1, &operation, 1, gpio_scope).status
+           == bdops::op_status_t::invalid_device);
+  }
+  {
     const auto zero = bdops::i2c_masked8(0, 0, 0, 0);
     const auto outside = bdops::i2c_masked8(0, 0, 0x80, 0x01);
     assert(bdops::validate_ops(devices, 1, &zero, 1, gpio_scope).status
@@ -268,6 +275,34 @@ static void test_wait_and_gpio()
   }
 }
 
+static void test_device_transient_nack_retry()
+{
+  {
+    fake_t fake;
+    fake.read_failures = 1;
+    const bdops::op_t operation = bdops::i2c_bit_on(0, 0x10, 0x04);
+    const auto result = bdops::run_ops(
+      backend(fake), pmicops::pm1_devices, 1, &operation, 1, gpio_scope);
+    assert(result.status == bdops::op_status_t::ok && result.failed_index == 1);
+    // A masked-write retry begins again at the read, rather than replaying a
+    // value computed by the failed attempt.
+    assert(fake.reads == 2 && fake.writes_attempted == 1);
+    assert(fake.writes.size() == 1 && fake.writes[0].new_value == 0x04);
+    assert(fake.now == 1);
+  }
+  {
+    fake_t fake;
+    fake.write_failures = 100;
+    const bdops::op_t operations[] = {
+      bdops::i2c_write8(0, 0x09, 0), bdops::i2c_write8(0, 0x0A, 0),
+    };
+    const auto result = bdops::run_ops(
+      backend(fake), pmicops::pm1_devices, 1, operations, 2, gpio_scope);
+    assert(result.status == bdops::op_status_t::timeout && result.failed_index == 0);
+    assert(fake.writes_attempted == 21 && fake.writes.empty() && fake.now == 20);
+  }
+}
+
 template <std::size_t LegacyN, std::size_t NewN, std::size_t DeviceN>
 static void assert_same_sequence(const legacy_write_t (&legacy)[LegacyN],
                                  const bdops::op_t (&converted)[NewN],
@@ -344,39 +379,6 @@ static void test_core2_restore_coverage()
   }
 }
 
-static bdops::op_status_t run_legacy_sticks3(fake_t& fake, std::uint32_t deadline)
-{
-  const auto& device = pmicops::pm1_devices[0];
-  for (const auto& write : legacy_sticks3)
-  {
-    for (;;)
-    {
-      bool ok = false;
-      if (write.keep == 0)
-      {
-        ok = write8(&fake, device, write.reg, write.value);
-      }
-      else
-      {
-        std::uint8_t old_value = 0;
-        if (read8(&fake, device, write.reg, &old_value))
-        {
-          const auto new_value = static_cast<std::uint8_t>(
-            (old_value & write.keep) | write.value);
-          ok = write8(&fake, device, write.reg, new_value);
-        }
-      }
-      if (ok) { break; }
-      if (static_cast<std::int32_t>(fake.now - deadline) >= 0)
-      {
-        return bdops::op_status_t::timeout;
-      }
-      delay(&fake, 1);
-    }
-  }
-  return bdops::op_status_t::ok;
-}
-
 static bool run_sticks3_reads(fake_t& fake, std::uint32_t deadline)
 {
   const auto& device = pmicops::pm1_devices[0];
@@ -394,53 +396,39 @@ static bool run_sticks3_reads(fake_t& fake, std::uint32_t deadline)
   return true;
 }
 
-static void assert_sticks3_retry_equivalent(int write_failures,
-                                             const std::vector<int>& read_nacks)
+static void test_sticks3_retry_scopes()
 {
-  fake_t legacy;
-  fake_t converted;
-  legacy.write_failures = write_failures;
-  converted.write_failures = write_failures;
-  legacy.read_nacks = read_nacks;
-  converted.read_nacks = read_nacks;
-  const auto legacy_status = run_sticks3_reads(legacy, 200)
-                           ? run_legacy_sticks3(legacy, 200)
-                           : bdops::op_status_t::timeout;
-  bdops::op_status_t converted_status = bdops::op_status_t::timeout;
-  if (run_sticks3_reads(converted, 200))
   {
-    const bdops::retry_policy_t policy { 200, 1 };
-    converted_status = bdops::run_ops(
-      backend(converted), pmicops::pm1_devices, 1,
+    fake_t fake;
+    fake.read_failures = 3;
+    assert(run_sticks3_reads(fake, 200));
+    assert(fake.reads == 5 && fake.now == 3);
+  }
+  {
+    fake_t fake;
+    fake.write_failures = 3;
+    const bdops::retry_policy_t wake_policy { 200, 1 };
+    const auto result = bdops::run_ops(
+      backend(fake), pmicops::pm1_devices, 1,
       pmicops::sticks3_power_on,
       sizeof(pmicops::sticks3_power_on) / sizeof(pmicops::sticks3_power_on[0]),
-      gpio_scope, &policy).status;
+      gpio_scope, &wake_policy);
+    assert(result.status == bdops::op_status_t::ok && fake.now == 3);
   }
-  assert(converted_status == legacy_status);
-  assert(converted.now == legacy.now);
-  assert(converted.reads == legacy.reads);
-  assert(converted.writes_attempted == legacy.writes_attempted);
-  assert(converted.registers == legacy.registers);
-  assert(converted.writes.size() == legacy.writes.size());
-  for (std::size_t i = 0; i < legacy.writes.size(); ++i)
   {
-    assert(converted.writes[i].addr == legacy.writes[i].addr);
-    assert(converted.writes[i].reg == legacy.writes[i].reg);
-    assert(converted.writes[i].old_value == legacy.writes[i].old_value);
-    assert(converted.writes[i].new_value == legacy.writes[i].new_value);
+    fake_t fake;
+    fake.write_failures = 300;
+    const bdops::retry_policy_t wake_policy { 200, 1 };
+    const auto result = bdops::run_ops(
+      backend(fake), pmicops::pm1_devices, 1,
+      pmicops::sticks3_power_on,
+      sizeof(pmicops::sticks3_power_on) / sizeof(pmicops::sticks3_power_on[0]),
+      gpio_scope, &wake_policy);
+    // StickS3's caller-wide 200 ms wake deadline remains available to wake a
+    // sleeping PM1. The policies share one retry loop rather than nesting.
+    assert(result.status == bdops::op_status_t::timeout && result.failed_index == 0);
+    assert(fake.writes_attempted == 201 && fake.now == 200);
   }
-}
-
-static void test_sticks3_retry_equivalence()
-{
-  const int failure_counts[] = { 0, 3, 200, 201 };
-  for (auto failures : failure_counts)
-  {
-    assert_sticks3_retry_equivalent(failures, {});
-  }
-  // Attempts 1/2 exercise ID-read NACKs; attempts 2/3 exercise state-read NACKs.
-  assert_sticks3_retry_equivalent(0, { 1, 2 });
-  assert_sticks3_retry_equivalent(0, { 2, 3 });
 }
 
 static void test_pm1_family_sequences()
@@ -552,6 +540,41 @@ static void test_paper_family_sequences()
   assert(fake.writes[5].reg == 0x11 && fake.writes[5].new_value == 0x04);
 }
 
+static void test_toughc5_sequences()
+{
+  const bdops::gpio_scope_t scope = { 29, nullptr, 0 };
+  fake_t fake;
+  assert(bdops::run_ops(
+    backend(fake), pmicops::pm1_family_devices, 2,
+    pmicops::toughc5_power_on,
+    sizeof(pmicops::toughc5_power_on) / sizeof(pmicops::toughc5_power_on[0]),
+    scope).status == bdops::op_status_t::ok);
+  assert(fake.writes.size() == 14 && fake.now == 10);
+  assert(fake.writes[0].addr == 0x4F && fake.writes[0].reg == 0x05);
+  assert(fake.writes[3].addr == 0x6E && fake.writes[3].reg == 0x06);
+  assert(fake.writes[4].reg == 0x09 && fake.writes[5].reg == 0x0A);
+  assert(fake.writes.back().addr == 0x6E && fake.writes.back().reg == 0x13);
+
+  assert(bdops::run_ops(
+    backend(fake), pmicops::pm1_family_devices, 2,
+    pmicops::toughc5_reset_assert,
+    sizeof(pmicops::toughc5_reset_assert) / sizeof(pmicops::toughc5_reset_assert[0]),
+    scope).status == bdops::op_status_t::ok);
+  assert(fake.writes.size() == 17 && fake.now == 22);
+  assert(fake.writes[14].addr == 0x4F && fake.writes[14].reg == 0x05);
+  assert(fake.writes[15].addr == 0x4F && fake.writes[15].reg == 0x05);
+  assert(fake.writes[16].addr == 0x6E && fake.writes[16].reg == 0x11);
+  delay(&fake, 2);
+  assert(bdops::run_ops(
+    backend(fake), pmicops::pm1_family_devices, 2,
+    pmicops::toughc5_reset_release,
+    sizeof(pmicops::toughc5_reset_release) / sizeof(pmicops::toughc5_reset_release[0]),
+    scope).status == bdops::op_status_t::ok);
+  delay(&fake, 10);
+  assert(fake.writes.back().addr == 0x6E && fake.writes.back().reg == 0x11);
+  assert(fake.writes.back().new_value == 0x04 && fake.now == 34);
+}
+
 static void test_dedicated_release_summary()
 {
   const std::uint16_t samples[] = { 3, 4, 0, 3, bdetect::dedicated_release_no_high };
@@ -599,18 +622,50 @@ static void test_dedicated_release_summary()
   assert(summary.band == bdetect::pin_release_band_t::ambiguous);
 }
 
+static void test_i2c_bus_held_sda_recovery()
+{
+  using bdetect::i2c_bus_probe_detail::line_state_t;
+  {
+    const line_state_t samples[] = { { false, true }, { true, true } };
+    int sampled = 0;
+    int recovered = 0;
+    assert(bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
+      [&]() { return samples[sampled++]; }, [&]() { ++recovered; }));
+    assert(sampled == 2 && recovered == 1);
+  }
+  {
+    const line_state_t no_scl(false, false);
+    int sampled = 0;
+    int recovered = 0;
+    assert(!bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
+      [&]() { ++sampled; return no_scl; }, [&]() { ++recovered; }));
+    assert(sampled == 1 && recovered == 0);
+  }
+  {
+    const line_state_t idle(true, true);
+    int sampled = 0;
+    int recovered = 0;
+    assert(bdetect::i2c_bus_probe_detail::probe_i2c_bus_present(
+      [&]() { ++sampled; return idle; }, [&]() { ++recovered; }));
+    assert(sampled == 1 && recovered == 0);
+  }
+}
+
 int main()
 {
   static_assert(sizeof(bdops::op_t) <= 16, "source IR operation grew beyond its ROM budget");
   test_validation();
   test_i2c_execution();
   test_wait_and_gpio();
+  test_device_transient_nack_retry();
   test_legacy_conversion();
   test_core2_restore_coverage();
-  test_sticks3_retry_equivalence();
+  test_sticks3_retry_scopes();
   test_pm1_family_sequences();
   test_pm1_ext_family_sequences();
   test_paper_family_sequences();
+  test_toughc5_sequences();
   test_dedicated_release_summary();
+  test_i2c_bus_held_sda_recovery();
   return 0;
 }

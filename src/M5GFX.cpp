@@ -38,12 +38,14 @@
 
 #include "board_detect/m5/setup_sentinels.hpp"
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5)
 #include "board_detect/board_detect.inl"
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 #include "board_detect/m5/esp32_d0wdq6.inl"
-#else
+#elif defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/m5/esp32s3.inl"
+#else
+#include "board_detect/m5/esp32c5.inl"
 #endif
 #endif
 
@@ -813,29 +815,17 @@ namespace m5gfx
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 
-  static constexpr int32_t i2c_freq = 400000;
-  // 内部 I2C (G2/G3) は LP_I2C の固定パッドと一致するため LP ポートへ割り当てる。
-  // PortA も同じバスの物理分配のため、これで HP の I2C0 が丸ごと空く。
-  // (ポート番号は HP ポート数の次 = C5 では 1。Arduino ビルドでも LP は
-  //  TwoWire を介さず ESP-IDF ドライバで直接駆動される)
-  // 条件は common.cpp が LP 対応をコンパイルする条件と同一に保つこと
-  // (条件を満たさない SDK では LP ポートを開けないため HP へフォールバックする)
-#if defined ( SOC_LP_I2C_NUM ) && ( SOC_LP_I2C_NUM > 0 ) && __has_include ( <driver/i2c_master.h> ) \
- && defined ( ESP_IDF_VERSION_VAL ) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
-  static constexpr int_fast16_t i2c_port = LP_I2C_NUM_0;
-#else
-  static constexpr int_fast16_t i2c_port = I2C_NUM_0;
-#endif
-
   struct Light_M5ToughC5 : public lgfx::ILight
   {
+    Light_M5ToughC5(int_fast16_t port, std::uint8_t addr, std::uint32_t freq)
+    : _port(port), _addr(addr), _freq(freq) {}
     // LCD backlight = M5IOE1 PIN10, driven by the expander's PWM channel 4.
     // Registers: 0x21/0x22 = PWM4 duty (12bit, H[7]=enable), 0x25/0x26 = shared PWM frequency (Hz).
     bool init(uint8_t brightness) override
     {
       static constexpr uint8_t freq_1khz[] = { 0x25, 0xE8, 0x03 };
-      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, freq_1khz, sizeof(freq_1khz), m5ioe1_i2c_freq);
-      lgfx::i2c::bitOn(i2c_port, m5ioe1_i2c_addr, 0x04, 0x02, m5ioe1_i2c_freq); // PIN10 output mode
+      lgfx::i2c::transactionWrite(_port, _addr, freq_1khz, sizeof(freq_1khz), _freq);
+      lgfx::i2c::bitOn(_port, _addr, 0x04, 0x02, _freq); // PIN10 output mode
       setBrightness(brightness);
       return true;
     }
@@ -843,7 +833,7 @@ namespace m5gfx
     void writeDuty(uint_fast16_t duty12)
     {
       uint8_t buf[] = { 0x21, (uint8_t)duty12, (uint8_t)(0x80 | (duty12 >> 8)) };
-      lgfx::i2c::transactionWrite(i2c_port, m5ioe1_i2c_addr, buf, sizeof(buf), m5ioe1_i2c_freq);
+      lgfx::i2c::transactionWrite(_port, _addr, buf, sizeof(buf), _freq);
     }
 
     void setBrightness(uint8_t brightness) override
@@ -853,9 +843,11 @@ namespace m5gfx
       if (brightness && duty12 == 0) { duty12 = 1; }
       writeDuty(duty12);
     }
+  private:
+    int_fast16_t _port;
+    std::uint8_t _addr;
+    std::uint32_t _freq;
   };
-
-  // Touch_M5ToughC5 は lgfx::Touch_CHSC6540 に統合済み
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C61)
 
@@ -959,7 +951,7 @@ namespace m5gfx
     return res;
   }
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5)
   /// Tell an ILI9342E from an ILI9342C. Two of the E's level-2 registers are written and read
   /// back through D9h (Get External Register for SPI):
   ///  - DDh (Set EXTC, W/R on the E) = 01h. On the C the command is undefined (a NOP).
@@ -1071,9 +1063,11 @@ namespace m5gfx
 #include "board_detect/m5/esp32_d0wdq6_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/m5/esp32s3_setup.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32C5)
+#include "board_detect/m5/esp32c5_setup.inl"
 #endif
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5)
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static bool conditional_detection_pins_unavailable()
   {
@@ -1095,8 +1089,10 @@ namespace m5gfx
   {
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
     return board_detect::m5::setup_esp32_d0wdq6(result, parts);
-#else
+#elif defined (CONFIG_IDF_TARGET_ESP32S3)
     return board_detect::m5::setup_esp32s3(result, parts);
+#else
+    return board_detect::m5::setup_esp32c5(result, parts);
 #endif
   }
 
@@ -1108,7 +1104,7 @@ namespace m5gfx
                                  board_t* setup_board = nullptr)
   {
     if (detector_matched != nullptr) { *detector_matched = false; }
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32C5)
     board_detect::detection_transaction_t transaction(
       board_detect::pins(board_detect::m5::wiring::detection::unconditional_pins),
       board_detect::no_pins(), false);
@@ -2388,164 +2384,22 @@ namespace m5gfx
         goto init_clear;
       }
 
-      // ToughC5: I2C0 SDA=2 SCL=3
-      static constexpr int_fast16_t toughc5_i2c_sda = GPIO_NUM_2;
-      static constexpr int_fast16_t toughc5_i2c_scl = GPIO_NUM_3;
-
-      gpio::pin_backup_t backup_pins[] =
-      { GPIO_NUM_2
-      , GPIO_NUM_3
-      , GPIO_NUM_7
-      , GPIO_NUM_8
-      , GPIO_NUM_9
-      , GPIO_NUM_25
-      , GPIO_NUM_26
-      };
-
-      // ボード確定まではソフトウェア I2C で通信し、ハードウェアポートを温存する
-      probe_i2c_t probe(toughc5_i2c_sda, toughc5_i2c_scl);
-
-      if (_check_m5pm1(probe_i2c_port) && _check_m5ioe1(probe_i2c_port)) {
-        // ボード確定 (パネル ID 確認) 前の書き込みは、ID 読みに必要な最小限
-        // (LCD 電源とリセット解除) に留め、不成立時に復元できるよう元値を控える
-        auto pm1_06  = lgfx::i2c::readRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x06, m5pm1_i2c_freq);
-        auto ioe1_03 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x03, m5ioe1_i2c_freq);
-        auto ioe1_05 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x05, m5ioe1_i2c_freq);
-        auto ioe1_13 = lgfx::i2c::readRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x13, m5ioe1_i2c_freq);
-        if (pm1_06.has_value() && ioe1_03.has_value() && ioe1_05.has_value() && ioe1_13.has_value()) {
-
-        // M5IOE1 PIN4(LCD_RST), PIN5(LCD_EN) を High で出力に設定
-        // PIN4=bit3, PIN5=bit4 → low register (0x03/0x05/0x13)
-        // リセット線 (PIN4, 基板プルアップ無し) を Low のまま駆動しないよう、
-        // 出力ラッチへ High を先に書いてから push-pull / 出力化する
-        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 latch HIGH
-        lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x13, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 push-pull
-        lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x03, 0b00011000, m5ioe1_i2c_freq);  // PIN4,5 output
-
-        // LCD のロジック電源 (PM1 LDO → PYB_LCD_EN 経由)。PM1 リセット後は
-        // PWR_CFG がクリアされているため、コールドブートではここで入れる
-        lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x04, m5pm1_i2c_freq); // PWR_CFG: LDO enable
-        lgfx::delay(10);
-
-        // SPI バスを設定して LCD パネル ID を確認
-        bus_cfg.pin_mosi = GPIO_NUM_7;
-        bus_cfg.pin_miso = GPIO_NUM_8;
-        bus_cfg.pin_sclk = GPIO_NUM_9;
-        bus_cfg.pin_dc   = GPIO_NUM_26;
-        bus_cfg.spi_mode = 0;
-        bus_cfg.spi_3wire = true;
-        bus_spi->config(bus_cfg);
-        bus_spi->init();
-
-        std::uint32_t id = _read_panel_id(bus_spi, GPIO_NUM_25);
-        if ((id & 0xFF) != 0xE3)
-        { // 一時的な読み損ないでボード不成立に落ちないよう一度だけ再試行する
-          lgfx::delay(2);
-          id = _read_panel_id(bus_spi, GPIO_NUM_25);
-        }
-        if ((id & 0xFF) == 0xE3)
-        {   // ILI9342c
-          board = board_t::board_M5ToughC5;
-          ESP_LOGI(LIBRARY_NAME, "[Autodetect] board_M5ToughC5");
-
-          // --- ボードが確定したので、確認前に行えなかった初期化をまとめて行う
-          // M5PM1 初期化
-          lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x09, 0x00, 0, m5pm1_i2c_freq); // I2C sleep disable
-          lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr, 0x0A, 0x00, 0, m5pm1_i2c_freq); // WDT disable
-          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x06, 0x17, m5pm1_i2c_freq); // PWR_CFG: LED_CTRL, LDO, DCDC, CHG enable
-
-          // M5IOE1 初期化
-          lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x23, 0x00, 0, m5ioe1_i2c_freq); // I2C sleep disable
-
-          // M5IOE1 PIN10(LCD_BL) を出力に設定
-          // PIN10=bit1(high) → high register (0x04/0x06/0x14)
-          static constexpr uint8_t IOE1_PIN_10 = 9;
-          static constexpr uint8_t IOE1_BIT_10_H = (1u << (IOE1_PIN_10 - 8));
-          lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x14, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 push-pull
-          lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x04, IOE1_BIT_10_H, m5ioe1_i2c_freq);  // PIN10 output
-
-          // LCD reset
-          if (use_reset) {
-            lgfx::i2c::bitOff(probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) LOW
-            lgfx::delay(2);
-            lgfx::i2c::bitOn( probe_i2c_port, m5ioe1_i2c_addr, 0x05, 1 << 3, m5ioe1_i2c_freq);  // PIN4(LCD_RST) HIGH
-            lgfx::delay(10);
-          }
-
-          // M5PM1 GPIO2(TP_RST) を出力に設定してリセット
-          // ラッチへ High (リセット解除) を先に書いてから出力化する
-          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2 latch HIGH
-          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x16, 0b11 << (2*2), m5pm1_i2c_freq); // GPIO2 → GPIO function
-          lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x10, 1 << 2, m5pm1_i2c_freq);  // GPIO2 output
-          lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x13, 1 << 2, m5pm1_i2c_freq);  // GPIO2 push-pull
-          if (use_reset) {
-            lgfx::i2c::bitOff(probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) LOW
-            lgfx::delay(2);
-            lgfx::i2c::bitOn( probe_i2c_port, m5pm1_i2c_addr, 0x11, 1 << 2, m5pm1_i2c_freq);  // GPIO2(TP_RST) HIGH
-            lgfx::delay(10);
-          }
-
-          // ボードが確定したので、常用するハードウェアポートへバスを引き継ぐ
-          // (バックライトとタッチがこのポートを使う)
-          probe.handover(i2c_port);
-
-          bus_spi->release();
-          bus_cfg.freq_write = 40000000;
-          bus_cfg.freq_read  = 16000000;
-          bus_spi->config(bus_cfg);
-
-          auto p = new lgfx::Panel_ILI9342();
-          {
-            auto cfg = p->config();
-            cfg.pin_cs  = GPIO_NUM_25;
-            cfg.pin_rst = GPIO_NUM_NC;
-            cfg.invert = true;
-            cfg.offset_rotation = 0;
-            cfg.panel_width  = 320;
-            cfg.panel_height = 240;
-            cfg.readable = true;
-            cfg.bus_shared = true;
-            p->config(cfg);
-            p->setRotation(0);
-          }
-          p->bus(bus_spi);
-          _panel_last.reset(p);
-          _set_backlight(new Light_M5ToughC5());
-
-          {
-            auto t = new lgfx::Touch_CHSC6540();
-            _touch_last.reset(t);
-            auto cfg = t->config();
-            cfg.pin_int  = GPIO_NUM_NC;
-            cfg.pin_sda  = toughc5_i2c_sda;
-            cfg.pin_scl  = toughc5_i2c_scl;
-            cfg.i2c_addr = 0x2E;
-            cfg.i2c_port = i2c_port;
-            cfg.freq = 400000;
-            cfg.x_min = 0;
-            cfg.x_max = 319;
-            cfg.y_min = 0;
-            cfg.y_max = 239;
-            cfg.bus_shared = false;
-            t->config(cfg);
-            p->touch(t);
-          }
-
-          goto init_clear;
-        }
-        bus_spi->release();
-
-        // 不成立: 確定前に書いた最小限のレジスタを元値へ復元する
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x03, ioe1_03.value(), 0, m5ioe1_i2c_freq);
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x13, ioe1_13.value(), 0, m5ioe1_i2c_freq);
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5ioe1_i2c_addr, 0x05, ioe1_05.value(), 0, m5ioe1_i2c_freq);
-        lgfx::i2c::writeRegister8(probe_i2c_port, m5pm1_i2c_addr,  0x06, pm1_06.value(),  0, m5pm1_i2c_freq);
-        }
+      if (try_setup_detected(board_detect::m5::esp32c5_detectors,
+                             board, use_reset, false, &board,
+                             [this](board_detect::m5::display_parts_t& parts)
+                             {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_TOUGHC5_SETUP)
+                               (void)parts;
+                               return false;
+#else
+                               return _adopt_detected_parts(parts.bus, parts.panel,
+                                                            parts.light, parts.touch);
+#endif
+                             }))
+      {
+        goto init_clear;
       }
-      // ここへ来るのはボード不成立の場合のみ。デバイスへ書いた分は復元済みで、
-      // ソフトウェア I2C と ESP 側のピン状態を返す
-      probe.release();
-      for (auto &bup : backup_pins) { bup.restore(); }
+
     }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C61)
