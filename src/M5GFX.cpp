@@ -987,11 +987,6 @@ namespace m5gfx
     {
       transaction.buses().opened_i2c(adopted_i2c_port);
     }
-    if ((result.prepared & board_detect::panel_dirty) && !allow_reset)
-    {
-      ESP_LOGD(LIBRARY_NAME,
-               "[Autodetect] panel probe changed registers while reset was disabled");
-    }
     board_detect::m5::display_parts_t parts;
     const auto construct_result = board_detect::m5::setup_detected_board(result, &parts);
     if (construct_result == board_detect::m5::construct_status_t::failed)
