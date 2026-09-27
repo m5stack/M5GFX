@@ -81,6 +81,37 @@
           && camera == specs::cores3::i2c_camera::id_value;
     }
 
+    bool refine_panel(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      const auto& display = desc_cores3.display;
+      probe_ctx_t probe;
+      static_cast<prepare_ctx_t&>(probe) = ctx;
+      // The LCD bus is 3-wire: read data returns on MOSI, not on the D/C pin.
+      const auto panel_id = soft_spi_read32(
+        probe, display.sclk, display.mosi, display.mosi, display.dc, display.cs,
+        0x04, 1, 1, true);
+      if ((panel_id & specs::cores3::probe_ili9342c::mask)
+          != specs::cores3::probe_ili9342c::values[0])
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] CoreS3 panel ID mismatch: 0x%08x",
+                 static_cast<unsigned>(panel_id));
+      }
+      soft_spi_t bus(display.sclk, display.mosi, display.mosi, display.dc);
+      bus.init();
+      std::uint32_t keys[4] = {};
+      const auto variant = detail::identify_panel_variant(bus, display.cs, keys, 1);
+      detail::log_panel_variant(variant, keys);
+      if (variant == detail::panel_variant_t::e)
+      {
+        result.option |= generated_options::cores3::lcd_e;
+      }
+      const std::int8_t signals[] = {
+        display.dc, display.sclk, display.mosi, display.miso
+      };
+      ctx.transaction->restore_start(signals);
+      return true;
+    }
+
     bool refine(board_result_t& result, const prepare_ctx_t& ctx)
     {
       const bool capacitance_said_se = result.desc == &desc_cores3se;
@@ -106,7 +137,7 @@
           if (capacitance_said_se || release_was_unavailable)
           {
             if (release_was_unavailable) { result.assign(&desc_cores3se); }
-            return true;
+            return refine_panel(result, ctx);
           }
           ESP_LOGW("M5GFX", "[Autodetect] CoreS3 capacitance indicated camera family, but camera ID was unavailable");
         }
@@ -127,7 +158,7 @@
 #endif
       result.assign(has_ioe && firmware >= specs::stackchan::i2c_stackchan_ioe::firmware_min
                   ? &desc_stackchan : &desc_cores3);
-      return true;
+      return refine_panel(result, ctx);
     }
   }
 

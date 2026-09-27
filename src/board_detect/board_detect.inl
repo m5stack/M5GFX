@@ -901,6 +901,7 @@ namespace board_detect
   {
     if (pin_dc_ >= 0) { lgfx::gpio_hi(pin_dc_); }
     if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::input); }
+    if (pin_miso_ == pin_dc_) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::input); }
     for (std::uint_fast8_t i = 0; i < dummy_bits; ++i) { clock(); }
   }
 
@@ -926,6 +927,7 @@ namespace board_detect
   void soft_spi_t::endRead()
   {
     if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output); }
+    if (pin_miso_ == pin_dc_) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
   }
 
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,

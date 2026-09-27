@@ -382,15 +382,20 @@ namespace generated_options {
 namespace cores3 {
   constexpr std::uint32_t vbus_5v = 1u << 0;
   constexpr std::uint32_t internal_camera_confirmed = 1u << 1;
-  static const char* const names[] = { "vbus_5v", "internal_camera_confirmed" };
+  constexpr std::uint32_t lcd_e = 1u << 2;
+  static const char* const names[] = { "vbus_5v", "internal_camera_confirmed", "lcd_e" };
 } // namespace cores3
 namespace cores3se {
   constexpr std::uint32_t vbus_5v = 1u << 0;
-  static const char* const names[] = { "vbus_5v" };
+  constexpr std::uint32_t reserved = 1u << 1;
+  constexpr std::uint32_t lcd_e = 1u << 2;
+  static const char* const names[] = { "vbus_5v", "reserved", "lcd_e" };
 } // namespace cores3se
 namespace stackchan {
   constexpr std::uint32_t vbus_5v = 1u << 0;
-  static const char* const names[] = { "vbus_5v" };
+  constexpr std::uint32_t reserved = 1u << 1;
+  constexpr std::uint32_t lcd_e = 1u << 2;
+  static const char* const names[] = { "vbus_5v", "reserved", "lcd_e" };
 } // namespace stackchan
 namespace atoms3 {
   constexpr std::uint32_t gc9107 = 1u << 0;

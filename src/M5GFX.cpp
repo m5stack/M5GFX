@@ -736,52 +736,7 @@ namespace m5gfx
 
 #endif
 
-  __attribute__ ((unused))
-  static void _pin_level(std::int_fast16_t pin, bool level)
-  {
-    lgfx::pinMode(pin, lgfx::pin_mode_t::output);
-    if (level) lgfx::gpio_hi(pin);
-    else       lgfx::gpio_lo(pin);
-  }
-
-  __attribute__ ((unused))
-  static std::uint32_t _read_panel_id(lgfx::Bus_SPI* bus, std::int32_t pin_cs, std::uint32_t cmd = 0x04, std::uint8_t dummy_read_bit = 1) // 0x04 = RDDID command
-  {
-    bus->beginTransaction();
-    _pin_level(pin_cs, true);
-    bus->writeCommand(0, 8);
-    bus->wait();
-    _pin_level(pin_cs, false);
-    bus->writeCommand(cmd, 8);
-    bus->beginRead(dummy_read_bit);
-    std::uint32_t res = bus->readData(32);
-    bus->endTransaction();
-    _pin_level(pin_cs, true);
-
-    ESP_LOGD(LIBRARY_NAME, "[Autodetect] read cmd:%02x = %08x", (int)cmd, (int)res);
-    return res;
-  }
-
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C61)
-  /// Tell an ILI9342E from an ILI9342C. Two of the E's level-2 registers are written and read
-  /// back through D9h (Get External Register for SPI):
-  ///  - DDh (Set EXTC, W/R on the E) = 01h. On the C the command is undefined (a NOP).
-  ///  - CBh (Power Control 6 on the E) = 1Ch, the value the E init list writes anyway. On the
-  ///    C the command is undefined as well, so nothing is stored that could be read back.
-  /// The E reads both values back; the C returned constants (00h / 0Fh / 1Fh / 3Fh) on every
-  /// unit measured. Only values the probe wrote itself are compared, and D9h is cleared first,
-  /// so the answer does not depend on what a previous firmware left in the panel (the CoreS3
-  /// does not reset its LCD at boot). A try that matches neither key set is inconclusive and
-  /// is repeated (_identify_ili9342); the caller falls back to the C when it stays so.
-  /// When the E keys do not match, the C is confirmed by its own datasheet-defined identity:
-  /// with its EXTC key sent, D3h (Read ID4) gives 93h 42h. That step is skipped on an E so
-  /// that no C command reaches an E. The C datasheet does not define what a C returns for the
-  /// E keys, so the "not E" side rests on measurement; the ID4 check exists to make the C
-  /// side positive. D9h is returned to 00h afterwards: while it still holds an index the panel
-  /// misreads the parameters of the following writes.
-  /// The reads go through a panel object (not yet initialized) so that the board's CS / D-C
-  /// handling applies; as it is not initialized, each transaction is closed with a NOP, which
-  /// both panels ignore. The caller then creates the panel of the detected type.
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3)
   /// The ILI9342E needs about 1 us after RAMRD before the first pixel is valid. At the 16 MHz
   /// read clock used here the eight dummy clocks are not enough and it returns one stale pixel
   /// (24 bits) first, so that pixel is skipped as well; at 8 MHz and below the eight clocks
@@ -793,81 +748,7 @@ namespace m5gfx
     p->config(cfg);
   }
 
-  enum class ili9342_variant_t : std::uint8_t { unknown, c, e };
 
-  /// One try of the identity keys. Silent, so that the caller can repeat it while the panel
-  /// is not answering (see _identify_ili9342). keys[] receives the raw read-backs for the log.
-  static ili9342_variant_t _probe_ili9342_variant(lgfx::Panel_LCD* p, std::uint32_t keys[4], bool try_c_key = true)
-  {
-    auto write8 = [&](std::uint8_t cmd, std::uint8_t data)
-    {
-      p->startWrite();
-      p->writeCommand(cmd, 1);
-      p->writeData(data, 1);
-      p->endWrite();
-    };
-    // One dummy bit shifts the byte left by one; normalise to the datasheet value.
-    std::uint8_t dummy_bits = p->config().dummy_read_bits;
-    auto read_param = [&](std::uint8_t cmd, std::uint8_t index) -> std::uint32_t
-    {
-      write8(0xD9, 0x10 | index);
-      std::uint32_t v = p->readCommand(cmd, 0, 1) & 0xFF;
-      return (dummy_bits == 1) ? ((v >> 1) & 0x7F) : v;
-    };
-    write8(0xD9, 0x00);   // a leftover index would make the panel misread the parameters below
-                          // (D9h needs EXTC on the E, and a firmware that left an index had it on)
-    write8(0xDD, 0x01);
-    write8(0xCB, 0x1C);
-    keys[0] = read_param(0xDD, 1);
-    keys[1] = read_param(0xCB, 1);
-    write8(0xD9, 0x00);   // the last read left an index behind
-    if (keys[0] == 0x01 && keys[1] == 0x1C) { return ili9342_variant_t::e; }
-    if (!try_c_key) { return ili9342_variant_t::unknown; }   // a known E is only waited for; no C command reaches it
-    // Not an E: confirm the C by its own Read ID4 (D3h = 00h 93h 42h), reachable once its EXTC key is sent.
-    p->startWrite();
-    p->writeCommand(0xC8, 1);
-    p->writeData(0xFF, 1);
-    p->writeData(0x93, 1);
-    p->writeData(0x42, 1);
-    p->endWrite();
-    keys[2] = read_param(0xD3, 2);
-    keys[3] = read_param(0xD3, 3);
-    write8(0xD9, 0x00);
-    // the normalisation keeps 7 bits, so 93h compares as 13h
-    return (keys[2] == (0x93 & 0x7F) && keys[3] == 0x42) ? ili9342_variant_t::c : ili9342_variant_t::unknown;
-  }
-
-  /// Identify the panel, repeating the probe every millisecond for up to poll_ms while neither
-  /// key set answers. A panel that is reloading its registers after a reset (see the Core2 path)
-  /// gives constants for a few milliseconds; a C answers at once.
-  __attribute__ ((unused))
-  static ili9342_variant_t _identify_ili9342(lgfx::Panel_LCD* p, std::uint32_t keys[4], std::uint32_t poll_ms, bool try_c_key = true)
-  {
-    auto v = _probe_ili9342_variant(p, keys, try_c_key);
-    for (std::uint32_t waited = 0; v == ili9342_variant_t::unknown && waited < poll_ms; ++waited)
-    {
-      lgfx::delay(1);
-      v = _probe_ili9342_variant(p, keys, try_c_key);
-    }
-    return v;
-  }
-
-  __attribute__ ((unused))
-  static void _log_ili9342_variant(ili9342_variant_t v, const std::uint32_t keys[4])
-  {
-    switch (v)
-    {
-    case ili9342_variant_t::e:
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x -> ILI9342E", (int)keys[0], (int)keys[1]);
-      break;
-    case ili9342_variant_t::c:
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> ILI9342C", (int)keys[0], (int)keys[1], (int)keys[2], (int)keys[3]);
-      break;
-    default:
-      ESP_LOGW(LIBRARY_NAME, "[Autodetect] ILI9342 read-back DDh:%02x CBh:%02x ID4:%02x%02x -> neither key answered, ILI9342C assumed", (int)keys[0], (int)keys[1], (int)keys[2], (int)keys[3]);
-      break;
-    }
-  }
 #endif
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)

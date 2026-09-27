@@ -1221,7 +1221,8 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.match(esp32c6Source,
     /gpio_reset\(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped\)/);
   assert.match(esp32c6SetupSource,
-    /_read_panel_id[\s\S]*?panel ID mismatch[\s\S]*?make_panel<lgfx::Panel_ST7789>/);
+    /make_spi_bus\(bus_nesson1\)[\s\S]*?make_panel<lgfx::Panel_ST7789>/);
+  assert.doesNotMatch(esp32c6SetupSource, /_read_panel_id/);
   assert.match(esp32c6SetupSource, /with_bus_shared\(true\)/);
   assert.match(esp32c6SetupSource,
     /backlight_i2c::i2c_addr[\s\S]*?backlight_i2c::i2c_freq/);
@@ -2524,7 +2525,12 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   assert.match(opsSource, /cores3_vbus_off_power_on\[] = \{[\s\S]*?cores3_vbus_5v_power_on\[] = \{/);
   const coreSetup = await fs.readFile(
     path.join(root, "../../src/board_detect/m5/esp32s3/cores3_setup.inl"), "utf8");
-  assert.match(coreSetup, /cores3_legacy_panel_id_freq = 8000000[\s\S]*?make_spi_bus\(bus_cores3_panel_id\)[\s\S]*?_read_panel_id[\s\S]*?freq_write = bus_cores3\.freq_write[\s\S]*?freq_read = bus_cores3\.freq_read[\s\S]*?_identify_ili9342/);
+  assert.match(coreSource, /refine_panel[\s\S]*?soft_spi_read32[\s\S]*?identify_panel_variant[\s\S]*?cores3::lcd_e/);
+  assert.match(coreSetup, /make_spi_bus\(bus_cores3\)[\s\S]*?result\.option & generated_options::cores3::lcd_e/);
+  const detectorSource = await fs.readFile(
+    path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
+  assert.match(detectorSource, /beginRead[\s\S]*?pin_miso_ == pin_dc_[\s\S]*?pin_mode_t::input/);
+  assert.match(detectorSource, /endRead[\s\S]*?pin_miso_ == pin_dc_[\s\S]*?pin_mode_t::output/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /assigned before prepare\/refine[\s\S]*?representative family ID[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
   assert.match(main, /case 0: detectors = board_detect::m5::esp32s3_detectors_qfn56;[\s\S]*?case 1: detectors = board_detect::m5::esp32s3_detectors_lga56;[\s\S]*?try_setup_detected\(detectors, board/);

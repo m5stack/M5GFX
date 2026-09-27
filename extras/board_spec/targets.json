@@ -58,18 +58,18 @@
         "chip": "esp32s3", "legacy_board_id": 10, "cpp_namespace": "cores3", "board_enum": "board_M5StackCoreS3", "desc_name": "desc_cores3",
         "wiring_fields": ["display", "shared_sd", "i2c", "hold", "touch", "camera"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander", "camera"],
-        "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "internal_camera_confirmed", "bit": 1 }],
+        "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "internal_camera_confirmed", "bit": 1 }, { "name": "lcd_e", "bit": 2 }],
         "release_probe": { "pins": ["dev:camera.href", "dev:camera.d0", "dev:camera.d1", "dev:camera.d2", "dev:camera.d3", "dev:camera.vsync", "dev:camera.d7", "dev:camera.d6"], "reads": 256, "samples": 9, "settle_us": 10, "short_max_ns": 260, "long_min_ns": 330 }
       },
       "m5stack_cores3se": {
         "chip": "esp32s3", "legacy_board_id": 17, "cpp_namespace": "cores3se", "board_enum": "board_M5StackCoreS3SE", "desc_name": "desc_cores3se",
         "wiring_fields": ["display", "shared_sd", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
-        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander"], "options": [{ "name": "vbus_5v", "bit": 0 }]
+        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander"], "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "reserved", "bit": 1 }, { "name": "lcd_e", "bit": 2 }]
       },
       "m5stack_stackchan": {
         "chip": "esp32s3", "legacy_board_id": 27, "cpp_namespace": "stackchan", "board_enum": "board_M5StackChan", "desc_name": "desc_stackchan",
         "wiring_fields": ["display", "shared_sd", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
-        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander", "camera", "stackchan_ioe"], "options": [{ "name": "vbus_5v", "bit": 0 }]
+        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander", "camera", "stackchan_ioe"], "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "reserved", "bit": 1 }, { "name": "lcd_e", "bit": 2 }]
       },
       "m5atoms3": {
         "chip": "esp32s3", "legacy_board_id": 11, "cpp_namespace": "atoms3", "board_enum": "board_M5AtomS3", "desc_name": "desc_atoms3",

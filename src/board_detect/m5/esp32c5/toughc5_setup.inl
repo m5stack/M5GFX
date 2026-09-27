@@ -11,8 +11,6 @@ namespace m5
                  wiring::toughc5::display_miso, wiring::toughc5::display_dc)
       .with_three_wire(specs::toughc5::bus_three_wire)
       .with_dma_channel(SPI_DMA_CH_AUTO);
-  static constexpr spi_bus_desc_t bus_toughc5_panel_id =
-    bus_toughc5.with_freq(8000000, 8000000);
   static constexpr panel_desc_t panel_toughc5 =
     panel().with_size(specs::toughc5::panel_ili9342c::width,
                       specs::toughc5::panel_ili9342c::height)
@@ -31,27 +29,7 @@ namespace m5
   construct_status_t construct_toughc5(const board_result_t&, display_parts_t* parts)
   {
     display_parts_owner_t out;
-    out.bus.reset(make_spi_bus(bus_toughc5_panel_id));
-    auto spi = static_cast<lgfx::Bus_SPI*>(out.bus.get());
-    if (!spi->init()) { return construct_status_t::failed; }
-    auto panel_id = _read_panel_id(spi, wiring::toughc5::display_cs);
-    if ((panel_id & specs::toughc5::probe_ili9342c::mask)
-        != specs::toughc5::probe_ili9342c::values[0])
-    {
-      lgfx::delay(2);
-      panel_id = _read_panel_id(spi, wiring::toughc5::display_cs);
-      if ((panel_id & specs::toughc5::probe_ili9342c::mask)
-          != specs::toughc5::probe_ili9342c::values[0])
-      {
-        ESP_LOGW(LIBRARY_NAME, "[Autodetect] ToughC5 panel ID mismatch: 0x%08x",
-                 static_cast<unsigned>(panel_id));
-      }
-    }
-    spi->release();
-    auto cfg = spi->config();
-    cfg.freq_write = bus_toughc5.freq_write;
-    cfg.freq_read = bus_toughc5.freq_read;
-    spi->config(cfg);
+    out.bus.reset(make_spi_bus(bus_toughc5));
     out.panel.reset(make_panel<lgfx::Panel_ILI9342>(panel_toughc5, out.bus.get()));
     out.light.reset(make_default_part<Light_M5ToughC5>(
       toughc5_detail::i2c_port, pmic_ops::ioe1_i2c_addr, toughc5_detail::i2c_freq));
