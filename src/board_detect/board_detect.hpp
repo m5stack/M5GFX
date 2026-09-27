@@ -46,7 +46,6 @@ namespace board_detect
     prepared_power  = 1u << 0,
     prepared_reset  = 1u << 1,
     prepared_sd_spi = 1u << 2,
-    panel_dirty     = 1u << 3,
     // The GPIO reset line has been driven inactive, but a reset pulse may not
     // have been allowed. Keep this distinct from prepared_reset so a later
     // reset-enabled prepare can still pulse the panel reset.

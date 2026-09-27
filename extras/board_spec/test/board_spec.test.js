@@ -1221,7 +1221,8 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.match(esp32c6Source,
     /gpio_reset\(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped\)/);
   assert.match(esp32c6SetupSource,
-    /_read_panel_id[\s\S]*?panel ID mismatch[\s\S]*?make_panel<lgfx::Panel_ST7789>/);
+    /make_spi_bus\(bus_nesson1\)[\s\S]*?make_panel<lgfx::Panel_ST7789>/);
+  assert.doesNotMatch(esp32c6SetupSource, /_read_panel_id/);
   assert.match(esp32c6SetupSource, /with_bus_shared\(true\)/);
   assert.match(esp32c6SetupSource,
     /backlight_i2c::i2c_addr[\s\S]*?backlight_i2c::i2c_freq/);
@@ -2322,7 +2323,7 @@ test("CoreP4X generated DSI setup preserves the legacy fields", async () => {
   assert.match(main, /pkg_ver == 0[\s\S]*?try_setup_detected\(board_detect::m5::esp32p4_detectors/);
 });
 
-test("Tab5 generated DSI setup preserves all three legacy panels", () => {
+test("Tab5 touch identities select the three DSI panels", () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_tab5");
   const resolved = resolveCatalog(source).map((item) => item.board);
   const specs = emitM5GFXSpecs(source, resolved, parts, m5gfxBoardMapping(target, source.id));
@@ -2332,6 +2333,9 @@ test("Tab5 generated DSI setup preserves all three legacy panels", () => {
   // requires 900 Mbps after runtime touch-FW identification.
   assert.match(tab5SetupSource, /tab5_st7121_lane_mbps = 900/);
   assert.match(tab5SetupSource, /hit_st7121 \? tab5_st7121_lane_mbps : specs::tab5::bus_lane_mbps/);
+  assert.match(tab5SetupSource, /fw_version == 1[\s\S]*?hit_st7121 = true[\s\S]*?fw_version == 3[\s\S]*?hit_st7123 = true/);
+  assert.match(tab5SetupSource, /if \(!read_st_touch_fw && !found_gt911\)[\s\S]*?delay\(80\)[\s\S]*?i < 3 && !hit_ili9881[\s\S]*?id\[0\] == 0x98 && id\[1\] == 0x81/);
+  assert.match(tab5SetupSource, /if \(found_gt911 \|\| hit_ili9881\)[\s\S]*?Panel_ILI9881C/);
   assert.equal(specs.panels.ili9881c.dpi_freq_mhz, 80);
   assert.equal(specs.panels.st7121.dpi_freq_mhz, 70);
   assert.equal(specs.panels.st7123.vsync_back_porch + specs.panels.st7123.vsync_pulse_width, 10);
@@ -2521,7 +2525,12 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   assert.match(opsSource, /cores3_vbus_off_power_on\[] = \{[\s\S]*?cores3_vbus_5v_power_on\[] = \{/);
   const coreSetup = await fs.readFile(
     path.join(root, "../../src/board_detect/m5/esp32s3/cores3_setup.inl"), "utf8");
-  assert.match(coreSetup, /cores3_legacy_panel_id_freq = 8000000[\s\S]*?make_spi_bus\(bus_cores3_panel_id\)[\s\S]*?_read_panel_id[\s\S]*?freq_write = bus_cores3\.freq_write[\s\S]*?freq_read = bus_cores3\.freq_read[\s\S]*?_identify_ili9342/);
+  assert.match(coreSource, /refine_panel[\s\S]*?soft_spi_read32[\s\S]*?identify_panel_variant[\s\S]*?cores3::lcd_e/);
+  assert.match(coreSetup, /make_spi_bus\(bus_cores3\)[\s\S]*?result\.option & generated_options::cores3::lcd_e/);
+  const detectorSource = await fs.readFile(
+    path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
+  assert.match(detectorSource, /beginRead[\s\S]*?pin_miso_ == pin_dc_[\s\S]*?pin_mode_t::input/);
+  assert.match(detectorSource, /endRead[\s\S]*?pin_miso_ == pin_dc_[\s\S]*?pin_mode_t::output/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /assigned before prepare\/refine[\s\S]*?representative family ID[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
   assert.match(main, /case 0: detectors = board_detect::m5::esp32s3_detectors_qfn56;[\s\S]*?case 1: detectors = board_detect::m5::esp32s3_detectors_lga56;[\s\S]*?try_setup_detected\(detectors, board/);

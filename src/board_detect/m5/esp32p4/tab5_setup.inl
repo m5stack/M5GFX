@@ -131,31 +131,28 @@ namespace m5
     if (!bus_dsi->init()) { return construct_status_t::no_display; }
 
     bool hit_ili9881 = false;
-    lgfx::delay(80);
-    for (int i = 0; !hit_st7121 && !hit_st7123 && !hit_ili9881 && i < 3; ++i)
+    if (!read_st_touch_fw && !found_gt911)
     {
-      std::uint8_t id[3] = {};
-      bus_dsi->readParams(0xF4, id, 2);
-      ESP_LOGD(LIBRARY_NAME, "ST ID %02x %02x", id[0], id[1]);
-      if (id[0] == 0x71 && id[1] == 0x23)
+      // A temporarily silent touch must not hide an answering ILI9881C.
+      lgfx::delay(80);
+      for (int i = 0; i < 3 && !hit_ili9881; ++i)
       {
-        ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST DSI ID matched 71 23");
-      }
-      static constexpr std::uint8_t params_page1[] = { 0x98, 0x81, 0x01 };
-      bus_dsi->writeParams(0xFF, params_page1, 3);
-      bus_dsi->readParams(0x00, &id[0], 1);
-      bus_dsi->readParams(0x01, &id[1], 1);
-      bus_dsi->readParams(0x02, &id[2], 1);
-      ESP_LOGD(LIBRARY_NAME, "ILI ID %02x %02x %02x", id[0], id[1], id[2]);
-      if (id[0] == 0x98 && id[1] == 0x81)
-      {
-        static constexpr std::uint8_t params_page0[] = { 0x98, 0x81, 0x00 };
-        bus_dsi->writeParams(0xFF, params_page0, 3);
-        hit_ili9881 = true;
+        std::uint8_t id[3] = {};
+        static constexpr std::uint8_t params_page1[] = { 0x98, 0x81, 0x01 };
+        bus_dsi->writeParams(0xFF, params_page1, 3);
+        bus_dsi->readParams(0x00, &id[0], 1);
+        bus_dsi->readParams(0x01, &id[1], 1);
+        bus_dsi->readParams(0x02, &id[2], 1);
+        ESP_LOGD(LIBRARY_NAME, "ILI ID %02x %02x %02x", id[0], id[1], id[2]);
+        if (id[0] == 0x98 && id[1] == 0x81)
+        {
+          static constexpr std::uint8_t params_page0[] = { 0x98, 0x81, 0x00 };
+          bus_dsi->writeParams(0xFF, params_page0, 3);
+          hit_ili9881 = true;
+        }
       }
     }
-
-    if (hit_ili9881)
+    if (found_gt911 || hit_ili9881)
     {
       out.touch.reset(make_i2c_touch<lgfx::Touch_GT911>(touch_tab5));
       out.panel.reset(make_dsi_panel<lgfx::Panel_ILI9881C>(panel_tab5_ili9881c, bus_dsi));
