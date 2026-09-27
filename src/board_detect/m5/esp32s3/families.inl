@@ -371,10 +371,17 @@ namespace m5
         // PM1 is identified by both bytes at register 0, not an ACK alone.
         const std::uint8_t reg = specs::sticks3::pmic::id_reg;
         std::uint8_t pm1_id[2] = {};
-        if (!lgfx::i2c::transactionWriteRead(
-              i2c.port, specs::sticks3::pmic::i2c_addr, &reg, 1,
-              pm1_id, sizeof(pm1_id), specs::sticks3::pmic::i2c_freq).has_value()
-         || (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0])
+        const auto started = lgfx::millis();
+        bool read_ok;
+        do
+        {
+          read_ok = lgfx::i2c::transactionWriteRead(
+            i2c.port, specs::sticks3::pmic::i2c_addr, &reg, 1,
+            pm1_id, sizeof(pm1_id), specs::sticks3::pmic::i2c_freq).has_value();
+          if (read_ok) { break; }
+          lgfx::delay(1);
+        } while (lgfx::millis() - started < 200);
+        if (!read_ok || (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0])
               != pmic_ops::pm1_device_id)
         { continue; }
         result->assign(*desc);
@@ -387,6 +394,58 @@ namespace m5
     static const board_def_t* const members_[];
     static const board_desc_t* const descriptions_[];
   };
+
+  namespace detail
+  {
+    bool refine_papermono_touch(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+                                       desc_papermono.internal_i2c);
+      const auto touch_answers = [&](std::uint8_t addr, std::uint32_t freq)
+      {
+        const auto started = lgfx::millis();
+        do
+        {
+          if (lgfx::i2c::beginTransaction(i2c.port, addr, freq, false).has_value()
+           && lgfx::i2c::endTransaction(i2c.port).has_value())
+          { return true; }
+          lgfx::delay(1);
+        } while (lgfx::millis() - started < 200);
+        return false;
+      };
+      bool stopwatch_touch = false;
+      if (i2c.opened)
+      {
+        if (touch_answers(specs::papermono::touch::i2c_addr,
+                          specs::papermono::touch::i2c_freq)) { return true; }
+        stopwatch_touch = touch_answers(specs::stopwatch::touch::i2c_addr,
+                                        specs::stopwatch::touch::i2c_freq);
+        if (stopwatch_touch
+         && lgfx::i2c::beginTransaction(i2c.port, 0x50, 100000, false).has_value())
+        {
+          lgfx::i2c::endTransaction(i2c.port);
+          return false;
+        }
+      }
+      if (!stopwatch_touch && !ctx.final_attempt) { return false; }
+      if (stopwatch_touch || ctx.hint == desc_stopwatch.def.id)
+      {
+        // The provisional PaperMono sequence has run. Apply StopWatch power
+        // before selecting it, whether touch replied or the hint is used.
+        board_result_t stopwatch;
+        stopwatch.assign(&desc_stopwatch);
+        if (!i2c.opened
+         || !startup_detail::prepare_power(desc_stopwatch, stopwatch, i2c.port, true))
+        { return false; }
+        result.assign(&desc_stopwatch);
+      }
+      if (stopwatch_touch) { return true; }
+      result.transient_fallback = true;
+      ESP_LOGW("board_detect_m5", "StopWatch/PaperMono touch unanswered; using %s for this boot",
+               result.def->name);
+      return true;
+    }
+  }
 
   class pm1_family_detector_t final : public board_detector_t
   {
@@ -417,16 +476,20 @@ namespace m5
       {
         return false;
       }
-      // Each member must answer at its own touch address; two misses (or two
-      // answers) do not identify either board.
+      // StopWatch can answer before power preparation. PaperMono's touch is
+      // held in reset until its PM1 power sequence, so check it in refine.
       const bool stopwatch_touch = probe_i2c_ack(
         ctx, wiring::stopwatch::internal_i2c_sda,
         wiring::stopwatch::internal_i2c_scl, specs::stopwatch::touch::i2c_addr);
-      const bool papermono_touch = probe_i2c_ack(
-        ctx, wiring::papermono::internal_i2c_sda,
-        wiring::papermono::internal_i2c_scl, specs::papermono::touch::i2c_addr);
-      if (stopwatch_touch == papermono_touch) { return false; }
-      result->assign(stopwatch_touch ? &desc_stopwatch : &desc_papermono);
+      if (stopwatch_touch)
+      {
+        if (probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
+                          wiring::stopwatch::internal_i2c_scl, 0x50)) { return false; }
+        result->assign(&desc_stopwatch);
+        return true;
+      }
+      result->assign(&desc_papermono);
+      result->refine = detail::refine_papermono_touch;
       return true;
     }
 
@@ -608,31 +671,45 @@ namespace m5
         wiring::cardputer_adv::internal_i2c_scl);
 
       const board_desc_t* chosen = &desc_cardputer;
+      bool variant_unanswered = false;
       if ((pulls.pulldown_high & vameter_mask) == vameter_mask)
       {
         // INA226 manufacturer ID register FEh is 5449h (TI). The second
         // VAMeter device must also answer; a probe miss cannot prove Cardputer.
         std::uint8_t manufacturer[2] = {};
-        if (!probe_i2c_read(ctx,
+        variant_unanswered = !probe_i2c_read(ctx,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[0],
                             0xFE, manufacturer, sizeof(manufacturer), 100000, 0, false)
-         || manufacturer[0] != 0x54 || manufacturer[1] != 0x49
-         || !probe_i2c_ack(ctx,
+                          || manufacturer[0] != 0x54 || manufacturer[1] != 0x49
+                          || !probe_i2c_ack(ctx,
                            wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
                            wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]))
-        { return false; }
-        chosen = &desc_vameter;
+                           wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]);
+        if (!variant_unanswered) { chosen = &desc_vameter; }
       }
       else if ((pulls.pulldown_high & adv_mask) == adv_mask)
       {
         // The ADV keyboard scanner is a TCA8418 at its fixed 34h address.
-        if (!probe_i2c_ack(ctx, wiring::cardputer_adv::internal_i2c_sda,
-                           wiring::cardputer_adv::internal_i2c_scl, 0x34))
-        { return false; }
-        chosen = &desc_cardputer_adv;
+        variant_unanswered = !probe_i2c_ack(
+          ctx, wiring::cardputer_adv::internal_i2c_sda,
+          wiring::cardputer_adv::internal_i2c_scl, 0x34);
+        if (!variant_unanswered) { chosen = &desc_cardputer_adv; }
+      }
+      if (variant_unanswered)
+      {
+        if (!ctx.final_attempt) { return false; }
+        // A same-family NVS hint is a better last resort than the base model.
+        if (ctx.hint == desc_vameter.def.id
+         && (pulls.pulldown_high & vameter_mask) == vameter_mask)
+        { chosen = &desc_vameter; }
+        else if (ctx.hint == desc_cardputer_adv.def.id
+              && (pulls.pulldown_high & adv_mask) == adv_mask)
+        { chosen = &desc_cardputer_adv; }
+        result->transient_fallback = true;
+        ESP_LOGW("board_detect_m5", "Cardputer variant unanswered; using %s for this boot",
+                 chosen->def.name);
       }
       result->assign(chosen);
       return true;

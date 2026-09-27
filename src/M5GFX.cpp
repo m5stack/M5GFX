@@ -786,7 +786,8 @@ namespace m5gfx
                                  board_t hint, bool allow_reset, bool final_attempt,
                                  board_t* detected_board, SetupDetected setup,
                                  bool* detector_matched = nullptr,
-                                 board_t* setup_board = nullptr)
+                                 board_t* setup_board = nullptr,
+                                 bool* transient_fallback = nullptr)
   {
     if (detector_matched != nullptr) { *detector_matched = false; }
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4)
@@ -897,6 +898,8 @@ namespace m5gfx
     }
     transaction.commit();
     *detected_board = static_cast<board_t>(result.def->id);
+    if (transient_fallback != nullptr)
+    { *transient_fallback = result.transient_fallback; }
     const auto log = board_detect::m5::success_log(result);
     if (log.name != nullptr && log.name[0] != '\0')
     { ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s%s", log.name, log.annotation); }
@@ -1008,6 +1011,7 @@ namespace m5gfx
     { esp32_detectors = board_detect::m5::esp32_picov3_detectors; }
 #endif
 
+    bool transient_fallback = false;
     int retry = 4;
     do
     {
@@ -1029,7 +1033,7 @@ namespace m5gfx
 #endif
                                  return _adopt_detected_parts(parts.bus, parts.panel,
                                                               parts.light, parts.touch);
-                               }, &detector_matched, &setup_board))
+                               }, &detector_matched, &setup_board, &transient_fallback))
         {
           break;
         }
@@ -1043,7 +1047,7 @@ namespace m5gfx
 #if defined (CONFIG_IDF_TARGET) && !defined (CONFIG_IDF_TARGET_ESP32)
       if (retry == 1) use_reset = true;
 #endif
-      board = autodetect(use_reset, board);
+      board = autodetect(use_reset, board, retry == 0, &transient_fallback);
       //ESP_LOGD(LIBRARY_NAME,"autodetect board:%d", (int)board);
     } while (board_t::board_unknown == board && --retry >= 0);
     _board = board;
@@ -1057,7 +1061,7 @@ namespace m5gfx
 
 #endif
 
-    if (nvs_board != board) {
+    if (!transient_fallback && nvs_board != board) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
         ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", (int)board);
         nvs_set_u32(nvs_handle, NVS_KEY, board);
@@ -1093,7 +1097,8 @@ namespace m5gfx
     return true;
   }
 
-  board_t M5GFX::autodetect(bool use_reset, board_t board)
+  board_t M5GFX::autodetect(bool use_reset, board_t board,
+                            bool final_attempt, bool* transient_fallback)
   {
     panel(nullptr);
 
@@ -1111,7 +1116,7 @@ namespace m5gfx
       board_t setup_board = board_t::board_unknown;
       // A hint tries its family first, then the remaining families in package
       // order, within one GPIO transaction.
-      if (try_setup_detected(detectors, board, use_reset, false, &board,
+      if (try_setup_detected(detectors, board, use_reset, final_attempt, &board,
                              [this, &setup_board](board_detect::m5::display_parts_t& parts)
                              {
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_SETUP)
@@ -1143,7 +1148,7 @@ namespace m5gfx
 #endif
                                return _adopt_detected_parts(parts.bus, parts.panel,
                                                             parts.light, parts.touch);
-                             }, nullptr, &setup_board))
+                             }, nullptr, &setup_board, transient_fallback))
       {
         goto init_clear;
       }
@@ -1299,9 +1304,12 @@ init_clear:
     return LGFX_Device::init_impl(use_reset, use_clear);
   }
 
-  board_t M5GFX::autodetect(bool use_reset, board_t board)
+  board_t M5GFX::autodetect(bool use_reset, board_t board,
+                            bool final_attempt, bool* transient_fallback)
   {
     (void)use_reset;
+    (void)final_attempt;
+    (void)transient_fallback;
     auto p = new Panel_sdl();
     _panel_last.reset(p);
     auto pnl_cfg = p->config();

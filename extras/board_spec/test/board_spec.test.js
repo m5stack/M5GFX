@@ -563,7 +563,7 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
 
 test("ESP32 detector reset permission is promoted before the final retry", async () => {
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  const loop = /int retry = 4;([\s\S]*?)board = autodetect\(use_reset, board\);/.exec(main)?.[1];
+  const loop = /int retry = 4;([\s\S]*?)board = autodetect\(use_reset, board, retry == 0, &transient_fallback\);/.exec(main)?.[1];
   assert.ok(loop);
   const promotion = loop.indexOf("if (retry == 1) { use_reset = true; }");
   const detected = loop.indexOf("try_setup_detected(esp32_detectors");
@@ -1531,7 +1531,7 @@ test("confirmed boards survive post-detection power setup failures", async () =>
 
 test("embedded autodetect routes detected boards through descriptor setup", async () => {
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  const autodetect = /board_t M5GFX::autodetect\(bool use_reset, board_t board\)\n  \{([\s\S]*?)\n  \}\n\n#else/.exec(main)?.[1];
+  const autodetect = /board_t M5GFX::autodetect\(bool use_reset, board_t board,\s*bool final_attempt, bool\* transient_fallback\)\n  \{([\s\S]*?)\n  \}\n\n#else/.exec(main)?.[1];
   assert.ok(autodetect, "embedded autodetect implementation is present");
   assert.doesNotMatch(autodetect, /\bboard\s*=\s*board_t::board_(?!unknown\b)/);
 });

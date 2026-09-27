@@ -121,6 +121,8 @@ namespace m5
     static constexpr std::uint8_t core2_touch_address = 0x38;
     static constexpr std::uint8_t touch_probe_register = 0;
     static constexpr std::uint32_t tough_touch_i2c_frequency = 400000;
+    // FT6336U Tpon/Trsi is at least 300 ms (datasheet table 3-5).
+    static constexpr std::uint32_t touch_startup_poll_ms = 300;
     static constexpr std::uint8_t panel_id_command = 0x04;
     static constexpr std::uint32_t panel_id_mask = 0xFF;
     static constexpr std::uint32_t common_panel_id = 0xE3;
@@ -225,22 +227,43 @@ namespace m5
         ctx.transaction->restore_start(signals);
         return false;
       }
-      const bool tough = lgfx::i2c::readRegister8(
-        i2c.port, tough_touch_address, touch_probe_register,
-        tough_touch_i2c_frequency).has_value();
+      bool tough = false;
+      bool core2 = false;
+      const auto touch_start = lgfx::millis();
+      do
+      {
+        tough = lgfx::i2c::readRegister8(
+          i2c.port, tough_touch_address, touch_probe_register,
+          tough_touch_i2c_frequency).has_value();
+        if (tough) { break; }
+        core2 = lgfx::i2c::readRegister8(
+          i2c.port, core2_touch_address, touch_probe_register,
+          tough_touch_i2c_frequency).has_value();
+        if (core2) { break; }
+        lgfx::delay(1);
+      } while (lgfx::millis() - touch_start < touch_startup_poll_ms);
       // Core2 requires its own touch response; a Station LCD miss on shared
       // AXP192 must not be saved as Core2 when neither touch answers.
-      if (!tough && !lgfx::i2c::readRegister8(
-            i2c.port, core2_touch_address, touch_probe_register,
-            tough_touch_i2c_frequency).has_value())
+      if (!tough && !core2)
       {
-        ctx.transaction->restore_start(signals);
-        return false;
+        // An AXP192 with no LCD or touch response may still be Station.
+        if (!ctx.final_attempt
+         || (variant == panel_variant_t::unknown
+          && !(result.option & generated_options::core2::new_pmic)))
+        {
+          ctx.transaction->restore_start(signals);
+          return false;
+        }
+        result.transient_fallback = true;
+        ESP_LOGW("board_detect_m5", "Core2/Tough touch unidentified; using %s for this boot",
+                 ctx.hint == desc_tough.def.id ? "Tough" : "Core2");
       }
       log_panel_variant(variant, keys);
-      result.assign(tough ? &desc_tough : &desc_core2);
+      result.assign(tough || (result.transient_fallback && ctx.hint == desc_tough.def.id)
+                      ? &desc_tough : &desc_core2);
       if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
-      if (tough) { result.option &= ~generated_options::core2::new_pmic; }
+      if (result.def->id == desc_tough.def.id)
+      { result.option &= ~generated_options::core2::new_pmic; }
       ctx.transaction->restore_start(signals);
       return true;
     }

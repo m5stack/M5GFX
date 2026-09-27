@@ -194,7 +194,8 @@ namespace m5gfx
     std::vector<DisplayState> _displayStateStack;
 
     bool init_impl(bool use_reset, bool use_clear) override;
-    board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown);
+    board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown,
+                       bool final_attempt = false, bool* transient_fallback = nullptr);
     bool _adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
                                lgfx::ILight* light, lgfx::ITouch* touch);
     void _set_backlight(lgfx::ILight* bl);
