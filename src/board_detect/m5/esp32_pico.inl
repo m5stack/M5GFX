@@ -120,9 +120,12 @@ public:
   bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
   {
     if (result == nullptr) { return false; }
-    // A failed Plus2 hint used to return unknown first. Only the caller's
-    // final retry may relax that negative evidence into the no-display model.
-    if (ctx.hint == id(lgfx::board_M5StickCPlus2) && !ctx.final_attempt)
+    // AtomPsram has no probe of its own yet; it is chosen only because the
+    // Plus2 panel did not answer. Without a stored AtomPsram hint, wait for
+    // the caller's final retry so one missed read does not store AtomPsram.
+    // With the hint, accept after a single Plus2 miss (Plus2 is still probed
+    // first), which is why this no-display board is recorded in NVS.
+    if (!ctx.final_attempt && ctx.hint != id(lgfx::board_M5AtomPsram))
     { return false; }
     result->assign(&desc_atompsram);
     return true;

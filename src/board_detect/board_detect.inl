@@ -1717,6 +1717,8 @@ namespace board_detect
     {
       if (result.prepared & prepared_power_failed)
       {
+        // The family member is still provisional: show it, but do not cache it.
+        result.transient_fallback = true;
         ESP_LOGW("board_detect",
                  "member refinement skipped after retained power_on failure; board=%u",
                  static_cast<unsigned>(result.def->id));

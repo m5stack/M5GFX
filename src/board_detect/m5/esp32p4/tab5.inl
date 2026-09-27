@@ -47,11 +47,13 @@ public:
     if (result == nullptr) { return false; }
     std::uint8_t value = 0;
     if (!probe_i2c_read(ctx, tab5_detail::sda, tab5_detail::scl,
-                        tab5_detail::pi4io1_addr, 0x01, &value, 1,
+                        tab5_detail::pi4io1_addr, pi4io_id_register, &value, 1,
                         tab5_detail::i2c_freq, 0)
+     || !is_pi4io(value)
      || !probe_i2c_read(ctx, tab5_detail::sda, tab5_detail::scl,
-                        tab5_detail::pi4io2_addr, 0x01, &value, 1,
-                        tab5_detail::i2c_freq, 0))
+                        tab5_detail::pi4io2_addr, pi4io_id_register, &value, 1,
+                        tab5_detail::i2c_freq, 0)
+     || !is_pi4io(value))
     {
       return false;
     }

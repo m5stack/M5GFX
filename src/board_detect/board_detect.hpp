@@ -79,6 +79,8 @@ namespace board_detect
     const board_def_t* def = &board_def_unknown;
     std::uint32_t option = 0;
     std::uint32_t prepared = 0;
+    // A final-attempt family default can show the display, but is not an NVS hint.
+    bool transient_fallback = false;
     detect_status_t status = detect_status_t::no_match;
     // Optional read-only member refinement after power preparation.
     refine_fn_t refine = nullptr;
@@ -90,6 +92,8 @@ namespace board_detect
   {
     // A retry must not override the caller's reset policy.
     bool allow_reset = true;
+    board_id_t hint = board_id_unknown;
+    bool final_attempt = false;
     int i2c_port_probe = -1;
     // Non-null while board-detection components are running.
     detection_transaction_t* transaction = nullptr;
@@ -501,10 +505,7 @@ namespace board_detect
     // that family is detector-specific: the S3 SPI-ID family probes only the
     // hinted member, while legacy families retain their established ordering.
     // A family containing only fallback definitions is never moved forward.
-    board_id_t hint = board_id_unknown;
-    // The caller's last retry may relax exclusions based only on negative
-    // evidence, retaining the legacy broad probe as a final safety net.
-    bool final_attempt = false;
+    // hint and final_attempt are inherited by prepare/refine.
     i2c_scan_cache_t i2c_cache;
     detector_workspace_t detector_workspace;
     bool conditional_pins_unavailable = false;
