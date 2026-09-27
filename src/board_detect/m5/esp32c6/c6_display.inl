@@ -9,6 +9,15 @@ namespace c6_display_detail
   constexpr std::uint64_t family_bus_bits = sda_bit | scl_bit;
   constexpr std::uint64_t signature_bit = std::uint64_t(1) << 18;
   constexpr std::uint64_t signature_mask = family_bus_bits | signature_bit;
+  // PI4IOE5V6408 datasheet, "Device ID and Control" register (01h):
+  // B7:B5 are the fixed manufacturer ID 101. Other bits are revision/control.
+  constexpr std::uint8_t pi4io_id_mask = 0xE0;
+  constexpr std::uint8_t pi4io_id_value = 0xA0;
+
+  constexpr bool is_pi4io(std::uint8_t value)
+  {
+    return (value & pi4io_id_mask) == pi4io_id_value;
+  }
 
   enum class candidate_t : std::uint8_t { none, unitc6l, nesson1 };
 
@@ -94,10 +103,12 @@ public:
                         specs::nesson1::i2c_pi4io2::i2c_addr,
                         specs::nesson1::i2c_pi4io2::id_reg,
                         &value, 1, c6_display_detail::pi4io_freq, 0)
+     || !c6_display_detail::is_pi4io(value)
      || !probe_i2c_read(ctx, c6_display_detail::sda, c6_display_detail::scl,
                         specs::nesson1::i2c_pi4io1::i2c_addr,
                         specs::nesson1::i2c_pi4io1::id_reg,
-                        &value, 1, c6_display_detail::pi4io_freq, 0))
+                        &value, 1, c6_display_detail::pi4io_freq, 0)
+     || !c6_display_detail::is_pi4io(value))
     { return false; }
     result->assign(&desc_nesson1);
     return true;

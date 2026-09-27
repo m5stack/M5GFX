@@ -5,6 +5,7 @@
     constexpr std::uint32_t vbus_5v = generated_options::cores3::vbus_5v;
     constexpr std::uint32_t internal_camera_confirmed =
       generated_options::cores3::internal_camera_confirmed;
+    constexpr std::uint32_t release_probe_unavailable = std::uint32_t(1) << 31;
     constexpr int sda = wiring::cores3::internal_i2c_sda;
     constexpr int scl = wiring::cores3::internal_i2c_scl;
     constexpr std::uint32_t i2c_freq = specs::cores3::pmic::i2c_freq;
@@ -88,6 +89,8 @@
     {
       const bool capacitance_said_se = result.desc == &desc_cores3se;
       const bool confirmed_before_power = result.option & internal_camera_confirmed;
+      const bool release_was_unavailable = result.option & release_probe_unavailable;
+      result.option &= ~release_probe_unavailable;
       bool has_camera = confirmed_before_power;
       if (!confirmed_before_power)
       {
@@ -103,7 +106,13 @@
 #endif
         if (!has_camera)
         {
-          if (capacitance_said_se) { return true; }
+          // Only an unavailable release probe falls back to the legacy
+          // camera-absence rule; a completed ambiguous probe still biases CoreS3.
+          if (capacitance_said_se || release_was_unavailable)
+          {
+            if (release_was_unavailable) { result.assign(&desc_cores3se); }
+            return true;
+          }
           ESP_LOGW("M5GFX", "[Autodetect] CoreS3 capacitance indicated camera family, but camera ID was unavailable");
         }
         else if (capacitance_said_se)
@@ -175,6 +184,7 @@
         const auto summary = summarize_dedicated_release(
           release, specs::cores3::release_probe::short_max_ns,
           specs::cores3::release_probe::long_min_ns);
+        if (!release.available) { result->option |= cores3_detail::release_probe_unavailable; }
         family_band = summary.band;
 #if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_SE)
         family_band = pin_release_band_t::short_release;

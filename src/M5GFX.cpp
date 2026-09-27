@@ -1315,19 +1315,21 @@ namespace m5gfx
     { esp32_detectors = board_detect::m5::esp32_pico_d4_detectors; }
     else if (esp32_pkg_ver == 6) // EFUSE_RD_CHIP_VER_PKG_ESP32PICOV3_02
     { esp32_detectors = board_detect::m5::esp32_picov3_detectors; }
-    const bool detector_allow_reset = use_reset;
 #endif
 
     int retry = 4;
     do
     {
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
+      // Match the other chip paths: after repeated no-reset attempts, the
+      // ESP32 detector must see the promoted reset permission too.
+      if (retry == 1) { use_reset = true; }
       if (esp32_detectors != nullptr)
       {
         bool detector_matched;
         board_t setup_board = board_t::board_unknown;
         if (try_setup_detected(esp32_detectors,
-                               static_cast<board_t>(nvs_board), detector_allow_reset,
+                               static_cast<board_t>(nvs_board), use_reset,
                                retry == 0, &board,
                                [this, &setup_board](board_detect::m5::display_parts_t& parts)
                                {
@@ -1347,7 +1349,9 @@ namespace m5gfx
         }
       }
 #endif
+#if defined (CONFIG_IDF_TARGET) && !defined (CONFIG_IDF_TARGET_ESP32)
       if (retry == 1) use_reset = true;
+#endif
       board = autodetect(use_reset, board);
       //ESP_LOGD(LIBRARY_NAME,"autodetect board:%d", (int)board);
     } while (board_t::board_unknown == board && --retry >= 0);

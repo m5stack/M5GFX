@@ -269,8 +269,8 @@ namespace m5gfx
 
     using lgfx::LGFX_Device::init;
 
-    // The inherited init_without_reset() never promotes retries to a reset.
-    // A D0WDQ6 panel that cannot identify without reset therefore stays unknown.
+    // init_without_reset() skips the initial reset. Board detection may still
+    // promote its final retry to reset after repeated identification failures.
 
     bool init(lgfx::Panel_Device* panel)
     {

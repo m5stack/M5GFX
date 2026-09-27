@@ -560,6 +560,17 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
   assert.deepEqual(parseGeneratedWiring(source), legacyEsp32Wiring);
 });
 
+test("ESP32 detector reset permission is promoted before the final retry", async () => {
+  const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
+  const loop = /int retry = 4;([\s\S]*?)board = autodetect\(use_reset, board\);/.exec(main)?.[1];
+  assert.ok(loop);
+  const promotion = loop.indexOf("if (retry == 1) { use_reset = true; }");
+  const detected = loop.indexOf("try_setup_detected(esp32_detectors");
+  assert.ok(promotion >= 0 && promotion < detected);
+  assert.match(loop, /static_cast<board_t>\(nvs_board\), use_reset,/);
+  assert.doesNotMatch(loop, /detector_allow_reset/);
+});
+
 test("all 62 revision and runtime combinations match snapshots", async () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
   assert.equal(outputs.length, 62);
@@ -1206,7 +1217,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.match(esp32c6Source,
     /probe_pin_pulls\(ctx, c6_display_detail::signature_mask\)/);
   assert.match(esp32c6Source,
-    /probe_i2c_bus_present[\s\S]*?i2c_pi4io2::id_reg[\s\S]*?i2c_pi4io1::id_reg/);
+    /pi4io_id_mask = 0xE0[\s\S]*?pi4io_id_value = 0xA0[\s\S]*?probe_i2c_bus_present[\s\S]*?i2c_pi4io2::id_reg[\s\S]*?is_pi4io\(value\)[\s\S]*?i2c_pi4io1::id_reg[\s\S]*?is_pi4io\(value\)/);
   assert.match(esp32c6Source,
     /gpio_reset\(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped\)/);
   assert.match(esp32c6SetupSource,
@@ -2495,6 +2506,8 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   assert.match(coreSource, /i2c_camera::i2c_addr[\s\S]*?i2c_camera::id_reg[\s\S]*?i2c_camera::id_value/);
   assert.match(coreSource, /One post-power read is deliberately retained[\s\S]*?camera_id\(probe\)/);
   assert.match(coreSource, /camera_id\(ctx\)[\s\S]*?probe_dedicated_pin_release[\s\S]*?RELEASE_AMBIGUOUS[\s\S]*?biasing toward camera family/);
+  assert.match(coreSource, /release_was_unavailable[\s\S]*?result\.assign\(&desc_cores3se\)/);
+  assert.match(coreSource, /!release\.available[\s\S]*?release_probe_unavailable/);
   assert.match(coreSource, /internal_camera_confirmed[\s\S]*?if \(!confirmed_before_power\)/);
   assert.match(coreSource, /i2c_stackchan_ioe::i2c_addr[\s\S]*?i2c_stackchan_ioe::firmware_reg[\s\S]*?i2c_stackchan_ioe::firmware_min/);
   const generatedSpecs = await fs.readFile(
