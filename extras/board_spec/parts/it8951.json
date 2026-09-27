@@ -1,0 +1,5 @@
+{
+  "id": "it8951", "name": "IT8951", "kind": "display", "vendor": "ITE",
+  "bus": { "kind": "spi" }, "signals": { "required": ["cs", "rst", "busy"], "optional": [] },
+  "spec_keys": ["width", "height", "rotation_offset"], "verified": { "signals": null }
+}

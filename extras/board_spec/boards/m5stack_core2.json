@@ -1,0 +1,534 @@
+{
+  "schema_version": 1,
+  "id": "m5stack_core2",
+  "name": "M5Stack Core2",
+  "legacy_board_id": 2,
+  "chip": "esp32_d0wdq6",
+  "spec": {
+    "display": {
+      "size_inch": 2,
+      "resolution": [
+        320,
+        240
+      ]
+    },
+    "power": {
+      "battery_mah": 390,
+      "usb": "type-c"
+    },
+    "storage": {
+      "psram_mb": 8,
+      "flash_mb": 16,
+      "sd": true
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "bus:i2s_spk.ws",
+        "bus:pdm_mic.ws",
+        "conn:mbus.24"
+      ],
+      "pull": "none",
+      "note": "I2S WS shared by the speaker and PDM microphone",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:mbus.14"
+      ],
+      "pull": "none",
+      "note": "TXD0",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:i2s_spk.data_out",
+        "conn:mbus.23"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:mbus.13"
+      ],
+      "pull": "none",
+      "note": "RXD0",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "dev:sd.d3"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "dev:lcd.cs"
+      ],
+      "pull": "up"
+    },
+    "12": {
+      "roles": [
+        "bus:i2s_spk.bck"
+      ],
+      "pull": "none"
+    },
+    "13": {
+      "roles": [
+        "conn:mbus.15"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "conn:mbus.16"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "dev:lcd.dc"
+      ],
+      "pull": "none"
+    },
+    "18": {
+      "roles": [
+        "bus:main_spi.sclk",
+        "dev:sd.clk",
+        "conn:mbus.11"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "19": {
+      "roles": [
+        "conn:mbus.22"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "conn:mbus.17"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "22": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "conn:mbus.18"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "23": {
+      "roles": [
+        "bus:main_spi.mosi",
+        "dev:sd.cmd",
+        "conn:mbus.7"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "25": {
+      "roles": [
+        "conn:mbus.8"
+      ],
+      "pull": "none",
+      "note": "Optional M5GO Bottom2 LED bar (M5Unified RGBLED column)",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "26": {
+      "roles": [
+        "conn:mbus.10"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "27": {
+      "roles": [
+        "conn:mbus.21"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "32": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2",
+        "conn:mbus.19"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1",
+        "conn:mbus.20"
+      ],
+      "pull": "up",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "34": {
+      "roles": [
+        "bus:pdm_mic.data_in",
+        "conn:mbus.26"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "35": {
+      "roles": [
+        "conn:mbus.2"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "36": {
+      "roles": [
+        "conn:mbus.4"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "38": {
+      "roles": [
+        "bus:main_spi.miso",
+        "dev:sd.d0",
+        "conn:mbus.9"
+      ],
+      "pull": "none",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "dev:touch.int"
+      ],
+      "pull": "up"
+    }
+  },
+  "buses": {
+    "main_spi": {
+      "kind": "spi",
+      "signals": [
+        "sclk",
+        "mosi",
+        "miso"
+      ],
+      "preferred_host": "SPI3_HOST",
+      "fixed": false,
+      "freq": 40000000,
+      "freq_read": 16000000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated",
+        "freq_read": "generated"
+      }
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "freq": 400000,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "i2s_spk": {
+      "kind": "i2s",
+      "signals": [
+        "bck",
+        "ws",
+        "data_out"
+      ],
+      "fixed": false
+    },
+    "pdm_mic": {
+      "kind": "pdm",
+      "signals": [
+        "ws",
+        "data_in"
+      ],
+      "fixed": false
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "bus": "main_spi",
+      "spec": {
+        "width": 320,
+        "height": 240,
+        "rotation_offset": 0
+      },
+      "selected_by": "revision",
+      "default": "ili9342c",
+      "choices": {
+        "ili9342c": {
+          "part": "ili9342c"
+        },
+        "ili9342e": {
+          "part": "ili9342e"
+        }
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "main_spi",
+      "verified": {
+        "bus": "generated"
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "ft5x06",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x38",
+      "spec": {
+        "x_max": 319,
+        "y_max": 279
+      }
+    },
+    "speaker": {
+      "kind": "speaker",
+      "part": "ns4168",
+      "bus": "i2s_spk"
+    },
+    "mic": {
+      "kind": "mic",
+      "part": "spm1423",
+      "bus": "pdm_mic"
+    },
+    "imu": {
+      "kind": "imu",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x68",
+      "selected_by": "revision",
+      "default": "mpu6886",
+      "choices": {
+        "mpu6886": {
+          "part": "mpu6886"
+        },
+        "bmi270": {
+          "part": "bmi270"
+        }
+      }
+    },
+    "rtc": {
+      "kind": "rtc",
+      "part": "bm8563",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x51"
+    },
+    "pmic": {
+      "kind": "pmic",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x34",
+      "selected_by": "revision",
+      "default": "axp192",
+      "choices": {
+        "axp192": {
+          "part": "axp192",
+          "pins": {
+            "gpio3": {
+              "roles": [
+                "dev:lcd.rst"
+              ]
+            },
+            "gpio2": {
+              "roles": [
+                "dev:speaker.enable"
+              ]
+            },
+            "dcdc3": {
+              "roles": [
+                "dev:lcd.backlight"
+              ]
+            },
+            "ldo2": {
+              "roles": [
+                "pwr:lcd_sd_3v3"
+              ]
+            },
+            "ldo3": {
+              "roles": [
+                "dev:vibration.enable"
+              ]
+            },
+            "gpio1": {
+              "roles": [
+                "dev:power_led.pwm"
+              ]
+            },
+            "dcdc1": {
+              "roles": [
+                "pwr:esp_3v3"
+              ]
+            },
+            "gpio0": {
+              "roles": [
+                "pwr:ext_ldo"
+              ]
+            },
+            "exten": {
+              "roles": [
+                "pwr:ext_5v"
+              ]
+            }
+          }
+        },
+        "axp2101": {
+          "part": "axp2101",
+          "pins": {
+            "aldo2": {
+              "roles": [
+                "dev:lcd.rst"
+              ]
+            },
+            "aldo3": {
+              "roles": [
+                "dev:speaker.enable"
+              ]
+            },
+            "bldo1": {
+              "roles": [
+                "dev:lcd.backlight"
+              ]
+            },
+            "dldo1": {
+              "roles": [
+                "dev:vibration.enable"
+              ]
+            },
+            "bldo2": {
+              "roles": [
+                "pwr:ext_5v"
+              ]
+            },
+            "chgled": {
+              "roles": [
+                "dev:power_led.on"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "vibration": {
+      "kind": "vibration"
+    },
+    "power_led": {
+      "kind": "led"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c"
+    },
+    "mbus": {
+      "type": "mbus"
+    }
+  },
+  "revisions": [
+    {
+      "id": "v1_0",
+      "name": "v1.0",
+      "select": {}
+    },
+    {
+      "id": "v1_1",
+      "name": "v1.1",
+      "select": {
+        "pmic": "axp2101"
+      },
+      "note": "AXP2101; IMU remains MPU6886"
+    },
+    {
+      "id": "v1_2",
+      "name": "v1.2",
+      "select": {},
+      "note": "AXP192 returned; IMU is unconfirmed"
+    },
+    {
+      "id": "v1_3",
+      "name": "v1.3",
+      "select": {
+        "lcd": "ili9342e",
+        "imu": "bmi270"
+      },
+      "note": "ILI9342E; BMI270 and the remaining combination are unconfirmed"
+    }
+  ]
+}

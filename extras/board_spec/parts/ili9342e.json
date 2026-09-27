@@ -1,0 +1,7 @@
+{
+  "id": "ili9342e", "name": "ILI9342E", "kind": "display", "vendor": "Ilitek",
+  "bus": { "kind": "spi", "modes": ["4wire", "3wire"] },
+  "signals": { "required": ["cs", "dc"], "optional": ["rst", "busy", "te", "backlight"] },
+  "spec_keys": ["width", "height", "rotation_offset", "panel_type"],
+  "verified": { "signals": null }
+}

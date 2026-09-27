@@ -1,0 +1,4 @@
+{
+  "id": "sk6812", "name": "SK6812", "kind": "led_strip", "bus": { "kind": "none" },
+  "signals": { "required": ["data"], "optional": [] }, "spec_keys": ["count"], "verified": { "signals": null }
+}

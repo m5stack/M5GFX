@@ -1,0 +1,31 @@
+{
+  "schema_version": 1, "id": "tough_subboard", "name": "M5Tough bundled subboard", "origin": "official", "bundled": true,
+  "attaches": { "connector_type": "mbus", "occupies": "bottom" }, "compatible_with": ["m5tough"],
+  "host_pins": {
+    "mbus.20": { "roles": ["conn:port_a.1"] }, "mbus.19": { "roles": ["conn:port_a.2"] },
+    "mbus.4": { "roles": ["conn:port_b.1"] }, "mbus.10": { "roles": ["conn:port_b.2"] },
+    "mbus.15": { "roles": ["conn:port_c.1"] }, "mbus.16": { "roles": ["conn:port_c.2"] },
+    "mbus.8": { "roles": ["conn:reset_port.2"], "verified": { "roles": "datasheet" } },
+    "mbus.21": { "roles": ["bus:uart_rs485.rx"], "verified": { "roles": "datasheet" } },
+    "mbus.22": { "roles": ["bus:uart_rs485.tx"], "verified": { "roles": "datasheet" } }
+  },
+  "buses": { "uart_rs485": { "kind": "uart", "signals": ["tx", "rx"], "fixed": false, "note": "Half-duplex auto-direction UART", "verified": { "signals": "datasheet", "note": "datasheet" } } },
+  "devices": {
+    "rs485_xcvr": { "kind": "transceiver", "part": "sp485e", "bus": "uart_rs485", "pins": {
+      "a": { "roles": ["conn:rs485.2"], "verified": { "roles": "datasheet" } },
+      "b": { "roles": ["conn:rs485.1"], "verified": { "roles": "datasheet" } }
+    }, "note": "SP485E auto-direction: DI is tied to GND; GPIO19 TX drives combined DE/RE through Q1, so DE/RE have no separate GPIO role.", "verified": { "part": "datasheet", "note": "datasheet" } },
+    "dcdc_in": { "kind": "regulator", "part": "me3116", "pins": {
+      "vin": { "roles": ["pwr:vin"], "note": "Shared by RS485 position 3 and M-Bus HPWR positions 25/27", "verified": { "roles": "datasheet", "note": "datasheet" } },
+      "vout": { "roles": ["pwr:5v"], "verified": { "roles": "datasheet" } }
+    }, "note": "ME3116 converts the 6–24V input rail to 5V.", "verified": { "part": "datasheet", "note": "datasheet" } }
+  },
+  "connectors": {
+    "port_a": { "type": "hy2_4p", "standard": "port_i2c" }, "port_b": { "type": "hy2_4p", "standard": "port_io" },
+    "port_c": { "type": "hy2_4p", "standard": "port_uart" },
+    "rs485": { "type": "hy2_4p", "standard": "port_rs485", "positions": { "3": "pwr:vin" }, "verified": { "positions": "datasheet" } },
+    "reset_port": { "type": "hy2_4p", "standard": "port_reset", "positions": { "1": "chip:en" }, "verified": { "positions": "datasheet" } }
+  },
+  "note": "Official Tough Ext Board schematic: RS485 is B/A/24V/GND; GPIO27=RX and GPIO19=TX; HPWR and J4.3 feed the ME3116 input.",
+  "verified": { "host_pins": "datasheet", "buses": "datasheet", "devices": "datasheet", "connectors": "datasheet", "note": "datasheet" }
+}

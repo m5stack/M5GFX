@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://m5stack.example/schema/accessory-spec-v1.json",
+  "title": "M5 accessory specification v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "origin", "attaches", "host_pins"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "board.schema.json#/definitions/id" },
+    "name": { "type": "string" },
+    "origin": { "enum": ["official", "third_party", "virtual"] },
+    "vendor": { "type": "string" },
+    "source_url": { "type": "string", "format": "uri" },
+    "bundled": { "type": "boolean" },
+    "compatible_with": { "type": "array", "items": { "$ref": "board.schema.json#/definitions/id" }, "uniqueItems": true },
+    "attaches": {
+      "type": "object", "additionalProperties": false, "required": ["connector_type", "occupies"],
+      "properties": {
+        "connector_type": { "$ref": "board.schema.json#/definitions/id" },
+        "occupies": { "enum": ["bottom", "stack", "exclusive", "none"] }
+      }
+    },
+    "host_pins": { "$ref": "#/definitions/hostPins" },
+    "buses": { "type": "object", "additionalProperties": { "$ref": "board.schema.json#/definitions/bus" } },
+    "devices": { "type": "object", "additionalProperties": { "$ref": "board.schema.json#/definitions/device" } },
+    "connectors": { "type": "object", "additionalProperties": { "$ref": "board.schema.json#/definitions/connector" } },
+    "settings": { "type": "object", "additionalProperties": { "$ref": "#/definitions/setting" } },
+    "note": { "type": "string" },
+    "verified": { "$ref": "board.schema.json#/definitions/verified" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "origin": { "const": "third_party" } } },
+      "then": { "required": ["vendor", "source_url"] }
+    }
+  ],
+  "definitions": {
+    "hostPins": {
+      "type": "object",
+      "additionalProperties": { "$ref": "board.schema.json#/definitions/pin" }
+    },
+    "setting": {
+      "type": "object", "additionalProperties": false, "required": ["selected_by", "default", "choices"],
+      "properties": {
+        "name": { "type": "string" },
+        "selected_by": { "const": "user" },
+        "default": { "anyOf": [{ "$ref": "board.schema.json#/definitions/id" }, { "type": "null" }] },
+        "choices": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object", "additionalProperties": false, "required": ["host_pins"],
+            "properties": { "host_pins": { "$ref": "#/definitions/hostPins" }, "note": { "type": "string" } }
+          }
+        }
+      }
+    }
+  }
+}

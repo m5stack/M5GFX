@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "id": "m5timercam",
+  "name": "M5TimerCam",
+  "legacy_board_id": 132,
+  "chip": "esp32_d0wdq6",
+  "pins": {
+    "4": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "12": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "13": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "power_hold": {
+      "kind": "power_hold",
+      "signals": {
+        "enable": "gpio:33"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:13",
+        "2": "gpio:4",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "id": "st7789v2", "name": "ST7789V2", "kind": "display", "vendor": "Sitronix",
+  "bus": { "kind": "spi" }, "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight"] },
+  "spec_keys": ["width", "height", "rotation_offset", "panel_type"], "verified": { "signals": null }
+}

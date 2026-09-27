@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../board_detect.hpp"
+#include "generated/esp32_d0wdq6_wiring.hpp"
 
 #include <new>
 
@@ -85,54 +86,117 @@ namespace m5
                  option_core2_new_pmic),
   };
 
-  static const std::int8_t hold_station[] = { GPIO_NUM_5 };
-  static const std::int8_t hold_core[] = { GPIO_NUM_4, GPIO_NUM_5 };
-  static const std::int8_t hold_stack[] = { GPIO_NUM_4, GPIO_NUM_14 };
-  static const std::int8_t hold_paper[] = { GPIO_NUM_4, GPIO_NUM_15 };
+  static_assert(
+       wiring::station::display_sclk == GPIO_NUM_18 && wiring::station::display_mosi == GPIO_NUM_23
+    && wiring::station::display_miso == -1 && wiring::station::display_dc == GPIO_NUM_19
+    && wiring::station::display_cs == GPIO_NUM_5 && wiring::station::display_rst == GPIO_NUM_15
+    && wiring::station::display_busy == -1 && wiring::station::reset_gpio == GPIO_NUM_15
+    && wiring::station::internal_i2c_sda == GPIO_NUM_21 && wiring::station::internal_i2c_scl == GPIO_NUM_22
+    && wiring::station::internal_i2c_port == I2C_NUM_1 && wiring::station::hold[0] == GPIO_NUM_5
+    && wiring::core2::display_sclk == GPIO_NUM_18 && wiring::core2::display_mosi == GPIO_NUM_23
+    && wiring::core2::display_miso == GPIO_NUM_38 && wiring::core2::display_dc == GPIO_NUM_15
+    && wiring::core2::display_cs == GPIO_NUM_5 && wiring::core2::display_rst == -1
+    && wiring::core2::display_busy == -1 && wiring::core2::shared_sd_sclk == GPIO_NUM_18
+    && wiring::core2::shared_sd_mosi == GPIO_NUM_23 && wiring::core2::shared_sd_miso == GPIO_NUM_38
+    && wiring::core2::shared_sd_sd_cs == GPIO_NUM_4 && wiring::core2::shared_sd_other_cs == GPIO_NUM_5
+    && wiring::core2::internal_i2c_sda == GPIO_NUM_21 && wiring::core2::internal_i2c_scl == GPIO_NUM_22
+    && wiring::core2::internal_i2c_port == I2C_NUM_1
+    && wiring::core2::hold[0] == GPIO_NUM_4 && wiring::core2::hold[1] == GPIO_NUM_5
+    && wiring::tough::display_sclk == GPIO_NUM_18 && wiring::tough::display_mosi == GPIO_NUM_23
+    && wiring::tough::display_miso == GPIO_NUM_38 && wiring::tough::display_dc == GPIO_NUM_15
+    && wiring::tough::display_cs == GPIO_NUM_5 && wiring::tough::display_rst == -1
+    && wiring::tough::display_busy == -1 && wiring::tough::shared_sd_sclk == GPIO_NUM_18
+    && wiring::tough::shared_sd_mosi == GPIO_NUM_23 && wiring::tough::shared_sd_miso == GPIO_NUM_38
+    && wiring::tough::shared_sd_sd_cs == GPIO_NUM_4 && wiring::tough::shared_sd_other_cs == GPIO_NUM_5
+    && wiring::tough::internal_i2c_sda == GPIO_NUM_21 && wiring::tough::internal_i2c_scl == GPIO_NUM_22
+    && wiring::tough::internal_i2c_port == I2C_NUM_1
+    && wiring::tough::hold[0] == GPIO_NUM_4 && wiring::tough::hold[1] == GPIO_NUM_5
+    && wiring::stack::display_sclk == GPIO_NUM_18 && wiring::stack::display_mosi == GPIO_NUM_23
+    && wiring::stack::display_miso == GPIO_NUM_19 && wiring::stack::display_dc == GPIO_NUM_27
+    && wiring::stack::display_cs == GPIO_NUM_14 && wiring::stack::display_rst == GPIO_NUM_33
+    && wiring::stack::display_busy == -1 && wiring::stack::reset_gpio == GPIO_NUM_33
+    && wiring::stack::shared_sd_sclk == GPIO_NUM_18 && wiring::stack::shared_sd_mosi == GPIO_NUM_23
+    && wiring::stack::shared_sd_miso == GPIO_NUM_19 && wiring::stack::shared_sd_sd_cs == GPIO_NUM_4
+    && wiring::stack::shared_sd_other_cs == GPIO_NUM_14
+    && wiring::stack::hold[0] == GPIO_NUM_4 && wiring::stack::hold[1] == GPIO_NUM_14
+    && wiring::paper::display_sclk == GPIO_NUM_14 && wiring::paper::display_mosi == GPIO_NUM_12
+    && wiring::paper::display_miso == GPIO_NUM_13 && wiring::paper::display_dc == -1
+    && wiring::paper::display_cs == GPIO_NUM_15 && wiring::paper::display_rst == GPIO_NUM_23
+    && wiring::paper::display_busy == GPIO_NUM_27 && wiring::paper::reset_gpio == GPIO_NUM_23
+    && wiring::paper::power_gpio == GPIO_NUM_2 && wiring::paper::shared_sd_sclk == GPIO_NUM_14
+    && wiring::paper::shared_sd_mosi == GPIO_NUM_12 && wiring::paper::shared_sd_miso == GPIO_NUM_13
+    && wiring::paper::shared_sd_sd_cs == GPIO_NUM_4 && wiring::paper::shared_sd_other_cs == GPIO_NUM_15
+    && wiring::paper::hold[0] == GPIO_NUM_4 && wiring::paper::hold[1] == GPIO_NUM_15,
+    "generated ESP32 wiring must match the replaced board descriptions");
+
   static constexpr board_desc_t desc_station = {
     { id(lgfx::board_M5Station), "M5Station", 0 },
-    no_power(), gpio_reset(GPIO_NUM_15, 2, 10, reset_hold_when_skipped),
+    no_power(), gpio_reset(wiring::station::reset_gpio, 2, 10, reset_hold_when_skipped),
     no_shared_sd(),
-    display_pins(GPIO_NUM_18, GPIO_NUM_23, -1, GPIO_NUM_19,
-                 GPIO_NUM_5, GPIO_NUM_15, -1),
-    pins(hold_station),
-    internal_i2c(GPIO_NUM_21, GPIO_NUM_22, I2C_NUM_1), no_direct_reset_panel_reload_wait(), no_options(),
+    display_pins(wiring::station::display_sclk, wiring::station::display_mosi,
+                 wiring::station::display_miso, wiring::station::display_dc,
+                 wiring::station::display_cs, wiring::station::display_rst,
+                 wiring::station::display_busy),
+    pins(wiring::station::hold),
+    internal_i2c(wiring::station::internal_i2c_sda, wiring::station::internal_i2c_scl,
+                 wiring::station::internal_i2c_port),
+    no_direct_reset_panel_reload_wait(), no_options(),
   };
   static constexpr board_desc_t desc_core2 = {
     { id(lgfx::board_M5StackCore2), "M5StackCore2", 0 },
     i2c_power(400000, core_pmic_variants, 5, 20), i2c_reset(1, 10),
-    shared_sd(GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38, GPIO_NUM_4, GPIO_NUM_5),
-    display_pins(GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38, GPIO_NUM_15,
-                 GPIO_NUM_5, -1, -1),
-    pins(hold_core), internal_i2c(GPIO_NUM_21, GPIO_NUM_22, I2C_NUM_1),
+    shared_sd(wiring::core2::shared_sd_sclk, wiring::core2::shared_sd_mosi,
+              wiring::core2::shared_sd_miso, wiring::core2::shared_sd_sd_cs,
+              wiring::core2::shared_sd_other_cs),
+    display_pins(wiring::core2::display_sclk, wiring::core2::display_mosi,
+                 wiring::core2::display_miso, wiring::core2::display_dc,
+                 wiring::core2::display_cs, wiring::core2::display_rst,
+                 wiring::core2::display_busy),
+    pins(wiring::core2::hold),
+    internal_i2c(wiring::core2::internal_i2c_sda, wiring::core2::internal_i2c_scl,
+                 wiring::core2::internal_i2c_port),
     direct_reset_panel_reload_wait(110),
     options(core_options),
   };
   static constexpr board_desc_t desc_tough = {
     { id(lgfx::board_M5Tough), "M5Tough", 0 },
     i2c_power(400000, core_pmic_variants, 5, 20), i2c_reset(1, 10),
-    shared_sd(GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38, GPIO_NUM_4, GPIO_NUM_5),
-    display_pins(GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_38, GPIO_NUM_15,
-                 GPIO_NUM_5, -1, -1),
-    pins(hold_core), internal_i2c(GPIO_NUM_21, GPIO_NUM_22, I2C_NUM_1),
+    shared_sd(wiring::tough::shared_sd_sclk, wiring::tough::shared_sd_mosi,
+              wiring::tough::shared_sd_miso, wiring::tough::shared_sd_sd_cs,
+              wiring::tough::shared_sd_other_cs),
+    display_pins(wiring::tough::display_sclk, wiring::tough::display_mosi,
+                 wiring::tough::display_miso, wiring::tough::display_dc,
+                 wiring::tough::display_cs, wiring::tough::display_rst,
+                 wiring::tough::display_busy),
+    pins(wiring::tough::hold),
+    internal_i2c(wiring::tough::internal_i2c_sda, wiring::tough::internal_i2c_scl,
+                 wiring::tough::internal_i2c_port),
     direct_reset_panel_reload_wait(110),
     options(tough_options),
   };
   static constexpr board_desc_t desc_stack = {
     { id(lgfx::board_M5Stack), "M5Stack", 0 },
-    no_power(), custom_reset(GPIO_NUM_33, 2, 10, detail::stack_reset_and_sample_ips),
-    shared_sd(GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_19, GPIO_NUM_4, GPIO_NUM_14),
-    display_pins(GPIO_NUM_18, GPIO_NUM_23, GPIO_NUM_19, GPIO_NUM_27,
-                 GPIO_NUM_14, GPIO_NUM_33, -1),
-    pins(hold_stack), no_internal_i2c(), no_direct_reset_panel_reload_wait(), options(stack_options),
+    no_power(), custom_reset(wiring::stack::reset_gpio, 2, 10, detail::stack_reset_and_sample_ips),
+    shared_sd(wiring::stack::shared_sd_sclk, wiring::stack::shared_sd_mosi,
+              wiring::stack::shared_sd_miso, wiring::stack::shared_sd_sd_cs,
+              wiring::stack::shared_sd_other_cs),
+    display_pins(wiring::stack::display_sclk, wiring::stack::display_mosi,
+                 wiring::stack::display_miso, wiring::stack::display_dc,
+                 wiring::stack::display_cs, wiring::stack::display_rst,
+                 wiring::stack::display_busy),
+    pins(wiring::stack::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(), options(stack_options),
   };
   static constexpr board_desc_t desc_paper = {
     { id(lgfx::board_M5Paper), "M5Paper", 0 },
-    gpio_power(GPIO_NUM_2), gpio_reset(GPIO_NUM_23, 2, 10, reset_always),
-    shared_sd(GPIO_NUM_14, GPIO_NUM_12, GPIO_NUM_13, GPIO_NUM_4, GPIO_NUM_15),
-    display_pins(GPIO_NUM_14, GPIO_NUM_12, GPIO_NUM_13, -1,
-                 GPIO_NUM_15, GPIO_NUM_23, GPIO_NUM_27),
-    pins(hold_paper), no_internal_i2c(), no_direct_reset_panel_reload_wait(), no_options(),
+    gpio_power(wiring::paper::power_gpio), gpio_reset(wiring::paper::reset_gpio, 2, 10, reset_always),
+    shared_sd(wiring::paper::shared_sd_sclk, wiring::paper::shared_sd_mosi,
+              wiring::paper::shared_sd_miso, wiring::paper::shared_sd_sd_cs,
+              wiring::paper::shared_sd_other_cs),
+    display_pins(wiring::paper::display_sclk, wiring::paper::display_mosi,
+                 wiring::paper::display_miso, wiring::paper::display_dc,
+                 wiring::paper::display_cs, wiring::paper::display_rst,
+                 wiring::paper::display_busy),
+    pins(wiring::paper::hold), no_internal_i2c(), no_direct_reset_panel_reload_wait(), no_options(),
   };
 
   static const board_def_t& board_station = desc_station.def;

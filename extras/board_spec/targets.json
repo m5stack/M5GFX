@@ -1,0 +1,31 @@
+{
+  "m5gfx_board_desc": {
+    "emit": "m5gfx_desc",
+    "options": {
+      "m5stack": [
+        { "name": "ips", "bit": 0, "select": { "lcd": "ips" } }
+      ],
+      "m5stack_core2": [
+        { "name": "new_pmic", "bit": 0, "select": { "pmic": "axp2101" } },
+        { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
+      ],
+      "m5tough": [
+        { "name": "reserved", "bit": 0 },
+        { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
+      ]
+    }
+  },
+  "m5unified_pin_table": {
+    "emit": "m5unified_pin_table",
+    "allow_origins": ["official", "third_party"],
+    "compositions": {
+      "m5stack_core2": { "default": { "accessories": [
+        { "id": "m5go_bottom2" }, { "id": "extport_core2", "use": ["port_d", "port_e"] }
+      ] } },
+      "m5stack": { "default": { "accessories": [
+        { "id": "m5go_bottom" }, { "id": "m5basic_base_lite", "use": ["port_d", "port_e"] }
+      ] } },
+      "m5tough": { "default": { "accessories": [{ "id": "tough_subboard" }] } }
+    }
+  }
+}

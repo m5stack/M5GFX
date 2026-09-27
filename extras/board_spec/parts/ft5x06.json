@@ -1,0 +1,5 @@
+{
+  "id": "ft5x06", "name": "FT5x06", "kind": "touch", "bus": { "kind": "i2c" },
+  "i2c_addr": ["0x38"], "signals": { "required": [], "optional": ["int", "rst"] },
+  "spec_keys": ["x_max", "y_max"], "verified": { "i2c_addr": null }
+}

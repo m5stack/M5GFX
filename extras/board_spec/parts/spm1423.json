@@ -1,0 +1,4 @@
+{
+  "id": "spm1423", "name": "SPM1423", "kind": "mic", "bus": { "kind": "pdm" },
+  "signals": { "required": [], "optional": [] }, "verified": { "bus": null }
+}
