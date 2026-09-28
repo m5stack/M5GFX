@@ -159,10 +159,6 @@ namespace pmic_ops
     ops::i2c_bit_off(1, 0x05, 0x30), ops::delay_ms(8),
     ops::i2c_bit_on(1, 0x05, 0x30), ops::delay_ms(2),
   };
-  static constexpr ops::op_t papermono_no_display_power_on[] = {
-    ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
-    ops::i2c_bit_on(0, 0x06, 0x17),
-  };
   static constexpr ops::op_t chaincaptain_power_on[] = {
     ops::i2c_write8(0, 0x09, 0x00), ops::i2c_write8(0, 0x0A, 0x00),
     ops::i2c_write8(1, 0x23, 0x00),
