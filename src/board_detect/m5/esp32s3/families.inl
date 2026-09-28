@@ -157,11 +157,9 @@ namespace m5
   static const pmic_variant_t papermono_pmic_variants[] = {
     pmic_variant_ack_only(specs::papermono::pmic::i2c_addr,
                           specs::papermono::pmic::id_reg,
-#if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
-                          ops::list(pmic_ops::papermono_no_display_power_on),
-#else
+                          // Also without OPI PSRAM: the refine needs the touch
+                          // powered and out of reset to confirm PaperMono.
                           ops::list(pmic_ops::papermono_power_on),
-#endif
                           reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
                           { nullptr, 0 }, 0),
   };
