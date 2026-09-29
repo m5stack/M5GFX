@@ -1411,6 +1411,7 @@ namespace m5gfx
               // BLDO2 == Boost EN
               // DLDO1 == Vibration Motor
             static constexpr uint8_t reg_data_axp2101_first[] = {
+              0x23, 0x00, 0xE0,   // DCDC1-5 undervoltage: no PMIC power-off (brown-out resets the SoC instead)
               0x90, 0x08, 0x7B,   // ALDO4 ON / ALDO3 OFF, DLDO1 OFF
               0x80, 0x05, 0xFF,   // DCDC1 + DCDC3 ON
               0x82, 0x12, 0x00,   // DCDC1 3.3V
@@ -1772,6 +1773,9 @@ namespace m5gfx
             m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x11, 0b00010000);  // GCR P0 port is Push-Pull mode.
             m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x12, 0b11111111);  // LEDMODE_P0
             m5gfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, 0x13, 0b11111111);  // LEDMODE_P1
+            // A DCDC dip below 85% (inrush on a weak USB supply) makes the AXP2101 power itself off,
+            // and it stays off; let the SoC brown out and restart instead. OVP (bit 5) stays enabled.
+            m5gfx::i2c::bitOff(probe_i2c_port, axp_i2c_addr, 0x23, 0x1F); // DCDC1-5 UVP power-off disable
             m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x90, 0xBF); // LDOS ON/OFF control 0
             m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x94, 33 - 5); // ALDO3 set to 3.3v // for GC0308 Camera
             m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x95, 33 - 5); // ALDO4 set to 3.3v // for TF card slot
