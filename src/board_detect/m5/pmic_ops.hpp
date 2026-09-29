@@ -39,6 +39,8 @@ namespace pmic_ops
     { 400000, 0, 0x34, 0, 1, 0 },
   };
   static constexpr ops::op_t cores3_vbus_off_power_on[] = {
+    // A DCDC dip can latch the PMIC off (REG21=0x20); keep OVP and VOFF enabled.
+    ops::i2c_bit_off(1, 0x23, 0x1F),
     ops::i2c_bit_on(0, 0x02, 0x05), ops::i2c_bit_on(0, 0x03, 0x03),
     ops::i2c_write8(0, 0x04, 0x18), ops::i2c_write8(0, 0x05, 0x0C),
     ops::i2c_write8(0, 0x11, 0x10), ops::i2c_write8(0, 0x12, 0xFF),
@@ -46,6 +48,7 @@ namespace pmic_ops
     ops::i2c_write8(1, 0x94, 28), ops::i2c_write8(1, 0x95, 28),
   };
   static constexpr ops::op_t cores3_vbus_5v_power_on[] = {
+    ops::i2c_bit_off(1, 0x23, 0x1F),
     ops::i2c_bit_on(0, 0x02, 0x07), ops::i2c_bit_on(0, 0x03, 0x83),
     ops::i2c_write8(0, 0x04, 0x18), ops::i2c_write8(0, 0x05, 0x0C),
     ops::i2c_write8(0, 0x11, 0x10), ops::i2c_write8(0, 0x12, 0xFF),
@@ -59,6 +62,7 @@ namespace pmic_ops
     ops::i2c_bit_on(0, 0x96, 0x02), ops::i2c_bit_on(0, 0x94, 0x02),
   };
   static constexpr ops::op_t power2101[] = {
+    ops::i2c_bit_off(0, 0x23, 0x1F),
     ops::i2c_bit_on(0, 0x90, 0x08), ops::i2c_bit_on(0, 0x80, 0x05),
     ops::i2c_write8(0, 0x82, 0x12), ops::i2c_write8(0, 0x84, 0x6A),
     ops::i2c_bit_on(0, 0x90, 0x02),

@@ -59,9 +59,9 @@
                 "CoreS3 deliberately shares LCD D/C with SPI MISO");
   static_assert(wiring::cores3::touches_opi_pins,
                 "CoreS3 detection must remain gated while OPI pins are unavailable");
-  static_assert(sizeof(pmic_ops::cores3_vbus_off_power_on) / sizeof(ops::op_t) == 10
-             && sizeof(pmic_ops::cores3_vbus_5v_power_on) / sizeof(ops::op_t) == 10,
-                "CoreS3 power variants preserve the ten legacy register operations");
+  static_assert(sizeof(pmic_ops::cores3_vbus_off_power_on) / sizeof(ops::op_t) == 11
+             && sizeof(pmic_ops::cores3_vbus_5v_power_on) / sizeof(ops::op_t) == 11,
+                "CoreS3 power variants include UVP configuration before load enable");
   namespace cores3_detail
   {
     bool read(const prepare_ctx_t& ctx, std::uint8_t addr, std::uint8_t reg,
