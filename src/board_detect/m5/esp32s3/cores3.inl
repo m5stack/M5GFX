@@ -112,8 +112,85 @@
       return true;
     }
 
+    // Enabling BUS_OUT_EN into an empty BUS_OUT can pull the AXP2101 DCDC under its
+    // threshold on a weak USB supply and power the board off. Precharge it with
+    // pulses of growing on-time first: the same sequence as M5Unified's setExtOutput(),
+    // including its 100 kHz bus, since the on-time is one register write plus i * 16 us.
+    // Failing to enable BUS_OUT_EN does not fail detection: failing the refine would lose
+    // the board (and the display) over the 5 V output, and M5Unified's setExtOutput()
+    // enables it later with the same precharge.
+    // After a failed on- or off-pulse, retry OFF and read back up to three times. Confirmed
+    // OFF aborts a failed ON pulse or continues the ramp after a failed OFF pulse; confirmed
+    // ON skips to final ON, and an unknown state fails. The final on write is verified:
+    // a precharged BUS_OUT left with BUS_OUT_EN off latches to VBUS and blocks later enables.
+    // Returns nullptr on success, else the failed step.
+    const char* precharge_bus_out(int port)
+    {
+      constexpr std::uint8_t port0_reg = 0x02;
+      constexpr std::uint8_t bus_en = 0x02;
+      constexpr std::uint32_t freq = 100000;
+      const auto port0 = lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq);
+      if (!port0.has_value()) { return "read failed"; }
+      if (port0.value() & bus_en) { return nullptr; }
+      const std::uint8_t off = port0.value();
+      enum class off_state_t { unknown, off, on };
+      const auto confirm_off = [&]()
+      {
+        bool read_ok = false;
+        for (int retry = 0; retry < 3; ++retry)
+        {
+          lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off, 0, freq);
+          const auto read = lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq);
+          read_ok = read.has_value();
+          if (read_ok && !(read.value() & bus_en)) { return off_state_t::off; }
+        }
+        return read_ok ? off_state_t::on : off_state_t::unknown;
+      };
+      for (std::uint32_t i = 0; i < 8; ++i)
+      {
+        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off | bus_en, 0, freq).has_value())
+        {
+          const auto state = confirm_off();
+          if (state == off_state_t::on) { break; }
+          return state == off_state_t::off ? "precharge write failed" : "precharge read failed";
+        }
+        lgfx::delayMicroseconds(i * 16);
+        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off, 0, freq).has_value())
+        {
+          const auto state = confirm_off();
+          if (state == off_state_t::unknown) { return "precharge read failed"; }
+          if (state == off_state_t::on) { break; }
+        }
+        lgfx::delayMicroseconds(1000);
+      }
+      for (int retry = 0; retry < 3; ++retry)
+      {
+        if (lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off | bus_en, 0, freq).has_value()
+         && lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq).value_or(0) == (off | bus_en))
+        {
+          return nullptr;
+        }
+      }
+      return "final write failed";
+    }
+
+    void enable_bus_out(const prepare_ctx_t& ctx)
+    {
+      const char* failed = "no I2C transaction";
+      if (ctx.transaction != nullptr)
+      {
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc_cores3.internal_i2c);
+        failed = i2c.opened ? precharge_bus_out(i2c.port) : "I2C open failed";
+      }
+      if (failed != nullptr)
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] CoreS3 BUS_OUT_EN not enabled: %s", failed);
+      }
+    }
+
     bool refine(board_result_t& result, const prepare_ctx_t& ctx)
     {
+      if (result.option & vbus_5v) { enable_bus_out(ctx); }
       const bool capacitance_said_se = result.desc == &desc_cores3se;
       const bool confirmed_before_power = result.option & internal_camera_confirmed;
       const bool release_was_unavailable = result.option & release_probe_unavailable;
