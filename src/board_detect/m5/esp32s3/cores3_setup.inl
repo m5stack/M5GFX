@@ -28,9 +28,6 @@ namespace m5
     {
       auto target = make_panel<Panel_M5StackCoreS3E>(panel_cores3, out.bus.get());
       _set_ili9342e_read(static_cast<lgfx::Panel_ILI9342*>(target), bus_cores3.freq_read);
-      auto cfg = target->config();
-      cfg.readable = false;
-      target->config(cfg);
       out.panel.reset(target);
     }
     else
