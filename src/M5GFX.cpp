@@ -475,10 +475,10 @@ namespace m5gfx
 
   struct Light_M5StackAtomS3R : public lgfx::ILight
   {
-    Light_M5StackAtomS3R(int i2c_port, int sda, int scl, std::uint8_t i2c_addr,
-                         std::uint32_t i2c_freq)
-    : _i2c_port(i2c_port), _sda(sda), _scl(scl), _i2c_addr(i2c_addr),
-      _i2c_freq(i2c_freq) {}
+    Light_M5StackAtomS3R(int port, int sda, int scl, std::uint8_t i2c_addr,
+                         std::uint32_t freq)
+    : _i2c_port(port), _sda(sda), _scl(scl), _i2c_addr(i2c_addr),
+      _i2c_freq(freq) {}
 
     bool init(uint8_t brightness) override
     {
@@ -507,8 +507,8 @@ namespace m5gfx
 
   struct Light_M5StackStamPLC : public lgfx::ILight
   {
-    Light_M5StackStamPLC(int i2c_port, int sda, int scl, std::uint8_t i2c_addr)
-    : _i2c_port(i2c_port), _sda(sda), _scl(scl), _i2c_addr(i2c_addr) {}
+    Light_M5StackStamPLC(int port, int sda, int scl, std::uint8_t i2c_addr)
+    : _i2c_port(port), _sda(sda), _scl(scl), _i2c_addr(i2c_addr) {}
 
     bool _is_backlight_inited = false;
 
