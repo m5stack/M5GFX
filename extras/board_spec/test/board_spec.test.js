@@ -537,6 +537,32 @@ test("ESP32-S3 Quad and OPI PSRAM map IO2 to SPIWP and IO3 to SPIHD", () => {
   assert.ok(validateBoard(swapped, { ...context, chip: chipS3 }).some((item) => item.id === "E_PSRAM_PINS"));
 });
 
+test("all resolved storage declarations match chip PSRAM capabilities", () => {
+  for (const output of catalogBoards.flatMap(resolveCatalog)) {
+    const resolved = output.board;
+    const capabilities = effectiveChip(chips[resolved.chip], resolved).psram ?? {};
+    const storage = resolved.spec?.storage ?? {};
+    if (storage.psram_mode !== undefined) {
+      assert.ok(Object.hasOwn(capabilities, storage.psram_mode), `${output.filename}: unsupported PSRAM mode ${storage.psram_mode}`);
+    }
+    if (storage.psram_mb > 0) {
+      assert.ok(Object.keys(capabilities).length > 0, `${output.filename}: chip does not support PSRAM`);
+    }
+  }
+});
+
+test("PSRAM capability validation does not require a device declaration", () => {
+  const unsupported = clone(catalogBoards.find((item) => item.id === "m5unit_c6l"));
+  unsupported.spec ??= {};
+  unsupported.spec.storage = { psram_mb: 8 };
+  const errors = validateBoard(unsupported, { ...context, chip: chipC6 });
+  assert.ok(errors.some((item) => item.id === "E_PSRAM_UNSUPPORTED"));
+
+  const invalidMode = clone(catalogBoards.find((item) => item.id === "m5station"));
+  invalidMode.spec.storage = { psram_mb: 8, psram_mode: "opi" };
+  assert.ok(validateBoard(invalidMode, { ...context, chip }).some((item) => item.id === "E_PSRAM_MODE"));
+});
+
 test("PSRAM may share connector roles but rejects another device signal", () => {
   const stack = catalogBoards.find((item) => item.id === "m5stack");
   const fire = clone(resolveCatalog(stack).find((item) => item.revision === "pre_2020_04_fire").board);

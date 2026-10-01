@@ -17,6 +17,10 @@
         240
       ],
       "touch": false
+    },
+    "storage": {
+      "psram_mb": 0,
+      "flash_mb": 8
     }
   },
   "pins": {

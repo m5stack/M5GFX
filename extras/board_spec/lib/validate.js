@@ -144,12 +144,16 @@ function validatePsram(board, chip, errors, resolved) {
   if (size <= 0 && device) errors.push(error("E_PSRAM_STORAGE", "/spec/storage/psram_mb", "psram device requires a positive storage.psram_mb"));
   if (size <= 0 && mode) errors.push(error("E_PSRAM_STORAGE", "/spec/storage/psram_mode", "PSRAM mode requires a positive storage.psram_mb"));
   if (size > 0 && !mode) errors.push(error("E_PSRAM_STORAGE", "/spec/storage/psram_mode", "PSRAM size requires storage.psram_mode"));
-  if (!device || !mode) return;
+  // Storage claims must match chip capabilities even without a device declaration.
+  if (size > 0 && Object.keys(chip.psram ?? {}).length === 0) {
+    errors.push(error("E_PSRAM_UNSUPPORTED", "/spec/storage/psram_mb", `${chip.id}/${chip.package} does not support PSRAM`));
+  }
   const expected = chip.psram?.[mode];
-  if (!expected) {
+  if (mode && !Object.hasOwn(chip.psram ?? {}, mode)) {
     errors.push(error("E_PSRAM_MODE", "/spec/storage/psram_mode", `${chip.id}/${chip.package} does not declare ${mode} PSRAM wiring`));
     return;
   }
+  if (!device || !mode) return;
   const actual = {};
   for (const entry of roleEntries(board)) if (entry.owner === "soc" && entry.parsed?.type === "dev" && entry.parsed.id === "psram") {
     actual[entry.parsed.signal] = Number(entry.pin);
