@@ -11,6 +11,12 @@
   ],
   "legacy_board_id": 9,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "storage": {
+      "psram_mb": 0,
+      "flash_mb": 16
+    }
+  },
   "pins": {
     "0": {
       "roles": [
