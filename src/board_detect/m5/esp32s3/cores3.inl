@@ -132,14 +132,14 @@
       const auto port0 = lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq);
       if (!port0.has_value()) { return "read failed"; }
       if (port0.value() & bus_en) { return nullptr; }
-      const std::uint8_t off = port0.value();
+      const std::uint8_t off_value = port0.value();
       enum class off_state_t { unknown, off, on };
       const auto confirm_off = [&]()
       {
         bool read_ok = false;
         for (int retry = 0; retry < 3; ++retry)
         {
-          lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off, 0, freq);
+          lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value, 0, freq);
           const auto read = lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq);
           read_ok = read.has_value();
           if (read_ok && !(read.value() & bus_en)) { return off_state_t::off; }
@@ -148,14 +148,14 @@
       };
       for (std::uint32_t i = 0; i < 8; ++i)
       {
-        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off | bus_en, 0, freq).has_value())
+        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value | bus_en, 0, freq).has_value())
         {
           const auto state = confirm_off();
           if (state == off_state_t::on) { break; }
           return state == off_state_t::off ? "precharge write failed" : "precharge read failed";
         }
         lgfx::delayMicroseconds(i * 16);
-        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off, 0, freq).has_value())
+        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value, 0, freq).has_value())
         {
           const auto state = confirm_off();
           if (state == off_state_t::unknown) { return "precharge read failed"; }
@@ -165,8 +165,8 @@
       }
       for (int retry = 0; retry < 3; ++retry)
       {
-        if (lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off | bus_en, 0, freq).has_value()
-         && lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq).value_or(0) == (off | bus_en))
+        if (lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value | bus_en, 0, freq).has_value()
+         && lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq).value_or(0) == (off_value | bus_en))
         {
           return nullptr;
         }

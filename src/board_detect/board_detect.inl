@@ -1585,9 +1585,9 @@ namespace board_detect
   class spi_id_detector_t final : public board_detector_t
   {
   public:
-    spi_id_detector_t(const board_def_t* const* members, const spi_id_member_t* members_desc,
+    spi_id_detector_t(const board_def_t* const* board_members, const spi_id_member_t* members_desc,
                       std::uint8_t member_count, bool shared_id_read = false)
-    : board_detector_t(members),
+    : board_detector_t(board_members),
       members_desc_(members_desc), member_count_(member_count),
       shared_id_read_(shared_id_read) {}
     bool signature(probe_ctx_t&) const override { return true; }
