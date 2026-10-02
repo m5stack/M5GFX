@@ -1827,9 +1827,7 @@ namespace m5gfx
                 {
                   p = new Panel_M5StackCoreS3E();
                   _set_ili9342e_read(p, bus_cfg.freq_read);
-                  auto cfg = p->config();
-                  cfg.readable = false;   // the frame memory cannot be read back on this combination yet
-                  p->config(cfg);
+                  // The ILI9342E supports GRAM reads with the dummy clocks set above.
                 }
                 else
                 {
