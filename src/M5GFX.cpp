@@ -268,10 +268,10 @@ namespace m5gfx
     {
       if (brightness)
       {
-        if (brightness > 4)
-        {
-          brightness = (brightness / 24) + 5;
-        }
+        // LDO3 = 1.8V + 0.1V * N (N = 0..15) drives the backlight directly; below 2.5V
+        // (N = 7) it does not light. Map 1..255 onto N = 7..15 so that every non-zero
+        // value is visible.
+        brightness = 7 + (brightness * 9) / 256;
         lgfx::i2c::bitOn(axp_i2c_port, axp_i2c_addr, 0x12, 0x08, axp_i2c_freq); // LDO3 enable
       }
       else
