@@ -38,7 +38,8 @@
     "2": {
       "roles": [
         "dev:epd.rst"
-      ]
+      ],
+      "detect_class": "floating"
     },
     "3": {
       "roles": [

@@ -831,7 +831,7 @@ namespace board_detect
   {
     lgfx::gpio_lo(pin_sclk_);
     lgfx::pinMode(pin_sclk_, lgfx::pin_mode_t::output);
-    lgfx::gpio_hi(pin_mosi_);
+    lgfx::gpio_lo(pin_mosi_);
     lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
     if (pin_miso_ != pin_mosi_) { lgfx::pinMode(pin_miso_, lgfx::pin_mode_t::input); }
     if (pin_dc_ >= 0) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
@@ -926,7 +926,13 @@ namespace board_detect
 
   void soft_spi_t::endRead()
   {
-    if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output); }
+    if (pin_miso_ == pin_mosi_)
+    {
+      // Input mode leaves the latch high. Clear it before driving MOSI again
+      // to avoid a long high pulse on shared data lines such as WS2812 inputs.
+      lgfx::gpio_lo(pin_mosi_);
+      lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
+    }
     if (pin_miso_ == pin_dc_) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
   }
 
@@ -1586,11 +1592,13 @@ namespace board_detect
   {
   public:
     spi_id_detector_t(const board_def_t* const* board_members, const spi_id_member_t* members_desc,
-                      std::uint8_t member_count, bool shared_id_read = false)
+                      std::uint8_t member_count, bool shared_id_read = false,
+                      bool (*signature_probe)(probe_ctx_t&) = nullptr)
     : board_detector_t(board_members),
       members_desc_(members_desc), member_count_(member_count),
-      shared_id_read_(shared_id_read) {}
-    bool signature(probe_ctx_t&) const override { return true; }
+      shared_id_read_(shared_id_read), signature_probe_(signature_probe) {}
+    bool signature(probe_ctx_t& ctx) const override
+    { return signature_probe_ == nullptr || signature_probe_(ctx); }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
       if (shared_id_read_) { return probe_family(ctx, result); }
@@ -1688,6 +1696,7 @@ namespace board_detect
     const spi_id_member_t* members_desc_;
     std::uint8_t member_count_;
     bool shared_id_read_;
+    bool (*signature_probe_)(probe_ctx_t&);
   };
 
   bool prepare(const board_desc_t& desc, board_result_t& result, const prepare_ctx_t& ctx)

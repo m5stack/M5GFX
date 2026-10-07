@@ -621,7 +621,7 @@ test("standalone editor bundle embeds the catalog and valid scripts", async () =
   const embedded = JSON.parse(/<script type="application\/json" id="board-spec-boards">(.*?)<\/script>/s.exec(html)[1]);
   assert.deepEqual(Object.keys(embedded).sort(), catalogBoards.map((item) => item.id).sort());
   assert.deepEqual(schema["x-editor"].pinColumns.map((column) => column.id), [
-    "gpio", "roles", "pull", "note", "verified", "validation",
+    "gpio", "roles", "pull", "detect_class", "note", "verified", "validation",
   ]);
 
   const sandbox = vm.createContext({ console });
@@ -2562,4 +2562,70 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /assigned before prepare\/refine[\s\S]*?representative family ID[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
   assert.match(main, /case 0: detectors = board_detect::m5::esp32s3_detectors_qfn56;[\s\S]*?case 1: detectors = board_detect::m5::esp32s3_detectors_lga56;[\s\S]*?try_setup_detected\(detectors, board/);
+});
+
+test("detect classes include only explicit pins and retain 64-bit GPIO masks", () => {
+  const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
+  source.pins["2"].detect_class = "floating";
+  source.pins["47"] = { roles: [], detect_class: "up" };
+  source.pins["48"] = { roles: [], detect_class: "down" };
+  const resolved = resolveCatalog(source)[0].board;
+  const emitted = emitM5GFXWiring(resolved, parts, target);
+  const header = renderM5GFXWiringHeader([{ board: source, chip: chips[source.chip], emitted }]);
+  assert.match(header, /detect_class_mask = 0x1800000000004ULL;/);
+  assert.match(header, /detect_class_up = 0x800000000000ULL;/);
+  assert.match(header, /detect_class_down = 0x1000000000000ULL;/);
+  assert.match(header, /detect_class_floating = 0x4ULL;/);
+  delete source.pins["2"].detect_class;
+  delete source.pins["47"];
+  delete source.pins["48"];
+  source.pins["2"].pull = "none";
+  const without = emitM5GFXWiring(resolveCatalog(source)[0].board, parts, target);
+  assert.doesNotMatch(renderM5GFXWiringHeader([{ board: source, chip: chips[source.chip], emitted: without }]), /detect_class_/);
+});
+
+test("detect classes reject pins without internal pulls in board and choices", () => {
+  const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
+  const noPullChip = { ...chipS3, no_internal_pull: [2] };
+  const validate = () => validateBoard(source, { ...context, chip: noPullChip });
+  assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_NO_PULL" && issue.path === "/pins/2/detect_class"));
+  delete source.pins["2"].detect_class;
+  source.devices.epd.choices.gdew0154d67.soc_pins = { "2": { roles: ["dev:epd.rst"], detect_class: "fixed" } };
+  assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_NO_PULL" && issue.path === "/devices/epd/choices/gdew0154d67/soc_pins/2/detect_class"));
+  const valid = validateBoard(source, { ...context, chip: chipS3 });
+  assert.equal(valid.some((issue) => issue.id === "E_SCHEMA" || issue.id === "E_DETECT_CLASS_NO_PULL"), false);
+  source.devices.epd.choices.gdew0154d67.soc_pins["2"].detect_class = "X";
+  assert.ok(validateBoard(source, { ...context, chip: chipS3 }).some((issue) => issue.path.endsWith("/detect_class")));
+});
+
+
+test("choice detect_class does not become a board-wide exclusion gate", () => {
+  const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
+  delete source.pins["2"].detect_class;
+  source.devices.epd.choices.gdew0154d67.soc_pins = { "2": { roles: ["dev:epd.rst"], detect_class: "fixed" } };
+  const emitted = emitM5GFXWiring(resolveCatalog(source)[0].board, parts, target);
+  const header = renderM5GFXWiringHeader([{ board: source, chip: chipS3, emitted }]);
+  assert.doesNotMatch(header, /detect_class_/);
+});
+
+test("detect-only pins participate in capture, reservations and conditional touch flags", () => {
+  const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
+  source.pins["17"] = { roles: [], detect_class: "floating" };
+  source.pins["33"] = { roles: [], detect_class: "fixed" };
+  const emitted = emitM5GFXWiring(resolveCatalog(source)[0].board, parts, target);
+  const entries = [{ board: source, chip: chipS3, emitted }];
+  assert.ok(detectionPinsForEntries(entries).includes(17));
+  assert.ok(detectionPinsForEntries(entries).includes(33));
+  const partitioned = partitionDetectionPins(entries, chipS3);
+  assert.ok(partitioned.unconditional.includes(17));
+  assert.ok(partitioned.conditional.opi.includes(33));
+  assert.equal(partitioned.unconditional.includes(33), false);
+  const header = renderM5GFXWiringHeader(entries);
+  assert.match(header, /touches_opi_pins = true;/);
+  assert.throws(() => validateDetectionPins(entries, chipS3, detectionPinsForEntries(entries).filter((pin) => pin !== 17)), /GPIO 17 is absent/);
+  assert.throws(() => validateDetectionPins(entries, { ...chipS3, reserved: [...chipS3.reserved, 17] }), /GPIO 17 is reserved/);
+  assert.throws(() => validateDetectionPins(entries, { ...chipS3, absent: [...chipS3.absent, 17] }), /GPIO 17 does not exist/);
+  assert.throws(() => validateDetectionPins(entries, { ...chipS3, usb: { dn: 17, dp: 18 } }), /GPIO 17 is reserved for native USB/);
+  source.spec.storage.psram_mode = "opi";
+  assert.throws(() => validateDetectionPins(entries, chipS3), /GPIO 33 is reserved when PSRAM mode is opi/);
 });

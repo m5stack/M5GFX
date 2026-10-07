@@ -25,3 +25,21 @@ test("board-detection operation IR passes its C++11 host suite", async (t) => {
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("detect-class matcher checks U, D, F, X and unconstrained pins", async (t) => {
+  const compiler = process.env.CXX || "c++";
+  const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
+  if (probe.error?.code === "ENOENT") return t.skip(`C++ compiler not found (${compiler})`);
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-ops-"));
+  const binary = path.join(directory, "detect_class_host");
+  try {
+    const sourceRoot = path.resolve(here, "../../../src");
+    const source = path.join(here, "detect_class_host.cpp");
+    const compiled = spawnSync(compiler, ["-std=c++11", `-I${sourceRoot}`, source, "-o", binary], { encoding: "utf8" });
+    assert.equal(compiled.status, 0, compiled.stderr || compiled.stdout);
+    const ran = spawnSync(binary, [], { encoding: "utf8" });
+    assert.equal(ran.status, 0, ran.stderr || ran.stdout);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

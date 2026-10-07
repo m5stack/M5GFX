@@ -377,6 +377,20 @@ export function validateBoard(board, { schema, chip, connectorTypes = {}, parts 
   validateDeviceSpecKeys(board, schema, errors);
   validateIds(board, schema, errors);
   validatePinKeys(board, chip, errors);
+  const checkDetectClasses = (pins, prefix) => {
+    for (const [gpio, pin] of Object.entries(pins ?? {})) {
+      if (pin.detect_class !== undefined && (chip.no_internal_pull ?? []).includes(Number(gpio))) {
+        errors.push(error("E_DETECT_CLASS_NO_PULL", `${prefix}/${gpio}/detect_class`, "detect_class requires internal GPIO pulls"));
+      }
+    }
+  };
+  checkDetectClasses(board.pins, "/pins");
+  for (const [id, device] of Object.entries(board.devices ?? {})) {
+    for (const [index, choice] of Object.entries(device.choices ?? {})) {
+      checkDetectClasses(choice.soc_pins, `/devices/${id}/choices/${index}/soc_pins`);
+    }
+  }
+
   validateHexFields(board, schema, errors);
   validateRoles(board, chip, schema, errors, resolved);
   validatePsram(board, chip, errors, resolved);
