@@ -814,8 +814,9 @@ namespace board_detect
     // del_bundle pin cleanup differs by IDF version (4.4/5.2/5.3 leave the
     // pads alone; newer versions disable output), and out_sel is not restored.
     // Dedicated input routing is peripheral-side. In every version,
-    // pin_backup_t::restore_start restores out_sel, GPIO_PINn, output-enable,
-    // latch, and the complete IO_MUX register (including temporary FUN_DRV).
+    // The transaction's restore_start (pin_backup_t::restore) restores out_sel,
+    // GPIO_PINn, output-enable, latch, and the complete IO_MUX register
+    // (including temporary FUN_DRV).
     ctx.transaction->restore_start(pins, pin_count);
     return result;
 #else
