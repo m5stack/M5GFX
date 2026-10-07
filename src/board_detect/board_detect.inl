@@ -831,7 +831,7 @@ namespace board_detect
   {
     lgfx::gpio_lo(pin_sclk_);
     lgfx::pinMode(pin_sclk_, lgfx::pin_mode_t::output);
-    lgfx::gpio_hi(pin_mosi_);
+    lgfx::gpio_lo(pin_mosi_);
     lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
     if (pin_miso_ != pin_mosi_) { lgfx::pinMode(pin_miso_, lgfx::pin_mode_t::input); }
     if (pin_dc_ >= 0) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
@@ -926,7 +926,13 @@ namespace board_detect
 
   void soft_spi_t::endRead()
   {
-    if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output); }
+    if (pin_miso_ == pin_mosi_)
+    {
+      // Input mode leaves the latch high. Clear it before driving MOSI again
+      // to avoid a long high pulse on shared data lines such as WS2812 inputs.
+      lgfx::gpio_lo(pin_mosi_);
+      lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
+    }
     if (pin_miso_ == pin_dc_) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
   }
 
