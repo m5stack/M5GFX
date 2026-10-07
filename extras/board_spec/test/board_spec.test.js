@@ -1181,7 +1181,7 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
     /stickc_family_members\[] = \{\s*&desc_stickcplus\.def, &desc_stickc\.def/);
   assert.match(picoSource,
     /stickc_family_detector\([\s\S]*?stickc_family_member_descs, 2, true\)/);
-  assert.match(picoSource, /stickcplus_id_values\[] = \{ 0x81, 0x85 \}/);
+  assert.match(picoSource, /stickcplus_id_values\[] = \{ 0x81 \}/);
   assert.match(picoSource,
     /coreink_probes\[] = \{[\s\S]*?probe_gdew0154d67[\s\S]*?probe_gdew0154m09/);
   assert.match(picoSource,

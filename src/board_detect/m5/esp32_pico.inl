@@ -62,7 +62,9 @@ static constexpr board_desc_t desc_atompsram = {
 };
 
 static constexpr std::uint32_t stickc_id_values[] = { 0x7C };
-static constexpr std::uint32_t stickcplus_id_values[] = { 0x81, 0x85 };
+// Both 0x81 and 0x85 have been read from real units; bit 2 differs, so the
+// probes compare under mask 0xFB and accept both with this single value.
+static constexpr std::uint32_t stickcplus_id_values[] = { 0x81 };
 static const spi_id_probe_t stickc_probes[] = {
   // The legacy read checks the low byte only; the part-catalog probe describes
   // full IDs used by other boards and is intentionally not emitted here.

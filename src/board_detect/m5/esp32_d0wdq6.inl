@@ -380,7 +380,7 @@ namespace m5
       if (!startup_detail::description_valid(desc_stack)
        || !startup_detail::gpio_valid(desc_stack.display.dc)) { return false; }
       std::uint64_t sd_mask;
-      if (!detail::sd_pull_mask(desc_stack, &sd_mask) || sd_mask == 0) { return false; }
+      if (!detail::sd_pull_mask(desc_stack, &sd_mask)) { return false; }
       auto& values = ctx.detector_workspace.values;
       startup_detail::pin_level(desc_stack.display.cs, true);
       const auto pulls = probe_pin_pulls(ctx, sd_mask);
