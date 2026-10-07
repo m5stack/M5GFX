@@ -855,7 +855,7 @@ function renderRoleColorLegend(board) {
 }
 
 function verificationSummary(pin) {
-  const fields = ["roles", "pull", "note"].filter((field) => (
+  const fields = ["roles", "pull", "detect_class", "note"].filter((field) => (
     Object.prototype.hasOwnProperty.call(pin, field) && (field !== "roles" || pin.roles.length > 0)
   ));
   if (!fields.length) return "<span>—</span>";
@@ -866,7 +866,7 @@ function verificationSummary(pin) {
 }
 
 function compactVerification(pin) {
-  const fields = ["roles", "pull", "note"].filter((field) => (
+  const fields = ["roles", "pull", "detect_class", "note"].filter((field) => (
     Object.prototype.hasOwnProperty.call(pin, field) && (field !== "roles" || pin.roles.length > 0)
   ));
   if (!fields.length) return "—";
@@ -955,10 +955,10 @@ function renderTable(board, errors) {
   const schemaColumns = schema["x-editor"]?.pinColumns ?? [];
   const connectorLanes = assignConnectorLanes(board.pins);
   const hasConnectors = connectorLanes.lanes.length > 0;
-  const compactIds = ["gpio", "internalRoles", ...(hasConnectors ? ["connectorRoles"] : []), "pull", "verified", "validation"];
+  const compactIds = ["gpio", "internalRoles", ...(hasConnectors ? ["connectorRoles"] : []), "pull", "detect_class", "verified", "validation"];
   const columns = compactIds.map((id) => schemaColumns.find((column) => column.id === id) ?? { id, label: id });
   const columnLabels = {
-    gpio: t("column.gpio"), internalRoles: t("column.internalRoles"), connectorRoles: t("column.connectors"), pull: t("column.pull"),
+    gpio: t("column.gpio"), internalRoles: t("column.internalRoles"), connectorRoles: t("column.connectors"), pull: t("column.pull"), detect_class: "detect_class",
     verified: t("column.verified"), validation: t("column.validation"),
   };
   const columnHelp = { internalRoles: "help.roles", connectorRoles: "help.roles", verified: "help.verification", validation: "help.validation" };
@@ -1011,6 +1011,7 @@ function renderTable(board, errors) {
       internalRoles: `<td class="gpio-roles-cell gpio-internal-roles-cell"><div class="role-row-main"><div class="compact-roles">${compactInternalRoles || "<span>—</span>"}</div>${rowHint}</div>${readonlyOrigin}</td>`,
       connectorRoles: `<td class="gpio-connector-roles-cell"><div class="connector-role-lanes">${compactConnectorRoles}</div></td>`,
       pull: `<td>${escapeHtml(pull || "—")}</td>`,
+      detect_class: `<td>${escapeHtml(pin.detect_class || "—")}</td>`,
       verified: `<td class="compact-verified">${escapeHtml(compactVerification(pin))}</td>`,
       validation: `<td>${errorSummary}</td>`,
     };
@@ -1023,6 +1024,7 @@ function renderTable(board, errors) {
         <section class="detail-roles"><h3>${escapeHtml(t("column.roles"))}</h3><div class="role-list">${editableRoles || "<span>—</span>"}</div>
           <div class="search-combobox" data-role-combobox="${safeKey}"><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${escapeHtml(t("detail.searchRole"))}" autocomplete="off"${readonly}><ul role="listbox"></ul></div>${readonlyNote(readonlyReason)}
         </section>
+        <label>detect_class<select class="cell-select" data-detect-class data-gpio="${safeKey}"${readonly}>${["", "up", "down", "floating", "fixed"].map((value) => `<option value="${value}"${(pin.detect_class ?? "") === value ? " selected" : ""}>${value || escapeHtml(t("detail.empty"))}</option>`).join("")}</select>${readonlyNote(readonlyReason)}</label>
         <label>${escapeHtml(t("column.pull"))}<select class="cell-select" data-pull data-gpio="${safeKey}"${readonly}><option value=""${pull === "" ? " selected" : ""}>${escapeHtml(t("detail.empty"))}</option><option value="up"${pull === "up" ? " selected" : ""}>up</option><option value="down"${pull === "down" ? " selected" : ""}>down</option><option value="none"${pull === "none" ? " selected" : ""}>none</option></select>${chip.no_internal_pull?.includes(gpio) ? `<small class="readonly-note">${escapeHtml(t("gpio.noInternalPull"))}</small>` : ""}${readonlyNote(readonlyReason)}</label>
         <label>${escapeHtml(t("column.note"))}<input class="cell-input note-input" data-note data-gpio="${safeKey}" type="text" value="${escapeHtml(pin.note ?? "")}"${readonly}>${readonlyNote(readonlyReason)}</label>
         <section><h3>${escapeHtml(t("column.verified"))}</h3><div class="verified">${verificationSummary(pin)}</div></section>
@@ -2333,6 +2335,7 @@ elements.tableBody.addEventListener("change", (event) => {
   const gpio = event.target.dataset.gpio;
   if (gpio === undefined) return;
   if (event.target.matches("[data-pull]")) updatePin(gpio, "pull", event.target.value);
+  else if (event.target.matches("[data-detect-class]")) updatePin(gpio, "detect_class", event.target.value);
   else if (event.target.matches("[data-note]")) updatePin(gpio, "note", event.target.value.trim());
 });
 

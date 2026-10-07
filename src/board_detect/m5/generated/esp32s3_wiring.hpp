@@ -147,6 +147,11 @@ namespace dinmeter {
 } // namespace dinmeter
 
 namespace airq {
+  constexpr std::uint64_t detect_class_mask = 0x4ULL;
+  constexpr std::uint64_t detect_class_up = 0x0ULL;
+  constexpr std::uint64_t detect_class_down = 0x0ULL;
+  constexpr std::uint64_t detect_class_floating = 0x4ULL;
+  constexpr std::uint64_t detect_class_fixed = 0x0ULL;
   constexpr std::int8_t display_sclk = 5;
   constexpr std::int8_t display_mosi = 6;
   constexpr std::int8_t display_miso = -1;

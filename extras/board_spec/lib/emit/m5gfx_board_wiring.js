@@ -200,11 +200,19 @@ function descriptorPins(emitted) {
   return [...new Set(values.filter((pin) => Number.isInteger(pin) && pin >= 0))].sort((left, right) => left - right);
 }
 
+function detectClassesForBoard(board) {
+  // Revision-choice classifications are not board-wide exclusion gates.
+  return Object.entries(board.pins ?? {}).filter(([, pin]) => pin.detect_class !== undefined);
+}
+
+function detectionPinsForEntry(entry, entries) {
+  const subdivision = cardputerSubdivisionForEntry(entry, entries);
+  return [...descriptorPins(entry.emitted), ...(subdivision?.sensePins ?? []),
+          ...detectClassesForBoard(entry.board).map(([gpio]) => Number(gpio))];
+}
+
 export function detectionPinsForEntries(entries) {
-  return [...new Set(entries.flatMap((entry) => {
-    const subdivision = cardputerSubdivisionForEntry(entry, entries);
-    return [...descriptorPins(entry.emitted), ...(subdivision?.sensePins ?? [])];
-  }))].sort((left, right) => left - right);
+  return [...new Set(entries.flatMap((entry) => detectionPinsForEntry(entry, entries)))].sort((left, right) => left - right);
 }
 
 export function partitionDetectionPins(entries, chip) {
@@ -222,9 +230,8 @@ export function partitionDetectionPins(entries, chip) {
 export function validateDetectionPins(entries, chip, pins = detectionPinsForEntries(entries)) {
   const available = new Set(pins);
   for (const entry of entries) {
-    const { board, emitted } = entry;
-    const subdivision = cardputerSubdivisionForEntry(entry, entries);
-    for (const pin of [...descriptorPins(emitted), ...(subdivision?.sensePins ?? [])]) {
+    const { board } = entry;
+    for (const pin of detectionPinsForEntry(entry, entries)) {
       if (!available.has(pin)) throw new Error(`${board.id}: descriptor GPIO ${pin} is absent from the detection pin set`);
       if (chip.absent?.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} does not exist on ${chip.id}`);
       if (chip.reserved?.includes(pin)) throw new Error(`${board.id}: detection GPIO ${pin} is reserved by ${chip.id}`);
@@ -256,11 +263,16 @@ export function renderM5GFXWiringHeader(entries) {
     const value = entry.emitted;
     const subdivision = cardputerSubdivisionForEntry(entry, entries);
     const fields = new Set(value.mapping.fields);
-    const boardPins = [
-      ...descriptorPins(value),
-      ...(subdivision?.sensePins ?? []),
-    ];
+    const boardPins = detectionPinsForEntry(entry, entries);
     lines.push("", `namespace ${value.mapping.cppNamespace} {`);
+    const detectClasses = detectClassesForBoard(entry.board);
+    if (detectClasses.length) {
+      const mask = (pull) => detectClasses.reduce((bits, [gpio, pin]) =>
+        pull === undefined || pin.detect_class === pull ? bits | (1n << BigInt(gpio)) : bits, 0n);
+      for (const [name, pull] of [["mask", undefined], ["up", "up"], ["down", "down"], ["floating", "floating"], ["fixed", "fixed"]]) {
+        lines.push(`  constexpr std::uint64_t detect_class_${name} = 0x${mask(pull).toString(16)}ULL;`);
+      }
+    }
     if (fields.has("display")) for (const [name, pin] of Object.entries(value.display)) lines.push(`  ${constant(`display_${name}`, pin)}`);
     if (fields.has("shared_sd") && value.sharedSd) for (const [name, pin] of Object.entries(value.sharedSd)) lines.push(`  ${constant(`shared_sd_${name}`, pin)}`);
     if (fields.has("i2c") && value.i2c) {

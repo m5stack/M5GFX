@@ -9,6 +9,7 @@
 #include "../lgfx/v1/platforms/esp32/common.hpp"
 #include "dedicated_release_probe.hpp"
 #include "ops.hpp"
+#include "detect_class.hpp"
 
 namespace m5gfx
 {
@@ -484,12 +485,6 @@ namespace board_detect
     // a cached NACK from an address that has not been touched yet.
     std::uint32_t checked[4] = {};
     std::uint32_t ack[4] = {};
-  };
-
-  struct pin_pull_result_t
-  {
-    std::uint64_t pulldown_high = 0;
-    std::uint64_t pullup_high = 0;
   };
 
   struct detector_workspace_t

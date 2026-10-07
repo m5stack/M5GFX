@@ -1586,11 +1586,13 @@ namespace board_detect
   {
   public:
     spi_id_detector_t(const board_def_t* const* board_members, const spi_id_member_t* members_desc,
-                      std::uint8_t member_count, bool shared_id_read = false)
+                      std::uint8_t member_count, bool shared_id_read = false,
+                      bool (*signature_probe)(probe_ctx_t&) = nullptr)
     : board_detector_t(board_members),
       members_desc_(members_desc), member_count_(member_count),
-      shared_id_read_(shared_id_read) {}
-    bool signature(probe_ctx_t&) const override { return true; }
+      shared_id_read_(shared_id_read), signature_probe_(signature_probe) {}
+    bool signature(probe_ctx_t& ctx) const override
+    { return signature_probe_ == nullptr || signature_probe_(ctx); }
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
       if (shared_id_read_) { return probe_family(ctx, result); }
@@ -1688,6 +1690,7 @@ namespace board_detect
     const spi_id_member_t* members_desc_;
     std::uint8_t member_count_;
     bool shared_id_read_;
+    bool (*signature_probe_)(probe_ctx_t&);
   };
 
   bool prepare(const board_desc_t& desc, board_result_t& result, const prepare_ctx_t& ctx)

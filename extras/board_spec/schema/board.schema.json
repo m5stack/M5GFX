@@ -8,6 +8,7 @@
       { "id": "gpio", "label": "GPIO" },
       { "id": "roles", "label": "roles" },
       { "id": "pull", "label": "pull" },
+      { "id": "detect_class", "label": "detect_class" },
       { "id": "note", "label": "note" },
       { "id": "verified", "label": "verified" },
       { "id": "validation", "label": "検証" }
@@ -60,6 +61,7 @@
       "properties": {
         "roles": { "type": "array", "items": { "$ref": "#/definitions/role" }, "uniqueItems": true },
         "pull": { "enum": ["up", "down", "none"] },
+        "detect_class": { "enum": ["up", "down", "floating", "fixed"] },
         "pull_reliable": { "type": "boolean" },
         "note": { "type": "string" },
         "verified": { "$ref": "#/definitions/verified" },

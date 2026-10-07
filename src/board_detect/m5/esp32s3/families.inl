@@ -744,6 +744,16 @@ namespace m5
     atoms3r_members, atoms3r_member_descs,
     sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
 
+  static bool airq_signature(probe_ctx_t& ctx)
+  {
+    const detect_class_expected_t expected = {
+      wiring::airq::detect_class_mask, wiring::airq::detect_class_up,
+      wiring::airq::detect_class_down, wiring::airq::detect_class_floating,
+      wiring::airq::detect_class_fixed,
+    };
+    return match_detect_class(expected, probe_pin_pulls(ctx, expected.mask));
+  }
+
   static const board_def_t* const airq_members[] = { &desc_airq.def, nullptr };
   static constexpr spi_id_member_t airq_member_descs[] = {
     { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
@@ -751,7 +761,7 @@ namespace m5
   };
   static const spi_id_detector_t airq_detector(
     airq_members, airq_member_descs,
-    sizeof(airq_member_descs) / sizeof(airq_member_descs[0]));
+    sizeof(airq_member_descs) / sizeof(airq_member_descs[0]), false, airq_signature);
 
   static const board_def_t* const stamplc_members[] = { &desc_stamplc.def, nullptr };
   static constexpr spi_id_member_t stamplc_member_descs[] = {
