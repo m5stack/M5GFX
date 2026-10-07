@@ -529,9 +529,8 @@ namespace board_detect
     // moved to SPI mode is never moved back to native mode. The surrounding
     // detection transaction restores GPIO state if a successful result is
     // excluded or its prepare/construction/setup subsequently fails.
-    // PMIC-register restoration after a failed confirmation is best effort:
-    // failures are warned and detection continues, since aborting would make
-    // the transport failure appear to the caller as a different board.
+    // Rollback releases buses and restores GPIO state only; PMIC registers
+    // written before a failed confirmation are not restored.
     const board_def_t* const* members;
   };
 

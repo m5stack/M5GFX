@@ -40,10 +40,9 @@ namespace ops
 
   enum class op_kind_t : std::uint8_t
   {
-    // Current PMIC descriptions use write8/masked8 (including bit helpers).
-    // Delay/GPIO are available to future detection lists; transfer remains a
-    // reserved, unsupported operation. wait_ready cannot shorten one lgfx I2C
-    // transaction. Deadline overrun depends on the lower I2C implementation
+    // Current PMIC descriptions use register writes, delays and GPIO operations;
+    // transfer remains a reserved, unsupported operation. wait_ready cannot
+    // shorten one lgfx I2C transaction. Deadline overrun depends on the lower I2C implementation
     // (hardware is about 26 ms; software I2C may take tens of milliseconds
     // with SCL stuck), but no new transaction begins at zero remaining time.
     delay_ms,

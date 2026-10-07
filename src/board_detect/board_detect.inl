@@ -814,8 +814,9 @@ namespace board_detect
     // del_bundle pin cleanup differs by IDF version (4.4/5.2/5.3 leave the
     // pads alone; newer versions disable output), and out_sel is not restored.
     // Dedicated input routing is peripheral-side. In every version,
-    // pin_backup_t::restore_start restores out_sel, GPIO_PINn, output-enable,
-    // latch, and the complete IO_MUX register (including temporary FUN_DRV).
+    // The transaction's restore_start (pin_backup_t::restore) restores out_sel,
+    // GPIO_PINn, output-enable, latch, and the complete IO_MUX register
+    // (including temporary FUN_DRV).
     ctx.transaction->restore_start(pins, pin_count);
     return result;
 #else
@@ -901,7 +902,6 @@ namespace board_detect
   {
     if (pin_dc_ >= 0) { lgfx::gpio_hi(pin_dc_); }
     if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::input); }
-    if (pin_miso_ == pin_dc_) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::input); }
     for (std::uint_fast8_t i = 0; i < dummy_bits; ++i) { clock(); }
   }
 
@@ -933,7 +933,6 @@ namespace board_detect
       lgfx::gpio_lo(pin_mosi_);
       lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
     }
-    if (pin_miso_ == pin_dc_) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
   }
 
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
