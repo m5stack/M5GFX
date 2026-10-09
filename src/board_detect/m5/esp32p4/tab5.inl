@@ -72,7 +72,18 @@ public:
     {
       return false;
     }
-    result->assign(ctx.hint == desc_tab5x.def.id ? &desc_tab5x : &desc_tab5);
+    // Tab5X upgrades the P4 silicon revision; saved hints cannot identify it.
+    esp_chip_info_t info;
+    esp_chip_info(&info);
+    const auto* desc = info.revision >= 300 ? &desc_tab5x : &desc_tab5;
+    if ((ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
+     && ctx.hint != desc->def.id)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] Tab5 hint:%u disagrees with chip revision:%u; using %s",
+               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(info.revision),
+               desc->def.name);
+    }
+    result->assign(desc);
     result->candidate = ctx.candidate;
     return true;
   }
