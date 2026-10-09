@@ -51,9 +51,7 @@ public:
     if (bus_present && ctx.candidate == nullptr
      && match_detect_class(expected, probe_pin_pulls(ctx, expected.mask)))
     {
-      esp_chip_info_t info;
-      esp_chip_info(&info);
-      ctx.candidate = info.revision >= 300 ? &desc_tab5x.def : &desc_tab5.def;
+      ctx.candidate = &revision_desc()->def;
     }
     return bus_present;
   }
@@ -70,24 +68,37 @@ public:
                         tab5_detail::i2c_freq, 0)
      || !is_pi4io(value))
     {
+      // The recovery candidate from signature() is what the caller will use.
+      if (ctx.candidate == &desc_tab5.def || ctx.candidate == &desc_tab5x.def)
+      { warn_hint_mismatch(ctx, ctx.candidate); }
       return false;
     }
     // Tab5X upgrades the P4 silicon revision; saved hints cannot identify it.
-    esp_chip_info_t info;
-    esp_chip_info(&info);
-    const auto* desc = info.revision >= 300 ? &desc_tab5x : &desc_tab5;
-    if ((ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
-     && ctx.hint != desc->def.id)
-    {
-      ESP_LOGW("M5GFX", "[Autodetect] Tab5 hint:%u disagrees with chip revision:%u; using %s",
-               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(info.revision),
-               desc->def.name);
-    }
+    const auto* desc = revision_desc();
+    warn_hint_mismatch(ctx, &desc->def);
     result->assign(desc);
     result->candidate = ctx.candidate;
     return true;
   }
 private:
+  static const board_desc_t* revision_desc()
+  {
+    esp_chip_info_t info;
+    esp_chip_info(&info);
+    return info.revision >= 300 ? &desc_tab5x : &desc_tab5;
+  }
+  static void warn_hint_mismatch(const probe_ctx_t& ctx, const board_def_t* def)
+  {
+    if ((ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
+     && ctx.hint != def->id)
+    {
+      esp_chip_info_t info;
+      esp_chip_info(&info);
+      ESP_LOGW("M5GFX", "[Autodetect] Tab5 hint:%u disagrees with chip revision:%u; using %s",
+               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(info.revision),
+               def->name);
+    }
+  }
   static const board_def_t* const members_[3];
 };
 const board_def_t* const tab5_family_detector_t::members_[3] = {
