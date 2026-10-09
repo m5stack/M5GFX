@@ -18,8 +18,8 @@ M5GFX tft;
 // M5AtomDisplay tft(480, 270);
 // M5AtomDisplay tft(320, 180);
 
-// #include <M5UnitPoEP4HDMI.h>
-// M5UnitPoEP4HDMI tft; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+// #include <M5UnitPoEP4DisplayOut.h>
+// M5UnitPoEP4DisplayOut tft; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
 /*
    M5AtomDisplay tft( 240     // width
                     , 360     // height
