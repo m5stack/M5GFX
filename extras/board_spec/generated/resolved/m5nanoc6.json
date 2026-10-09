@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "m5nanoc6",
+  "name": "M5NanoC6",
+  "official_name": "M5Stack NanoC6",
+  "legacy_board_id": 140,
+  "chip": "esp32c6",
+  "pins": {
+    "3": {
+      "roles": [
+        "dev:ir_led.on"
+      ],
+      "note": "IR LED clamps the internal pull-up low",
+      "verified": {
+        "roles": "measured"
+      },
+      "measured_by": {
+        "roles": "docs/investigations/nano-c6-h2-pins-2026-09-28.md"
+      }
+    }
+  },
+  "buses": {},
+  "devices": {
+    "ir_led": {
+      "kind": "led",
+      "signals": {
+        "on": "gpio:3"
+      }
+    }
+  }
+}

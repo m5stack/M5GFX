@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "m5stampc3",
+  "name": "M5StampC3",
+  "official_name": "M5Stack StampC3",
+  "legacy_board_id": 134,
+  "chip": "esp32c3",
+  "pins": {
+    "20": {
+      "roles": [
+        "bus:console_uart.rx"
+      ],
+      "note": "CH9102 TXD holds UART0 RX high against the internal pulldown",
+      "verified": {
+        "roles": "measured"
+      },
+      "measured_by": {
+        "roles": "docs/investigations/c3-stamp-displayless-2026-09-29.md"
+      }
+    },
+    "21": {
+      "roles": [
+        "bus:console_uart.tx"
+      ]
+    }
+  },
+  "buses": {
+    "console_uart": {
+      "kind": "uart",
+      "signals": [
+        "tx",
+        "rx"
+      ],
+      "preferred_host": 0,
+      "fixed": true
+    }
+  },
+  "devices": {}
+}

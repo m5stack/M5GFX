@@ -35,6 +35,32 @@
     no_options(), pins(toughc5_hold),
   };
 
+  static constexpr board_desc_t desc_stampc5 = {
+    { static_cast<board_id_t>(lgfx::board_M5StampC5), "M5StampC5", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    no_internal_i2c(), no_options(), no_pins(),
+  };
+
+  class stampc5_detector_t final : public board_detector_t
+  {
+  public:
+    stampc5_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t&) const override
+    {
+      // The in-package 4 MB flash and absent PSRAM identify StampC5 before
+      // ToughC5 probes any of its GPIOs.
+      const auto sys2 = REG_READ(EFUSE_RD_MAC_SYS2_REG);
+      return ((sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V) == 1
+          && ((sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V) == 0;
+    }
+    bool confirm(probe_ctx_t&, board_result_t* result) const override
+    { if (!result) return false; result->assign(&desc_stampc5); return true; }
+  private:
+    static const board_def_t* const members_[2];
+  };
+  const board_def_t* const stampc5_detector_t::members_[2] = { &desc_stampc5.def, nullptr };
+  static const stampc5_detector_t stampc5_detector;
+
   class toughc5_detector_t final : public board_detector_t
   {
   public:
@@ -81,10 +107,11 @@
   };
   const board_def_t* const toughc5_detector_t::members_[2] = { &desc_toughc5.def, nullptr };
   static const toughc5_detector_t toughc5_detector;
-  static const board_detector_t* const esp32c5_detectors[] = { &toughc5_detector, nullptr };
+  #include "../generated/esp32c5_detector_order.hpp"
 
   construct_status_t construct_toughc5(const board_result_t&, display_parts_t*);
   static const board_entry_t esp32c5_boards[] = {
+    { &desc_stampc5, construct_displayless, "board_M5StampC5", nullptr },
     { &desc_toughc5, construct_toughc5, "board_M5ToughC5", nullptr },
   };
   success_log_t success_log(const board_result_t& result) { return success_log(esp32c5_boards, result); }

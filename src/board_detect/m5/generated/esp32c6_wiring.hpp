@@ -7,6 +7,9 @@
 
 namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {
 
+namespace nanoc6 {
+} // namespace nanoc6
+
 namespace unitc6l {
   constexpr std::int8_t display_sclk = 20;
   constexpr std::int8_t display_mosi = 21;
@@ -19,6 +22,7 @@ namespace unitc6l {
   constexpr std::int8_t internal_i2c_scl = 8;
   constexpr std::int8_t internal_i2c_port = 0;
   constexpr std::int8_t reset_gpio = 15;
+  constexpr std::int8_t power_gpio = 2;
   constexpr std::int8_t hold[] = { 6 };
 } // namespace unitc6l
 
@@ -38,7 +42,7 @@ namespace nesson1 {
 } // namespace nesson1
 
 namespace detection {
-  constexpr std::int8_t unconditional_pins[] = { 3, 6, 8, 10, 15, 16, 17, 18, 20, 21, 22 };
+  constexpr std::int8_t unconditional_pins[] = { 2, 3, 6, 8, 10, 15, 16, 17, 18, 20, 21, 22 };
 } // namespace detection
 
 } // namespace wiring

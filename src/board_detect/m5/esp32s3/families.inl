@@ -32,6 +32,42 @@ namespace m5
     pins(wiring::atoms3::hold), no_internal_i2c(), options(generated_options::atoms3::names), pins(wiring::atoms3::hold),
   };
 
+  static constexpr board_desc_t desc_atoms3lite = {
+    { id(lgfx::board_M5AtomS3Lite), "M5AtomS3Lite", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    no_internal_i2c(), no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_atoms3u = {
+    { id(lgfx::board_M5AtomS3U), "M5AtomS3U", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    no_internal_i2c(), no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_stamps3 = {
+    { id(lgfx::board_M5StampS3), "M5StampS3", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    no_internal_i2c(), no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_dualkey = {
+    { id(lgfx::board_M5DualKey), "M5DualKey", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    no_internal_i2c(), no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_capsule = {
+    { id(lgfx::board_M5Capsule), "M5Capsule", 0 },
+    gpio_power(wiring::capsule::power_gpio), no_reset(), no_shared_sd(),
+    no_display_pins(), no_pins(),
+    internal_i2c(wiring::capsule::internal_i2c_sda, wiring::capsule::internal_i2c_scl,
+                 wiring::capsule::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_powerhub = {
+    { id(lgfx::board_M5PowerHub), "M5PowerHub", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    internal_i2c(wiring::powerhub::internal_i2c_sda, wiring::powerhub::internal_i2c_scl,
+                 wiring::powerhub::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+
   static constexpr board_desc_t desc_atoms3r = {
     { id(lgfx::board_M5AtomS3R), "M5AtomS3R", 0 },
     no_power(), gpio_reset(wiring::atoms3r::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
@@ -42,9 +78,50 @@ namespace m5
     pins(wiring::atoms3r::hold), no_internal_i2c(), options(generated_options::atoms3r::names), pins(wiring::atoms3r::hold),
   };
 
+  static constexpr board_desc_t desc_atoms3rcam = {
+    { id(lgfx::board_M5AtomS3RCam), "M5AtomS3RCam", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    internal_i2c(wiring::atoms3rcam::internal_i2c_sda,
+                 wiring::atoms3rcam::internal_i2c_scl,
+                 wiring::atoms3rcam::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_atoms3rext = {
+    { id(lgfx::board_M5AtomS3RExt), "M5AtomS3RExt", def_flag_fallback },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    internal_i2c(wiring::atoms3rext::internal_i2c_sda,
+                 wiring::atoms3rext::internal_i2c_scl,
+                 wiring::atoms3rext::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_atomvoices3r = {
+    { id(lgfx::board_M5AtomVoiceS3R), "M5AtomVoiceS3R", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    internal_i2c(wiring::atomvoices3r::internal_i2c_sda,
+                 wiring::atomvoices3r::internal_i2c_scl,
+                 wiring::atomvoices3r::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_stamps3bat = {
+    { id(lgfx::board_M5StampS3Bat), "M5StampS3Bat", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    internal_i2c(wiring::stamps3bat::internal_i2c_sda,
+                 wiring::stamps3bat::internal_i2c_scl,
+                 wiring::stamps3bat::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+  static constexpr board_desc_t desc_stamps3mini = {
+    { id(lgfx::board_M5StampS3Mini), "M5StampS3Mini", 0 },
+    no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+    internal_i2c(wiring::stamps3mini::internal_i2c_sda,
+                 wiring::stamps3mini::internal_i2c_scl,
+                 wiring::stamps3mini::internal_i2c_port),
+    no_options(), no_pins(),
+  };
+
   static constexpr board_desc_t desc_dinmeter = {
     { id(lgfx::board_M5DinMeter), "M5DinMeter", 0 },
-    no_power(), gpio_reset(wiring::dinmeter::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    gpio_power(wiring::dinmeter::power_gpio), gpio_reset(wiring::dinmeter::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
     display_pins(wiring::dinmeter::display_sclk, wiring::dinmeter::display_mosi,
                  wiring::dinmeter::display_miso, wiring::dinmeter::display_dc,
                  wiring::dinmeter::display_cs, wiring::dinmeter::display_rst,
@@ -80,7 +157,7 @@ namespace m5
 
   static constexpr board_desc_t desc_dial = {
     { id(lgfx::board_M5Dial), "M5Dial", 0 },
-    no_power(), gpio_reset(wiring::dial::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
+    gpio_power(wiring::dial::power_gpio), gpio_reset(wiring::dial::reset_gpio, 2, 10, reset_hold_when_skipped), no_shared_sd(),
     display_pins(wiring::dial::display_sclk, wiring::dial::display_mosi,
                  wiring::dial::display_miso, wiring::dial::display_dc,
                  wiring::dial::display_cs, wiring::dial::display_rst,
@@ -358,33 +435,26 @@ namespace m5
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
       if (result == nullptr) { return false; }
-      for (auto desc = descriptions_; *desc != nullptr; ++desc)
+      // Both boards have pull-ups on G47/G48. A failed read in the wrong
+      // direction gets one transaction, not the full 200 ms StickS3 poll.
+      // Retry the two orientations under one shared budget for a waking PM1.
+      const auto started = lgfx::millis();
+      do
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
-                                        (*desc)->internal_i2c);
-        if (!i2c.opened) { continue; }
-        const auto& power = (*desc)->power;
-        startup_detail::retry_budget_t retry_budget(power.wake_poll_ms);
-        if (startup_detail::read_variant(power, i2c.port, retry_budget) == nullptr) { continue; }
-        // PM1 is identified by both bytes at register 0, not an ACK alone.
-        const std::uint8_t reg = specs::sticks3::pmic::id_reg;
-        std::uint8_t pm1_id[2] = {};
-        const auto started = lgfx::millis();
-        bool read_ok;
-        do
+        for (auto desc = descriptions_; *desc != nullptr; ++desc)
         {
-          read_ok = lgfx::i2c::transactionWriteRead(
-            i2c.port, specs::sticks3::pmic::i2c_addr, &reg, 1,
-            pm1_id, sizeof(pm1_id), specs::sticks3::pmic::i2c_freq).has_value();
-          if (read_ok) { break; }
-          lgfx::delay(1);
-        } while (lgfx::millis() - started < 200);
-        if (!read_ok || (static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0])
-              != pmic_ops::pm1_device_id)
-        { continue; }
-        result->assign(*desc);
-        return true;
-      }
+          const auto& bus = (*desc)->internal_i2c;
+          std::uint8_t pm1_id[2] = {};
+          if (!probe_i2c_read(ctx, bus.sda, bus.scl, specs::sticks3::pmic::i2c_addr,
+                              specs::sticks3::pmic::id_reg, pm1_id, sizeof(pm1_id),
+                              specs::sticks3::pmic::i2c_freq, 0)) { continue; }
+          if ((static_cast<std::uint16_t>(pm1_id[1]) << 8 | pm1_id[0])
+                != pmic_ops::pm1_device_id) { continue; }
+          result->assign(*desc);
+          return true;
+        }
+        lgfx::delay(1);
+      } while (lgfx::millis() - started < 200);
       return false;
     }
 
@@ -717,16 +787,106 @@ namespace m5
     static const board_def_t* const members_[];
   };
 #include "cores3.inl"
-  static const board_def_t* const spi_id_members[] = { &desc_atoms3.def, &desc_dinmeter.def, nullptr };
+  static const board_def_t* const spi_id_members[] = {
+    &desc_atoms3.def, &desc_dinmeter.def, &desc_atoms3lite.def, &desc_atoms3u.def, nullptr,
+  };
   static constexpr spi_id_member_t spi_id_member_descs[] = {
     { &desc_atoms3, atoms3_probes, sizeof(atoms3_probes) / sizeof(atoms3_probes[0]),
       specs::atoms3::bus_three_wire, wiring::atoms3::touches_opi_pins, 0, false },
     { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
       specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false },
   };
-  static const spi_id_detector_t spi_id_detector(
+  static const spi_id_detector_t spi_display_detector(
     spi_id_members, spi_id_member_descs,
     sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
+  class atoms3_family_detector_t final : public board_detector_t
+  {
+  public:
+    atoms3_family_detector_t() : board_detector_t(spi_id_members) {}
+    bool signature(probe_ctx_t& ctx) const override
+    { return spi_display_detector.signature(ctx); }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (spi_display_detector.confirm(ctx, result)) { return true; }
+      const auto button = std::uint64_t(1) << 41;
+      if (!(probe_pin_pulls(ctx, button).pulldown_high & button)) { return false; }
+      // AtomS3's backlight PWM input (G16) falls low about 3 us after release. Lite/U have no such pulldown.
+      lgfx::gpio_hi(16);
+      lgfx::pinMode(16, lgfx::pin_mode_t::output);
+      lgfx::delayMicroseconds(10);
+      lgfx::pinMode(16, lgfx::pin_mode_t::input);
+      const auto start = lgfx::micros();
+      while (lgfx::micros() - start < 2000)
+      {
+        if (!lgfx::gpio_in(16))
+        {
+          ctx.transaction->restore_start({ 16 });
+          return false;
+        }
+      }
+      ctx.transaction->restore_start({ 16 });
+      const bool lite_ir = probe_pin_pullup_low(ctx, 4);
+      const bool u_ir = probe_pin_pullup_low(ctx, 12);
+      if (lite_ir == u_ir) { return false; }
+      result->assign(lite_ir ? &desc_atoms3lite : &desc_atoms3u);
+      return true;
+    }
+  };
+  static const atoms3_family_detector_t spi_id_detector;
+
+  class capsule_detector_t final : public board_detector_t
+  {
+  public:
+    capsule_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      // G46 is Capsule's power hold. M5Unified already asserts it before detection;
+      // asserting here also covers M5GFX standalone startup.
+      lgfx::gpio_hi(wiring::capsule::power_gpio);
+      lgfx::pinMode(wiring::capsule::power_gpio, lgfx::pin_mode_t::output);
+      const auto mask = (std::uint64_t(1) << wiring::capsule::internal_i2c_sda)
+                      | (std::uint64_t(1) << wiring::capsule::internal_i2c_scl);
+      return (probe_pin_pulls(ctx, mask).pulldown_high & mask) == mask;
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      const int sda = wiring::capsule::internal_i2c_sda;
+      const int scl = wiring::capsule::internal_i2c_scl;
+      std::uint8_t bmi_id = 0;
+      if (!probe_i2c_ack(ctx, sda, scl, 0x51)
+       || !probe_i2c_read(ctx, sda, scl, 0x69, 0x00, &bmi_id, 1, 100000, 0)
+       || bmi_id != 0x24) { return false; }
+      result->assign(&desc_capsule);
+      return true;
+    }
+  private:
+    static const board_def_t* const members_[];
+  };
+  const board_def_t* const capsule_detector_t::members_[] = { &desc_capsule.def, nullptr };
+  static const capsule_detector_t capsule_detector;
+
+  class powerhub_detector_t final : public board_detector_t
+  {
+  public:
+    powerhub_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      return probe_i2c_bus_present(ctx, wiring::powerhub::internal_i2c_sda,
+                                   wiring::powerhub::internal_i2c_scl);
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (!probe_i2c_ack(ctx, wiring::powerhub::internal_i2c_sda,
+                         wiring::powerhub::internal_i2c_scl, 0x50)) { return false; }
+      result->assign(&desc_powerhub);
+      return true;
+    }
+  private:
+    static const board_def_t* const members_[];
+  };
+  const board_def_t* const powerhub_detector_t::members_[] = { &desc_powerhub.def, nullptr };
+  static const powerhub_detector_t powerhub_detector;
+
   static const board_def_t* const dial_members[] = { &desc_dial.def, nullptr };
   static constexpr spi_id_member_t dial_member_descs[] = {
     { &desc_dial, dial_probes, sizeof(dial_probes) / sizeof(dial_probes[0]),
@@ -735,12 +895,50 @@ namespace m5
   static const spi_id_detector_t dial_detector(
     dial_members, dial_member_descs,
     sizeof(dial_member_descs) / sizeof(dial_member_descs[0]));
-  static const board_def_t* const atoms3r_members[] = { &desc_atoms3r.def, nullptr };
+  class dualkey_detector_t final : public board_detector_t
+  {
+  public:
+    dualkey_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+#if defined (CONFIG_SPIRAM_MODE_OCT)
+      // GPIO38/39 may carry OPI PSRAM in this build; do not disturb that bus.
+      return false;
+#else
+      // G21 has a board-local 10 kOhm pull-up. G38/G39 are NC on this revision;
+      // an external pull on either pin disproves DualKey. Revisit for revisions
+      // that populate either NC net.
+      constexpr std::uint64_t g21 = std::uint64_t(1) << 21;
+      if (!(probe_pin_pulls(ctx, g21).pulldown_high & g21)) { return false; }
+      if (!probe_pin_floating(ctx, 38, 32) || !probe_pin_floating(ctx, 39, 32))
+      { return false; }
+      constexpr std::uint64_t g17 = std::uint64_t(1) << 17;
+      if (probe_pin_pulls(ctx, g17).pulldown_high & g17) { return true; }
+      // KEY_2 can hold G17 low. A candidate is emitted in signature so it
+      // does not enter confirm, trigger retry, or get saved as proof.
+      if (ctx.candidate == nullptr) { ctx.candidate = &desc_dualkey.def; }
+      return false;
+#endif
+    }
+    bool confirm(probe_ctx_t&, board_result_t* result) const override
+    {
+      if (result == nullptr) { return false; }
+      result->assign(&desc_dualkey);
+      return true;
+    }
+  private:
+    static const board_def_t* const members_[];
+  };
+  const board_def_t* const dualkey_detector_t::members_[] = { &desc_dualkey.def, nullptr };
+  static const dualkey_detector_t dualkey_detector;
+  static const board_def_t* const atoms3r_members[] = {
+    &desc_atoms3r.def, &desc_atoms3rcam.def, &desc_atoms3rext.def, nullptr,
+  };
   static constexpr spi_id_member_t atoms3r_member_descs[] = {
     { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
       specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false },
   };
-  static const spi_id_detector_t atoms3r_detector(
+  static const spi_id_detector_t atoms3r_display_detector(
     atoms3r_members, atoms3r_member_descs,
     sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
 
@@ -753,6 +951,144 @@ namespace m5
     };
     return match_detect_class(expected, probe_pin_pulls(ctx, expected.mask));
   }
+
+  // The camera needs XCLK while its SCCB address is sent. This follows the
+  // former M5Unified GPIO probe without borrowing hardware I2C or LEDC.
+  static bool probe_atoms3r_camera(probe_ctx_t& ctx)
+  {
+    lgfx::gpio_lo(18); // camera power-down, active high
+    lgfx::pinMode(18, lgfx::pin_mode_t::output);
+    lgfx::gpio_lo(9);
+    lgfx::pinMode(9, lgfx::pin_mode_t::output);
+    lgfx::gpio_lo(12);
+    lgfx::pinMode(12, lgfx::pin_mode_t::output);
+    lgfx::gpio_hi(21);
+    lgfx::pinMode(21, lgfx::pin_mode_t::output);
+    lgfx::gpio_hi(9);
+    lgfx::gpio_hi(12);
+    auto lo = m5gfx::get_gpio_lo_reg(GPIO_NUM_21);
+    auto hi = m5gfx::get_gpio_hi_reg(GPIO_NUM_21);
+    const auto clock_xclk = [&](int cycles)
+    {
+      for (; cycles != 0; --cycles)
+      {
+        *lo = 1u << 21;
+        *hi = 1u << 21;
+      }
+    };
+    clock_xclk(32768 * 54);
+    std::uint32_t nack_bits = 0;
+    for (std::uint8_t addr : { std::uint8_t(0x3C << 1), std::uint8_t(0x21 << 1) })
+    {
+      clock_xclk(32768 * 2);
+      bool nack = true;
+      *lo = 1u << 12; // SDA low: START
+      for (int cycle = 0; cycle < 20; ++cycle)
+      {
+        for (int phase = 0; phase < 2; ++phase)
+        {
+          clock_xclk(8);
+          *((cycle & 1) ? hi : lo) = 1u << 9;
+        }
+        if (cycle & 1)
+        {
+          if (cycle == 17) { nack = lgfx::gpio_in(12); }
+        }
+        else
+        {
+          *((addr & 0x80) ? hi : lo) = 1u << 12;
+          addr <<= 1;
+          if (cycle >= 16)
+          {
+            lgfx::pinMode(12, (cycle == 16) ? lgfx::pin_mode_t::input
+                                            : lgfx::pin_mode_t::output);
+          }
+        }
+      }
+      *hi = 1u << 12; // SDA high: STOP
+      nack_bits = (nack_bits << 1) | nack;
+    }
+    ctx.transaction->restore_start({ 9, 12, 18, 21 });
+    return nack_bits == 1 || nack_bits == 2;
+  }
+
+  class atoms3r_family_detector_t final : public board_detector_t
+  {
+  public:
+    atoms3r_family_detector_t() : board_detector_t(atoms3r_members) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      // Try the display before camera header pins. The SPI result is cached
+      // because an Ext candidate must be emitted here without entering confirm.
+      cached_ = board_result_t {};
+      display_matched_ = atoms3r_display_detector.confirm(ctx, &cached_);
+      if (display_matched_) { return true; }
+      const int sda = wiring::atoms3rext::internal_i2c_sda;
+      const int scl = wiring::atoms3rext::internal_i2c_scl;
+      if ((probe_i2c_ack(ctx, sda, scl, 0x68)
+        || probe_i2c_ack(ctx, sda, scl, 0x69))
+       && !probe_i2c_ack(ctx, sda, scl, 0x30))
+      {
+        if (probe_atoms3r_camera(ctx))
+        {
+          cached_.assign(&desc_atoms3rcam);
+          return true;
+        }
+        // Lack of camera ACK only suggests Ext; do not trigger a retry.
+        if (ctx.candidate == nullptr) { ctx.candidate = &desc_atoms3rext.def; }
+        return false;
+      }
+      // Preserve retries for a display read that may recover on a later pass.
+      return true;
+    }
+    bool confirm(probe_ctx_t&, board_result_t* result) const override
+    {
+      if (display_matched_ || cached_.desc == &desc_atoms3rcam)
+      {
+        *result = cached_;
+        return true;
+      }
+      return false;
+    }
+  private:
+    mutable board_result_t cached_;
+    mutable bool display_matched_ = false;
+  };
+  static const atoms3r_family_detector_t atoms3r_detector;
+
+  class atomvoices3r_detector_t final : public board_detector_t
+  {
+  public:
+    atomvoices3r_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      return probe_i2c_ack(ctx, wiring::atomvoices3r::internal_i2c_sda,
+                           wiring::atomvoices3r::internal_i2c_scl, 0x18);
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      const int sda = wiring::atomvoices3r::internal_i2c_sda;
+      const int scl = wiring::atomvoices3r::internal_i2c_scl;
+      std::uint8_t id_hi = 0, id_lo = 0;
+      // ES8311 does not auto-increment the register address.
+      if (!probe_i2c_read(ctx, sda, scl, 0x18, 0xFD, &id_hi, 1, 100000, 0)
+       || !probe_i2c_read(ctx, sda, scl, 0x18, 0xFE, &id_lo, 1, 100000, 0)
+       || id_hi != 0x83 || id_lo != 0x11) { return false; }
+      // The legacy detector checked BMI270 before the codec: an added ES8311
+      // must not turn an AtomS3R Ext/Cam into a confirmed Voice board.
+      if (probe_i2c_ack(ctx, sda, scl, 0x68)
+       || probe_i2c_ack(ctx, sda, scl, 0x69)) { return false; }
+      result->assign(&desc_atomvoices3r);
+      return true;
+    }
+  private:
+    static const board_def_t* const members_[];
+  };
+  const board_def_t* const atomvoices3r_detector_t::members_[] = {
+    &desc_atomvoices3r.def, nullptr,
+  };
+  static const atomvoices3r_detector_t atomvoices3r_detector;
+
 
   static const board_def_t* const airq_members[] = { &desc_airq.def, nullptr };
   static constexpr spi_id_member_t airq_member_descs[] = {
@@ -781,8 +1117,12 @@ namespace m5
     &desc_cardputer.def, &desc_cardputer_adv.def, &desc_vameter.def, nullptr,
   };
   static const cardputer_family_detector_t cardputer_family_detector;
-  const board_def_t* const pmic_id_detector_t::members_[] = { &desc_sticks3.def, nullptr };
-  const board_desc_t* const pmic_id_detector_t::descriptions_[] = { &desc_sticks3, nullptr };
+  const board_def_t* const pmic_id_detector_t::members_[] = {
+    &desc_sticks3.def, &desc_stamps3bat.def, nullptr,
+  };
+  const board_desc_t* const pmic_id_detector_t::descriptions_[] = {
+    &desc_sticks3, &desc_stamps3bat, nullptr,
+  };
   static const pmic_id_detector_t pmic_id_detector;
   const board_def_t* const pm1_family_detector_t::members_[] = {
     &desc_stopwatch.def, &desc_papermono.def, nullptr,
@@ -796,15 +1136,7 @@ namespace m5
     &desc_paperdiy.def, &desc_papers3.def, nullptr,
   };
   static const paper_family_detector_t paper_family_detector;
-  // Detection order per package (QFN56 / LGA56).
-  static const board_detector_t* const esp32s3_detectors_qfn56[] = {
-    &cores3_family_detector, &dial_detector, &pm1_family_detector,
-    &pm1_ext_family_detector, &paper_family_detector, &spi_id_detector,
-    &cardputer_family_detector, &airq_detector, &stamplc_detector, nullptr,
-  };
-  static const board_detector_t* const esp32s3_detectors_lga56[] = {
-    &atoms3r_detector, &pmic_id_detector, nullptr,
-  };
+  #include "../generated/esp32s3_detector_order.hpp"
 
   construct_status_t construct_atoms3(const board_result_t& result, display_parts_t* parts);
   construct_status_t construct_atoms3r(const board_result_t& result, display_parts_t* parts);
@@ -835,11 +1167,22 @@ namespace m5
   }
 
   static const board_entry_t esp32s3_boards[] = {
+    { &desc_dualkey, construct_displayless, "board_M5DualKey", nullptr },
     { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr },
     { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr },
     { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr },
     { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation },
+    { &desc_atoms3lite, construct_displayless, "board_M5AtomS3Lite", nullptr },
+    { &desc_atoms3u, construct_displayless, "board_M5AtomS3U", nullptr },
+    { &desc_stamps3, construct_displayless, "board_M5StampS3", nullptr },
+    { &desc_capsule, construct_displayless, "board_M5Capsule", nullptr },
+    { &desc_powerhub, construct_displayless, "board_M5PowerHub", nullptr },
     { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation },
+    { &desc_atoms3rcam, construct_displayless, "board_M5AtomS3RCam", nullptr },
+    { &desc_atoms3rext, construct_displayless, "board_M5AtomS3RExt", nullptr },
+    { &desc_atomvoices3r, construct_displayless, "board_M5AtomVoiceS3R", nullptr },
+    { &desc_stamps3bat, construct_displayless, "board_M5StampS3Bat", nullptr },
+    { &desc_stamps3mini, construct_displayless, "board_M5StampS3Mini", nullptr },
     { &desc_dinmeter, construct_dinmeter, "board_M5DinMeter", nullptr },
     { &desc_airq, construct_airq, "M5AirQ", nullptr },
     { &desc_stamplc, construct_stamplc, "board_M5StamPLC", nullptr },

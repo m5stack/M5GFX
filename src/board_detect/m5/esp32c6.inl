@@ -14,6 +14,7 @@ namespace board_detect
 {
 namespace m5
 {
+#include "esp32c6/c6_displayless.inl"
 #include "esp32c6/c6_display.inl"
 }
 }

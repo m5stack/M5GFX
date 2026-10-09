@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "id": "m5capsule",
+  "name": "M5Capsule",
+  "official_name": "M5Stack M5Capsule",
+  "legacy_board_id": 139,
+  "chip": "esp32s3",
+  "pins": {
+    "8": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "11": {
+      "roles": [
+        "bus:sd_bus.d3",
+        "dev:sd.d3"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "12": {
+      "roles": [
+        "bus:sd_bus.cmd",
+        "dev:sd.cmd"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "13": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "14": {
+      "roles": [
+        "bus:sd_bus.clk",
+        "dev:sd.clk"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "15": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "21": {
+      "roles": [
+        "dev:rgb_led.data"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "bus:sd_bus.d0",
+        "dev:sd.d0"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "46": {
+      "roles": [
+        "dev:power_hold.enable"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "sd_bus": {
+      "kind": "sdmmc",
+      "signals": [
+        "clk",
+        "cmd",
+        "d0",
+        "d3"
+      ],
+      "fixed": false
+    }
+  },
+  "devices": {
+    "rtc": {
+      "kind": "rtc",
+      "part": "bm8563",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x51"
+    },
+    "imu": {
+      "kind": "imu",
+      "part": "bmi270",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x69"
+    },
+    "power_hold": {
+      "kind": "power_hold",
+      "signals": {
+        "enable": "gpio:46"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "rgb_led": {
+      "kind": "led_strip",
+      "signals": {
+        "data": "gpio:21"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "sd": {
+      "kind": "sd",
+      "part": "sd_slot",
+      "bus": "sd_bus",
+      "verified": {
+        "bus": "generated",
+        "signals": "generated",
+        "derived": "generated"
+      },
+      "signals": {
+        "d3": "gpio:11",
+        "cmd": "gpio:12",
+        "clk": "gpio:14",
+        "d0": "gpio:39"
+      },
+      "derived": {
+        "modes": [
+          "sdio1"
+        ]
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:15",
+        "2": "gpio:13",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

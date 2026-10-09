@@ -16,6 +16,8 @@ namespace m5
   enum class construct_status_t : std::uint8_t { ok, no_display, failed };
   constexpr construct_status_t construct_status(bool success)
   { return success ? construct_status_t::ok : construct_status_t::failed; }
+  inline construct_status_t construct_displayless(const board_result_t&, display_parts_t*)
+  { return construct_status_t::no_display; }
   using construct_fn_t = construct_status_t (*)(const board_result_t&, display_parts_t*);
   using success_annotation_fn_t = const char* (*)(const board_result_t&);
 

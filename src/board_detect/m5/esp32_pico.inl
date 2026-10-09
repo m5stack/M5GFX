@@ -56,7 +56,33 @@ static constexpr board_desc_t desc_stickcplus2 = {
 };
 
 static constexpr board_desc_t desc_atompsram = {
-  { id(lgfx::board_M5AtomPsram), "M5AtomPsram", def_flag_fallback },
+  { id(lgfx::board_M5AtomPsram), "M5AtomPsram", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
+};
+
+static constexpr board_desc_t desc_atomvoice = {
+  { id(lgfx::board_M5AtomVoice), "M5AtomVoice", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
+};
+static constexpr board_desc_t desc_atommatrix = {
+  { id(lgfx::board_M5AtomMatrix), "M5AtomMatrix", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
+};
+static constexpr board_desc_t desc_atomlite = {
+  { id(lgfx::board_M5AtomLite), "M5AtomLite", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
+};
+static constexpr board_desc_t desc_atomu = {
+  { id(lgfx::board_M5AtomU), "M5AtomU", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
+};
+static constexpr board_desc_t desc_stamppico = {
+  { id(lgfx::board_M5StampPico), "M5StampPico", 0 },
   no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
   no_internal_i2c(), no_options(), no_pins(),
 };
@@ -114,38 +140,104 @@ static const spi_id_member_t stickcplus2_member_descs[] = {
 static const spi_id_detector_t stickcplus2_detector(
   stickcplus2_members, stickcplus2_member_descs, 1);
 
-class atompsram_detector_t final : public board_detector_t
+#include "atom_touch.inl"
+
+class atom_family_detector_t final : public board_detector_t
 {
 public:
-  atompsram_detector_t() : board_detector_t(members_) {}
-  bool signature(probe_ctx_t&) const override { return true; }
-  bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+  atom_family_detector_t() : board_detector_t(members_) {}
+  bool signature(probe_ctx_t& ctx) const override
   {
-    if (result == nullptr) { return false; }
-    // AtomPsram has no probe of its own yet; it is chosen only because the
-    // Plus2 panel did not answer. Without a stored AtomPsram hint, wait for
-    // the caller's final retry so one missed read does not store AtomPsram.
-    // With the hint, accept after a single Plus2 miss (Plus2 is still probed
-    // first), which is why this no-display board is recorded in NVS.
-    if (!ctx.final_attempt && ctx.hint != id(lgfx::board_M5AtomPsram))
-    { return false; }
-    result->assign(&desc_atompsram);
+    cached_ = board_result_t {};
+    return probe(ctx, &cached_);
+  }
+  bool confirm(probe_ctx_t&, board_result_t* result) const override
+  {
+    if (result == nullptr || cached_.desc == nullptr) { return false; }
+    *result = cached_;
     return true;
   }
 private:
-  static const board_def_t* const members_[];
-};
-const board_def_t* const atompsram_detector_t::members_[] = {
-  &desc_atompsram.def, nullptr,
-};
-static const atompsram_detector_t atompsram_detector;
+  bool probe(probe_ctx_t& ctx, board_result_t* result) const
+  {
+    if (result == nullptr) { return false; }
+    // StampPico holds G2 low; exclude it before probing the Atom family.
+    lgfx::pinMode(2, lgfx::pin_mode_t::input_pullup);
+    esp_rom_delay_us(5);
+    const bool atom_g2 = lgfx::gpio_in(2);
+    ctx.transaction->restore_start({ 2 });
+    if (!atom_g2) { return false; }
+    const auto read_g34 = [](lgfx::pin_mode_t mode) {
+      lgfx::pinMode(23, mode); // G23 is exposed: internal pull only, never drive it.
+      esp_rom_delay_us(5);
+      return lgfx::gpio_in(34);
+    };
+    lgfx::pinMode(34, lgfx::pin_mode_t::input);
+    const bool down = read_g34(lgfx::pin_mode_t::input_pulldown);
+    const bool up1 = read_g34(lgfx::pin_mode_t::input_pullup);
+    const bool down2 = read_g34(lgfx::pin_mode_t::input_pulldown);
+    const bool up2 = read_g34(lgfx::pin_mode_t::input_pullup);
+    ctx.transaction->restore_start({ 23, 34 });
 
-static const board_detector_t* const esp32_pico_d4_detectors[] = {
-  &stickc_family_detector, &coreink_detector, nullptr,
+    if (down)
+    {
+      result->assign(&desc_atomvoice); // Microphone DATA remains high with G23 low.
+      if (!(up1 && down2 && up2)) { result->transient_fallback = true; }
+      return true;
+    }
+    if (!measured_)
+    {
+      measured_ = true; // One touch scan per boot, including retries.
+      touch_ok_ = atom_touch::measure(&t4_, &t7_);
+      atom_touch::clear_led(); // 25 black pixels; leave G27 output low.
+    }
+    if (!touch_ok_ || t7_ == 0)
+    {
+      // No successful touch measurement means no physical board evidence.
+      return false;
+    }
+    // At 1.2 V and 0.1 ms/ch the measured T7/T4 ratios are Matrix 0.26,
+    // Lite 0.42-0.45, U 0.71 (atom-picod4-pin-edge-2026-09-28).
+    constexpr std::uint32_t matrix_limit = 34;
+    constexpr std::uint32_t lite_limit = 58;
+    const std::uint32_t ratio100 = std::uint32_t(t7_) * 100;
+    const std::uint32_t reference = t4_;
+    const bool linked = !down && up1 && !down2 && up2;
+    if (ratio100 < matrix_limit * reference)
+    {
+      result->assign(&desc_atommatrix);
+      lgfx::pinMode(21, lgfx::pin_mode_t::input_pulldown);
+      lgfx::pinMode(25, lgfx::pin_mode_t::input_pulldown);
+      esp_rom_delay_us(10);
+      const bool matrix_pulls = lgfx::gpio_in(21) && lgfx::gpio_in(25);
+      ctx.transaction->restore_start({ 21, 25 });
+      if (!linked || !matrix_pulls) { result->transient_fallback = true; }
+    }
+    else if (ratio100 <= lite_limit * reference)
+    {
+      result->assign(&desc_atomlite);
+      if (!linked) { result->transient_fallback = true; }
+    }
+    else
+    {
+      result->assign(&desc_atomu);
+      if (linked || up1 || down2 || up2) { result->transient_fallback = true; }
+    }
+    return true;
+  }
+  mutable board_result_t cached_;
+  mutable bool measured_ = false;
+  mutable bool touch_ok_ = false;
+  mutable std::uint16_t t4_ = 0, t7_ = 0;
+  static const board_def_t* const members_[5];
 };
-static const board_detector_t* const esp32_picov3_detectors[] = {
-  &stickcplus2_detector, &atompsram_detector, nullptr,
+const board_def_t* const atom_family_detector_t::members_[5] = {
+  &desc_atomvoice.def, &desc_atommatrix.def, &desc_atomlite.def,
+  &desc_atomu.def, nullptr,
 };
+static const atom_family_detector_t atom_family_detector;
+
+#include "generated/esp32_pico_detector_order.hpp"
 
 construct_status_t construct_stickc(const board_result_t&, display_parts_t*);
 construct_status_t construct_stickcplus(const board_result_t&, display_parts_t*);

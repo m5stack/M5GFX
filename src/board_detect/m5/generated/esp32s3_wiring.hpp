@@ -95,6 +95,72 @@ namespace atoms3 {
   constexpr bool touches_opi_pins = true;
 } // namespace atoms3
 
+namespace atoms3lite {
+  constexpr bool touches_opi_pins = false;
+} // namespace atoms3lite
+
+namespace atoms3u {
+  constexpr bool touches_opi_pins = false;
+} // namespace atoms3u
+
+namespace capsule {
+  constexpr std::int8_t internal_i2c_sda = 8;
+  constexpr std::int8_t internal_i2c_scl = 10;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t power_gpio = 46;
+  constexpr bool touches_opi_pins = false;
+} // namespace capsule
+
+namespace powerhub {
+  constexpr std::int8_t internal_i2c_sda = 45;
+  constexpr std::int8_t internal_i2c_scl = 48;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace powerhub
+
+namespace dualkey {
+  constexpr bool touches_opi_pins = false;
+} // namespace dualkey
+
+namespace stamps3 {
+  constexpr bool touches_opi_pins = false;
+} // namespace stamps3
+
+namespace atoms3rcam {
+  constexpr std::int8_t internal_i2c_sda = 45;
+  constexpr std::int8_t internal_i2c_scl = 0;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace atoms3rcam
+
+namespace atoms3rext {
+  constexpr std::int8_t internal_i2c_sda = 45;
+  constexpr std::int8_t internal_i2c_scl = 0;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace atoms3rext
+
+namespace atomvoices3r {
+  constexpr std::int8_t internal_i2c_sda = 45;
+  constexpr std::int8_t internal_i2c_scl = 0;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace atomvoices3r
+
+namespace stamps3bat {
+  constexpr std::int8_t internal_i2c_sda = 48;
+  constexpr std::int8_t internal_i2c_scl = 47;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace stamps3bat
+
+namespace stamps3mini {
+  constexpr std::int8_t internal_i2c_sda = 38;
+  constexpr std::int8_t internal_i2c_scl = 39;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr bool touches_opi_pins = false;
+} // namespace stamps3mini
+
 namespace atoms3r {
   constexpr std::int8_t display_sclk = 15;
   constexpr std::int8_t display_mosi = 21;
@@ -123,6 +189,7 @@ namespace dial {
   constexpr std::int8_t internal_i2c_scl = 12;
   constexpr std::int8_t internal_i2c_port = 1;
   constexpr std::int8_t reset_gpio = 8;
+  constexpr std::int8_t power_gpio = 46;
   constexpr std::int8_t backlight_gpio = 9;
   constexpr std::int8_t touch_int = 14;
   constexpr std::int8_t hold[] = { 7 };
@@ -141,6 +208,7 @@ namespace dinmeter {
   constexpr std::int8_t internal_i2c_scl = 12;
   constexpr std::int8_t internal_i2c_port = 1;
   constexpr std::int8_t reset_gpio = 8;
+  constexpr std::int8_t power_gpio = 46;
   constexpr std::int8_t backlight_gpio = 9;
   constexpr std::int8_t hold[] = { 7 };
   constexpr bool touches_opi_pins = false;
@@ -377,7 +445,7 @@ namespace paperdiy {
 } // namespace paperdiy
 
 namespace detection {
-  constexpr std::int8_t unconditional_pins[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 };
+  constexpr std::int8_t unconditional_pins[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 };
   constexpr std::int8_t opi_pins[] = { 33, 34, 35, 36, 37 };
 } // namespace detection
 

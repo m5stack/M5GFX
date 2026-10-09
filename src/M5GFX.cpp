@@ -37,18 +37,22 @@
 
 #include "board_detect/m5/setup_sentinels.hpp"
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32H2)
 #include "board_detect/board_detect.inl"
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
 #include "board_detect/m5/esp32_d0wdq6.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/m5/esp32s3.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32C3)
+#include "board_detect/m5/esp32c3.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 #include "board_detect/m5/esp32c5.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 #include "board_detect/m5/esp32c6.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C61)
 #include "board_detect/m5/esp32c61.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32H2)
+#include "board_detect/m5/esp32h2.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32P4)
 #include "board_detect/m5/esp32p4.inl"
 #endif
@@ -755,17 +759,21 @@ namespace m5gfx
 #include "board_detect/m5/esp32_d0wdq6_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
 #include "board_detect/m5/esp32s3_setup.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32C3)
+#include "board_detect/m5/esp32c3_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 #include "board_detect/m5/esp32c5_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 #include "board_detect/m5/esp32c6_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C61)
 #include "board_detect/m5/esp32c61_setup.inl"
+#elif defined (CONFIG_IDF_TARGET_ESP32H2)
+#include "board_detect/m5/esp32h2_setup.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32P4)
 #include "board_detect/m5/esp32p4_setup.inl"
 #endif
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4)
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32H2)
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static bool conditional_detection_pins_unavailable()
   {
@@ -787,10 +795,13 @@ namespace m5gfx
                                  board_t* detected_board, SetupDetected setup,
                                  bool* detector_matched = nullptr,
                                  board_t* setup_board = nullptr,
-                                 bool* transient_fallback = nullptr)
+                                 bool* transient_fallback = nullptr,
+                                 bool* no_signature = nullptr,
+                                 board_t* candidate_board = nullptr)
   {
     if (detector_matched != nullptr) { *detector_matched = false; }
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4)
+    if (no_signature != nullptr) { *no_signature = false; }
+#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32H2)
     board_detect::detection_transaction_t transaction(
       board_detect::pins(board_detect::m5::wiring::detection::unconditional_pins),
       board_detect::no_pins(), false);
@@ -836,6 +847,10 @@ namespace m5gfx
 #endif
     auto result = board_detect::detect_board(
       detectors, static_cast<board_detect::board_id_t>(hint), probe);
+    if (no_signature != nullptr) { *no_signature = !probe.confirm_attempted; }
+    if (candidate_board != nullptr && *candidate_board == board_t::board_unknown
+     && result.candidate != nullptr)
+    { *candidate_board = static_cast<board_t>(result.candidate->id); }
     if (result.status == board_detect::detect_status_t::excluded)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] detected board:%u is excluded",
@@ -880,7 +895,7 @@ namespace m5gfx
     }
     if (construct_result == board_detect::m5::construct_status_t::no_display)
     {
-      ESP_LOGW(LIBRARY_NAME, "[Autodetect] display is unavailable for detected board:%u",
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] display is unavailable for detected board:%u",
                static_cast<unsigned>(result.def->id));
       transaction.restore_start(result.desc->hold_high_pins.data,
                                 result.desc->hold_high_pins.size);
@@ -941,6 +956,7 @@ namespace m5gfx
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {
+    _board_candidate = board_t::board_unknown;
     if (getBoard() != board_t::board_unknown)
     {
       return true;
@@ -1015,6 +1031,7 @@ namespace m5gfx
     int retry = 4;
     do
     {
+      bool no_signature = false;
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
       // Match the other chip paths: after repeated no-reset attempts, the
       // ESP32 detector must see the promoted reset permission too.
@@ -1033,7 +1050,8 @@ namespace m5gfx
 #endif
                                  return _adopt_detected_parts(parts.bus, parts.panel,
                                                               parts.light, parts.touch);
-                               }, &detector_matched, &setup_board, &transient_fallback))
+                               }, &detector_matched, &setup_board, &transient_fallback,
+                               &no_signature, &_board_candidate))
         {
           break;
         }
@@ -1047,10 +1065,19 @@ namespace m5gfx
 #if defined (CONFIG_IDF_TARGET) && !defined (CONFIG_IDF_TARGET_ESP32)
       if (retry == 1) use_reset = true;
 #endif
-      board = autodetect(use_reset, board, retry == 0, &transient_fallback);
+      board = autodetect(use_reset, board, retry == 0, &transient_fallback,
+                         &no_signature, &_board_candidate);
+      // Only a positive signature that entered confirm and failed can justify
+      // another attempt. A candidate alone does not retry or become NVS state.
+      if (board == board_t::board_unknown && no_signature)
+      {
+        transient_fallback = true;
+        break;
+      }
       //ESP_LOGD(LIBRARY_NAME,"autodetect board:%d", (int)board);
     } while (board_t::board_unknown == board && --retry >= 0);
     _board = board;
+    if (board != board_t::board_unknown) { _board_candidate = board_t::board_unknown; }
 
 #if defined ( ARDUINO_M5STACK_ATOM ) || defined ( ARDUINO_M5Stack_ATOM )
 
@@ -1098,7 +1125,8 @@ namespace m5gfx
   }
 
   board_t M5GFX::autodetect(bool use_reset, board_t board,
-                            bool final_attempt, bool* transient_fallback)
+                            bool final_attempt, bool* transient_fallback,
+                            bool* no_signature, board_t* candidate_board)
   {
     panel(nullptr);
 
@@ -1148,7 +1176,8 @@ namespace m5gfx
 #endif
                                return _adopt_detected_parts(parts.bus, parts.panel,
                                                             parts.light, parts.touch);
-                             }, nullptr, &setup_board, transient_fallback))
+                             }, nullptr, &setup_board, transient_fallback,
+                             no_signature, candidate_board))
       {
         goto init_clear;
       }
@@ -1187,7 +1216,7 @@ namespace m5gfx
 #endif
                                  return _adopt_detected_parts(parts.bus, parts.panel,
                                                               parts.light, parts.touch);
-                               }, nullptr, &setup_board))
+                               }, nullptr, &setup_board, nullptr, no_signature))
         {
           goto init_clear;
         }
@@ -1201,46 +1230,54 @@ namespace m5gfx
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg_ver);
 
     if (pkg_ver == 1)
-    { // QFN32 (ESP32-C6FH4 : NanoC6 / ESP32-C6FH8 : StampC6) : no display on these boards.
-      // Board identity of display-less boards is resolved by M5Unified (eFuse-based),
-      // not here — M5GFX persists autodetect results to NVS, which is only
-      // appropriate for probed display boards. Do not add board detection here.
+    { // QFN32: eFuse first (StampC6), then the NanoC6 internal IR LED.
+      if (try_setup_detected(board_detect::m5::esp32c6_detectors_qfn32,
+                             board, use_reset, final_attempt, &board,
+                             [this](board_detect::m5::display_parts_t& parts)
+                             { return _adopt_detected_parts(parts.bus, parts.panel,
+                                                            parts.light, parts.touch); },
+                             nullptr, nullptr, transient_fallback, no_signature,
+                             candidate_board))
+      { goto init_clear; }
     } else
     if (pkg_ver == 0)
     { // ESP32C6(QFN40) : NessoN1, UnitC6L
       if (board == 0 || board == board_t::board_ArduinoNessoN1 || board == board_t::board_M5UnitC6L)
       {
-        if (try_setup_detected(board_detect::m5::esp32c6_detectors,
-                               board, use_reset, false, &board,
+        if (try_setup_detected(board_detect::m5::esp32c6_detectors_qfn40,
+                               board, use_reset, final_attempt, &board,
                                [this](board_detect::m5::display_parts_t& parts)
                                {
                                  return _adopt_detected_parts(parts.bus, parts.panel,
                                                               parts.light, parts.touch);
-                               }))
+                               }, nullptr, nullptr, transient_fallback,
+                               no_signature))
         {
           goto init_clear;
         }
       }
     }
 
+#elif defined (CONFIG_IDF_TARGET_ESP32C3)
+
+    if (board == 0 || board == board_t::board_M5StampC3
+                   || board == board_t::board_M5StampC3U)
+    {
+      if (try_setup_detected(board_detect::m5::esp32c3_detectors,
+                             board, use_reset, final_attempt, &board,
+                             [this](board_detect::m5::display_parts_t& parts)
+                             { return _adopt_detected_parts(parts.bus, parts.panel,
+                                                            parts.light, parts.touch); },
+                             nullptr, nullptr, transient_fallback, no_signature,
+                             candidate_board))
+      { goto init_clear; }
+    }
+
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
 
-    if (board == 0 || board == board_t::board_M5ToughC5)
+    if (board == 0 || board == board_t::board_M5ToughC5
+                   || board == board_t::board_M5StampC5)
     {
-      // ESP32-C5HF4 (in-package 4MB flash, no PSRAM) boards such as the
-      // StampC5 carry no display: skip the ToughC5 (C5HR8) display probe so
-      // their GPIOs are left untouched, but keep the board unknown here.
-      // Board identity of display-less boards is resolved by M5Unified —
-      // M5GFX persists autodetect results to NVS, which is only appropriate
-      // for probed display boards. Do not add board detection here.
-      std::uint32_t mac_sys2 = REG_READ(EFUSE_RD_MAC_SYS2_REG);
-      std::uint32_t flash_cap = (mac_sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V;
-      std::uint32_t psram_cap = (mac_sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V;
-      ESP_LOGD(LIBRARY_NAME, "mac_sys2:%08x flash_cap:%02x psram_cap:%02x", (int)mac_sys2, (int)flash_cap, (int)psram_cap);
-      if (board == 0 && flash_cap == 1 && psram_cap == 0) {
-        goto init_clear;
-      }
-
       if (try_setup_detected(board_detect::m5::esp32c5_detectors,
                              board, use_reset, false, &board,
                              [this](board_detect::m5::display_parts_t& parts)
@@ -1252,7 +1289,7 @@ namespace m5gfx
                                return _adopt_detected_parts(parts.bus, parts.panel,
                                                             parts.light, parts.touch);
 #endif
-                             }))
+                             }, nullptr, nullptr, nullptr, no_signature))
       {
         goto init_clear;
       }
@@ -1274,13 +1311,20 @@ namespace m5gfx
                                return _adopt_detected_parts(parts.bus, parts.panel,
                                                             parts.light, parts.touch);
 #endif
-                             }))
+                             }, nullptr, nullptr, nullptr, no_signature))
       {
         goto init_clear;
       }
     }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32H2)
+    if (try_setup_detected(board_detect::m5::esp32h2_detectors,
+                           board, use_reset, final_attempt, &board,
+                           [this](board_detect::m5::display_parts_t& parts)
+                           { return _adopt_detected_parts(parts.bus, parts.panel,
+                                                          parts.light, parts.touch); },
+                           nullptr, nullptr, transient_fallback, no_signature))
+    { goto init_clear; }
 #endif
 
     board = board_t::board_unknown;
@@ -1305,11 +1349,14 @@ init_clear:
   }
 
   board_t M5GFX::autodetect(bool use_reset, board_t board,
-                            bool final_attempt, bool* transient_fallback)
+                            bool final_attempt, bool* transient_fallback,
+                            bool* no_signature, board_t* candidate_board)
   {
     (void)use_reset;
     (void)final_attempt;
     (void)transient_fallback;
+    (void)no_signature;
+    (void)candidate_board;
     auto p = new Panel_sdl();
     _panel_last.reset(p);
     auto pnl_cfg = p->config();

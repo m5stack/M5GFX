@@ -14,6 +14,8 @@ import { formatBoard } from "../lib/format.js";
 import { emitPinTable, PIN_NAMES, PIN_TABLE_TARGETS, renderPinTableInl, renderPinTableJson } from "../lib/emit/m5unified_pin_table.js";
 import { emitM5GFXWiring, m5gfxBoardMapping, renderM5GFXWiringHeader, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
 import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
+import { renderDetectorOrderHeaders } from "../lib/emit/m5gfx_detector_order.js";
+import { validateSchema } from "../lib/schema.js";
 import { assertBoard, assertChip, assertSchema, parseJson } from "../lib/model.js";
 import { resolveAll, resolveBoard } from "../lib/resolve.js";
 import { validateBoard, validateCatalog, validateResolvedVariants } from "../lib/validate.js";
@@ -54,6 +56,15 @@ async function loadParts() {
 
 async function loadTargets() {
   return readJson(path.join(root, "targets.json"), (item) => item);
+}
+
+async function loadDetectorOrder() {
+  const schema = await readJson(path.join(root, "schema/detector_order.schema.json"), (item) => item);
+  return readJson(path.join(root, "detector_order.json"), (item) => {
+    const issues = validateSchema(item, schema);
+    if (issues.length) throw new Error(`detector_order.json: ${JSON.stringify(issues)}`);
+    return item;
+  });
 }
 
 async function loadAccessories() {
@@ -212,6 +223,7 @@ async function writeWiringOutput() {
   const connectorTypes = await loadConnectorTypes();
   const parts = await loadParts();
   const targets = await loadTargets();
+  const detectorOrder = await loadDetectorOrder();
   const accessories = await loadAccessories();
   const boards = await Promise.all((await boardFiles()).map((filename) => readJson(filename, assertBoard)));
   const contexts = new Map();
@@ -223,6 +235,9 @@ async function writeWiringOutput() {
     await fs.writeFile(safeOutputPath(directory, filename), output);
   }
   for (const [filename, output] of specsOutputs(boards, connectorTypes, contexts, targets)) {
+    await fs.writeFile(safeOutputPath(directory, filename), output);
+  }
+  for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
     await fs.writeFile(safeOutputPath(directory, filename), output);
   }
   const count = Object.values(targets.m5gfx_board_desc?.boards ?? {}).filter((entry) => entry.wiring_output).length;
@@ -301,6 +316,7 @@ async function check() {
   const connectorTypes = await loadConnectorTypes();
   const parts = await loadParts();
   const targets = await loadTargets();
+  const detectorOrder = await loadDetectorOrder();
   const accessories = await loadAccessories();
   const files = await boardFiles();
   const boards = await Promise.all(files.map((filename) => readJson(filename, assertBoard)));
@@ -370,6 +386,9 @@ async function check() {
     await assertGeneratedFile(path.join(wiringDirectory, filename), output);
   }
   for (const [filename, output] of specsOutputs(boards, connectorTypes, contexts, targets)) {
+    await assertGeneratedFile(path.join(wiringDirectory, filename), output);
+  }
+  for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
     await assertGeneratedFile(path.join(wiringDirectory, filename), output);
   }
 

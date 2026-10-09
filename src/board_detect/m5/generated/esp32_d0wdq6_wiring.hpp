@@ -152,8 +152,18 @@ namespace stickcplus2 {
   constexpr std::int8_t hold[] = { 5 };
 } // namespace stickcplus2
 
+namespace atomlite {
+} // namespace atomlite
+
+namespace timercam {
+  constexpr std::int8_t internal_i2c_sda = 12;
+  constexpr std::int8_t internal_i2c_scl = 14;
+  constexpr std::int8_t internal_i2c_port = 1;
+  constexpr std::int8_t power_gpio = 33;
+} // namespace timercam
+
 namespace detection {
-  constexpr std::int8_t unconditional_pins[] = { 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 33, 34, 38 };
+  constexpr std::int8_t unconditional_pins[] = { 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 27, 33, 34, 35, 37, 38 };
 } // namespace detection
 
 } // namespace wiring

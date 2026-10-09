@@ -137,6 +137,12 @@
     "power_hold": {
       "kind": "power_hold"
     },
+    "rtc": {
+      "kind": "rtc",
+      "part": "bm8563",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x51"
+    },
     "psram": {
       "kind": "psram",
       "part": "psram"

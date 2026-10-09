@@ -51,8 +51,47 @@
       "m5atom_psram": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 129, "board_enum": "board_M5AtomPsram"
       },
+      "m5atomlite": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 128, "cpp_namespace": "atomlite", "board_enum": "board_M5AtomLite", "desc_name": "desc_atomlite",
+        "wiring_fields": [], "probe_pins": [25], "wiring_output": "esp32_d0wdq6_wiring.hpp"
+      },
+      "m5atomu": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 130, "board_enum": "board_M5AtomU", "desc_name": "desc_atomu"
+      },
+      "m5stamppico": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 133, "board_enum": "board_M5StampPico", "desc_name": "desc_stamppico"
+      },
+      "m5atommatrix": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 141, "board_enum": "board_M5AtomMatrix", "desc_name": "desc_atommatrix"
+      },
+      "m5atomvoice": {
+        "chip": "esp32_d0wdq6", "legacy_board_id": 142, "board_enum": "board_M5AtomVoice", "desc_name": "desc_atomvoice"
+      },
       "m5timercam": {
-        "chip": "esp32_d0wdq6", "legacy_board_id": 132, "board_enum": "board_M5TimerCam"
+        "chip": "esp32_d0wdq6", "legacy_board_id": 132, "cpp_namespace": "timercam", "board_enum": "board_M5TimerCam", "desc_name": "desc_timercam",
+        "wiring_fields": ["i2c", "power"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp"
+      },
+      "m5nanoc6": {
+        "chip": "esp32c6", "legacy_board_id": 140, "cpp_namespace": "nanoc6", "board_enum": "board_M5NanoC6", "desc_name": "desc_nanoc6",
+        "wiring_fields": [], "probe_pins": [3], "wiring_output": "esp32c6_wiring.hpp"
+      },
+      "m5nanoh2": {
+        "chip": "esp32h2", "legacy_board_id": 151, "cpp_namespace": "nanoh2", "board_enum": "board_M5NanoH2", "desc_name": "desc_nanoh2",
+        "wiring_fields": [], "probe_pins": [3], "wiring_output": "esp32h2_wiring.hpp"
+      },
+      "m5stampc5": {
+        "chip": "esp32c5", "legacy_board_id": 153, "board_enum": "board_M5StampC5", "desc_name": "desc_stampc5"
+      },
+      "m5stampc3": {
+        "chip": "esp32c3", "legacy_board_id": 134, "board_enum": "board_M5StampC3", "desc_name": "desc_stampc3",
+        "cpp_namespace": "stampc3", "wiring_fields": [], "probe_pins": [20], "wiring_output": "esp32c3_wiring.hpp"
+      },
+      "m5stampc3u": {
+        "chip": "esp32c3", "legacy_board_id": 135, "board_enum": "board_M5StampC3U", "desc_name": "desc_stampc3u",
+        "cpp_namespace": "stampc3u", "wiring_fields": [], "wiring_output": "esp32c3_wiring.hpp"
+      },
+      "m5stampc6": {
+        "chip": "esp32c6", "legacy_board_id": 154, "board_enum": "board_M5StampC6", "desc_name": "desc_stampc6"
       },
       "m5stack_cores3": {
         "chip": "esp32s3", "legacy_board_id": 10, "cpp_namespace": "cores3", "board_enum": "board_M5StackCoreS3", "desc_name": "desc_cores3",
@@ -77,6 +116,17 @@
         "specs_output": "esp32s3_specs.hpp",
         "options": [{ "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }]
       },
+      "m5atoms3lite": {"chip": "esp32s3", "legacy_board_id": 137, "cpp_namespace": "atoms3lite", "board_enum": "board_M5AtomS3Lite", "desc_name": "desc_atoms3lite", "wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp", "probe_pins": [4, 12, 16, 41]},
+      "m5atoms3u": {"chip": "esp32s3", "legacy_board_id": 138, "cpp_namespace": "atoms3u", "board_enum": "board_M5AtomS3U", "desc_name": "desc_atoms3u", "wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp", "probe_pins": [4, 12, 16, 41]},
+      "m5capsule": {"chip": "esp32s3", "legacy_board_id": 139, "cpp_namespace": "capsule", "board_enum": "board_M5Capsule", "desc_name": "desc_capsule", "wiring_fields": ["i2c", "power"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5powerhub": {"chip": "esp32s3", "legacy_board_id": 146, "cpp_namespace": "powerhub", "board_enum": "board_M5PowerHub", "desc_name": "desc_powerhub", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5dualkey": {"chip": "esp32s3", "legacy_board_id": 147, "cpp_namespace": "dualkey", "board_enum": "board_M5DualKey", "desc_name": "desc_dualkey", "wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp", "probe_pins": [17, 21, 38, 39]},
+      "m5stamps3": {"chip": "esp32s3", "legacy_board_id": 136, "cpp_namespace": "stamps3", "board_enum": "board_M5StampS3", "desc_name": "desc_stamps3", "wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp"},
+      "m5atoms3rcam": {"chip": "esp32s3", "legacy_board_id": 144, "cpp_namespace": "atoms3rcam", "board_enum": "board_M5AtomS3RCam", "desc_name": "desc_atoms3rcam", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true, "probe_pins": [9, 12, 18, 21]},
+      "m5atoms3rext": {"chip": "esp32s3", "legacy_board_id": 143, "cpp_namespace": "atoms3rext", "board_enum": "board_M5AtomS3RExt", "desc_name": "desc_atoms3rext", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true, "probe_pins": [9, 12, 18, 21]},
+      "m5atomvoices3r": {"chip": "esp32s3", "legacy_board_id": 145, "cpp_namespace": "atomvoices3r", "board_enum": "board_M5AtomVoiceS3R", "desc_name": "desc_atomvoices3r", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5stamps3bat": {"chip": "esp32s3", "legacy_board_id": 149, "cpp_namespace": "stamps3bat", "board_enum": "board_M5StampS3Bat", "desc_name": "desc_stamps3bat", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5stamps3mini": {"chip": "esp32s3", "legacy_board_id": 150, "cpp_namespace": "stamps3mini", "board_enum": "board_M5StampS3Mini", "desc_name": "desc_stamps3mini", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
       "m5atoms3r": {
         "chip": "esp32s3", "legacy_board_id": 18, "cpp_namespace": "atoms3r", "board_enum": "board_M5AtomS3R", "desc_name": "desc_atoms3r",
         "wiring_fields": ["display", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
@@ -85,12 +135,12 @@
       },
       "m5dial": {
         "chip": "esp32s3", "legacy_board_id": 12, "cpp_namespace": "dial", "board_enum": "board_M5Dial", "desc_name": "desc_dial",
-        "wiring_fields": ["display", "i2c", "hold", "backlight", "touch"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "touch", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp"
       },
       "m5dinmeter": {
         "chip": "esp32s3", "legacy_board_id": 13, "cpp_namespace": "dinmeter", "board_enum": "board_M5DinMeter", "desc_name": "desc_dinmeter",
-        "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
         "specs_output": "esp32s3_specs.hpp"
       },
       "m5airq": {
@@ -166,7 +216,7 @@
       },
       "m5unit_c6l": {
         "chip": "esp32c6", "legacy_board_id": 25, "cpp_namespace": "unitc6l", "board_enum": "board_M5UnitC6L", "desc_name": "desc_unitc6l",
-        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32c6_wiring.hpp", "specs_output": "esp32c6_specs.hpp"
+        "wiring_fields": ["display", "i2c", "hold", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32c6_wiring.hpp", "specs_output": "esp32c6_specs.hpp", "identity_devices": ["ioe"]
       },
       "arduino_nesso_n1": {
         "chip": "esp32c6", "legacy_board_id": 23, "cpp_namespace": "nesson1", "board_enum": "board_ArduinoNessoN1", "desc_name": "desc_nesson1",

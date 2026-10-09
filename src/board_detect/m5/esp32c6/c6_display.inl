@@ -17,7 +17,7 @@ namespace c6_display_detail
 
 static constexpr board_desc_t desc_unitc6l = {
   { static_cast<board_id_t>(lgfx::board_M5UnitC6L), "M5UnitC6L", 0 },
-  no_power(), gpio_reset(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped),
+  gpio_power(wiring::unitc6l::power_gpio), gpio_reset(wiring::unitc6l::reset_gpio, 2, 10, reset_hold_when_skipped),
   no_shared_sd(),
   display_pins(wiring::unitc6l::display_sclk, wiring::unitc6l::display_mosi,
                wiring::unitc6l::display_miso, wiring::unitc6l::display_dc,
@@ -71,6 +71,22 @@ public:
     if (result == nullptr) { return false; }
     if (candidate_ == c6_display_detail::candidate_t::unitc6l)
     {
+      std::uint8_t value = 0;
+      if (!probe_i2c_read(ctx, wiring::unitc6l::internal_i2c_sda,
+                          wiring::unitc6l::internal_i2c_scl,
+                          specs::unitc6l::i2c_ioe::i2c_addr,
+                          specs::unitc6l::i2c_ioe::id_reg,
+                          &value, 1, specs::unitc6l::i2c_ioe::i2c_freq, 0)
+       || !is_pi4io(value))
+      {
+        // GPIO18 alone does not identify UnitC6L. Preserve a known UnitC6L
+        // only on the last retry, without caching the unverified fallback.
+        if (!ctx.final_attempt || ctx.hint != desc_unitc6l.def.id) { return false; }
+        result->assign(&desc_unitc6l);
+        result->transient_fallback = true;
+        ESP_LOGW("board_detect_m5", "UnitC6L PI4IO unanswered; using hinted board for this boot");
+        return true;
+      }
       result->assign(&desc_unitc6l);
       return true;
     }
@@ -100,13 +116,13 @@ const board_def_t* const c6_display_family_detector_t::members_[3] = {
   &desc_unitc6l.def, &desc_nesson1.def, nullptr,
 };
 static const c6_display_family_detector_t c6_display_family_detector;
-static const board_detector_t* const esp32c6_detectors[] = {
-  &c6_display_family_detector, nullptr,
-};
+#include "../generated/esp32c6_detector_order.hpp"
 
 construct_status_t construct_unitc6l(const board_result_t&, display_parts_t*);
 construct_status_t construct_nesson1(const board_result_t&, display_parts_t*);
 static const board_entry_t esp32c6_boards[] = {
+  { &desc_stampc6, construct_displayless, "board_M5StampC6", nullptr },
+  { &desc_nanoc6, construct_displayless, "board_M5NanoC6", nullptr },
   { &desc_unitc6l, construct_unitc6l, "board_M5UnitC6L", nullptr },
   { &desc_nesson1, construct_nesson1, "board_ArduinoNessoN1", nullptr },
 };

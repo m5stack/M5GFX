@@ -3,6 +3,7 @@
 // Precedence: board value > part default > panel-class default.
 
 // _pin_table_i2c_ex_in[][5]
+{ board_t::board_M5StampC5, 255, 255, 255, 255 },
 { board_t::board_M5ToughC5, 3, 2, 3, 2 },
 { board_t::board_unknown, 22, 21, 33, 32 },
 
