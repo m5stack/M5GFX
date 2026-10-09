@@ -82,7 +82,9 @@ const esp32h2Source = await fs.readFile(path.join(root, "../../src/board_detect/
 const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6/c6_display_setup.inl"), "utf8");
 const esp32c61Source = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c61/corematrix.inl"), "utf8");
 const esp32p4Source = (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/corep4x.inl"), "utf8"))
-  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5.inl"), "utf8"));
+  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5.inl"), "utf8"))
+  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/unitpoep4.inl"), "utf8"))
+  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/stampp4.inl"), "utf8"));
 const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5_setup.inl"), "utf8");
 const pmicOpsSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/pmic_ops.hpp"), "utf8");
 const i18nMatch = /<script type="application\/json" id="board-spec-i18n">([\s\S]*?)<\/script>/.exec(editorHtml);
@@ -400,7 +402,7 @@ test("catalog button devices match M5Unified GPIO, expander, and PMIC inputs", (
     m5dinmeter: { btn_a: 42, btn_b: 0 }, m5sticks3: { btn_a: 11, btn_b: 12 },
     m5paperdiy: { btn_a: 4, btn_b: 3 }, m5papercolor: { btn_a: 10, btn_b: 9, btn_c: 1 },
     m5chaincaptain: { btn_a: 1, btn_b: 4, btn_c: 5 }, m5papermono: { btn_a: 2, btn_b: 3 },
-    m5stopwatch: { btn_a: 2, btn_b: 1 }, m5dualkey: { btn_a: 0, btn_b: 17 },
+    m5stopwatch: { btn_a: 2, btn_b: 1 }, m5unitpoep4: { btn_a: 45 }, m5dualkey: { btn_a: 0, btn_b: 17 },
   };
   const ownedButtons = {
     m5stamplc: { btn_a: "pin:ioe.p2", btn_b: "pin:ioe.p1", btn_c: "pin:ioe.p0" },
@@ -2388,7 +2390,7 @@ test("gpio_power keeps the active-high hold level for existing members", () => {
 });
 
 test("no_display_pins is used only when a display has no GPIO bus or is absent", () => {
-  const allowed = new Set(["papers3", "paperdiy", "corematrix", "corep4x", "tab5", "tab5x", "atompsram", "atomvoice", "atommatrix", "atomlite", "atomu", "stamppico", "timercam", "nanoc6", "nanoh2", "stampc3", "stampc3u", "stampc5", "stampc6", "atoms3lite", "atoms3u", "stamps3", "dualkey", "capsule", "powerhub", "atoms3rcam", "atoms3rext", "atomvoices3r", "stamps3bat", "stamps3mini"]);
+  const allowed = new Set(["papers3", "paperdiy", "corematrix", "corep4x", "tab5", "tab5x", "atompsram", "atomvoice", "atommatrix", "atomlite", "atomu", "stamppico", "timercam", "nanoc6", "nanoh2", "stampc3", "stampc3u", "stampc5", "stampc6", "atoms3lite", "atoms3u", "stamps3", "dualkey", "capsule", "powerhub", "atoms3rcam", "atoms3rext", "atomvoices3r", "stamps3bat", "stamps3mini", "unitpoep4", "stampp4", "stampp4x"]);
   for (const source of [d0wdq6Source, esp32s3Source, esp32c3Source, esp32c5Source, esp32c6Source, esp32h2Source, esp32c61Source, esp32p4Source]) {
     const descs = [...source.matchAll(/static constexpr board_desc_t desc_([a-z0-9_]+) = \{([\s\S]*?)\n\s*\};/g)];
     assert.ok(descs.length > 0);
@@ -2434,7 +2436,7 @@ test("Tab5 touch identities select the three DSI panels", () => {
   assert.equal(specs.panels.st7123.vsync_front_porch, 220);
   assert.deepEqual(specs.backlight, { pin: 22, freq: 44100, channel: 7, invert: false, offset: 0 });
   assert.deepEqual(wiring.i2c, { sda: 31, scl: 32, port: 1 });
-  assert.deepEqual(detectionPinsForEntries([{ board: source, chip: chipP4, emitted: wiring }]), [23, 31, 32]);
+  assert.deepEqual(detectionPinsForEntries([{ board: source, chip: chipP4, emitted: wiring }]), [22, 23, 31, 32]);
   assert.match(esp32p4Source, /probe_i2c_bus_present\(ctx, tab5_detail::sda, tab5_detail::scl\)/);
   assert.match(esp32p4Source, /pi4io1_addr, pi4io_id_register[\s\S]*?is_pi4io\(value\)[\s\S]*?pi4io2_addr, pi4io_id_register[\s\S]*?is_pi4io\(value\)/);
 });

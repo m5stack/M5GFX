@@ -75,6 +75,36 @@
         "roles": "generated"
       }
     },
+    "8": {
+      "roles": [
+        "bus:wifi_sdio.d3"
+      ]
+    },
+    "9": {
+      "roles": [
+        "bus:wifi_sdio.d2"
+      ]
+    },
+    "10": {
+      "roles": [
+        "bus:wifi_sdio.d1"
+      ]
+    },
+    "11": {
+      "roles": [
+        "bus:wifi_sdio.d0"
+      ]
+    },
+    "12": {
+      "roles": [
+        "bus:wifi_sdio.clk"
+      ]
+    },
+    "13": {
+      "roles": [
+        "bus:wifi_sdio.cmd"
+      ]
+    },
     "16": {
       "roles": [
         "conn:mbus.2"
@@ -111,7 +141,8 @@
     "22": {
       "roles": [
         "dev:backlight.pwm"
-      ]
+      ],
+      "detect_class": "down"
     },
     "23": {
       "roles": [
@@ -341,6 +372,18 @@
         "d3"
       ],
       "preferred_host": 0,
+      "fixed": false
+    },
+    "wifi_sdio": {
+      "kind": "sdmmc",
+      "signals": [
+        "clk",
+        "cmd",
+        "d0",
+        "d1",
+        "d2",
+        "d3"
+      ],
       "fixed": false
     }
   },

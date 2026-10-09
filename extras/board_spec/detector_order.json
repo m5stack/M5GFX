@@ -122,10 +122,53 @@
     ]
   },
   "esp32p4_detectors": {
-    "chip": "esp32p4", "source": "src/board_detect/m5/esp32p4.inl", "output": "esp32p4_detector_order.hpp",
+    "chip": "esp32p4",
+    "source": "src/board_detect/m5/esp32p4.inl",
+    "output": "esp32p4_detector_order.hpp",
     "families": [
-      { "detector": "corep4x_detector", "boards": ["m5stack_corep4x"] },
-      { "detector": "tab5_family_detector", "boards": ["m5stack_tab5", "m5stack_tab5x"] }
+      {
+        "detector": "corep4x_detector",
+        "boards": [
+          "m5stack_corep4x"
+        ]
+      },
+      {
+        "detector": "tab5_family_detector",
+        "boards": [
+          "m5stack_tab5",
+          "m5stack_tab5x"
+        ]
+      },
+      {
+        "detector": "unitpoep4_detector",
+        "boards": [
+          "m5unitpoep4"
+        ]
+      },
+      {
+        "detector": "stampp4_detector",
+        "boards": [
+          "m5stampp4",
+          "m5stampp4x"
+        ]
+      }
+    ],
+    "constraints": [
+      {
+        "before": "corep4x_detector",
+        "after": "tab5_family_detector",
+        "reason": "Probe the CoreP4X internal devices before Tab5"
+      },
+      {
+        "before": "tab5_family_detector",
+        "after": "unitpoep4_detector",
+        "reason": "Probe Tab5 internal devices before driving Ethernet management pins"
+      },
+      {
+        "before": "unitpoep4_detector",
+        "after": "stampp4_detector",
+        "reason": "StampP4 is only a fallback candidate after all P4 probes"
+      }
     ]
   }
 }

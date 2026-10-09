@@ -28,6 +28,15 @@
       ],
       "detect_class": "up"
     },
+    "32": {
+      "roles": [],
+      "detect_class": "floating"
+    },
+    "45": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
     "52": {
       "roles": [
         "dev:ethernet.mdio"
@@ -67,6 +76,14 @@
   "devices": {
     "ethernet": {
       "kind": "transceiver"
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      }
     }
   },
   "connectors": {
