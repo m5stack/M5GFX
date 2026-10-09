@@ -20,8 +20,8 @@ namespace board_detect
 
   enum board_def_flag_t : std::uint8_t
   {
-    // A board with no positive signature. Such a board must be the final member
-    // of the final detector; the framework preserves the caller's ordering.
+    // A board with no positive signature. Such members cannot promote their
+    // detector through an NVS hint; a detector may expose them as candidates.
     def_flag_fallback = 1 << 0,
   };
 
@@ -82,6 +82,8 @@ namespace board_detect
     std::uint32_t prepared = 0;
     // A final-attempt family default can show the display, but is not an NVS hint.
     bool transient_fallback = false;
+    // A weak, displayless suggestion returned only when no board is confirmed.
+    const board_def_t* candidate = nullptr;
     detect_status_t status = detect_status_t::no_match;
     // Optional read-only member refinement after power preparation.
     refine_fn_t refine = nullptr;
@@ -503,6 +505,11 @@ namespace board_detect
     // hint and final_attempt are inherited by prepare/refine.
     i2c_scan_cache_t i2c_cache;
     detector_workspace_t detector_workspace;
+    // True once any family entered confirm() in this detection pass.
+    bool confirm_attempted = false;
+    // A signature may suggest one board without entering confirm(). The first
+    // detector in probe order owns the candidate for this attempt.
+    const board_def_t* candidate = nullptr;
     bool conditional_pins_unavailable = false;
     const board_id_t* enabled_ids = nullptr;
   };
@@ -537,6 +544,7 @@ namespace board_detect
   board_result_t detect_board(const board_detector_t* const* list, board_id_t hint, probe_ctx_t& ctx);
 
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr);
+  bool probe_pin_pullup_low(probe_ctx_t& ctx, int pin);
   bool probe_i2c_bus_present(probe_ctx_t& ctx, int pin_sda, int pin_scl);
   bool probe_i2c_read(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr,
                       std::uint16_t reg, std::uint8_t* data, std::size_t length,
@@ -554,6 +562,9 @@ namespace board_detect
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
   pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask);
+  // True only when a pin retains both internally biased levels after release.
+  // A rapid reversal indicates an external pull, so an NC assumption is false.
+  bool probe_pin_floating(probe_ctx_t& ctx, std::int8_t pin, std::uint32_t release_us);
 
   // On an already high SCL, release a held SDA and resample the same pins.
   // Reuse the previous sample so successive candidate pairs do not probe twice.

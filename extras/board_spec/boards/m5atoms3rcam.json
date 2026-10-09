@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "id": "m5atoms3rcam",
+  "name": "M5AtomS3RCam",
+  "official_name": "M5Stack M5AtomS3RCam",
+  "legacy_board_id": 144,
+  "chip": "esp32s3",
+  "pins": {
+    "0": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "9": {
+      "roles": []
+    },
+    "12": {
+      "roles": []
+    },
+    "18": {
+      "roles": []
+    },
+    "21": {
+      "roles": []
+    },
+    "45": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "imu": {
+      "kind": "imu",
+      "part": "bmi270",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x68"
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c"
+    }
+  }
+}

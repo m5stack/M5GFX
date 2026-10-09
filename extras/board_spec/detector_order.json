@@ -1,0 +1,131 @@
+{
+  "esp32_d0wdq6_detectors": {
+    "chip": "esp32_d0wdq6", "source": "src/board_detect/m5/esp32_d0wdq6.inl", "output": "esp32_d0wdq6_detector_order.hpp",
+    "constraints": [
+      { "before": "axp_family_detector", "after": "timercam_detector", "reason": "TimerCam RTC probe on G12/G14 runs after the AXP display family" },
+      { "before": "stack_family_detector", "after": "timercam_detector", "reason": "TimerCam RTC probe on G12/G14 runs after Stack display probing" },
+      { "before": "paper_family_detector", "after": "timercam_detector", "reason": "TimerCam RTC probe on G12/G14 runs after Paper display probing" }
+    ],
+    "families": [
+      { "detector": "axp_family_detector", "boards": ["m5station", "m5stack_core2", "m5tough"] },
+      { "detector": "stack_family_detector", "boards": ["m5stack"] },
+      { "detector": "paper_family_detector", "boards": ["m5paper"] },
+      { "detector": "timercam_detector", "boards": ["m5timercam"] }
+    ]
+  },
+  "esp32_pico_d4_detectors": {
+    "chip": "esp32_d0wdq6", "source": "src/board_detect/m5/esp32_pico.inl", "output": "esp32_pico_detector_order.hpp",
+    "constraints": [
+      { "after": "coreink_detector", "before": "stickc_family_detector", "reason": "CoreInk SCLK G18 is StickC and StickC-Plus LCD RST" },
+      { "after": "atom_family_detector", "before": "stickc_family_detector", "reason": "Atom touch probing on G13 runs after StickC LCD SCLK" },
+      { "after": "atom_family_detector", "before": "coreink_detector", "reason": "Atom touch probing runs after CoreInk display probing" }
+    ],
+    "families": [
+      { "detector": "stickc_family_detector", "boards": ["m5stickcplus", "m5stickc"] },
+      { "detector": "coreink_detector", "boards": ["m5stack_coreink"] },
+      { "detector": "atom_family_detector", "boards": ["m5atomvoice", "m5atommatrix", "m5atomlite", "m5atomu"] }
+    ]
+  },
+  "esp32_picov3_detectors": {
+    "chip": "esp32_d0wdq6", "source": "src/board_detect/m5/esp32_pico.inl", "output": "esp32_pico_detector_order.hpp",
+    "families": [
+      { "detector": "stickcplus2_detector", "boards": ["m5stickcplus2"] }
+    ]
+  },
+  "esp32s3_detectors_qfn56": {
+    "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/families.inl", "output": "esp32s3_detector_order.hpp",
+    "constraints": [
+      { "after": "airq_detector", "before": "pm1_ext_family_detector", "reason": "AirQ RST G2 and DC G3 overlap ChainCaptain and PaperColor internal I2C SCL and SDA" },
+      { "after": "spi_id_detector", "before": "cores3_family_detector", "reason": "AtomS3 MOSI G21 overlaps CoreS3 touch INT; remove after hardware validation rules out output contention" },
+      {"before": "dial_detector", "after": "capsule_detector", "reason": "Capsule SDA G8 is Dial LCD reset; probe Dial before toggling G8"},
+      {"before": "spi_id_detector", "after": "capsule_detector", "reason": "Capsule SDA G8 is DinMeter LCD reset; probe DinMeter before toggling G8"},
+      {"before": "cores3_family_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "dial_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "pm1_family_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "pm1_ext_family_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "paper_family_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "spi_id_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "cardputer_family_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "airq_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},
+      {"before": "stamplc_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"}
+    ],
+    "families": [
+      { "detector": "cores3_family_detector", "boards": ["m5stack_cores3", "m5stack_cores3se", "m5stack_stackchan"] },
+      { "detector": "dial_detector", "boards": ["m5dial"] },
+      { "detector": "pm1_family_detector", "boards": ["m5stopwatch", "m5papermono"] },
+      { "detector": "pm1_ext_family_detector", "boards": ["m5chaincaptain", "m5papercolor"] },
+      { "detector": "paper_family_detector", "boards": ["m5paperdiy", "m5papers3"] },
+      { "detector": "spi_id_detector", "boards": ["m5atoms3", "m5dinmeter", "m5atoms3lite", "m5atoms3u"] },
+      { "detector": "cardputer_family_detector", "boards": ["m5cardputer", "m5cardputer_adv", "m5vameter"] },
+      { "detector": "airq_detector", "boards": ["m5airq"] },
+      { "detector": "stamplc_detector", "boards": ["m5stamplc"] },
+      { "detector": "capsule_detector", "boards": ["m5capsule"] },
+      { "detector": "powerhub_detector", "boards": ["m5powerhub"] },
+      { "detector": "dualkey_detector", "boards": ["m5dualkey"] }
+    ]
+  },
+  "esp32s3_detectors_lga56": {
+    "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/families.inl", "output": "esp32s3_detector_order.hpp",
+    "constraints": [
+      { "before": "atomvoices3r_detector", "after": "atoms3r_detector", "reason": "Voice codec on G45/G0 is read before AtomS3R display probing can drive Voice I2S DOUT G48" },
+      { "before": "atomvoices3r_detector", "after": "pmic_id_detector", "reason": "Voice codec is identified before the G47/G48 PM1 bus can touch Voice I2S DOUT G48" },
+      { "before": "atoms3r_detector", "after": "pmic_id_detector", "reason": "AtomS3R display reset G48 must not receive the PM1 I2C probe first" }
+    ],
+    "families": [
+      { "detector": "atomvoices3r_detector", "boards": ["m5atomvoices3r"] },
+      { "detector": "atoms3r_detector", "boards": ["m5atoms3r", "m5atoms3rcam", "m5atoms3rext"] },
+      { "detector": "pmic_id_detector", "boards": ["m5sticks3", "m5stamps3bat"] }
+    ]
+  },
+  "esp32c3_detectors": {
+    "chip": "esp32c3", "source": "src/board_detect/m5/esp32c3.inl", "output": "esp32c3_detector_order.hpp",
+    "families": [
+      { "detector": "c3_family_detector", "boards": ["m5stampc3", "m5stampc3u"] }
+    ]
+  },
+  "esp32c5_detectors": {
+    "chip": "esp32c5", "source": "src/board_detect/m5/esp32c5/toughc5.inl", "output": "esp32c5_detector_order.hpp",
+    "constraints": [
+      { "before": "stampc5_detector", "after": "toughc5_detector", "reason": "StampC5 eFuse flash and PSRAM gate must precede ToughC5 I2C GPIO probing even with an NVS hint" }
+    ],
+    "families": [
+      { "detector": "stampc5_detector", "boards": ["m5stampc5"] },
+      { "detector": "toughc5_detector", "boards": ["m5toughc5"] }
+    ]
+  },
+  "esp32c6_detectors_qfn40": {
+    "chip": "esp32c6", "source": "src/board_detect/m5/esp32c6/c6_display.inl", "output": "esp32c6_detector_order.hpp",
+    "families": [
+      { "detector": "c6_display_family_detector", "boards": ["m5unit_c6l", "arduino_nesso_n1"] }
+    ]
+  },
+  "esp32c6_detectors_qfn32": {
+    "chip": "esp32c6", "source": "src/board_detect/m5/esp32c6/c6_display.inl", "output": "esp32c6_detector_order.hpp",
+    "constraints": [
+      { "before": "stampc6_detector", "after": "nanoc6_detector", "reason": "StampC6 eFuse capacity must precede NanoC6 G3 probing because G3 is a StampC6 user pin" }
+    ],
+    "families": [
+      { "detector": "stampc6_detector", "boards": ["m5stampc6"] },
+      { "detector": "nanoc6_detector", "boards": ["m5nanoc6"] }
+    ]
+  },
+  "esp32h2_detectors": {
+    "chip": "esp32h2", "source": "src/board_detect/m5/esp32h2.inl", "output": "esp32h2_detector_order.hpp",
+    "families": [
+      { "detector": "nanoh2_detector", "boards": ["m5nanoh2"] }
+    ]
+  },
+  "esp32c61_detectors": {
+    "chip": "esp32c61", "source": "src/board_detect/m5/esp32c61/corematrix.inl", "output": "esp32c61_detector_order.hpp",
+    "families": [
+      { "detector": "corematrix_detector", "boards": ["m5stack_corematrix"] }
+    ]
+  },
+  "esp32p4_detectors": {
+    "chip": "esp32p4", "source": "src/board_detect/m5/esp32p4.inl", "output": "esp32p4_detector_order.hpp",
+    "families": [
+      { "detector": "corep4x_detector", "boards": ["m5stack_corep4x"] },
+      { "detector": "tab5_family_detector", "boards": ["m5stack_tab5", "m5stack_tab5x"] }
+    ]
+  }
+}

@@ -17,6 +17,7 @@ export function m5gfxBoardMapping(target, boardId) {
     cardputerSubdivision: source.cardputer_subdivision ?? null,
     identityDevices: source.identity_devices ?? [],
     releaseProbe: source.release_probe ?? null,
+    probePins: source.probe_pins ?? [],
   };
 }
 
@@ -46,7 +47,7 @@ export function wiringFieldsForRole(board, sourceRole, parts) {
     const sd = Object.values(board.devices ?? {}).find((device) => device.kind === "sd");
     if (display?.bus === bus[1] && ["sclk", "mosi", "miso", "io0", "io1", "io2", "io3"].includes(bus[2])) fields.push(`display_${bus[2]}`);
     if (display?.bus === bus[1] && board.buses?.[bus[1]]?.kind === "parallel_epd") fields.push(`display_${bus[2]}`);
-    if (sd?.bus === display?.bus && sd.bus === bus[1]) {
+    if (sd && display && sd.bus === display.bus && sd.bus === bus[1]) {
       const name = { sclk: "shared_sd_sclk", mosi: "shared_sd_mosi", miso: "shared_sd_miso" }[bus[2]];
       if (name) fields.push(name);
     }
@@ -197,6 +198,10 @@ function descriptorPins(emitted) {
   if (fields.has("touch")) values.push(emitted.touchInt);
   if (fields.has("camera")) values.push(...Object.values(emitted.camera));
   if (fields.has("hold")) values.push(...emitted.hold);
+  values.push(...emitted.mapping.probePins);
+  // The AtomPsram fallback samples these input-only pads. Snapshot them even
+  // though only two currently occur in other board descriptors.
+  if (emitted.mapping.boardId === "m5stickcplus2") values.push(34, 35, 37, 38);
   return [...new Set(values.filter((pin) => Number.isInteger(pin) && pin >= 0))].sort((left, right) => left - right);
 }
 

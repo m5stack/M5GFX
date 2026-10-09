@@ -62,7 +62,6 @@
         "roles": { "type": "array", "items": { "$ref": "#/definitions/role" }, "uniqueItems": true },
         "pull": { "enum": ["up", "down", "none"] },
         "detect_class": { "enum": ["up", "down", "floating", "fixed"] },
-        "pull_reliable": { "type": "boolean" },
         "note": { "type": "string" },
         "verified": { "$ref": "#/definitions/verified" },
         "measured_by": { "$ref": "#/definitions/measuredBy" },

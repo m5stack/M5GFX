@@ -9,6 +9,16 @@
 #include "pmic_ops.hpp"
 
 #include <new>
+#include <driver/gpio.h>
+#include <esp_attr.h>
+#include <esp_cpu.h>
+#include <esp_rom_sys.h>
+#include <esp_timer.h>
+#include <soc/gpio_struct.h>
+#include <soc/rtc.h>
+#include <soc/rtc_cntl_reg.h>
+#include <soc/rtc_io_reg.h>
+#include <soc/sens_reg.h>
 
 namespace m5gfx
 {
@@ -112,6 +122,15 @@ namespace m5
     pins(wiring::paper::hold), no_internal_i2c(), no_options(),
     pins(wiring::paper::hold),
   };
+  static constexpr board_desc_t desc_timercam = {
+    { id(lgfx::board_M5TimerCam), "M5TimerCam", 0 },
+    gpio_power(wiring::timercam::power_gpio), no_reset(), no_shared_sd(),
+    no_display_pins(), no_pins(),
+    internal_i2c(wiring::timercam::internal_i2c_sda,
+                 wiring::timercam::internal_i2c_scl,
+                 wiring::timercam::internal_i2c_port),
+    no_options(), no_pins(),
+  };
   // gpio_power() keeps its active-high meaning; only gpio_power_low() holds low.
   static_assert(desc_paper.power.hold_high, "Paper power hold stays active high");
 
@@ -174,6 +193,7 @@ namespace m5
   construct_status_t construct_stack(const board_result_t& result, display_parts_t* parts);
   construct_status_t construct_paper(const board_result_t& result, display_parts_t* parts);
   static const board_entry_t esp32_d0wdq6_boards[] = {
+    { &desc_timercam, construct_displayless, "board_M5TimerCam", nullptr },
     { &desc_station, construct_station, nullptr, nullptr },
     { &desc_core2, construct_core2, nullptr, nullptr },
     { &desc_tough, construct_tough, nullptr, nullptr },
@@ -184,6 +204,11 @@ namespace m5
     { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr },
     { &desc_stickcplus2, construct_stickcplus2, "M5StickCPlus2", nullptr },
     { &desc_atompsram, construct_atompsram, "", nullptr },
+    { &desc_atomvoice, construct_displayless, "board_M5AtomVoice", nullptr },
+    { &desc_atommatrix, construct_displayless, "board_M5AtomMatrix", nullptr },
+    { &desc_atomlite, construct_displayless, "board_M5AtomLite", nullptr },
+    { &desc_atomu, construct_displayless, "board_M5AtomU", nullptr },
+    { &desc_stamppico, construct_displayless, "board_M5StampPico", nullptr },
   };
 
   namespace detail
@@ -247,20 +272,25 @@ namespace m5
       if (!tough && !core2)
       {
         // An AXP192 with no LCD or touch response may still be Station.
-        if (!ctx.final_attempt
-         || (variant == panel_variant_t::unknown
-          && !(result.option & generated_options::core2::new_pmic)))
+        if (variant == panel_variant_t::unknown
+         && !(result.option & generated_options::core2::new_pmic))
         {
           ctx.transaction->restore_start(signals);
           return false;
         }
-        result.transient_fallback = true;
-        ESP_LOGW("board_detect_m5", "Core2/Tough touch unidentified; using %s for this boot",
-                 ctx.hint == desc_tough.def.id ? "Tough" : "Core2");
+        if (!finish_unresolved(ctx, &result,
+                               ctx.hint == desc_tough.def.id ? &desc_tough : nullptr,
+                               &desc_core2, false, "Core2/Tough touch unidentified"))
+        {
+          ctx.transaction->restore_start(signals);
+          return false;
+        }
       }
       log_panel_variant(variant, keys);
-      result.assign(tough || (result.transient_fallback && ctx.hint == desc_tough.def.id)
-                      ? &desc_tough : &desc_core2);
+      if (tough || core2)
+      {
+        result.assign(tough ? &desc_tough : &desc_core2);
+      }
       if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
       if (result.def->id == desc_tough.def.id)
       { result.option &= ~generated_options::core2::new_pmic; }
@@ -549,12 +579,30 @@ namespace m5
   static const stack_family_detector_t stack_family_detector;
   static const paper_family_detector_t paper_family_detector;
 
-  static const board_detector_t* const esp32_d0wdq6_detectors[] = {
-    &axp_family_detector,
-    &stack_family_detector,
-    &paper_family_detector,
-    nullptr,
+  class timercam_detector_t final : public board_detector_t
+  {
+  public:
+    timercam_detector_t() : board_detector_t(members_) {}
+    bool signature(probe_ctx_t& ctx) const override
+    {
+      return probe_i2c_bus_present(ctx, wiring::timercam::internal_i2c_sda,
+                                   wiring::timercam::internal_i2c_scl);
+    }
+    bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+    {
+      if (!result || !probe_i2c_ack(ctx, wiring::timercam::internal_i2c_sda,
+                                    wiring::timercam::internal_i2c_scl, 0x51))
+      { return false; } // BM8563 RTC address in m5timercam catalog.
+      result->assign(&desc_timercam);
+      return true;
+    }
+  private:
+    static const board_def_t* const members_[2];
   };
+  const board_def_t* const timercam_detector_t::members_[2] = { &desc_timercam.def, nullptr };
+  static const timercam_detector_t timercam_detector;
+
+  #include "generated/esp32_d0wdq6_detector_order.hpp"
 
   success_log_t success_log(const board_result_t& result)
   {

@@ -4,6 +4,10 @@
 
 // _pin_table_i2c_ex_in[][5]
 { board_t::board_M5AtomPsram, 21, 25, 32, 26 },
+{ board_t::board_M5AtomLite, 21, 25, 32, 26 },
+{ board_t::board_M5AtomMatrix, 21, 25, 32, 26 },
+{ board_t::board_M5AtomU, 21, 25, 32, 26 },
+{ board_t::board_M5AtomVoice, 21, 25, 32, 26 },
 { board_t::board_M5Paper, 22, 21, 32, 25 },
 { board_t::board_M5Stack, 22, 21, 22, 21 },
 { board_t::board_M5TimerCam, 14, 12, 13, 4 },
@@ -32,8 +36,13 @@
 
 // _pin_table_other0[][2]
 { board_t::board_M5AtomPsram, 27 },
+{ board_t::board_M5AtomLite, 27 },
+{ board_t::board_M5AtomMatrix, 27 },
+{ board_t::board_M5AtomU, 27 },
+{ board_t::board_M5AtomVoice, 27 },
 { board_t::board_M5Stack, 15 },
 { board_t::board_M5StackCore2, 25 },
+{ board_t::board_M5StampPico, 27 },
 { board_t::board_M5Station, 4 },
 { board_t::board_unknown, 255 },
 

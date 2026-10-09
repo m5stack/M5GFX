@@ -38,6 +38,13 @@ Generated headers represent unspecified values with target-specific unknown or
 sentinel values. Value precedence is board value, then part default, then the
 panel-class default.
 
+`detector_order.json` maps each package's detector families to catalog boards.
+`emit-wiring` generates the detector arrays with GPIO power-hold families first,
+preserving the declared order within each group. A board qualifies only when a
+`power_hold` device also has a GPIO `dev:<id>.*` role. The generated board IDs
+give the runtime hint pass the same priority rule. Add a new family to the
+manifest; `npm test` checks that each generated array is included by its source.
+
 ## Board-detection operation lists
 
 `src/board_detect/ops.hpp` defines a typed source IR for ordered I2C, GPIO, and

@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "id": "m5atoms3u",
+  "name": "M5AtomS3U",
+  "official_name": "M5Stack M5AtomS3U",
+  "legacy_board_id": 138,
+  "chip": "esp32s3",
+  "pins": {
+    "1": {
+      "roles": [
+        "bus:port_a_i2c.scl",
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "bus:port_a_i2c.sda",
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": []
+    },
+    "12": {
+      "roles": [
+        "dev:ir_led.on"
+      ]
+    },
+    "16": {
+      "roles": []
+    },
+    "35": {
+      "roles": [
+        "dev:rgb_led.data"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "38": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "39": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    },
+    "port_a_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 0,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "rgb_led": {
+      "kind": "led_strip",
+      "signals": {
+        "data": "gpio:35"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:41"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "ir_led": {
+      "kind": "led",
+      "signals": {
+        "on": "gpio:12"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:2",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}

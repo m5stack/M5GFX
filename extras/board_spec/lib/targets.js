@@ -180,6 +180,11 @@ export function validateTargets(boards, target = {}) {
         issues.push({ id: "E_TGT_OUTPUT_COLLISION", path: `${path}/${field}`, message: `${value} is also ${prior.field} for ${prior.id} (${prior.chip})` });
       } else if (!prior) outputs.set(value, { field, id, chip: entry.chip });
     }
+    for (const pin of entry.probe_pins ?? []) {
+      if (!Number.isInteger(pin) || !catalog.get(id)?.pins?.[pin]) {
+        issues.push({ id: "E_TGT_PROBE_PIN", path: `${path}/probe_pins`, message: `GPIO ${pin} is not a catalog pin on ${id}` });
+      }
+    }
     const subdivision = entry.cardputer_subdivision;
     for (const sourceId of [...(subdivision?.sense_i2c_from_boards ?? []), subdivision?.vameter_board].filter(Boolean)) {
       if (!catalog.has(sourceId)) issues.push({ id: "E_TGT_CARDPUTER_SUBDIVISION", path: `${path}/cardputer_subdivision`, message: `${sourceId} is not in the board catalog` });

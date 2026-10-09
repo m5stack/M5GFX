@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "m5nanoh2",
+  "name": "M5NanoH2",
+  "official_name": "M5Stack NanoH2",
+  "legacy_board_id": 151,
+  "chip": "esp32h2",
+  "pins": {
+    "3": {
+      "roles": [
+        "dev:ir_led.on"
+      ],
+      "note": "IR LED clamps the internal pull-up low",
+      "verified": {
+        "roles": "measured"
+      },
+      "measured_by": {
+        "roles": "docs/investigations/nano-c6-h2-pins-2026-09-28.md"
+      }
+    }
+  },
+  "buses": {},
+  "devices": {
+    "ir_led": {
+      "kind": "led"
+    }
+  }
+}

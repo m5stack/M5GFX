@@ -16,9 +16,7 @@ namespace m5
 #include "esp32p4/corep4x.inl"
 #include "esp32p4/tab5.inl"
 
-static const board_detector_t* const esp32p4_detectors[] = {
-  &corep4x_detector, &tab5_family_detector, nullptr
-};
+#include "generated/esp32p4_detector_order.hpp"
 static const board_entry_t esp32p4_boards[] = {
   { &desc_corep4x, construct_corep4x, "board_M5CoreP4X", nullptr },
   { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr },

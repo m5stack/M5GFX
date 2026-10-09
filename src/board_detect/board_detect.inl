@@ -5,10 +5,13 @@
 #include "board_detect.hpp"
 #include "i2c_bus_probe.hpp"
 #include "ops.inl"
+#include "m5/generated/gpio_power_hold_board_ids.hpp"
+#include "m5/generated/detector_order_constraints.hpp"
 
 #include <cstdio>
 #include <cstring>
 #include <driver/gpio.h>
+#include <soc/gpio_reg.h>
 #include <esp_log.h>
 #if defined (CONFIG_IDF_TARGET_ESP32S3) \
  && __has_include(<driver/dedic_gpio.h>) \
@@ -119,6 +122,25 @@ namespace board_detect
     return true;
   }
 #endif
+
+  // Call after family-specific evidence gates; a hint is eligible only while
+  // that member remains possible. Defaults may be absent for open families.
+  // Only some chips' detectors use it.
+  __attribute__((unused))
+  static bool finish_unresolved(const prepare_ctx_t& ctx, board_result_t* result,
+                                const board_desc_t* hinted_if_possible,
+                                const board_desc_t* family_default,
+                                bool persist, const char* why)
+  {
+    if (!ctx.final_attempt || result == nullptr) { return false; }
+    const auto* chosen = hinted_if_possible ? hinted_if_possible : family_default;
+    if (chosen == nullptr) { return false; }
+    result->assign(chosen);
+    if (!persist) { result->transient_fallback = true; }
+    ESP_LOGW("board_detect_m5", "%s; using %s%s", why, chosen->def.name,
+             persist ? "" : " for this boot");
+    return true;
+  }
 
   static void restore_if_changed(lgfx::gpio::pin_backup_t& saved)
   {
@@ -310,6 +332,15 @@ namespace board_detect
       return true;
     }
 
+    bool gpio_power_hold_family(const board_detector_t* detector)
+    {
+      for (const auto id : gpio_power_hold_board_ids)
+      {
+        if (detector->has_member(id)) { return true; }
+      }
+      return false;
+    }
+
     bool run_detector(const board_detector_t* detector, probe_ctx_t& ctx, board_result_t* result)
     {
       if (ctx.transaction == nullptr)
@@ -327,6 +358,8 @@ namespace board_detect
         ctx.transaction->rollback();
         return false;
       }
+
+      ctx.confirm_attempted = true;
 
       board_result_t candidate;
       const bool confirmed = detector->confirm(ctx, &candidate);
@@ -389,6 +422,7 @@ namespace board_detect
   board_result_t detect_board(const board_detector_t* const* list, board_id_t hint, probe_ctx_t& ctx)
   {
     board_result_t result;
+    ctx.confirm_attempted = false;
     if (list == nullptr) { return result; }
     ctx.hint = hint;
 
@@ -415,18 +449,44 @@ namespace board_detect
         // A hint belonging to a detector outside this package-specific list is normal.
         ESP_LOGD(tag, "hint=%u is not present in detector list", static_cast<unsigned>(hint));
       }
-      else if (hinted != nullptr)
+    }
+
+    unsigned count = 0;
+    while (list[count] != nullptr && count <= max_detector_families) { ++count; }
+    if (count > max_detector_families) { return result; }
+    bool tried[max_detector_families] = {};
+    for (unsigned pass = 0; pass < count; ++pass)
+    {
+      unsigned chosen = count;
+      unsigned best = 4;
+      for (unsigned i = 0; i < count; ++i)
       {
-        if (run_detector(hinted, ctx, &result)) { return result; }
+        if (tried[i]) { continue; }
+        bool blocked = false;
+        for (const auto& edge : detector_order_edges)
+        {
+          if (!list[i]->has_member(edge.after)) { continue; }
+          for (unsigned j = 0; j < count; ++j)
+          {
+            if (!tried[j] && list[j]->has_member(edge.before)) { blocked = true; break; }
+          }
+          if (blocked) { break; }
+        }
+        if (blocked) { continue; }
+        const bool hold = gpio_power_hold_family(list[i]);
+        const unsigned rank = hold ? (list[i] == hinted ? 0 : 1)
+                                   : (list[i] == hinted ? 2 : 3);
+        if (rank < best) { chosen = i; best = rank; }
+      }
+      if (chosen == count) { break; } // Generated constraints must be acyclic.
+      tried[chosen] = true;
+      if (run_detector(list[chosen], ctx, &result)) { return result; }
+      if (list[chosen] == hinted)
+      {
         ESP_LOGD(tag, "hint=%u did not match its detector family", static_cast<unsigned>(hint));
       }
     }
-
-    for (auto p = list; *p != nullptr; ++p)
-    {
-      if (*p == hinted) { continue; }
-      if (run_detector(*p, ctx, &result)) { return result; }
-    }
+    result.candidate = ctx.candidate;
     return result;
   }
 
@@ -528,6 +588,15 @@ namespace board_detect
     return i2c_bus_probe_detail::probe_i2c_bus_present(sample, wait_scl, recover);
   }
 
+  bool probe_pin_pullup_low(probe_ctx_t& ctx, int pin)
+  {
+    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
+    lgfx::delayMicroseconds(10);
+    const bool held_low = !lgfx::gpio_in(pin);
+    ctx.transaction->restore_start({ pin });
+    return held_low;
+  }
+
   bool probe_i2c_ack(probe_ctx_t& ctx, int pin_sda, int pin_scl, std::uint8_t addr)
   {
     // Reserved addresses are never touched, even if requested accidentally.
@@ -620,6 +689,25 @@ namespace board_detect
       ctx.transaction->restore_start(static_cast<std::int8_t>(pin));
     }
     return result;
+  }
+
+  bool probe_pin_floating(probe_ctx_t& ctx, std::int8_t pin, std::uint32_t release_us)
+  {
+    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
+    lgfx::delayMicroseconds(10);
+    const bool charged_high = lgfx::gpio_in(pin);
+    lgfx::pinMode(pin, lgfx::pin_mode_t::input);
+    lgfx::delayMicroseconds(release_us);
+    const bool held_high = lgfx::gpio_in(pin);
+
+    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
+    lgfx::delayMicroseconds(10);
+    const bool charged_low = !lgfx::gpio_in(pin);
+    lgfx::pinMode(pin, lgfx::pin_mode_t::input);
+    lgfx::delayMicroseconds(release_us);
+    const bool held_low = !lgfx::gpio_in(pin);
+    ctx.transaction->restore_start(pin);
+    return charged_high && held_high && charged_low && held_low;
   }
 
   dedicated_release_result_t probe_dedicated_pin_release(
@@ -994,6 +1082,21 @@ namespace board_detect
       lgfx::pinMode(pin, lgfx::pin_mode_t::output);
     }
 
+    void hold_pin_level(int pin, bool high)
+    {
+      const auto bit = std::uint32_t(1) << (pin & 31);
+#if !defined (SOC_GPIO_PIN_COUNT) || SOC_GPIO_PIN_COUNT > 32
+      const bool output = pin & 32 ? REG_READ(GPIO_ENABLE1_REG) & bit : REG_READ(GPIO_ENABLE_REG) & bit;
+      const bool level = pin & 32 ? REG_READ(GPIO_OUT1_REG) & bit : REG_READ(GPIO_OUT_REG) & bit;
+#else
+      const bool output = REG_READ(GPIO_ENABLE_REG) & bit;
+      const bool level = REG_READ(GPIO_OUT_REG) & bit;
+#endif
+      if (output && level == high) { return; }
+      // Set the output latch before enabling the driver, including after M5Unified prehold.
+      pin_level(pin, high);
+    }
+
     bool read_register(int port, const power_desc_t& power,
                        std::uint8_t addr, std::uint8_t reg,
                        std::uint8_t* value, retry_budget_t& retry_budget)
@@ -1137,7 +1240,7 @@ namespace board_detect
   {
     if (result.prepared & prepared_power) { return true; }
     const auto& power = desc.power;
-    if (power.hold_pin >= 0) { startup_detail::pin_level(power.hold_pin, power.hold_high); }
+    if (power.hold_pin >= 0) { startup_detail::hold_pin_level(power.hold_pin, power.hold_high); }
     if (power.variants == nullptr || power.variant_count == 0)
     {
       result.prepared |= prepared_power;

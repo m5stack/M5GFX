@@ -55,7 +55,7 @@
   };
   const board_def_t* const corematrix_detector_t::members_[2] = { &desc_corematrix.def, nullptr };
   static const corematrix_detector_t corematrix_detector;
-  static const board_detector_t* const esp32c61_detectors[] = { &corematrix_detector, nullptr };
+  #include "../generated/esp32c61_detector_order.hpp"
 
   construct_status_t construct_corematrix(const board_result_t&, display_parts_t*);
   static const board_entry_t esp32c61_boards[] = {

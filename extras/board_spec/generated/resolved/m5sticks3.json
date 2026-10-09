@@ -174,7 +174,6 @@
         "bus:internal_i2c.sda"
       ],
       "pull": "up",
-      "pull_reliable": true,
       "verified": {
         "roles": "generated"
       }
@@ -184,7 +183,6 @@
         "bus:internal_i2c.scl"
       ],
       "pull": "up",
-      "pull_reliable": true,
       "verified": {
         "roles": "generated"
       }

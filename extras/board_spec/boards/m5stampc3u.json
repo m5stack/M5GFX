@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "m5stampc3u",
+  "name": "M5StampC3U",
+  "official_name": "M5Stack StampC3U",
+  "legacy_board_id": 135,
+  "chip": "esp32c3",
+  "pins": {},
+  "buses": {},
+  "devices": {}
+}

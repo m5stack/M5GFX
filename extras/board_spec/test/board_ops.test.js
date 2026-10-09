@@ -142,7 +142,7 @@ test("duplicate operations can produce StickS3 byte-for-byte", () => {
     47: ["bus:internal_i2c.sda"], 48: ["bus:internal_i2c.scl"],
   };
   for (const [gpio, items] of Object.entries(roles)) for (const role of items) addRole(board, gpio, role, { chip });
-  setPin(board, 47, { pull: "up", pull_reliable: true });
-  setPin(board, 48, { pull: "up", pull_reliable: true });
+  setPin(board, 47, { pull: "up" });
+  setPin(board, 48, { pull: "up" });
   assert.equal(formatBoard(board), sticks3Text);
 });

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "m5stamps3bat",
+  "name": "M5StampS3Bat",
+  "official_name": "M5Stack M5StampS3Bat",
+  "legacy_board_id": 149,
+  "chip": "esp32s3",
+  "pins": {
+    "47": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "48": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "fixed": false,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated"
+      }
+    }
+  },
+  "devices": {
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c"
+    }
+  }
+}

@@ -89,20 +89,44 @@
         "roles": "generated"
       }
     },
+    "19": {
+      "roles": [
+        "dev:ir_led.on",
+        "dev:red_led.on"
+      ],
+      "pull": "down",
+      "note": "IR transmitter and red LED driven through Q5 base",
+      "verified": {
+        "pull": "measured"
+      },
+      "measured_by": {
+        "pull": "Internal-pull GPIO survey on M5StickCPlus2"
+      }
+    },
     "21": {
       "roles": [
         "bus:internal_i2c.sda"
       ],
+      "pull": "up",
       "verified": {
-        "roles": "generated"
+        "roles": "generated",
+        "pull": "measured"
+      },
+      "measured_by": {
+        "pull": "Internal-pull GPIO survey on M5StickCPlus2"
       }
     },
     "22": {
       "roles": [
         "bus:internal_i2c.scl"
       ],
+      "pull": "up",
       "verified": {
-        "roles": "generated"
+        "roles": "generated",
+        "pull": "measured"
+      },
+      "measured_by": {
+        "pull": "Internal-pull GPIO survey on M5StickCPlus2"
       }
     },
     "27": {
@@ -254,6 +278,18 @@
       },
       "verified": {
         "signals": "generated"
+      }
+    },
+    "ir_led": {
+      "kind": "led",
+      "signals": {
+        "on": "gpio:19"
+      }
+    },
+    "red_led": {
+      "kind": "led",
+      "signals": {
+        "on": "gpio:19"
       }
     },
     "btn_a": {

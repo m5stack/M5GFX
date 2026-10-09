@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+  "additionalProperties": {
+    "type": "object",
+    "required": ["chip", "source", "output", "families"],
+    "additionalProperties": false,
+    "properties": {
+      "chip": { "type": "string" },
+      "source": { "type": "string" },
+      "output": { "type": "string" },
+      "families": {
+        "type": "array", "minItems": 1,
+        "items": {
+          "type": "object", "required": ["detector", "boards"], "additionalProperties": false,
+          "properties": {
+            "detector": { "type": "string" },
+            "boards": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+          }
+        }
+      },
+      "constraints": {
+        "type": "array",
+        "items": {
+          "type": "object", "required": ["after", "before", "reason"], "additionalProperties": false,
+          "properties": {
+            "after": { "type": "string" },
+            "before": { "type": "string" },
+            "reason": { "type": "string", "pattern": "\\S" }
+          }
+        }
+      }
+    }
+  }
+}

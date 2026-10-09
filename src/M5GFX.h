@@ -192,10 +192,13 @@ namespace m5gfx
     std::shared_ptr<lgfx::ILight> _light_last;
 #endif
     std::vector<DisplayState> _displayStateStack;
+    board_t _board_candidate = board_t::board_unknown;
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown,
-                       bool final_attempt = false, bool* transient_fallback = nullptr);
+                       bool final_attempt = false, bool* transient_fallback = nullptr,
+                       bool* no_signature = nullptr,
+                       board_t* candidate_board = nullptr);
     bool _adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
                                lgfx::ILight* light, lgfx::ITouch* touch);
     void _set_backlight(lgfx::ILight* bl);
@@ -207,6 +210,7 @@ namespace m5gfx
     using LGFXBase::drawBitmap;
 
     static M5GFX* getInstance(void) { return _instance; }
+    board_t getBoardCandidate(void) const { return _board_candidate; }
 
     void progressBar(int x, int y, int w, int h, uint8_t val);
     void pushState(void);

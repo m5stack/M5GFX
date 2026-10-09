@@ -134,9 +134,11 @@
       ],
       "preferred_host": 0,
       "fixed": false,
+      "freq": 100000,
       "verified": {
         "signals": "generated",
-        "preferred_host": "generated"
+        "preferred_host": "generated",
+        "freq": "generated"
       }
     }
   },

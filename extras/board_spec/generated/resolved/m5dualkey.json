@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "m5dualkey",
+  "name": "M5DualKey",
+  "official_name": "M5Stack Chain DualKey",
+  "legacy_board_id": 147,
+  "chip": "esp32s3",
+  "pins": {
+    "0": {
+      "roles": [
+        "dev:btn_a.in"
+      ]
+    },
+    "17": {
+      "roles": [
+        "dev:btn_b.in"
+      ]
+    },
+    "21": {
+      "roles": [
+        "dev:rgb_led.data"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "38": {
+      "roles": [],
+      "note": "NC; measured floating"
+    },
+    "39": {
+      "roles": [],
+      "note": "NC; measured floating"
+    }
+  },
+  "buses": {},
+  "devices": {
+    "btn_a": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:0"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "btn_b": {
+      "kind": "button",
+      "part": "button",
+      "spec": {
+        "active_low": true,
+        "pull": "external_up"
+      },
+      "signals": {
+        "in": "gpio:17"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    },
+    "rgb_led": {
+      "kind": "led_strip",
+      "signals": {
+        "data": "gpio:21"
+      },
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  }
+}

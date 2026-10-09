@@ -28,6 +28,12 @@ namespace power_hold {
   constexpr bool active_low = false;
 } // namespace power_hold
 
+namespace i2c_ioe {
+  constexpr std::uint8_t i2c_addr = 0x43;
+  constexpr std::uint32_t i2c_freq = 100000;
+  constexpr std::uint8_t id_reg = 0x1;
+} // namespace i2c_ioe
+
 } } } } } // namespace m5gfx::board_detect::m5::specs::unitc6l
 
 namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace nesson1 {
