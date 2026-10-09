@@ -129,6 +129,8 @@ Write `detect_class` only when the class holds in every state detection can meet
 cold boot, software reset, wake from sleep, and after an interrupted detection.
 Measure each of these states on real hardware before writing a value.
 
+- Do not classify pins whose state users can change through buttons, connectors,
+  or headers. Validation rejects connector and button roles.
 - Use `up` / `down` / `floating` for pins defined by resistors alone.
 - Use `fixed` for a driven pin only when the driver is always powered. For example,
   an EPD BUSY output reads D normally and U while the EPD is in deep sleep, so it can

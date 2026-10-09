@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "m5stampp4",
+  "name": "M5StampP4",
+  "official_name": "M5StampP4",
+  "legacy_board_id": 150,
+  "chip": "esp32p4",
+  "pins": {},
+  "buses": {},
+  "devices": {}
+}

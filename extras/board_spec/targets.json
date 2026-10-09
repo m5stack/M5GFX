@@ -126,7 +126,7 @@
       "m5atoms3rext": {"chip": "esp32s3", "legacy_board_id": 143, "cpp_namespace": "atoms3rext", "board_enum": "board_M5AtomS3RExt", "desc_name": "desc_atoms3rext", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true, "probe_pins": [9, 12, 18, 21]},
       "m5atomvoices3r": {"chip": "esp32s3", "legacy_board_id": 145, "cpp_namespace": "atomvoices3r", "board_enum": "board_M5AtomVoiceS3R", "desc_name": "desc_atomvoices3r", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
       "m5stamps3bat": {"chip": "esp32s3", "legacy_board_id": 149, "cpp_namespace": "stamps3bat", "board_enum": "board_M5StampS3Bat", "desc_name": "desc_stamps3bat", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
-      "m5stamps3mini": {"chip": "esp32s3", "legacy_board_id": 150, "cpp_namespace": "stamps3mini", "board_enum": "board_M5StampS3Mini", "desc_name": "desc_stamps3mini", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5stamps3mini": {"chip": "esp32s3", "legacy_board_id": 155, "cpp_namespace": "stamps3mini", "board_enum": "board_M5StampS3Mini", "desc_name": "desc_stamps3mini", "wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
       "m5atoms3r": {
         "chip": "esp32s3", "legacy_board_id": 18, "cpp_namespace": "atoms3r", "board_enum": "board_M5AtomS3R", "desc_name": "desc_atoms3r",
         "wiring_fields": ["display", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
@@ -232,6 +232,9 @@
         "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
         "specs_output": "esp32p4_specs.hpp"
       },
+      "m5unitpoep4": {"chip": "esp32p4", "legacy_board_id": 148, "board_enum": "board_M5UnitPoEP4"},
+      "m5stampp4": {"chip": "esp32p4", "legacy_board_id": 150, "board_enum": "board_M5StampP4"},
+      "m5stampp4x": {"chip": "esp32p4", "legacy_board_id": 156, "board_enum": "board_M5StampP4X"},
       "m5stack_tab5": {
         "chip": "esp32p4", "legacy_board_id": 22, "cpp_namespace": "tab5", "board_enum": "board_M5Tab5", "desc_name": "desc_tab5",
         "wiring_fields": ["i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",

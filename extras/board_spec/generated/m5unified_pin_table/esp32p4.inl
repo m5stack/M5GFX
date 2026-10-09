@@ -6,6 +6,9 @@
 { board_t::board_M5CoreP4X, 9, 11, 16, 18 },
 { board_t::board_M5Tab5, 32, 31, 54, 53 },
 { board_t::board_M5Tab5X, 32, 31, 54, 53 },
+{ board_t::board_M5StampP4, 255, 255, 255, 255 },
+{ board_t::board_M5StampP4X, 255, 255, 255, 255 },
+{ board_t::board_M5UnitPoEP4, 1, 0, 54, 53 },
 { board_t::board_unknown, 22, 21, 33, 32 },
 
 // _pin_table_port_bc[][5]

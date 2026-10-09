@@ -3,7 +3,7 @@
   "id": "m5stamps3mini",
   "name": "M5StampS3Mini",
   "official_name": "M5Stack M5StampS3Mini",
-  "legacy_board_id": 150,
+  "legacy_board_id": 155,
   "chip": "esp32s3",
   "pins": {
     "1": {

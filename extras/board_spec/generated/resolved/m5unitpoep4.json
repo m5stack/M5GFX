@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "m5unitpoep4",
+  "name": "M5UnitPoEP4",
+  "official_name": "M5Stack Unit PoE-P4",
+  "legacy_board_id": 148,
+  "chip": "esp32p4",
+  "pins": {
+    "0": {
+      "roles": [
+        "bus:internal_i2c.sda"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "bus:internal_i2c.scl"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "31": {
+      "roles": [
+        "dev:ethernet.mdc"
+      ],
+      "detect_class": "up"
+    },
+    "52": {
+      "roles": [
+        "dev:ethernet.mdio"
+      ],
+      "detect_class": "up"
+    },
+    "53": {
+      "roles": [
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "54": {
+      "roles": [
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    }
+  },
+  "buses": {
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "fixed": false,
+      "verified": {
+        "signals": "generated"
+      }
+    }
+  },
+  "devices": {
+    "ethernet": {
+      "kind": "transceiver",
+      "signals": {
+        "mdc": "gpio:31",
+        "mdio": "gpio:52"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "positions": {
+        "1": "gpio:54",
+        "2": "gpio:53",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      }
+    }
+  }
+}
