@@ -29,5 +29,8 @@ static constexpr detector_order_edge_t detector_order_edges[] = {
   { 18, 26 },
   { 153, 33 },
   { 154, 140 },
+  { 31, 22 },
+  { 22, 148 },
+  { 148, 150 },
 };
 } } // namespace m5gfx::board_detect

@@ -94,7 +94,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5UnitRCA = 198
     , board_M5ModuleDisplay = 199
     , board_M5ModuleRCA = 200
-    , board_M5UnitPoEP4HDMI = 201
+    , board_M5UnitPoEP4DisplayOut = 201
+    , board_M5UnitPoEP4HDMI __attribute__ ((deprecated)) = board_M5UnitPoEP4DisplayOut
 
     , board_FrameBuffer = 512
     };

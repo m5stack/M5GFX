@@ -147,7 +147,7 @@
         "led": ["on", "pwm"],
         "vibration": ["enable"],
         "camera": ["pwdn", "reset", "xclk", "vsync", "href", "pclk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"],
-        "transceiver": ["de", "re"],
+        "transceiver": ["de", "re", "mdc", "mdio"],
         "regulator": ["en"],
         "button": ["in"],
         "usb_uart": ["boot"],

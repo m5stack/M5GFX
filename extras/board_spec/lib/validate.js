@@ -379,6 +379,17 @@ export function validateBoard(board, { schema, chip, connectorTypes = {}, parts 
   validatePinKeys(board, chip, errors);
   const checkDetectClasses = (pins, prefix) => {
     for (const [gpio, pin] of Object.entries(pins ?? {})) {
+      if (pin.detect_class !== undefined) {
+        if ((pin.roles ?? []).some((role) => /(?:^|\/)conn:/.test(role))) {
+          errors.push(error("E_DETECT_CLASS_CONNECTOR", `${prefix}/${gpio}/detect_class`, "detect_class cannot use a user connector pin"));
+        }
+        if ((pin.roles ?? []).some((role) => {
+          const match = /^dev:([^.]*)\./.exec(role);
+          return match && board.devices?.[match[1]]?.kind === "button";
+        })) {
+          errors.push(error("E_DETECT_CLASS_BUTTON", `${prefix}/${gpio}/detect_class`, "detect_class cannot use a user button pin"));
+        }
+      }
       if (pin.detect_class !== undefined && (chip.no_internal_pull ?? []).includes(Number(gpio))) {
         errors.push(error("E_DETECT_CLASS_NO_PULL", `${prefix}/${gpio}/detect_class`, "detect_class requires internal GPIO pulls"));
       }

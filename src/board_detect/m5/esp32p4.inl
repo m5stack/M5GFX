@@ -6,6 +6,7 @@
 #include "generated/esp32p4_wiring.hpp"
 #include "generated/esp32p4_specs.hpp"
 #include "pmic_ops.hpp"
+#include <esp_chip_info.h>
 
 namespace m5gfx
 {
@@ -15,12 +16,15 @@ namespace m5
 {
 #include "esp32p4/corep4x.inl"
 #include "esp32p4/tab5.inl"
+#include "esp32p4/unitpoep4.inl"
+#include "esp32p4/stampp4.inl"
 
 #include "generated/esp32p4_detector_order.hpp"
 static const board_entry_t esp32p4_boards[] = {
   { &desc_corep4x, construct_corep4x, "board_M5CoreP4X", nullptr },
   { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr },
   { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr },
+  { &desc_unitpoep4, construct_displayless, "board_M5UnitPoEP4", nullptr },
 };
 success_log_t success_log(const board_result_t& result) { return success_log(esp32p4_boards, result); }
 }

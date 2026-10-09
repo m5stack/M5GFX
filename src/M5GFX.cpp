@@ -1190,36 +1190,32 @@ namespace m5gfx
 
     if (pkg_ver == 0) // pkg_ver == EFUSE_RD_CHIP_VER_PKG_
     {
-      if (board == 0 || board == board_t::board_M5CoreP4X
-                     || board == board_t::board_M5Tab5
-                     || board == board_t::board_M5Tab5X)
-      {
-        board_t setup_board = board_t::board_unknown;
-        if (try_setup_detected(board_detect::m5::esp32p4_detectors,
-                               board, use_reset, false, &board,
-                               [this, &setup_board](board_detect::m5::display_parts_t& parts)
-                               {
+      board_t setup_board = board_t::board_unknown;
+      if (try_setup_detected(board_detect::m5::esp32p4_detectors,
+                             board, use_reset, final_attempt, &board,
+                             [this, &setup_board](board_detect::m5::display_parts_t& parts)
+                             {
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_COREP4X_SETUP)
-                                 if (setup_board == board_t::board_M5CoreP4X)
-                                 {
-                                   (void)parts;
-                                   return false;
-                                 }
+                               if (setup_board == board_t::board_M5CoreP4X)
+                               {
+                                 (void)parts;
+                                 return false;
+                               }
 #endif
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_TAB5_SETUP)
-                                 if (setup_board == board_t::board_M5Tab5
-                                  || setup_board == board_t::board_M5Tab5X)
-                                 {
-                                   (void)parts;
-                                   return false;
-                                 }
+                               if (setup_board == board_t::board_M5Tab5
+                                || setup_board == board_t::board_M5Tab5X)
+                               {
+                                 (void)parts;
+                                 return false;
+                               }
 #endif
-                                 return _adopt_detected_parts(parts.bus, parts.panel,
-                                                              parts.light, parts.touch);
-                               }, nullptr, &setup_board, nullptr, no_signature))
-        {
-          goto init_clear;
-        }
+                               return _adopt_detected_parts(parts.bus, parts.panel,
+                                                            parts.light, parts.touch);
+                             }, nullptr, &setup_board, transient_fallback, no_signature,
+                             candidate_board))
+      {
+        goto init_clear;
       }
 
     }

@@ -18,8 +18,8 @@ M5GFX display;
 //M5AtomDisplay display;  // default setting
 //M5AtomDisplay display ( 320, 180 ); // width, height
 
-//#include <M5UnitPoEP4HDMI.h>
-//M5UnitPoEP4HDMI display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+//#include <M5UnitPoEP4DisplayOut.h>
+//M5UnitPoEP4DisplayOut display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
 
 static constexpr const int qsintab[256]={
     0x8000,0x80c9,0x8192,0x825b,0x8324,0x83ee,0x84b7,0x8580,

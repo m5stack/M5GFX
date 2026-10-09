@@ -40,7 +40,22 @@ public:
   tab5_family_detector_t() : board_detector_t(members_) {}
   bool signature(probe_ctx_t& ctx) const override
   {
-    return probe_i2c_bus_present(ctx, tab5_detail::sda, tab5_detail::scl);
+    const detect_class_expected_t expected = {
+      wiring::tab5::detect_class_mask, wiring::tab5::detect_class_up,
+      wiring::tab5::detect_class_down, wiring::tab5::detect_class_floating,
+      wiring::tab5::detect_class_fixed,
+    };
+    const bool bus_present = probe_i2c_bus_present(ctx, tab5_detail::sda, tab5_detail::scl);
+    // Backlight wiring only suggests a recovery candidate; it must not gate
+    // PI4IO confirmation, which remains valid with the wireless supply off.
+    if (bus_present && ctx.candidate == nullptr
+     && match_detect_class(expected, probe_pin_pulls(ctx, expected.mask)))
+    {
+      esp_chip_info_t info;
+      esp_chip_info(&info);
+      ctx.candidate = info.revision >= 300 ? &desc_tab5x.def : &desc_tab5.def;
+    }
+    return bus_present;
   }
   bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
   {
@@ -57,7 +72,19 @@ public:
     {
       return false;
     }
-    result->assign(ctx.hint == desc_tab5x.def.id ? &desc_tab5x : &desc_tab5);
+    // Tab5X upgrades the P4 silicon revision; saved hints cannot identify it.
+    esp_chip_info_t info;
+    esp_chip_info(&info);
+    const auto* desc = info.revision >= 300 ? &desc_tab5x : &desc_tab5;
+    if ((ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
+     && ctx.hint != desc->def.id)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] Tab5 hint:%u disagrees with chip revision:%u; using %s",
+               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(info.revision),
+               desc->def.name);
+    }
+    result->assign(desc);
+    result->candidate = ctx.candidate;
     return true;
   }
 private:
