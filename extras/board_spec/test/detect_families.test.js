@@ -184,19 +184,33 @@ int main() {
 `,"C6 weak candidate");
 });
 
-test("production Atom pull mismatch stays provisional on attempt zero and Stack bypass keeps its retry timing", async () => {
+test("production Atom pull mismatch stays provisional on attempt zero and Stack requires physical evidence", async () => {
  const atomSource=await fs.readFile(path.join(src,"m5/esp32_pico.inl"),"utf8");
  const stackSource=await fs.readFile(path.join(src,"m5/esp32_d0wdq6.inl"),"utf8");
  const atom=body(atomSource.slice(atomSource.indexOf('class atom_family_detector_t')),'bool probe(');
  const stack=body(stackSource.slice(stackSource.indexOf('class stack_family_detector_t')),'bool signature(');
- const bypass=body(stackSource.slice(stackSource.indexOf('class stack_family_detector_t')),'if (values[2] & 2u)');
+
  await compileRun(common+`
 struct tx_t {void restore_start(std::initializer_list<int>){} void restore_start(int){} } tx;
 struct hw_ctx_t:probe_ctx_t {tx_t* transaction=&tx;struct {std::uint64_t values[3];} detector_workspace;};
 const board_desc_t desc_atomvoice={{10,"Voice",0}},desc_atommatrix={{11,"Matrix",0}},desc_atomlite={{12,"Lite",0}},desc_atomu={{13,"U",0}};
-namespace lgfx {enum class pin_mode_t {input,input_pullup,input_pulldown};pin_mode_t mode;void pinMode(int pin,pin_mode_t m){if(pin==23)mode=m;}bool gpio_in(int pin) {if(pin==2)return true;if(pin==34)return mode==pin_mode_t::input_pullup;return false;}}
+bool g2_high=true,voice=false;unsigned touch_scans=0;
+namespace lgfx {enum class pin_mode_t {input,input_pullup,input_pulldown};pin_mode_t mode;void pinMode(int pin,pin_mode_t m){if(pin==23)mode=m;}bool gpio_in(int pin) {if(pin==2)return g2_high;if(pin==34)return voice||mode==pin_mode_t::input_pullup;return false;}}
 void esp_rom_delay_us(int){}
-namespace atom_touch {bool measure(std::uint32_t* a,std::uint32_t* b){*a=100;*b=25;return true;}void clear_led(){}}
+namespace atom_touch {bool measure(std::uint32_t* a,std::uint32_t* b){++touch_scans;*a=100;*b=25;return true;}void clear_led(){}}
+constexpr unsigned pull_release_us=128;
+int sd_class=2;int g18_class=2,g12_class=0,g32_class=2;unsigned g32_reads=0;
+pin_pull_result_t probe_pin_pulls(hw_ctx_t&,std::uint64_t mask,unsigned release=0) {
+ pin_pull_result_t p;
+ int c=mask==(1ULL<<18)?g18_class:mask==(1ULL<<12)?g12_class:mask==(1ULL<<32)?g32_class:sd_class;
+ if(mask==(1ULL<<32)){++g32_reads;assert(release==128);}
+ if(c==3||c==1)p.pulldown_high=mask;
+ if(c>=2)p.pullup_high=mask;
+ p.release_sampled=release;
+ if(c==2||c==5)p.pullup_release_high=mask;
+ if(c==5||c==6)p.pulldown_release_high=mask;
+ return p;
+}
 struct atom_t {mutable bool measured_=false,touch_ok_=false;mutable std::uint32_t t4_=0,t7_=0;
  bool probe(hw_ctx_t& ctx,board_result_t* result) const ${atom}
 };
@@ -204,8 +218,6 @@ struct stack_desc_t {board_def_t def;struct {int dc,cs;} display;};
 const stack_desc_t desc_stack={{14,"Stack",0},{0,1}};
 namespace startup_detail {bool description_valid(const stack_desc_t&){return true;}bool gpio_valid(int){return true;}void pin_level(int,bool){}}
 namespace detail {bool sd_pull_mask(const stack_desc_t&,std::uint64_t* mask){*mask=3;return true;}}
-struct stack_pulls_t {std::uint64_t pulldown_high,pullup_high;};
-stack_pulls_t probe_pin_pulls(hw_ctx_t&,std::uint64_t){return {0,3};}
 bool stack_signature(hw_ctx_t& ctx) ${stack}
 int main() {
  atom_t detector;detect_request_t req;req.max_attempts=5;
@@ -213,25 +225,24 @@ int main() {
  assert(detector.probe(ctx,&out.result));assert(out.result.def==&desc_atommatrix.def);assert(out.result.provisional);
  finalize_prepared_result(out,0);out.setup_succeeded=true;return out;});
  assert(out.attempts==1&&out.candidate_kind==candidate_kind_t::provisional);assert(!should_persist_detection(out,0));
- for(bool hinted:{false,true}) {
- req.hint=hinted?14:0;
- out=run_detection_session(req,[&](const detect_request_t& r,bool last){hw_ctx_t ctx;ctx.hint=r.hint;ctx.final_attempt=last;detect_outcome_t out;
- if(!stack_signature(ctx)){return out;}
- const auto& values=ctx.detector_workspace.values;auto* result=&out.result;result->def=&desc_stack.def;
- if(values[2]&2u) ${bypass}
- finalize_prepared_result(out,0);out.setup_succeeded=true;return out;});
- assert(out.attempts==(hinted?1:5));assert(out.result.provisional);assert(!should_persist_detection(out,0));
- req.preferred=desc_core2.def.id;
- out=run_detection_session(req,[&](const detect_request_t& r,bool last){hw_ctx_t ctx;ctx.hint=r.hint;ctx.final_attempt=last;detect_outcome_t out;
- if(!stack_signature(ctx)){return out;}
- const auto& values=ctx.detector_workspace.values;auto* result=&out.result;result->def=&desc_stack.def;
- if(values[2]&2u) ${bypass}
- if(finalize_prepared_result(out,r.preferred)) {out.setup_succeeded=true;}return out;});
- assert(out.attempts==5&&!out.setup_succeeded&&out.result.candidate==&desc_stack.def);
- req.preferred=0;
+ for(bool final:{false,true}) for(bool hinted:{false,true}) {
+ hw_ctx_t ctx;ctx.final_attempt=final;ctx.hint=hinted?14:0;
+ for(int bias=0;bias<7;++bias)for(int sd=0;sd<4;++sd){g32_class=bias;sd_class=sd;assert(stack_signature(ctx)==(sd==3));assert(g32_reads==0);}
+
+ sd_class=3;g32_reads=0;assert(stack_signature(ctx));assert(g32_reads==0);
  }
+ g2_high=false;voice=true;atom_t excluded;board_result_t excluded_result;hw_ctx_t excluded_ctx;
+ assert(!excluded.probe(excluded_ctx,&excluded_result));g2_high=true;
+ for(int c:{0,1,3}){g18_class=c;assert(!excluded.probe(excluded_ctx,&excluded_result));}
+ g18_class=2;g12_class=3;assert(excluded.probe(excluded_ctx,&excluded_result));
+ assert(excluded_result.def==&desc_atomvoice.def&&!excluded_result.provisional);
+ assert(touch_scans==1);voice=false;
+ g18_class=3;atom_t blocked;board_result_t result;hw_ctx_t ctx;
+ assert(!blocked.probe(ctx,&result)&&!blocked.measured_);
+ g18_class=2;
+ for(int c=1;c<4;++c){g12_class=c;assert(!blocked.probe(ctx,&result)&&!blocked.measured_);}
 }
-`,"Atom and Stack timing");
+`,"Atom and Stack gates");
 });
 
 test("production PM1 unresolved tail keeps PaperMono without running hinted StopWatch power", async () => {
@@ -555,4 +566,34 @@ int main(){for(const auto* desc:{&desc_core2,&desc_pm1})for(bool signature:{fals
  }
 }
 `,"identified family stops subsequent probes");
+});
+
+test("production Stack confirmation requires LCD ID and persists confirmed identity", async () => {
+ const source=await fs.readFile(path.join(src,"m5/esp32_d0wdq6.inl"),"utf8");
+ const confirm=body(source.slice(source.indexOf('class stack_family_detector_t')),'bool confirm(');
+ const fixture=common.replace('struct board_desc_t {board_def_t def;};',
+  'struct board_desc_t {board_def_t def;struct {std::int8_t sclk=18,miso=19,mosi=23,dc=27,cs=14;} display;struct {int sd_cs=4;} sd;struct {int pin=33;} reset;};');
+ await compileRun(fixture+`
+struct tx_t {template<class T>void restore_start(const T&){} } tx;
+struct hw_ctx_t:probe_ctx_t {tx_t* transaction=&tx;int i2c_port_probe=0;};
+const board_desc_t desc_stack={{14,"Stack",0}};
+namespace startup_detail {
+ bool description_valid(const board_desc_t&){return true;}bool gpio_valid(int){return true;}
+ void pin_level(int,bool){}bool prepare_power(const board_desc_t&,board_result_t&,int){return true;}
+ bool prepare_sd_spi(const board_desc_t&,board_result_t&,const prepare_ctx_t&){return true;}
+ void hold_chip_selects(const board_desc_t&){}
+}
+namespace detail {constexpr unsigned panel_id_command=4,panel_id_mask=255,common_panel_id=0xE3;}
+bool prepare_reset(const board_desc_t&,board_result_t&,const prepare_ctx_t&,int,std::uint32_t*){return true;}
+unsigned panel_id=0;
+unsigned soft_spi_read32(hw_ctx_t&,int,int,int,int,int,unsigned,int){return panel_id;}
+bool confirm_stack(hw_ctx_t& ctx,board_result_t* result) ${confirm}
+int main(){for(bool final:{false,true})for(bool hint:{false,true}){
+ hw_ctx_t ctx;ctx.final_attempt=final;ctx.hint=hint?14:0;board_result_t result;
+ panel_id=0;assert(!confirm_stack(ctx,&result));panel_id=0xE3;
+ assert(confirm_stack(ctx,&result)&&!result.provisional);
+ detect_outcome_t out;out.result=result;finalize_prepared_result(out,0);out.setup_succeeded=true;
+ assert(should_persist_detection(out,0));assert(!should_persist_detection(out,14));
+}}
+`,"Stack LCD confirmation");
 });

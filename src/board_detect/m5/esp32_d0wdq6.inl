@@ -528,25 +528,23 @@ namespace m5
        || !startup_detail::gpio_valid(desc_stack.display.dc)) { return false; }
       std::uint64_t sd_mask;
       if (!detail::sd_pull_mask(desc_stack, &sd_mask)) { return false; }
-      auto& values = ctx.detector_workspace.values;
       startup_detail::pin_level(desc_stack.display.cs, true);
       const auto pulls = probe_pin_pulls(ctx, sd_mask);
-      values[0] = pulls.pulldown_high;
-      values[1] = pulls.pullup_high;
       ctx.transaction->restore_start(desc_stack.display.cs);
-      const bool pull_match = values[0] == sd_mask && values[1] == sd_mask;
-      const bool bypassed = !pull_match && (ctx.final_attempt || ctx.hint == desc_stack.def.id);
-      values[2] = (pull_match ? 1u : 0u) | (bypassed ? 2u : 0u);
+      const bool pull_match = pulls.pulldown_high == sd_mask && pulls.pullup_high == sd_mask;
       if (!pull_match)
       {
         ESP_LOGD("board_detect_m5",
                  "M5Stack pull signature mismatch pd=%08x%08x pu=%08x%08x",
-                 static_cast<unsigned>(values[0] >> 32),
-                 static_cast<unsigned>(values[0]),
-                 static_cast<unsigned>(values[1] >> 32),
-                 static_cast<unsigned>(values[1]));
+                 static_cast<unsigned>(pulls.pulldown_high >> 32),
+                 static_cast<unsigned>(pulls.pulldown_high),
+                 static_cast<unsigned>(pulls.pullup_high >> 32),
+                 static_cast<unsigned>(pulls.pullup_high));
       }
-      return pull_match || bypassed;
+      // G32 can be camera output or external SDA on other boards. Its low
+      // level must not admit Stack reset, which can drop their power hold.
+      // Require SD evidence even for hints and the final attempt.
+      return pull_match;
     }
 
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
@@ -576,18 +574,6 @@ namespace m5
       if ((panel_id & detail::panel_id_mask) != detail::common_panel_id)
       { return false; }
       ctx.transaction->restore_start(signals);
-      const auto& values = ctx.detector_workspace.values;
-      if (values[2] & 2u)
-      {
-        // A bypassed signature can display, but cannot establish a saved identity.
-        result->provisional = true;
-        ESP_LOGI("board_detect_m5",
-                 "M5Stack detected after bypassing pull signature pd=%08x%08x pu=%08x%08x",
-                 static_cast<unsigned>(values[0] >> 32),
-                 static_cast<unsigned>(values[0]),
-                 static_cast<unsigned>(values[1] >> 32),
-                 static_cast<unsigned>(values[1]));
-      }
       return true;
     }
 

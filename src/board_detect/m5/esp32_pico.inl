@@ -169,6 +169,9 @@ private:
     const bool atom_g2 = lgfx::gpio_in(2);
     ctx.transaction->restore_start({ 2 });
     if (!atom_g2) { return false; }
+    // StickC LCD reset is pulled high; Atom leaves G18 unconnected.
+    const auto g18 = probe_pin_pulls(ctx, 1ULL << 18);
+    if (g18.pulldown_high || g18.pullup_high != (1ULL << 18)) { return false; }
     const auto read_g34 = [](lgfx::pin_mode_t mode) {
       lgfx::pinMode(23, mode); // G23 is exposed: internal pull only, never drive it.
       esp_rom_delay_us(5);
@@ -187,6 +190,10 @@ private:
       if (!(up1 && down2 && up2)) { result->provisional = true; }
       return true;
     }
+    // The IR transmitter supplies the strong pull-down on Lite/Matrix/U.
+    // Reject unrelated PICO boards before touch scanning or LED writes.
+    const auto g12 = probe_pin_pulls(ctx, 1ULL << 12);
+    if (classify_pin_pull(g12, 12) != pull_class_t::down) { return false; }
     if (!measured_)
     {
       measured_ = true; // One touch scan per boot, including retries.

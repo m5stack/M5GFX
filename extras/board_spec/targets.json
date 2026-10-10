@@ -9,6 +9,7 @@
       "m5stack_core2": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 2, "cpp_namespace": "core2", "board_enum": "board_M5StackCore2", "desc_name": "desc_core2",
         "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "probe_pins": [12, 32, 33],
         "options": [
           { "name": "new_pmic", "bit": 0, "select": { "pmic": "axp2101" } },
           { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
@@ -17,6 +18,7 @@
       "m5tough": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 8, "cpp_namespace": "tough", "board_enum": "board_M5Tough", "desc_name": "desc_tough",
         "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "probe_pins": [12, 32, 33],
         "options": [
           { "name": "reserved", "bit": 0 },
           { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
@@ -53,7 +55,7 @@
       },
       "m5atomlite": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 128, "cpp_namespace": "atomlite", "board_enum": "board_M5AtomLite", "desc_name": "desc_atomlite",
-        "wiring_fields": [], "probe_pins": [25], "wiring_output": "esp32_d0wdq6_wiring.hpp"
+        "wiring_fields": [], "probe_pins": [12, 18, 25], "wiring_output": "esp32_d0wdq6_wiring.hpp"
       },
       "m5atomu": {
         "chip": "esp32_d0wdq6", "legacy_board_id": 130, "board_enum": "board_M5AtomU", "desc_name": "desc_atomu"

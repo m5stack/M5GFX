@@ -6,6 +6,12 @@
   "legacy_board_id": 130,
   "chip": "esp32_d0wdq6",
   "pins": {
+    "12": {
+      "roles": [
+        "dev:ir.pwm"
+      ],
+      "note": "IR transmitter GPIO from the official pin map."
+    },
     "21": {
       "roles": [
         "bus:internal_i2c.scl"
@@ -65,6 +71,9 @@
   "devices": {
     "rgb_led": {
       "kind": "led_strip"
+    },
+    "ir": {
+      "kind": "led"
     }
   },
   "connectors": {

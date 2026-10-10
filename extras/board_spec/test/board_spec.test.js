@@ -947,7 +947,7 @@ test("M5GFX wiring emitter maps every board-description GPIO", () => {
   }
   const header = renderM5GFXWiringHeader(entries.filter(({ board }) => board.chip === "esp32_d0wdq6"));
   assert.match(header, /constexpr std::int8_t display_sclk = 18;/);
-  assert.match(header, /namespace detection \{\s+constexpr std::int8_t unconditional_pins\[] = \{ 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 33, 34, 35, 37, 38 \};/);
+  assert.match(header, /namespace detection \{\s+constexpr std::int8_t unconditional_pins\[] = \{ 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 27, 32, 33, 34, 35, 37, 38 \};/);
   assert.deepEqual(wiringFieldsForRole(board, "bus:main_spi.sclk", parts), ["display_sclk", "shared_sd_sclk"]);
   assert.deepEqual(wiringFieldsForRole(board, "dev:lcd.rst", parts), ["display_rst"]);
   assert.deepEqual(wiringFieldsForRole(catalogBoards.find((item) => item.id === "m5dial"), "dev:touch.int", parts), ["touch_int"]);
@@ -2706,4 +2706,16 @@ test("detect classes reject user connectors and buttons", () => {
   const button = Object.entries(source.pins).find(([, pin]) => pin.roles.includes("dev:btn_a.in"));
   button[1].detect_class = "down";
   assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_BUTTON"));
+});
+
+
+test("AXP family measurement pins are captured without other board descriptors", () => {
+  for (const id of ["m5stack_core2", "m5tough"]) {
+    const board = catalogBoards.find((item) => item.id === id);
+    const resolved = resolveAll(board, connectorTypes, { chip: chips[board.chip], parts })[0].board;
+    const emitted = emitM5GFXWiring(resolved, parts, target);
+    const header = renderM5GFXWiringHeader([{ board, chip: chips[board.chip], emitted }]);
+    const pins = /unconditional_pins\[\] = \{ ([^}]*) \}/.exec(header)[1].split(", ").map(Number);
+    for (const pin of [12, 32, 33]) assert.ok(pins.includes(pin), `${id}: G${pin} must be captured`);
+  }
 });
