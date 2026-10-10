@@ -17,8 +17,8 @@ namespace m5
 #include "esp32p4/corep4x.inl"
 #include "esp32p4/tab5.inl"
 #include "esp32p4/unitpoep4.inl"
-#include "esp32p4/stampp4.inl"
 
+// Module revision alone supplies no board evidence; leave defaults to M5Unified.
 #include "generated/esp32p4_detector_order.hpp"
 static const board_entry_t esp32p4_boards[] = {
   { &desc_corep4x, construct_corep4x, "board_M5CoreP4X", nullptr },

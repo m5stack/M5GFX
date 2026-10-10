@@ -68,7 +68,9 @@ export function renderDetectorOrderHeaders(boards, groups) {
     maxFamilies = Math.max(maxFamilies, group.ordered.length);
     const array = `static const board_detector_t* const ${name}[] = {\n`
       + group.ordered.map((detector) => `  &${detector},`).join("\n")
-      + "\n  nullptr,\n};\n";
+      + "\n  nullptr,\n};\n"
+      + `static_assert(sizeof(${name}) / sizeof(${name}[0]) - 1 <= max_detector_families,\n`
+      + `              "${name} exceeds the detection session family limit");\n`;
     outputs.set(group.output, (outputs.get(group.output) ?? "// Generated from detector_order.json and board catalog.\n#pragma once\n\n") + array + "\n");
   }
   const ids = boards.filter(hasGpioPowerHold).map((board) => board.legacy_board_id).sort((a, b) => a - b);

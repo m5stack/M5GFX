@@ -75,7 +75,8 @@
       ],
       "verified": {
         "roles": "generated"
-      }
+      },
+      "note": "Base pulls GPIO5 D (measured)."
     },
     "6": {
       "roles": [
@@ -83,7 +84,8 @@
       ],
       "verified": {
         "roles": "generated"
-      }
+      },
+      "note": "Base pulls GPIO6 U (measured)."
     },
     "7": {
       "roles": [
@@ -91,7 +93,8 @@
       ],
       "verified": {
         "roles": "generated"
-      }
+      },
+      "note": "Base pulls GPIO7 D (measured)."
     },
     "8": {
       "roles": [

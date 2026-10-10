@@ -1,5 +1,5 @@
 static constexpr board_desc_t desc_stampc6 = {
-  { static_cast<board_id_t>(lgfx::board_M5StampC6), "M5StampC6", 0 },
+  { static_cast<board_id_t>(lgfx::board_M5StampC6), "M5StampC6", def_flag_fallback },
   no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
   no_internal_i2c(), no_options(), no_pins(),
 };
@@ -21,10 +21,16 @@ class stampc6_detector_t final : public board_detector_t
 {
 public:
   stampc6_detector_t() : board_detector_t(members_) {}
-  bool signature(probe_ctx_t&) const override
-  { return c6_displayless_detail::flash_capacity() == 2; }
-  bool confirm(probe_ctx_t&, board_result_t* result) const override
-  { if (!result) return false; result->assign(&desc_stampc6); return true; }
+  bool signature(probe_ctx_t& ctx) const override
+  {
+    if (c6_displayless_detail::flash_capacity() != 2) { return false; }
+    // Package facts only suggest a board; keep later families from probing
+    // this module's user pins without treating it as confirmed.
+    if (ctx.candidate == nullptr) { ctx.candidate = &desc_stampc6.def; }
+    ctx.family_identified = true;
+    return false;
+  }
+  bool confirm(probe_ctx_t&, board_result_t*) const override { return false; }
 private:
   static const board_def_t* const members_[2];
 };

@@ -9,93 +9,20 @@
 #include "../lgfx/v1/platforms/esp32/common.hpp"
 #include "dedicated_release_probe.hpp"
 #include "ops.hpp"
+#include "detect_types.hpp"
 #include "detect_class.hpp"
 
 namespace m5gfx
 {
 namespace board_detect
 {
-  using board_id_t = std::uint16_t;
-  static constexpr board_id_t board_id_unknown = 0;
-
-  enum board_def_flag_t : std::uint8_t
-  {
-    // A board with no positive signature. Such members cannot promote their
-    // detector through an NVS hint; a detector may expose them as candidates.
-    def_flag_fallback = 1 << 0,
-  };
-
-  struct board_def_t
-  {
-    board_id_t id;
-    const char* name;
-    std::uint8_t flags;
-  };
-
-#if __cplusplus >= 201703L
-  inline const board_def_t board_def_unknown = { board_id_unknown, "unknown", 0 };
-#else
-  // Arduino-ESP32 2.x still compiles as C++11. Internal linkage provides the
-  // same ODR safety there; C++17 and newer use the single inline definition.
-  static const board_def_t board_def_unknown = { board_id_unknown, "unknown", 0 };
-#endif
-
-  enum prepared_state_t : std::uint32_t
-  {
-    // Bits 0..15 are manufacturer-independent completed operations or probe
-    // side effects. Bits 16..31 are reserved for board-specific state.
-    prepared_power  = 1u << 0,
-    prepared_reset  = 1u << 1,
-    prepared_sd_spi = 1u << 2,
-    // The GPIO reset line has been driven inactive, but a reset pulse may not
-    // have been allowed. Keep this distinct from prepared_reset so a later
-    // reset-enabled prepare can still pulse the panel reset.
-    prepared_reset_line = 1u << 4,
-    // A confirmed family's post-power refinement has been resolved (run, or
-    // deliberately skipped after a failed retained power sequence).
-    prepared_refine = 1u << 5,
-    // The confirmed board was retained after its power operation list stopped.
-    prepared_power_failed = 1u << 6,
-  };
-
-  enum class detect_status_t : std::uint8_t
-  {
-    no_match,
-    matched,
-    excluded,
-  };
-
-  struct board_desc_t;
-  struct prepare_ctx_t;
-  class detection_transaction_t;
-  struct board_result_t;
-  using refine_fn_t = bool (*)(board_result_t&, const prepare_ctx_t&);
-
-  struct board_result_t
-  {
-    // A matched/direct result owns no description; this points at the static
-    // canonical description and def aliases &desc->def. Unknown results have
-    // desc == nullptr and retain board_def_unknown for compatibility.
-    const board_desc_t* desc = nullptr;
-    const board_def_t* def = &board_def_unknown;
-    std::uint32_t option = 0;
-    std::uint32_t prepared = 0;
-    // A final-attempt family default can show the display, but is not an NVS hint.
-    bool transient_fallback = false;
-    // A weak, displayless suggestion returned only when no board is confirmed.
-    const board_def_t* candidate = nullptr;
-    detect_status_t status = detect_status_t::no_match;
-    // Optional read-only member refinement after power preparation.
-    refine_fn_t refine = nullptr;
-
-    void assign(const board_desc_t* value);
-  };
-
   struct prepare_ctx_t
   {
     // A retry must not override the caller's reset policy.
     bool allow_reset = true;
     board_id_t hint = board_id_unknown;
+    board_id_t preferred = board_id_unknown;
+    std::uint8_t attempt = 0;
     bool final_attempt = false;
     int i2c_port_probe = -1;
     // Non-null while board-detection components are running.
@@ -312,6 +239,7 @@ namespace board_detect
     option_list_t option_names;
     // GPIOs that typed operation lists may access. This is intentionally
     // separate from hold_high_pins: an operation may restore a pin to input.
+    // Also includes construction pins captured during fixed startup, beyond power-operation GPIO permissions.
     pin_list_t op_gpio_pins;
   };
 
@@ -507,6 +435,9 @@ namespace board_detect
     detector_workspace_t detector_workspace;
     // True once any family entered confirm() in this detection pass.
     bool confirm_attempted = false;
+    // A chip ID has established this family. Stop later family probes in this
+    // attempt even if its member is unresolved; retry/session verdicts stay unchanged.
+    bool family_identified = false;
     // A signature may suggest one board without entering confirm(). The first
     // detector in probe order owns the candidate for this attempt.
     const board_def_t* candidate = nullptr;
@@ -561,10 +492,12 @@ namespace board_detect
   // its rail is powered, but must not be used as a board signature. U is high
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
-  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask);
-  // True only when a pin retains both internally biased levels after release.
-  // A rapid reversal indicates an external pull, so an NC assumption is false.
-  bool probe_pin_floating(probe_ctx_t& ctx, std::int8_t pin, std::uint32_t release_us);
+  static constexpr std::uint32_t pull_release_us = 128;
+  // Zero preserves the legacy pull-only sequence and timing.
+  // Release masks contain levels read without pulls after each bias; release_sampled
+  // marks those masks as measured only when release_us is nonzero.
+  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask,
+                                    std::uint32_t release_us = 0);
 
   // On an already high SCL, release a held SDA and resample the same pins.
   // Reuse the previous sample so successive candidate pairs do not probe twice.

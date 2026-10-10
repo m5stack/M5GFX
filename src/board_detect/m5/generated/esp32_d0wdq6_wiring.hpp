@@ -163,7 +163,7 @@ namespace timercam {
 } // namespace timercam
 
 namespace detection {
-  constexpr std::int8_t unconditional_pins[] = { 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 27, 33, 34, 35, 37, 38 };
+  constexpr std::int8_t unconditional_pins[] = { 0, 2, 4, 5, 9, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 27, 32, 33, 34, 35, 37, 38 };
 } // namespace detection
 
 } // namespace wiring

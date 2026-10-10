@@ -240,6 +240,11 @@ namespace m5
                           reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
                           { nullptr, 0 }, 0),
   };
+  // Construction configures the panel TE input before display adoption.
+  static constexpr std::int8_t stopwatch_te_pin = GPIO_NUM_38;
+  static const std::int8_t stopwatch_startup_pins[] = {
+    wiring::stopwatch::display_cs, stopwatch_te_pin,
+  };
   static constexpr board_desc_t desc_stopwatch = {
     { id(lgfx::board_M5StopWatch), "M5StopWatch", 0 },
     i2c_power_confirmed(specs::stopwatch::pmic::i2c_freq, stopwatch_pmic_variants,
@@ -253,7 +258,8 @@ namespace m5
     pins(wiring::stopwatch::hold),
     internal_i2c(wiring::stopwatch::internal_i2c_sda, wiring::stopwatch::internal_i2c_scl,
                  wiring::stopwatch::internal_i2c_port),
-    no_options(), pins(wiring::stopwatch::hold),
+    // op_gpio_pins also captures the construction-time TE input (GPIO38) for fixed startup rollback.
+    no_options(), pins(stopwatch_startup_pins),
   };
   static constexpr board_desc_t desc_papermono = {
     { id(lgfx::board_M5PaperMono), "M5PaperMono", 0 },
@@ -465,51 +471,40 @@ namespace m5
 
   namespace detail
   {
+    // Share the injected address between pre-power confirmation and refine.
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_TOUCH)
+    static constexpr std::uint8_t stopwatch_probe_addr = 0x16;
+#else
+    static constexpr std::uint8_t stopwatch_probe_addr = specs::stopwatch::touch::i2c_addr;
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERMONO_TOUCH)
+    static constexpr std::uint8_t papermono_probe_addr = 0x39;
+#else
+    static constexpr std::uint8_t papermono_probe_addr = specs::papermono::touch::i2c_addr;
+#endif
+
     bool refine_papermono_touch(board_result_t& result, const prepare_ctx_t& ctx)
     {
       startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
-                                       desc_papermono.internal_i2c);
-      const auto touch_answers = [&](std::uint8_t addr, std::uint32_t freq)
+                                    desc_papermono.internal_i2c);
+      if (i2c.opened)
       {
         const auto started = lgfx::millis();
         do
         {
-          if (lgfx::i2c::beginTransaction(i2c.port, addr, freq, false).has_value()
+          if (lgfx::i2c::beginTransaction(i2c.port, papermono_probe_addr,
+                                        specs::papermono::touch::i2c_freq, false).has_value()
            && lgfx::i2c::endTransaction(i2c.port).has_value())
           { return true; }
           lgfx::delay(1);
         } while (lgfx::millis() - started < 200);
-        return false;
-      };
-      bool stopwatch_touch = false;
-      if (i2c.opened)
-      {
-        if (touch_answers(specs::papermono::touch::i2c_addr,
-                          specs::papermono::touch::i2c_freq)) { return true; }
-        stopwatch_touch = touch_answers(specs::stopwatch::touch::i2c_addr,
-                                        specs::stopwatch::touch::i2c_freq);
-        if (stopwatch_touch
-         && lgfx::i2c::beginTransaction(i2c.port, 0x50, 100000, false).has_value())
-        {
-          lgfx::i2c::endTransaction(i2c.port);
-          return false;
-        }
       }
-      if (!stopwatch_touch && !ctx.final_attempt) { return false; }
-      if (stopwatch_touch || ctx.hint == desc_stopwatch.def.id)
-      {
-        // The provisional PaperMono sequence has run. Apply StopWatch power
-        // before selecting it, whether touch replied or the hint is used.
-        board_result_t stopwatch;
-        stopwatch.assign(&desc_stopwatch);
-        if (!i2c.opened
-         || !startup_detail::prepare_power(desc_stopwatch, stopwatch, i2c.port, true))
-        { return false; }
-        result.assign(&desc_stopwatch);
-      }
-      if (stopwatch_touch) { return true; }
-      result.transient_fallback = true;
-      ESP_LOGW("board_detect_m5", "StopWatch/PaperMono touch unanswered; using %s for this boot",
+      if (!ctx.final_attempt) { return false; }
+      // Keep the powered member; no second member's power sequence in this attempt.
+      // Later attempts can switch only after unanswered touch with D/D or U/U.
+      result.provisional = true;
+      ESP_LOGW("board_detect_m5", "%s; using %s for this boot",
+               i2c.opened ? "PaperMono touch unanswered" : "PaperMono internal I2C unavailable",
                result.def->name);
       return true;
     }
@@ -537,28 +532,60 @@ namespace m5
       {
         return false;
       }
-      std::uint8_t ioe_id[2] = {};
-      if (!probe_i2c_read(ctx, wiring::stopwatch::internal_i2c_sda,
-                          wiring::stopwatch::internal_i2c_scl, 0x4F, 0,
-                          ioe_id, sizeof(ioe_id), 100000, 200))
-      {
-        return false;
-      }
-      // StopWatch can answer before power preparation. PaperMono's touch is
-      // held in reset until its PM1 power sequence, so check it in refine.
+      ctx.family_identified = true;
+      // IOE1 takes hundreds of milliseconds to boot; its presence is not
+      // member evidence. Wait only when its selected power sequence needs it.
       const bool stopwatch_touch = probe_i2c_ack(
         ctx, wiring::stopwatch::internal_i2c_sda,
-        wiring::stopwatch::internal_i2c_scl, specs::stopwatch::touch::i2c_addr);
-      if (stopwatch_touch)
+        wiring::stopwatch::internal_i2c_scl, detail::stopwatch_probe_addr);
+      const bool papermono_touch = probe_i2c_ack(
+        ctx, wiring::papermono::internal_i2c_sda,
+        wiring::papermono::internal_i2c_scl, detail::papermono_probe_addr);
+      const auto pulls = probe_pin_pulls(ctx, (1ULL << 12) | (1ULL << 13));
+      const auto classify = [&](unsigned pin) -> char
       {
-        if (probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
-                          wiring::stopwatch::internal_i2c_scl, 0x50)) { return false; }
-        result->assign(&desc_stopwatch);
+        const unsigned sample = ((pulls.pulldown_high >> pin) & 1)
+                              | (((pulls.pullup_high >> pin) & 1) << 1);
+        return "DXFU"[sample];
+      };
+      const char g12 = classify(12), g13 = classify(13);
+      ESP_LOGD("board_detect_m5", "PM1 attempt=%u touch15=%u touch38=%u G12=%c G13=%c",
+               ctx.attempt, stopwatch_touch, papermono_touch, g12, g13);
+      // Both members carry NFC at 0x50; its ACK cannot exclude StopWatch.
+      if (stopwatch_touch != papermono_touch)
+      {
+        result->assign(stopwatch_touch ? &desc_stopwatch : &desc_papermono);
         return true;
       }
-      result->assign(&desc_papermono);
-      result->refine = detail::refine_papermono_touch;
-      return true;
+      if (!stopwatch_touch
+       && ((g12 == 'D' && g13 == 'D') || (g12 == 'U' && g13 == 'U')))
+      {
+        // Cold PaperMono needs power before touch confirmation, even after its
+        // SD pull-ups rise. This pre-confirmation write also admits StopWatch
+        // with unanswered touch and both IRQ lines low or both driven high.
+        result->assign(&desc_papermono);
+        result->refine = detail::refine_papermono_touch;
+        return true;
+      }
+      const board_desc_t* chosen = nullptr;
+      if (!stopwatch_touch)
+      {
+        if (g12 == 'F' || (g12 == 'D' && g13 == 'U')) { chosen = &desc_stopwatch; }
+      }
+      if (chosen)
+      {
+        return select_provisional_member(ctx, result, chosen, nullptr, nullptr,
+                                         "PM1 member touch unanswered");
+      }
+      const auto possible = [](board_id_t id) -> const board_desc_t*
+      {
+        if (id == desc_stopwatch.def.id) { return &desc_stopwatch; }
+        if (id == desc_papermono.def.id) { return &desc_papermono; }
+        return nullptr;
+      };
+      return select_provisional_member(ctx, result, possible(ctx.preferred),
+                                       possible(ctx.hint), nullptr,
+                                       "PM1 member evidence ambiguous");
     }
 
   private:
@@ -658,8 +685,8 @@ namespace m5
       if (result == nullptr) { return false; }
       // The legacy block skipped the PM1 read when hinted PaperS3 and the
       // GT911 read when hinted PaperDIY; each skip saves up to 200 ms or two
-      // touch-controller transactions, so the hint keeps that meaning here.
-      if (ctx.hint != desc_papers3.def.id)
+      // touch-controller transactions. Restrict these skips to the first attempt.
+      if (ctx.attempt != 0 || ctx.final_attempt || ctx.hint != desc_papers3.def.id)
       {
         std::uint8_t pm1_id[2] = {};
         if (probe_i2c_read(ctx, wiring::papers3::internal_i2c_sda,
@@ -672,7 +699,7 @@ namespace m5
           return true;
         }
       }
-      if (ctx.hint != desc_paperdiy.def.id)
+      if (ctx.attempt != 0 || ctx.final_attempt || ctx.hint != desc_paperdiy.def.id)
       {
         // An ACK alone is not enough to identify the PaperS3 touch controller
         // (DinMeter shares these pins): require the GT911 product ID string.
@@ -738,44 +765,65 @@ namespace m5
         ctx, pulls, sense_mask, wiring::cardputer_adv::internal_i2c_sda,
         wiring::cardputer_adv::internal_i2c_scl);
 
-      const board_desc_t* chosen = &desc_cardputer;
-      bool variant_unanswered = false;
-      if ((pulls.pulldown_high & vameter_mask) == vameter_mask)
+      // Recovery may resample without release; obtain fresh released levels
+      // before deciding whether these keyboard/I2C lines genuinely float.
+      pulls = probe_pin_pulls(ctx, sense_mask, pull_release_us);
+      const bool vameter_up = (pulls.pulldown_high & pulls.pullup_high & vameter_mask) == vameter_mask;
+      const bool adv_up = (pulls.pulldown_high & pulls.pullup_high & adv_mask) == adv_mask;
+      bool all_floating = true;
+      for (const auto pin : wiring::cardputer::cardputer_subdivision::sense_pins)
       {
-        // INA226 manufacturer ID register FEh is 5449h (TI). The second
-        // VAMeter device must also answer; a probe miss cannot prove Cardputer.
+        all_floating = all_floating && classify_pin_pull(pulls, pin) == pull_class_t::floating;
+      }
+      const board_desc_t* chosen = &desc_cardputer;
+      bool vameter_answers = false, adv_answers = false;
+      if (vameter_up)
+      {
+        // INA226 manufacturer ID FEh is 5449h; its companion must also ACK.
         std::uint8_t manufacturer[2] = {};
-        variant_unanswered = !probe_i2c_read(ctx,
+        vameter_answers = probe_i2c_read(ctx,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[0],
                             0xFE, manufacturer, sizeof(manufacturer), 100000, 0, false)
-                          || manufacturer[0] != 0x54 || manufacturer[1] != 0x49
-                          || !probe_i2c_ack(ctx,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]);
-        if (!variant_unanswered) { chosen = &desc_vameter; }
+                       && manufacturer[0] == 0x54 && manufacturer[1] == 0x49
+                       && probe_i2c_ack(ctx,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]);
       }
-      else if ((pulls.pulldown_high & adv_mask) == adv_mask)
+      if (adv_up)
       {
-        // The ADV keyboard scanner is a TCA8418 at its fixed 34h address.
-        variant_unanswered = !probe_i2c_ack(
-          ctx, wiring::cardputer_adv::internal_i2c_sda,
-          wiring::cardputer_adv::internal_i2c_scl, 0x34);
-        if (!variant_unanswered) { chosen = &desc_cardputer_adv; }
+        // Read independently when both pairs are high; two answers conflict.
+        adv_answers = probe_i2c_ack(ctx, wiring::cardputer_adv::internal_i2c_sda,
+                                   wiring::cardputer_adv::internal_i2c_scl, 0x34);
       }
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_VARIANT)
+      vameter_answers = adv_answers = false;
+#endif
+      if (vameter_answers && adv_answers) { return false; }
+      if (vameter_answers) { chosen = &desc_vameter; }
+      if (adv_answers) { chosen = &desc_cardputer_adv; }
+      // A pressed key or a weak/held line is not evidence for normal Cardputer.
+      // Keep retrying; its displayable provisional fallback takes all attempts.
+      const bool variant_unanswered = !vameter_answers && !adv_answers && !all_floating;
       if (variant_unanswered)
       {
         if (!ctx.final_attempt) { return false; }
-        // A same-family NVS hint is a better last resort than the base model.
-        if (ctx.hint == desc_vameter.def.id
-         && (pulls.pulldown_high & vameter_mask) == vameter_mask)
-        { chosen = &desc_vameter; }
-        else if (ctx.hint == desc_cardputer_adv.def.id
-              && (pulls.pulldown_high & adv_mask) == adv_mask)
-        { chosen = &desc_cardputer_adv; }
-        result->transient_fallback = true;
+        // Only select members compatible with the observed subdivision pulls.
+        const auto possible = [&](board_id_t id) -> const board_desc_t*
+        {
+          if (id == desc_cardputer.def.id) { return &desc_cardputer; }
+          if (id == desc_vameter.def.id
+           && (pulls.pulldown_high & vameter_mask) == vameter_mask) { return &desc_vameter; }
+          if (id == desc_cardputer_adv.def.id
+           && (pulls.pulldown_high & adv_mask) == adv_mask) { return &desc_cardputer_adv; }
+          return nullptr;
+        };
+        const auto* preferred = possible(ctx.preferred);
+        const auto* hinted = possible(ctx.hint);
+        chosen = preferred ? preferred : hinted ? hinted : &desc_cardputer;
+        result->provisional = true;
         ESP_LOGW("board_detect_m5", "Cardputer variant unanswered; using %s for this boot",
                  chosen->def.name);
       }
@@ -796,6 +844,8 @@ namespace m5
     { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
       specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false },
   };
+  static bool fixed_start_atoms3(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_start_spi_variant(result, ctx, spi_id_member_descs[0]); }
   static const spi_id_detector_t spi_display_detector(
     spi_id_members, spi_id_member_descs,
     sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
@@ -910,7 +960,10 @@ namespace m5
       // that populate either NC net.
       constexpr std::uint64_t g21 = std::uint64_t(1) << 21;
       if (!(probe_pin_pulls(ctx, g21).pulldown_high & g21)) { return false; }
-      if (!probe_pin_floating(ctx, 38, 32) || !probe_pin_floating(ctx, 39, 32))
+      // Release for 128 us instead of 32 us so a slow weak pull is no longer mistaken for NC.
+      const auto socket_pulls = probe_pin_pulls(ctx, (std::uint64_t(1) << 38) | (std::uint64_t(1) << 39), pull_release_us);
+      if (classify_pin_pull(socket_pulls, 38) != pull_class_t::floating
+       || classify_pin_pull(socket_pulls, 39) != pull_class_t::floating)
       { return false; }
       constexpr std::uint64_t g17 = std::uint64_t(1) << 17;
       if (probe_pin_pulls(ctx, g17).pulldown_high & g17) { return true; }
@@ -938,6 +991,8 @@ namespace m5
     { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
       specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false },
   };
+  static bool fixed_start_atoms3r(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_start_spi_variant(result, ctx, atoms3r_member_descs[0]); }
   static const spi_id_detector_t atoms3r_display_detector(
     atoms3r_members, atoms3r_member_descs,
     sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
@@ -1095,6 +1150,8 @@ namespace m5
     { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
       specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0, false },
   };
+  static bool fixed_start_airq(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_start_spi_variant(result, ctx, airq_member_descs[0]); }
   static const spi_id_detector_t airq_detector(
     airq_members, airq_member_descs,
     sizeof(airq_member_descs) / sizeof(airq_member_descs[0]), false, airq_signature);
@@ -1168,23 +1225,23 @@ namespace m5
 
   static const board_entry_t esp32s3_boards[] = {
     { &desc_dualkey, construct_displayless, "board_M5DualKey", nullptr },
-    { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr },
-    { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr },
-    { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr },
-    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation },
+    { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr, cores3_detail::fixed_start },
+    { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr, cores3_detail::fixed_start },
+    { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr, cores3_detail::fixed_start },
+    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation, fixed_start_atoms3 },
     { &desc_atoms3lite, construct_displayless, "board_M5AtomS3Lite", nullptr },
     { &desc_atoms3u, construct_displayless, "board_M5AtomS3U", nullptr },
     { &desc_stamps3, construct_displayless, "board_M5StampS3", nullptr },
     { &desc_capsule, construct_displayless, "board_M5Capsule", nullptr },
     { &desc_powerhub, construct_displayless, "board_M5PowerHub", nullptr },
-    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation },
+    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation, fixed_start_atoms3r },
     { &desc_atoms3rcam, construct_displayless, "board_M5AtomS3RCam", nullptr },
     { &desc_atoms3rext, construct_displayless, "board_M5AtomS3RExt", nullptr },
     { &desc_atomvoices3r, construct_displayless, "board_M5AtomVoiceS3R", nullptr },
     { &desc_stamps3bat, construct_displayless, "board_M5StampS3Bat", nullptr },
     { &desc_stamps3mini, construct_displayless, "board_M5StampS3Mini", nullptr },
     { &desc_dinmeter, construct_dinmeter, "board_M5DinMeter", nullptr },
-    { &desc_airq, construct_airq, "M5AirQ", nullptr },
+    { &desc_airq, construct_airq, "M5AirQ", nullptr, fixed_start_airq },
     { &desc_stamplc, construct_stamplc, "board_M5StamPLC", nullptr },
     { &desc_dial, construct_dial, "board_M5Dial", nullptr },
     { &desc_cardputer, construct_cardputer, "board_M5Cardputer", nullptr },

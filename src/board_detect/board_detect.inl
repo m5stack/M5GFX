@@ -127,18 +127,18 @@ namespace board_detect
   // that member remains possible. Defaults may be absent for open families.
   // Only some chips' detectors use it.
   __attribute__((unused))
-  static bool finish_unresolved(const prepare_ctx_t& ctx, board_result_t* result,
+  static bool select_provisional_member(const prepare_ctx_t& ctx, board_result_t* result,
+                                const board_desc_t* preferred_if_possible,
                                 const board_desc_t* hinted_if_possible,
-                                const board_desc_t* family_default,
-                                bool persist, const char* why)
+                                const board_desc_t* family_default, const char* why)
   {
     if (!ctx.final_attempt || result == nullptr) { return false; }
-    const auto* chosen = hinted_if_possible ? hinted_if_possible : family_default;
+    const auto* chosen = preferred_if_possible ? preferred_if_possible
+                       : hinted_if_possible ? hinted_if_possible : family_default;
     if (chosen == nullptr) { return false; }
     result->assign(chosen);
-    if (!persist) { result->transient_fallback = true; }
-    ESP_LOGW("board_detect_m5", "%s; using %s%s", why, chosen->def.name,
-             persist ? "" : " for this boot");
+    result->provisional = true;
+    ESP_LOGW("board_detect_m5", "%s; using %s for this boot", why, chosen->def.name);
     return true;
   }
 
@@ -423,6 +423,7 @@ namespace board_detect
   {
     board_result_t result;
     ctx.confirm_attempted = false;
+    ctx.family_identified = false;
     if (list == nullptr) { return result; }
     ctx.hint = hint;
 
@@ -481,12 +482,16 @@ namespace board_detect
       if (chosen == count) { break; } // Generated constraints must be acyclic.
       tried[chosen] = true;
       if (run_detector(list[chosen], ctx, &result)) { return result; }
+      if (ctx.family_identified) { break; }
       if (list[chosen] == hinted)
       {
         ESP_LOGD(tag, "hint=%u did not match its detector family", static_cast<unsigned>(hint));
       }
     }
     result.candidate = ctx.candidate;
+    if (ctx.candidate != nullptr)
+    { ESP_LOGD(tag, "weak candidate board=%u name=%s",
+               static_cast<unsigned>(ctx.candidate->id), ctx.candidate->name); }
     return result;
   }
 
@@ -670,10 +675,12 @@ namespace board_detect
     return success;
   }
 
-  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask)
+  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask,
+                                    std::uint32_t release_us)
   {
     static constexpr std::size_t max_pins = 64;
     pin_pull_result_t result;
+    result.release_sampled = release_us != 0;
     for (std::size_t pin = 0; pin < max_pins; ++pin)
     {
       const std::uint64_t bit = std::uint64_t(1) << pin;
@@ -683,31 +690,24 @@ namespace board_detect
       lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
       lgfx::delayMicroseconds(10);
       if (lgfx::gpio_in(pin)) { result.pulldown_high |= bit; }
+      if (release_us != 0)
+      {
+        lgfx::pinMode(pin, lgfx::pin_mode_t::input);
+        lgfx::delayMicroseconds(release_us);
+        if (lgfx::gpio_in(pin)) { result.pulldown_release_high |= bit; }
+      }
       lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
       lgfx::delayMicroseconds(10);
       if (lgfx::gpio_in(pin)) { result.pullup_high |= bit; }
+      if (release_us != 0)
+      {
+        lgfx::pinMode(pin, lgfx::pin_mode_t::input);
+        lgfx::delayMicroseconds(release_us);
+        if (lgfx::gpio_in(pin)) { result.pullup_release_high |= bit; }
+      }
       ctx.transaction->restore_start(static_cast<std::int8_t>(pin));
     }
     return result;
-  }
-
-  bool probe_pin_floating(probe_ctx_t& ctx, std::int8_t pin, std::uint32_t release_us)
-  {
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
-    lgfx::delayMicroseconds(10);
-    const bool charged_high = lgfx::gpio_in(pin);
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input);
-    lgfx::delayMicroseconds(release_us);
-    const bool held_high = lgfx::gpio_in(pin);
-
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
-    lgfx::delayMicroseconds(10);
-    const bool charged_low = !lgfx::gpio_in(pin);
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input);
-    lgfx::delayMicroseconds(release_us);
-    const bool held_low = !lgfx::gpio_in(pin);
-    ctx.transaction->restore_start(pin);
-    return charged_high && held_high && charged_low && held_low;
   }
 
   dedicated_release_result_t probe_dedicated_pin_release(
@@ -1132,7 +1132,8 @@ namespace board_detect
       const ops::gpio_scope_t gpio_scope { GPIO_NUM_MAX, gpio_pins.data, gpio_pins.size };
       return ops::run_ops(ops::lgfx_backend(&backend_context),
                           power.devices, power.device_count,
-                          sequence.data, sequence.size, gpio_scope, policy);
+                          sequence.data, sequence.size, gpio_scope, policy,
+                          ops::lgfx_wait_ready_finished);
     }
 
     const pmic_variant_t* read_variant(const power_desc_t& power, int port,
@@ -1583,6 +1584,61 @@ namespace board_detect
     return ok;
   }
 
+  bool observe_spi_variant(probe_ctx_t& ctx, const board_desc_t& desc,
+                           const spi_id_probe_t* probes, std::size_t probe_count,
+                           std::uint32_t* option, bool three_wire,
+                           std::uint8_t slow_retry_half_us, bool legacy_zero_preamble)
+  {
+    const int read_pin = three_wire || desc.display.miso < 0
+                       ? desc.display.mosi : desc.display.miso;
+    std::uint8_t last_cmd = 0;
+    std::uint8_t last_dummy_bits = 0;
+    std::uint32_t id = 0;
+    bool have_id = false;
+    for (std::size_t index = 0; index < probe_count; ++index)
+    {
+      const auto& probe = probes[index];
+      if (!have_id || probe.cmd != last_cmd || probe.dummy_bits != last_dummy_bits)
+      {
+        id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
+                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits,
+                             1, legacy_zero_preamble);
+        last_cmd = probe.cmd;
+        last_dummy_bits = probe.dummy_bits;
+        have_id = true;
+      }
+      for (std::size_t value = 0; value < probe.value_count; ++value)
+      {
+        if ((id & probe.mask) != probe.values[value]) { continue; }
+        *option = probe.option_bit;
+        return true;
+      }
+    }
+    if (slow_retry_half_us > 0)
+    {
+      // AtomS3R has shipped with GC9107 batches that answer only at a slow
+      // clock. Its alternatives share one command, so re-read that command
+      // exactly once and compare the result against every matching probe.
+      const auto retry_cmd = probes[0].cmd;
+      id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
+                           desc.display.dc, desc.display.cs, retry_cmd,
+                           probes[0].dummy_bits,
+                           slow_retry_half_us, legacy_zero_preamble);
+      for (std::size_t index = 0; index < probe_count; ++index)
+      {
+        const auto& probe = probes[index];
+        if (probe.cmd != retry_cmd) { continue; }
+        for (std::size_t value = 0; value < probe.value_count; ++value)
+        {
+          if ((id & probe.mask) != probe.values[value]) { continue; }
+          *option = probe.option_bit;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
@@ -1626,54 +1682,11 @@ namespace board_detect
       restore_probe_pins();
       return false;
     }
-    const int read_pin = three_wire || desc.display.miso < 0
-                       ? desc.display.mosi : desc.display.miso;
-    std::uint8_t last_cmd = 0;
-    std::uint8_t last_dummy_bits = 0;
-    std::uint32_t id = 0;
-    bool have_id = false;
-    for (std::size_t index = 0; index < probe_count; ++index)
+    if (observe_spi_variant(ctx, desc, probes, probe_count, &candidate.option,
+                            three_wire, slow_retry_half_us, legacy_zero_preamble))
     {
-      const auto& probe = probes[index];
-      if (!have_id || probe.cmd != last_cmd || probe.dummy_bits != last_dummy_bits)
-      {
-        id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
-                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits,
-                             1, legacy_zero_preamble);
-        last_cmd = probe.cmd;
-        last_dummy_bits = probe.dummy_bits;
-        have_id = true;
-      }
-      for (std::size_t value = 0; value < probe.value_count; ++value)
-      {
-        if ((id & probe.mask) != probe.values[value]) { continue; }
-        candidate.option = probe.option_bit;
-        *result = candidate;
-        return true;
-      }
-    }
-    if (slow_retry_half_us > 0)
-    {
-      // AtomS3R has shipped with GC9107 batches that answer only at a slow
-      // clock. Its alternatives share one command, so re-read that command
-      // exactly once and compare the result against every matching probe.
-      const auto retry_cmd = probes[0].cmd;
-      id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
-                           desc.display.dc, desc.display.cs, retry_cmd,
-                           probes[0].dummy_bits,
-                           slow_retry_half_us, legacy_zero_preamble);
-      for (std::size_t index = 0; index < probe_count; ++index)
-      {
-        const auto& probe = probes[index];
-        if (probe.cmd != retry_cmd) { continue; }
-        for (std::size_t value = 0; value < probe.value_count; ++value)
-        {
-          if ((id & probe.mask) != probe.values[value]) { continue; }
-          candidate.option = probe.option_bit;
-          *result = candidate;
-          return true;
-        }
-      }
+      *result = candidate;
+      return true;
     }
     restore_probe_pins();
     return false;
@@ -1690,6 +1703,25 @@ namespace board_detect
     bool legacy_zero_preamble;
   };
 
+  bool fixed_start_spi_variant(board_result_t& result, const prepare_ctx_t& ctx,
+                               const spi_id_member_t& member)
+  {
+    if (!prepare(*result.desc, result, ctx)) { return false; }
+    probe_ctx_t probe;
+    static_cast<prepare_ctx_t&>(probe) = ctx;
+    if (!observe_spi_variant(probe, *result.desc, member.probes, member.probe_count,
+                             &result.option, member.three_wire,
+                             member.slow_retry_half_us, member.legacy_zero_preamble))
+    {
+      ESP_LOGW("M5GFX", "Fixed board:%u panel variant unreadable; using default",
+               static_cast<unsigned>(result.def->id));
+    }
+    const auto& display = result.desc->display;
+    const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
+    ctx.transaction->restore_start(signals);
+    return true;
+  }
+
   class spi_id_detector_t final : public board_detector_t
   {
   public:
@@ -1704,7 +1736,7 @@ namespace board_detect
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
       if (shared_id_read_) { return probe_family(ctx, result); }
-      if (ctx.hint != board_id_unknown)
+      if (ctx.attempt == 0 && !ctx.final_attempt && ctx.hint != board_id_unknown)
       {
         for (std::uint8_t index = 0; index < member_count_; ++index)
         {
@@ -1828,8 +1860,10 @@ namespace board_detect
     {
       if (result.prepared & prepared_power_failed)
       {
-        // The family member is still provisional: show it, but do not cache it.
-        result.transient_fallback = true;
+        // Pending refinement means the member is not yet confirmed. Give a
+        // failed power sequence another attempt before retaining it provisionally.
+        if (!ctx.final_attempt) { return false; }
+        result.provisional = true;
         ESP_LOGW("board_detect",
                  "member refinement skipped after retained power_on failure; board=%u",
                  static_cast<unsigned>(result.def->id));
@@ -1847,6 +1881,19 @@ namespace board_detect
     else if (result.desc != nullptr)
     {
       current = result.desc;
+    }
+    if (!(result.prepared & prepared_observation) && result.observe_after_power != nullptr)
+    {
+      // Panel metadata is optional after retained power failure; the member
+      // was already confirmed before this observer was attached.
+      if (!(result.prepared & prepared_power_failed)
+       && !result.observe_after_power(result, ctx))
+      {
+        // Optional panel metadata must not discard a member confirmed by touch.
+        ESP_LOGW("board_detect", "post-power observation failed; retaining board=%u",
+                 static_cast<unsigned>(result.def->id));
+      }
+      result.prepared |= prepared_observation;
     }
     if (!startup_detail::prepare_sd_spi(*current, result, ctx)) { return false; }
     const bool reset_was_prepared = result.prepared & prepared_reset;

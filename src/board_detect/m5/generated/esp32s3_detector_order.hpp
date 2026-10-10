@@ -16,6 +16,8 @@ static const board_detector_t* const esp32s3_detectors_qfn56[] = {
   &dualkey_detector,
   nullptr,
 };
+static_assert(sizeof(esp32s3_detectors_qfn56) / sizeof(esp32s3_detectors_qfn56[0]) - 1 <= max_detector_families,
+              "esp32s3_detectors_qfn56 exceeds the detection session family limit");
 
 static const board_detector_t* const esp32s3_detectors_lga56[] = {
   &atomvoices3r_detector,
@@ -23,4 +25,6 @@ static const board_detector_t* const esp32s3_detectors_lga56[] = {
   &pmic_id_detector,
   nullptr,
 };
+static_assert(sizeof(esp32s3_detectors_lga56) / sizeof(esp32s3_detectors_lga56[0]) - 1 <= max_detector_families,
+              "esp32s3_detectors_lga56 exceeds the detection session family limit");
 

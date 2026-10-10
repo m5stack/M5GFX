@@ -36,6 +36,7 @@ namespace m5
 
   namespace detail
   {
+    bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx);
     bool stack_reset_and_sample_ips(const board_desc_t& desc, const prepare_ctx_t& ctx,
                                     std::uint32_t* detected_option);
   }
@@ -195,13 +196,13 @@ namespace m5
   static const board_entry_t esp32_d0wdq6_boards[] = {
     { &desc_timercam, construct_displayless, "board_M5TimerCam", nullptr },
     { &desc_station, construct_station, nullptr, nullptr },
-    { &desc_core2, construct_core2, nullptr, nullptr },
-    { &desc_tough, construct_tough, nullptr, nullptr },
+    { &desc_core2, construct_core2, nullptr, nullptr, detail::fixed_start_core },
+    { &desc_tough, construct_tough, nullptr, nullptr, detail::fixed_start_core },
     { &desc_stack, construct_stack, nullptr, nullptr },
     { &desc_paper, construct_paper, nullptr, nullptr },
     { &desc_stickcplus, construct_stickcplus, "M5StickCPlus", nullptr },
     { &desc_stickc, construct_stickc, "M5StickC", nullptr },
-    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr },
+    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr, fixed_start_coreink },
     { &desc_stickcplus2, construct_stickcplus2, "M5StickCPlus2", nullptr },
     { &desc_atompsram, construct_atompsram, "", nullptr },
     { &desc_atomvoice, construct_displayless, "board_M5AtomVoice", nullptr },
@@ -213,8 +214,16 @@ namespace m5
 
   namespace detail
   {
-    bool refine_core_family(board_result_t& result, const prepare_ctx_t& ctx)
+    const pmic_variant_t* observe_core_pmic(int port)
+    { return startup_detail::read_variant(desc_core2.power, port); }
+
+    bool observe_core_panel(board_result_t& result, const prepare_ctx_t& ctx,
+                            panel_variant_t& variant, std::uint32_t keys[4])
     {
+      // Power may have just enabled a cold SD card. Put it in SPI mode before
+      // sharing the panel clocks, including the fixed-board startup path.
+      if (!startup_detail::prepare_sd_spi(*result.desc, result, ctx)) { return false; }
+      ESP_LOGD("board_detect_m5", "Core panel observation after SD SPI preparation");
       const auto& display = desc_core2.display;
       const std::int8_t signals[] = {
         display.dc, display.sclk, display.mosi, display.miso
@@ -223,9 +232,8 @@ namespace m5
       startup_detail::pin_level(desc_core2.sd.sd_cs, true);
       soft_spi_t bus(display.sclk, display.mosi, display.mosi, display.dc);
       bus.init();
-      std::uint32_t keys[4] = {};
       // Without reset, leave the same 120 ms window for a waking panel.
-      auto variant = identify_panel_variant(bus, display.cs, keys,
+      variant = identify_panel_variant(bus, display.cs, keys,
                                             ctx.allow_reset ? 1 : 120);
       if (ctx.allow_reset)
       {
@@ -245,6 +253,59 @@ namespace m5
           for (int i = 0; i < 4; ++i) { keys[i] = after_keys[i]; }
         }
       }
+      return true;
+    }
+
+    bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      const auto& desc = *result.desc;
+      {
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
+        const auto* pmic = i2c.opened ? observe_core_pmic(i2c.port) : nullptr;
+        // Never send a default controller's write list when its identity is unknown.
+        if (pmic == nullptr)
+        {
+          ESP_LOGW("M5GFX", "Fixed board:%u PMIC unreadable; startup stopped",
+                   static_cast<unsigned>(desc.def.id));
+          return false;
+        }
+        result.option |= pmic->detected_option;
+        if (!startup_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
+      }
+      panel_variant_t variant;
+      std::uint32_t keys[4] = {};
+      if (!observe_core_panel(result, ctx, variant, keys)) { return false; }
+      log_panel_variant(variant, keys);
+      if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
+      const auto& display = desc.display;
+      const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
+      ctx.transaction->restore_start(signals);
+      return prepare(desc, result, ctx);
+    }
+
+    bool observe_confirmed_core_panel(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      panel_variant_t variant;
+      std::uint32_t keys[4] = {};
+      const bool observed = observe_core_panel(result, ctx, variant, keys);
+      const auto& display = desc_core2.display;
+      const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
+      ctx.transaction->restore_start(signals);
+      if (!observed) { return false; }
+      log_panel_variant(variant, keys);
+      if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
+      return true;
+    }
+
+    bool refine_core_family(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      const auto& display = desc_core2.display;
+      const std::int8_t signals[] = {
+        display.dc, display.sclk, display.mosi, display.miso
+      };
+      std::uint32_t keys[4] = {};
+      panel_variant_t variant;
+      if (!observe_core_panel(result, ctx, variant, keys)) { return false; }
       startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
                                        desc_core2.internal_i2c);
       if (!i2c.opened)
@@ -260,27 +321,36 @@ namespace m5
         tough = lgfx::i2c::readRegister8(
           i2c.port, tough_touch_address, touch_probe_register,
           tough_touch_i2c_frequency).has_value();
-        if (tough) { break; }
         core2 = lgfx::i2c::readRegister8(
           i2c.port, core2_touch_address, touch_probe_register,
           tough_touch_i2c_frequency).has_value();
-        if (core2) { break; }
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH) || defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH_POST)
+        tough = core2 = false;
+#endif
+        // M-Bus devices can answer at either address. Read both even if Tough
+        // answers first; simultaneous responses cannot confirm a member.
+        if (tough || core2) { break; }
         lgfx::delay(1);
       } while (lgfx::millis() - touch_start < touch_startup_poll_ms);
-      // Core2 requires its own touch response; a Station LCD miss on shared
-      // AXP192 must not be saved as Core2 when neither touch answers.
+      if ((tough && core2)
+       || (tough && (result.option & generated_options::core2::new_pmic)))
+      {
+        ctx.transaction->restore_start(signals);
+        return false;
+      }
       if (!tough && !core2)
       {
-        // An AXP192 with no LCD or touch response may still be Station.
-        if (variant == panel_variant_t::unknown
-         && !(result.option & generated_options::core2::new_pmic))
+        const auto possible = [&](board_id_t id) -> const board_desc_t*
         {
-          ctx.transaction->restore_start(signals);
-          return false;
-        }
-        if (!finish_unresolved(ctx, &result,
-                               ctx.hint == desc_tough.def.id ? &desc_tough : nullptr,
-                               &desc_core2, false, "Core2/Tough touch unidentified"))
+          if (id == desc_core2.def.id) { return &desc_core2; }
+          // Tough has no AXP2101 variant; an explicit preference cannot negate it.
+          if (id == desc_tough.def.id
+           && !(result.option & generated_options::core2::new_pmic)) { return &desc_tough; }
+          return nullptr;
+        };
+        if (!select_provisional_member(ctx, &result,
+                               possible(ctx.preferred), possible(ctx.hint),
+                               &desc_core2, "Core2/Tough touch unidentified"))
         {
           ctx.transaction->restore_start(signals);
           return false;
@@ -328,13 +398,82 @@ namespace m5
       if (!i2c.opened) { return false; }
       prepare_ctx_t prepare_ctx = ctx;
       prepare_ctx.i2c_port_probe = i2c.port;
-      const auto* pmic = startup_detail::read_variant(desc_core2.power, i2c.port);
+      const auto* pmic = detail::observe_core_pmic(i2c.port);
       if (pmic == nullptr) { return false; }
+      ctx.family_identified = true;
       ESP_LOGD("board_detect_m5", "power controller id=%02x", pmic->id_value);
+
+      const bool new_pmic = pmic->id_value != detail::station_pmic_id;
+      // Keep the scoped port alive; probe_i2c_ack would release it between reads.
+      const auto touch_answers = [&](std::uint8_t addr) -> bool
+      {
+        const bool began = lgfx::i2c::beginTransaction(i2c.port, addr, 100000, false).has_value();
+        const bool ended = lgfx::i2c::endTransaction(i2c.port).has_value();
+        return began && ended;
+      };
+      bool core2_touch = touch_answers(detail::core2_touch_address);
+      bool tough_touch = touch_answers(detail::tough_touch_address);
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH) || defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH_PRE) || defined (M5GFX_AUTODETECT_TEST_CORE_FAMILY_FORCE_STATION)
+      core2_touch = tough_touch = false;
+#endif
+      char g12 = '-', g32 = '-', g33 = '-';
+      // Port A is external. Sample its pulls only for silent AXP192 members;
+      // positive touch evidence and AXP2101 do not need this subdivision.
+      if (!core2_touch && !tough_touch && !new_pmic)
+      {
+        const auto pulls = probe_pin_pulls(ctx, (1ULL << 12) | (1ULL << 32) | (1ULL << 33));
+        const auto classify = [&](unsigned pin) -> char
+        {
+          const unsigned sample = ((pulls.pulldown_high >> pin) & 1)
+                                | (((pulls.pullup_high >> pin) & 1) << 1);
+          return "DXFU"[sample];
+        };
+        g12 = classify(12); g32 = classify(32); g33 = classify(33);
+      }
+#if defined (M5GFX_AUTODETECT_TEST_CORE_FAMILY_FORCE_STATION)
+      g12 = 'F';
+#endif
+      ESP_LOGD("board_detect_m5", "AXP attempt=%u pmic=%02x touch38=%u touch2e=%u G12=%c G32=%c G33=%c",
+               ctx.attempt, pmic->id_value, core2_touch, tough_touch, g12, g32, g33);
+      *result = {};
+      // External M-Bus ICs at these addresses can make the evidence contradictory.
+      if ((core2_touch && tough_touch) || (new_pmic && tough_touch)) { return false; }
+      if (core2_touch || tough_touch)
+      {
+        result->assign(core2_touch ? &desc_core2 : &desc_tough);
+        result->option = pmic->detected_option;
+        // Observe panel metadata without selecting the confirmed member again.
+        result->observe_after_power = detail::observe_confirmed_core_panel;
+        return true;
+      }
+      if (new_pmic)
+      {
+        // AXP2101 belongs only to Core2, but absent touch is abnormal. A failed
+        // touch controller deliberately consumes all attempts before fallback.
+        if (!select_provisional_member(ctx, result, &desc_core2, nullptr, nullptr,
+                                       "AXP2101 Core2 touch unanswered")) { return false; }
+        result->option = pmic->detected_option;
+        result->observe_after_power = detail::observe_confirmed_core_panel;
+        return true;
+      }
+      if (g12 == 'D' && g32 == 'U' && g33 == 'U')
+      {
+        // Cold AXP192 Core2 needs the shared Core2/Tough power list before touch
+        // confirmation. Station's weak G12 pull-down may also read D, so both
+        // Port A lines must read U. External pull-ups on both lines still admit
+        // such a Station; no second member power list runs in this attempt.
+        result->assign(&desc_core2);
+        result->option = pmic->detected_option;
+        result->refine = detail::refine_core_family;
+        return true;
+      }
+      if (g12 != 'F' && g12 != 'D') { return false; }
 
       std::uint64_t sd_mask;
       if (!detail::sd_pull_mask(desc_core2, &sd_mask)) { return false; }
-      // Even pull probing toggles shared clocks, so deselect the LCD first.
+      // A cold AXP192 Core2/Tough with either Port A line externally held low
+      // also enters this Station path and stays unidentified after an LCD miss.
+      // Only the Station probe needs the exceptional pre-power SD transition.
       startup_detail::pin_level(desc_core2.display.cs, true);
       const auto sd_pulls = probe_pin_pulls(ctx, sd_mask);
       const bool sd_present = sd_pulls.pulldown_high == sd_mask
@@ -342,53 +481,31 @@ namespace m5
       std::uint32_t preprepared = 0;
       if (sd_present)
       {
-        // This exceptional pre-power transition protects the Station probe on
-        // powered Core2 revisions. Unpowered cards transition after PMIC power.
         startup_detail::pin_level(desc_core2.sd.sd_cs, true);
         board_result_t sd_result;
         sd_result.assign(&desc_core2);
-        if (!startup_detail::prepare_sd_spi(desc_core2, sd_result, prepare_ctx))
-        {
-          return false;
-        }
+        if (!startup_detail::prepare_sd_spi(desc_core2, sd_result, prepare_ctx)) { return false; }
         preprepared |= sd_result.prepared & prepared_sd_spi;
       }
-
-      auto try_station = [&]() -> bool
-      {
-#if !defined (M5GFX_AUTODETECT_TEST_STATION_TO_CORE2)
-        if (pmic->id_value != detail::station_pmic_id) { return false; }
-#endif
-        *result = {};
-        result->assign(&desc_station);
-        result->prepared = preprepared;
-        if (!prepare_reset(desc_station, *result, prepare_ctx, i2c.port))
-        {
-          ctx.transaction->restore_start(desc_station.reset.pin);
-          return false;
-        }
-        const auto& display = desc_station.display;
-        const auto detected_id = soft_spi_read32(
-          ctx, display.sclk, display.mosi, display.mosi, display.dc, display.cs,
-          detail::panel_id_command, 1);
-        if ((detected_id & detail::station_id_mask) != detail::station_id)
-        {
-          ctx.transaction->restore_start(desc_station.reset.pin);
-          return false;
-        }
-        // A matching Station keeps reset and LCD CS inactive through prepare.
-        // Core2's SD CS may have been raised on the way here; Station does not own it.
-        ctx.transaction->restore_start(desc_core2.sd.sd_cs);
-        return true;
-      };
-
-      // Station must be excluded before accepting the shared AXP signature.
-      if (try_station()) { return true; }
-      *result = {};
-      result->assign(&desc_core2);
-      result->option = pmic->detected_option;
+      result->assign(&desc_station);
       result->prepared = preprepared;
-      result->refine = detail::refine_core_family;
+      if (!prepare_reset(desc_station, *result, prepare_ctx, i2c.port))
+      {
+        ctx.transaction->restore_start(desc_station.reset.pin);
+        return false;
+      }
+      const auto& display = desc_station.display;
+      const auto detected_id = soft_spi_read32(
+        ctx, display.sclk, display.mosi, display.mosi, display.dc, display.cs,
+        detail::panel_id_command, 1);
+      if ((detected_id & detail::station_id_mask) != detail::station_id)
+      {
+        ctx.transaction->restore_start(desc_station.reset.pin);
+        // Neither hint nor preference may send Core2 power after a Station miss.
+        *result = {};
+        return false;
+      }
+      ctx.transaction->restore_start(desc_core2.sd.sd_cs);
       return true;
     }
 
@@ -411,25 +528,23 @@ namespace m5
        || !startup_detail::gpio_valid(desc_stack.display.dc)) { return false; }
       std::uint64_t sd_mask;
       if (!detail::sd_pull_mask(desc_stack, &sd_mask)) { return false; }
-      auto& values = ctx.detector_workspace.values;
       startup_detail::pin_level(desc_stack.display.cs, true);
       const auto pulls = probe_pin_pulls(ctx, sd_mask);
-      values[0] = pulls.pulldown_high;
-      values[1] = pulls.pullup_high;
       ctx.transaction->restore_start(desc_stack.display.cs);
-      const bool pull_match = values[0] == sd_mask && values[1] == sd_mask;
-      const bool bypassed = !pull_match && (ctx.final_attempt || ctx.hint == desc_stack.def.id);
-      values[2] = (pull_match ? 1u : 0u) | (bypassed ? 2u : 0u);
+      const bool pull_match = pulls.pulldown_high == sd_mask && pulls.pullup_high == sd_mask;
       if (!pull_match)
       {
         ESP_LOGD("board_detect_m5",
                  "M5Stack pull signature mismatch pd=%08x%08x pu=%08x%08x",
-                 static_cast<unsigned>(values[0] >> 32),
-                 static_cast<unsigned>(values[0]),
-                 static_cast<unsigned>(values[1] >> 32),
-                 static_cast<unsigned>(values[1]));
+                 static_cast<unsigned>(pulls.pulldown_high >> 32),
+                 static_cast<unsigned>(pulls.pulldown_high),
+                 static_cast<unsigned>(pulls.pullup_high >> 32),
+                 static_cast<unsigned>(pulls.pullup_high));
       }
-      return pull_match || bypassed;
+      // G32 can be camera output or external SDA on other boards. Its low
+      // level must not admit Stack reset, which can drop their power hold.
+      // Require SD evidence even for hints and the final attempt.
+      return pull_match;
     }
 
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
@@ -459,16 +574,6 @@ namespace m5
       if ((panel_id & detail::panel_id_mask) != detail::common_panel_id)
       { return false; }
       ctx.transaction->restore_start(signals);
-      const auto& values = ctx.detector_workspace.values;
-      if (values[2] & 2u)
-      {
-        ESP_LOGI("board_detect_m5",
-                 "M5Stack detected after bypassing pull signature pd=%08x%08x pu=%08x%08x",
-                 static_cast<unsigned>(values[0] >> 32),
-                 static_cast<unsigned>(values[0]),
-                 static_cast<unsigned>(values[1] >> 32),
-                 static_cast<unsigned>(values[1]));
-      }
       return true;
     }
 

@@ -89,7 +89,8 @@ private:
   }
   static void warn_hint_mismatch(const probe_ctx_t& ctx, const board_def_t* def)
   {
-    if ((ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
+    if (ctx.attempt == 0
+     && (ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
      && ctx.hint != def->id)
     {
       esp_chip_info_t info;

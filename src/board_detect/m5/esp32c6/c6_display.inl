@@ -79,13 +79,9 @@ public:
                           &value, 1, specs::unitc6l::i2c_ioe::i2c_freq, 0)
        || !is_pi4io(value))
       {
-        // GPIO18 alone does not identify UnitC6L. Preserve a known UnitC6L
-        // only on the last retry, without caching the unverified fallback.
-        if (!ctx.final_attempt || ctx.hint != desc_unitc6l.def.id) { return false; }
-        result->assign(&desc_unitc6l);
-        result->transient_fallback = true;
-        ESP_LOGW("board_detect_m5", "UnitC6L PI4IO unanswered; using hinted board for this boot");
-        return true;
+        // Presence and GPIO18 only suggest UnitC6L; never construct on a hint.
+        if (ctx.candidate == nullptr) { ctx.candidate = &desc_unitc6l.def; }
+        return false;
       }
       result->assign(&desc_unitc6l);
       return true;

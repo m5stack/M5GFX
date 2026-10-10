@@ -437,6 +437,7 @@ class M5Unified {
 public:
   static int8_t _get_pin_table[${PIN_NAMES.length}];
   static void _setup_pinmap(board_t);
+  static int8_t _get_power_hold_pin(board_t);
 };
 int8_t M5Unified::_get_pin_table[${PIN_NAMES.length}];
 ${tableSource}

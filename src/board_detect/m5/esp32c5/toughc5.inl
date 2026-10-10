@@ -36,7 +36,7 @@
   };
 
   static constexpr board_desc_t desc_stampc5 = {
-    { static_cast<board_id_t>(lgfx::board_M5StampC5), "M5StampC5", 0 },
+    { static_cast<board_id_t>(lgfx::board_M5StampC5), "M5StampC5", def_flag_fallback },
     no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
     no_internal_i2c(), no_options(), no_pins(),
   };
@@ -45,16 +45,18 @@
   {
   public:
     stampc5_detector_t() : board_detector_t(members_) {}
-    bool signature(probe_ctx_t&) const override
+    bool signature(probe_ctx_t& ctx) const override
     {
-      // The in-package 4 MB flash and absent PSRAM identify StampC5 before
-      // ToughC5 probes any of its GPIOs.
       const auto sys2 = REG_READ(EFUSE_RD_MAC_SYS2_REG);
-      return ((sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V) == 1
-          && ((sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V) == 0;
+      if (((sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V) != 1
+       || ((sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V) != 0) { return false; }
+      // Package facts only suggest a board; keep later families from probing
+      // this module's user pins without treating it as confirmed.
+      if (ctx.candidate == nullptr) { ctx.candidate = &desc_stampc5.def; }
+      ctx.family_identified = true;
+      return false;
     }
-    bool confirm(probe_ctx_t&, board_result_t* result) const override
-    { if (!result) return false; result->assign(&desc_stampc5); return true; }
+    bool confirm(probe_ctx_t&, board_result_t*) const override { return false; }
   private:
     static const board_def_t* const members_[2];
   };

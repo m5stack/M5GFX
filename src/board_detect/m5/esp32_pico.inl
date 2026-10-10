@@ -131,6 +131,8 @@ static const board_def_t* const coreink_members[] = { &desc_coreink.def, nullptr
 static const spi_id_member_t coreink_member_descs[] = {
   { &desc_coreink, coreink_probes, 2, true, false, 0, true },
 };
+static bool fixed_start_coreink(board_result_t& result, const prepare_ctx_t& ctx)
+{ return fixed_start_spi_variant(result, ctx, coreink_member_descs[0]); }
 static const spi_id_detector_t coreink_detector(coreink_members, coreink_member_descs, 1);
 
 static const board_def_t* const stickcplus2_members[] = { &desc_stickcplus2.def, nullptr };
@@ -167,6 +169,9 @@ private:
     const bool atom_g2 = lgfx::gpio_in(2);
     ctx.transaction->restore_start({ 2 });
     if (!atom_g2) { return false; }
+    // StickC LCD reset is pulled high; Atom leaves G18 unconnected.
+    const auto g18 = probe_pin_pulls(ctx, 1ULL << 18);
+    if (g18.pulldown_high || g18.pullup_high != (1ULL << 18)) { return false; }
     const auto read_g34 = [](lgfx::pin_mode_t mode) {
       lgfx::pinMode(23, mode); // G23 is exposed: internal pull only, never drive it.
       esp_rom_delay_us(5);
@@ -182,9 +187,13 @@ private:
     if (down)
     {
       result->assign(&desc_atomvoice); // Microphone DATA remains high with G23 low.
-      if (!(up1 && down2 && up2)) { result->transient_fallback = true; }
+      if (!(up1 && down2 && up2)) { result->provisional = true; }
       return true;
     }
+    // The IR transmitter supplies the strong pull-down on Lite/Matrix/U.
+    // Reject unrelated PICO boards before touch scanning or LED writes.
+    const auto g12 = probe_pin_pulls(ctx, 1ULL << 12);
+    if (classify_pin_pull(g12, 12) != pull_class_t::down) { return false; }
     if (!measured_)
     {
       measured_ = true; // One touch scan per boot, including retries.
@@ -211,17 +220,17 @@ private:
       esp_rom_delay_us(10);
       const bool matrix_pulls = lgfx::gpio_in(21) && lgfx::gpio_in(25);
       ctx.transaction->restore_start({ 21, 25 });
-      if (!linked || !matrix_pulls) { result->transient_fallback = true; }
+      if (!linked || !matrix_pulls) { result->provisional = true; }
     }
     else if (ratio100 <= lite_limit * reference)
     {
       result->assign(&desc_atomlite);
-      if (!linked) { result->transient_fallback = true; }
+      if (!linked) { result->provisional = true; }
     }
     else
     {
       result->assign(&desc_atomu);
-      if (linked || up1 || down2 || up2) { result->transient_fallback = true; }
+      if (linked || up1 || down2 || up2) { result->provisional = true; }
     }
     return true;
   }

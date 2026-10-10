@@ -50,12 +50,18 @@ struct fake_t
   int ready_failures = 0;
   int ready_attempts = 0;
   std::uint32_t ready_attempt_ms = 0;
+  bool check_ioe_wait = false;
+  std::uint32_t ioe_ready_at = 0;
+  int wait_notifications = 0;
+  std::uint32_t wait_elapsed = 0;
+  bool wait_succeeded = false;
 };
 
 static bool read8(void* context, const bdops::i2c_device_t& device,
                   std::uint16_t reg, std::uint8_t* value)
 {
   auto& fake = *static_cast<fake_t*>(context);
+  if (fake.check_ioe_wait && device.addr == 0x4F) { assert(fake.now >= fake.ioe_ready_at); }
   ++fake.reads;
   if (fake.read_failures-- > 0) { return false; }
   for (auto attempt : fake.read_nacks)
@@ -70,6 +76,7 @@ static bool write8(void* context, const bdops::i2c_device_t& device,
                    std::uint16_t reg, std::uint8_t value)
 {
   auto& fake = *static_cast<fake_t*>(context);
+  if (fake.check_ioe_wait && device.addr == 0x4F) { assert(fake.now >= fake.ioe_ready_at); }
   ++fake.writes_attempted;
   if (fake.write_failures-- > 0) { return false; }
   const auto key = std::make_pair(device.addr, reg);
@@ -89,12 +96,17 @@ static bool write16le(void* context, const bdops::i2c_device_t& device,
   return true;
 }
 
-static bool ready(void* context, const bdops::i2c_device_t&, std::uint32_t remaining_ms)
+static bool ready(void* context, const bdops::i2c_device_t& device, std::uint32_t remaining_ms)
 {
   auto& fake = *static_cast<fake_t*>(context);
   if (remaining_ms == 0) { return false; }
   ++fake.ready_attempts;
   fake.now += fake.ready_attempt_ms;
+  if (fake.check_ioe_wait)
+  {
+    assert(device.addr == 0x4F);
+    return fake.now >= fake.ioe_ready_at;
+  }
   return fake.ready_failures-- <= 0;
 }
 
@@ -494,6 +506,59 @@ static void test_pm1_family_sequences()
   }
 }
 
+static void wait_finished(void* context, const bdops::i2c_device_t& device,
+                          std::uint32_t elapsed, bool succeeded)
+{
+  auto& fake = *static_cast<fake_t*>(context);
+  assert(device.addr == 0x4F);
+  ++fake.wait_notifications;
+  fake.wait_elapsed = elapsed;
+  fake.wait_succeeded = succeeded;
+}
+
+static void test_pm1_member_boot_wait()
+{
+  const std::int8_t pins[] = { 39, 16 };
+  const bdops::gpio_scope_t scope = { 49, pins, 2 };
+  const bdops::op_list_t sequences[] = {
+    bdops::list(pmicops::stopwatch_power_on), bdops::list(pmicops::papermono_power_on)
+  };
+  for (const auto& sequence : sequences)
+  {
+    for (unsigned ready_at : { 0u, 230u, 499u, 500u, 501u })
+    {
+      fake_t fake;
+      fake.check_ioe_wait = true;
+      fake.ioe_ready_at = ready_at;
+      const auto result = bdops::run_ops(backend(fake), pmicops::pm1_family_devices, 2,
+                                        sequence.data, sequence.size, scope, nullptr,
+                                        wait_finished);
+      const bool success = ready_at < 500;
+      assert((result.status == bdops::op_status_t::ok) == success);
+      assert(fake.wait_notifications == 1 && fake.wait_succeeded == success);
+      assert(fake.wait_elapsed == (success ? ready_at : 500));
+      // PM1 writes precede the wait; no IOE1 access precedes readiness.
+      assert(fake.writes.size() == (success ? (sequence.data == pmicops::stopwatch_power_on ? 12u : 11u) : 3u));
+      if (!success) { assert(result.status == bdops::op_status_t::timeout && result.failed_index == 5); }
+    }
+  }
+  // Shared devices do not add a boot wait to other PM1/IOE1 users.
+  fake_t chain;
+  chain.ready_failures = 1000;
+  auto result = bdops::run_ops(backend(chain), pmicops::pm1_family_devices, 2,
+                               pmicops::chaincaptain_power_on,
+                               sizeof(pmicops::chaincaptain_power_on) / sizeof(pmicops::chaincaptain_power_on[0]),
+                               scope, nullptr, wait_finished);
+  assert(result.status == bdops::op_status_t::ok && chain.ready_attempts == 0 && chain.wait_notifications == 0);
+  fake_t stick;
+  stick.ready_failures = 1000;
+  result = bdops::run_ops(backend(stick), pmicops::pm1_devices, 1,
+                         pmicops::sticks3_power_on,
+                         sizeof(pmicops::sticks3_power_on) / sizeof(pmicops::sticks3_power_on[0]),
+                         scope, nullptr, wait_finished);
+  assert(result.status == bdops::op_status_t::ok && stick.ready_attempts == 0 && stick.wait_notifications == 0);
+}
+
 static void test_pm1_ext_family_sequences()
 {
   {
@@ -837,6 +902,7 @@ int main()
   test_core2_restore_coverage();
   test_sticks3_retry_scopes();
   test_pm1_family_sequences();
+  test_pm1_member_boot_wait();
   test_pm1_ext_family_sequences();
   test_paper_family_sequences();
   test_toughc5_sequences();
