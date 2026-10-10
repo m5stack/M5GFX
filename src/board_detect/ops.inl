@@ -67,6 +67,13 @@ namespace ops
     return began && ended;
   }
 
+  inline void lgfx_wait_ready_finished(void*, const i2c_device_t& device,
+                                       std::uint32_t elapsed_ms, bool ready)
+  {
+    ESP_LOGD("board_detect", "power wait_ready addr=0x%02x elapsed=%ums ready=%u",
+             device.addr, static_cast<unsigned>(elapsed_ms), ready);
+  }
+
   inline bool lgfx_gpio_set_mode(void*, std::uint16_t pin, gpio_mode_t mode)
   {
     lgfx::pin_mode_t native = lgfx::pin_mode_t::output;

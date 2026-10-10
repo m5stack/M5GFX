@@ -1132,7 +1132,8 @@ namespace board_detect
       const ops::gpio_scope_t gpio_scope { GPIO_NUM_MAX, gpio_pins.data, gpio_pins.size };
       return ops::run_ops(ops::lgfx_backend(&backend_context),
                           power.devices, power.device_count,
-                          sequence.data, sequence.size, gpio_scope, policy);
+                          sequence.data, sequence.size, gpio_scope, policy,
+                          ops::lgfx_wait_ready_finished);
     }
 
     const pmic_variant_t* read_variant(const power_desc_t& power, int port,
@@ -1859,7 +1860,9 @@ namespace board_detect
     {
       if (result.prepared & prepared_power_failed)
       {
-        // The family member is still provisional: show it, but do not cache it.
+        // Pending refinement means the member is not yet confirmed. Give a
+        // failed power sequence another attempt before retaining it provisionally.
+        if (!ctx.final_attempt) { return false; }
         result.provisional = true;
         ESP_LOGW("board_detect",
                  "member refinement skipped after retained power_on failure; board=%u",

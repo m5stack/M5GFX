@@ -471,51 +471,40 @@ namespace m5
 
   namespace detail
   {
+    // Share the injected address between pre-power confirmation and refine.
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_TOUCH)
+    static constexpr std::uint8_t stopwatch_probe_addr = 0x16;
+#else
+    static constexpr std::uint8_t stopwatch_probe_addr = specs::stopwatch::touch::i2c_addr;
+#endif
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERMONO_TOUCH)
+    static constexpr std::uint8_t papermono_probe_addr = 0x39;
+#else
+    static constexpr std::uint8_t papermono_probe_addr = specs::papermono::touch::i2c_addr;
+#endif
+
     bool refine_papermono_touch(board_result_t& result, const prepare_ctx_t& ctx)
     {
       startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
-                                       desc_papermono.internal_i2c);
-      const auto touch_answers = [&](std::uint8_t addr, std::uint32_t freq)
+                                    desc_papermono.internal_i2c);
+      if (i2c.opened)
       {
         const auto started = lgfx::millis();
         do
         {
-          if (lgfx::i2c::beginTransaction(i2c.port, addr, freq, false).has_value()
+          if (lgfx::i2c::beginTransaction(i2c.port, papermono_probe_addr,
+                                        specs::papermono::touch::i2c_freq, false).has_value()
            && lgfx::i2c::endTransaction(i2c.port).has_value())
           { return true; }
           lgfx::delay(1);
         } while (lgfx::millis() - started < 200);
-        return false;
-      };
-      bool stopwatch_touch = false;
-      if (i2c.opened)
-      {
-        if (touch_answers(specs::papermono::touch::i2c_addr,
-                          specs::papermono::touch::i2c_freq)) { return true; }
-        stopwatch_touch = touch_answers(specs::stopwatch::touch::i2c_addr,
-                                        specs::stopwatch::touch::i2c_freq);
-        if (stopwatch_touch
-         && lgfx::i2c::beginTransaction(i2c.port, 0x50, 100000, false).has_value())
-        {
-          lgfx::i2c::endTransaction(i2c.port);
-          return false;
-        }
       }
-      if (!stopwatch_touch && !ctx.final_attempt) { return false; }
-      if (stopwatch_touch)
-      {
-        // The provisional PaperMono sequence has run. Apply StopWatch power
-        // before selecting the member confirmed by its touch response.
-        board_result_t stopwatch;
-        stopwatch.assign(&desc_stopwatch);
-        if (!i2c.opened
-         || !startup_detail::prepare_power(desc_stopwatch, stopwatch, i2c.port, true))
-        { return false; }
-        result.assign(&desc_stopwatch);
-      }
-      if (stopwatch_touch) { return true; }
+      if (!ctx.final_attempt) { return false; }
+      // Keep the powered member; no second member's power sequence in this attempt.
+      // Later attempts can switch only after unanswered touch with D/D or U/U.
       result.provisional = true;
-      ESP_LOGW("board_detect_m5", "StopWatch/PaperMono touch unanswered; using %s for this boot",
+      ESP_LOGW("board_detect_m5", "%s; using %s for this boot",
+               i2c.opened ? "PaperMono touch unanswered" : "PaperMono internal I2C unavailable",
                result.def->name);
       return true;
     }
@@ -543,28 +532,59 @@ namespace m5
       {
         return false;
       }
-      std::uint8_t ioe_id[2] = {};
-      if (!probe_i2c_read(ctx, wiring::stopwatch::internal_i2c_sda,
-                          wiring::stopwatch::internal_i2c_scl, 0x4F, 0,
-                          ioe_id, sizeof(ioe_id), 100000, 200))
-      {
-        return false;
-      }
-      // StopWatch can answer before power preparation. PaperMono's touch is
-      // held in reset until its PM1 power sequence, so check it in refine.
+      // IOE1 takes hundreds of milliseconds to boot; its presence is not
+      // member evidence. Wait only when its selected power sequence needs it.
       const bool stopwatch_touch = probe_i2c_ack(
         ctx, wiring::stopwatch::internal_i2c_sda,
-        wiring::stopwatch::internal_i2c_scl, specs::stopwatch::touch::i2c_addr);
-      if (stopwatch_touch)
+        wiring::stopwatch::internal_i2c_scl, detail::stopwatch_probe_addr);
+      const bool papermono_touch = probe_i2c_ack(
+        ctx, wiring::papermono::internal_i2c_sda,
+        wiring::papermono::internal_i2c_scl, detail::papermono_probe_addr);
+      const auto pulls = probe_pin_pulls(ctx, (1ULL << 12) | (1ULL << 13));
+      const auto classify = [&](unsigned pin) -> char
       {
-        if (probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
-                          wiring::stopwatch::internal_i2c_scl, 0x50)) { return false; }
-        result->assign(&desc_stopwatch);
+        const unsigned sample = ((pulls.pulldown_high >> pin) & 1)
+                              | (((pulls.pullup_high >> pin) & 1) << 1);
+        return "DXFU"[sample];
+      };
+      const char g12 = classify(12), g13 = classify(13);
+      ESP_LOGD("board_detect_m5", "PM1 attempt=%u touch15=%u touch38=%u G12=%c G13=%c",
+               ctx.attempt, stopwatch_touch, papermono_touch, g12, g13);
+      // Both members carry NFC at 0x50; its ACK cannot exclude StopWatch.
+      if (stopwatch_touch != papermono_touch)
+      {
+        result->assign(stopwatch_touch ? &desc_stopwatch : &desc_papermono);
         return true;
       }
-      result->assign(&desc_papermono);
-      result->refine = detail::refine_papermono_touch;
-      return true;
+      if (!stopwatch_touch
+       && ((g12 == 'D' && g13 == 'D') || (g12 == 'U' && g13 == 'U')))
+      {
+        // Cold PaperMono needs power before touch confirmation, even after its
+        // SD pull-ups rise. This pre-confirmation write also admits StopWatch
+        // with unanswered touch and both IRQ lines low or both driven high.
+        result->assign(&desc_papermono);
+        result->refine = detail::refine_papermono_touch;
+        return true;
+      }
+      const board_desc_t* chosen = nullptr;
+      if (!stopwatch_touch)
+      {
+        if (g12 == 'F' || (g12 == 'D' && g13 == 'U')) { chosen = &desc_stopwatch; }
+      }
+      if (chosen)
+      {
+        return select_provisional_member(ctx, result, chosen, nullptr, nullptr,
+                                         "PM1 member touch unanswered");
+      }
+      const auto possible = [](board_id_t id) -> const board_desc_t*
+      {
+        if (id == desc_stopwatch.def.id) { return &desc_stopwatch; }
+        if (id == desc_papermono.def.id) { return &desc_papermono; }
+        return nullptr;
+      };
+      return select_provisional_member(ctx, result, possible(ctx.preferred),
+                                       possible(ctx.hint), nullptr,
+                                       "PM1 member evidence ambiguous");
     }
 
   private:

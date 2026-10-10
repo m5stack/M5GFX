@@ -427,7 +427,9 @@ namespace ops
                               const i2c_device_t* devices, std::size_t device_count,
                               const op_t* operations, std::size_t count,
                               const gpio_scope_t& gpio_scope,
-                              const retry_policy_t* policy = nullptr)
+                              const retry_policy_t* policy = nullptr,
+                              void (*wait_ready_finished)(void*, const i2c_device_t&,
+                                                          std::uint32_t, bool) = nullptr)
   {
     auto checked = validate_ops(devices, device_count, operations, count, gpio_scope);
     if (checked.status != op_status_t::ok) { return checked; }
@@ -511,9 +513,16 @@ namespace ops
                                   ? remaining
                                   : (device.wire_timeout_ms < remaining
                                      ? device.wire_timeout_ms : remaining);
-          if (backend.i2c_ready(backend.ctx, device, wire_timeout)) { break; }
+          if (backend.i2c_ready(backend.ctx, device, wire_timeout))
+          {
+            if (wait_ready_finished)
+            { wait_ready_finished(backend.ctx, device, backend.millis(backend.ctx) - started, true); }
+            break;
+          }
           if (static_cast<std::int32_t>(backend.millis(backend.ctx) - deadline) >= 0)
           {
+            if (wait_ready_finished)
+            { wait_ready_finished(backend.ctx, device, backend.millis(backend.ctx) - started, false); }
             return result(op_status_t::timeout, i);
           }
           const auto left = deadline - backend.millis(backend.ctx);
