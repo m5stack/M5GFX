@@ -435,6 +435,9 @@ namespace board_detect
     detector_workspace_t detector_workspace;
     // True once any family entered confirm() in this detection pass.
     bool confirm_attempted = false;
+    // A chip ID has established this family. Stop later family probes in this
+    // attempt even if its member is unresolved; retry/session verdicts stay unchanged.
+    bool family_identified = false;
     // A signature may suggest one board without entering confirm(). The first
     // detector in probe order owns the candidate for this attempt.
     const board_def_t* candidate = nullptr;

@@ -17,7 +17,7 @@ namespace m5gfx { namespace board_detect {
 struct board_desc_t {board_def_t def;};
 void board_result_t::assign(const board_desc_t* d) {desc=d; def=&d->def;}
 struct prepare_ctx_t {board_id_t preferred=0,hint=0; unsigned attempt=0; bool final_attempt=false;};
-struct probe_ctx_t : prepare_ctx_t {const board_def_t* candidate=nullptr; bool conditional_pins_unavailable=false;};
+struct probe_ctx_t : prepare_ctx_t {bool family_identified=false;const board_def_t* candidate=nullptr; bool conditional_pins_unavailable=false;};
 } }
 const board_desc_t desc_core2={{1,"Core2",0}},desc_tough={{2,"Tough",0}},desc_cardputer={{3,"Cardputer",0}},desc_cardputer_adv={{4,"ADV",0}},desc_vameter={{5,"VAMeter",0}},desc_unitc6l={{6,"UnitC6L",0}},desc_nesson1={{7,"NessoN1",0}},desc_papers3={{8,"PaperS3",0}},desc_paperdiy={{9,"PaperDIY",0}};
 `;
@@ -266,10 +266,10 @@ namespace papermono {constexpr int internal_i2c_sda=1,internal_i2c_scl=2;}}
 namespace detail {constexpr int stopwatch_probe_addr=0x15,papermono_probe_addr=0x38;
 bool refine_papermono_touch(board_result_t&,const prepare_ctx_t&){return true;}}
 struct pulls_t {std::uint64_t pulldown_high,pullup_high;};
-int sw,pm,g12,g13,reads;
+int sw,pm,g12,g13,reads;bool pm1_identity=true;
 pulls_t probe_pin_pulls(probe_ctx_t&,std::uint64_t){return {std::uint64_t(g12&1)<<12|std::uint64_t(g13&1)<<13,std::uint64_t((g12>>1)&1)<<12|std::uint64_t((g13>>1)&1)<<13};}
 bool probe_i2c_ack(probe_ctx_t&,int,int,int addr){++reads;assert(addr==0x15||addr==0x38);return addr==0x15?sw:pm;}
-bool probe_i2c_read(probe_ctx_t&,int,int,int addr,int,std::uint8_t* data,int,int,int){data[0]=0x50;data[1]=0x20;assert(addr==0x6e);return true;}
+bool probe_i2c_read(probe_ctx_t&,int,int,int addr,int,std::uint8_t* data,int,int,int){data[0]=0x50;data[1]=0x20;assert(addr==0x6e);return pm1_identity;}
 bool select_provisional_member(const prepare_ctx_t& ctx,board_result_t* result,const board_desc_t* preferred_if_possible,const board_desc_t* hinted_if_possible,const board_desc_t* family_default,const char* why) ${helper}
 bool confirm_member(probe_ctx_t& ctx,board_result_t* result) ${confirm}
 int main(){
@@ -277,7 +277,7 @@ int main(){
  for(bool final:{false,true})for(board_id_t preferred:{board_id_t(0),board_id_t(20),board_id_t(21),board_id_t(42)})
  for(board_id_t hint:{board_id_t(0),board_id_t(20),board_id_t(21)}){
  probe_ctx_t ctx;ctx.final_attempt=final;ctx.attempt=final?4:0;ctx.preferred=preferred;ctx.hint=hint;
- board_result_t r;reads=0;bool ok=confirm_member(ctx,&r);assert(reads==2);
+ board_result_t r;reads=0;bool ok=confirm_member(ctx,&r);assert(reads==2&&ctx.family_identified);
  int expected=0;bool provisional=false,refine=false;
  if(sw!=pm)expected=sw?20:21;
  else if(!sw&&((g12==0&&g13==0)||(g12==3&&g13==3))){expected=21;refine=true;}
@@ -290,6 +290,7 @@ int main(){
  detect_outcome_t out;out.result=r;if(provisional)assert(!should_persist_detection(out,0));}
  assert(stopwatch_power==(ok&&expected==20));assert(papermono_power==(ok&&expected==21));
  }
+ pm1_identity=false;probe_ctx_t ctx;board_result_t r;assert(!confirm_member(ctx,&r)&&!ctx.family_identified);
 }
 `,"PM1 pre-power table");
 });
@@ -330,7 +331,7 @@ test("production prepare retries failed power before pending member refinement",
  struct {int hw_port,sda,scl;} internal_i2c;struct {reset_kind_t kind;} reset;};`)
  .replace('bool final_attempt=false;','bool final_attempt=false; int* transaction=nullptr; int i2c_port_probe=0;');
  await compileRun(extended+`
-int power_calls,refine_calls,sd_calls,construct_calls;bool fail_power;
+int power_calls,refine_calls,sd_calls,construct_calls,observe_calls;bool fail_power,fail_observe;
 namespace lgfx {namespace i2c {struct value_t {bool has_value() const{return true;}int value() const{return 0;}};
  bool isInitialized(int){return false;}value_t getPinSDA(int){return {};}
  value_t getPinSCL(int){return {};}value_t init(int,int,int){return {};}}}
@@ -344,17 +345,19 @@ namespace startup_detail {
 }
 bool prepare_reset(const board_desc_t&,board_result_t&,const prepare_ctx_t&,int,void*,bool){return true;}
 bool refine_member(board_result_t&,const prepare_ctx_t&){++refine_calls;return true;}
+bool observe_member(board_result_t&,const prepare_ctx_t&){++observe_calls;return !fail_observe;}
 bool prepare_member(const board_desc_t& desc,board_result_t& result,const prepare_ctx_t& ctx) ${prepare}
 int main(){int tx=0,variant=0;
  // Pending refine represents both D/D and U/U; no refine represents touch-confirmed members.
- for(int row:{0,1,2})for(bool final:{false,true})for(bool failed:{false,true})for(bool scoped:{false,true}){
+ for(int row:{0,1,2})for(bool final:{false,true})for(bool failed:{false,true})for(bool scoped:{false,true})for(bool observation:{false,true})for(bool observation_failed:{false,true}){
  board_desc_t desc={{21,"PaperMono",0},{scoped?&variant:nullptr},{-1,47,48},{reset_kind_t::none}};
- board_result_t r;r.assign(&desc);r.refine=row<2?refine_member:nullptr;
+ board_result_t r;r.assign(&desc);r.refine=row<2?refine_member:nullptr;r.observe_after_power=(row==2&&observation)?observe_member:nullptr;
  prepare_ctx_t ctx;ctx.transaction=&tx;ctx.final_attempt=final;
- power_calls=refine_calls=sd_calls=construct_calls=0;fail_power=failed;
+ power_calls=refine_calls=sd_calls=construct_calls=observe_calls=0;fail_power=failed;fail_observe=observation_failed;
  const bool ok=prepare_member(desc,r,ctx);if(ok)++construct_calls;
  const bool retry=failed&&row<2&&!final;
- assert(ok==!retry&&construct_calls==int(!retry));assert(power_calls==1);
+ assert(ok==!retry&&construct_calls==int(!retry));assert(power_calls==1);assert(observe_calls==int(row==2&&observation&&!failed));
+ assert(bool(r.prepared&prepared_observation)==(row==2&&observation));
  assert(refine_calls==int(row<2&&!failed));assert(sd_calls==int(!retry));
  assert(r.provisional==(failed&&row<2&&final));
  assert(bool(r.prepared&prepared_refine)==(row<2&&!retry));
@@ -366,4 +369,184 @@ int main(){int tx=0,variant=0;
  prepare_ctx_t ctx;ctx.transaction=&tx;assert(prepare_member(desc,r,ctx));assert(!r.provisional);
 }
 `,"pending-refinement power failure");
+});
+
+test("production AXP subdivision excludes unsafe Station fallbacks before power", async () => {
+ const source=await fs.readFile(path.join(src,"m5/esp32_d0wdq6.inl"),"utf8");
+ const confirm=body(source.slice(source.indexOf('class axp_family_detector_t')),'bool confirm(');
+ const detector=await fs.readFile(path.join(src,"board_detect.inl"),"utf8");
+ const helper=body(detector,'static bool select_provisional_member');
+ const prepare=body(detector,'bool prepare(const board_desc_t& desc,');
+ const extended=common.replace('#define ESP_LOGW', '#define ESP_LOGE(...) ((void)0)\n#define ESP_LOGW').replace('struct board_desc_t {board_def_t def;};',`enum class reset_kind_t {none,i2c_regs}; struct board_desc_t {board_def_t def;struct {const int* variants;} power;
+ struct {int hw_port,sda,scl;} internal_i2c;struct {std::int8_t dc,cs,sclk,mosi,miso;} display;
+ struct {int sd_cs;} sd;struct {int pin;reset_kind_t kind;} reset;};`)
+ .replace('struct prepare_ctx_t {', 'struct tx_t {template<class T>void restore_start(T){}};\nstruct prepare_ctx_t {tx_t* transaction=nullptr; int i2c_port_probe=0; ');
+ await compileRun(extended+`
+const board_desc_t desc_station={{22,"Station",0}};
+namespace generated_options {namespace core2 {constexpr unsigned new_pmic=1;}}
+struct pmic_variant_t {unsigned id_value,detected_option;};
+namespace lgfx {namespace i2c {struct value_t {bool has_value() const{return true;}int value() const{return 0;}};
+ bool isInitialized(int){return false;}value_t getPinSDA(int){return {};}
+ value_t getPinSCL(int){return {};}value_t init(int,int,int){return {};}
+ struct response_t {bool ok;bool has_value() const{return ok;}};
+ response_t beginTransaction(int,int,int,bool);response_t endTransaction(int);}}
+int pmic_id,core_ack,tough_ack,g12,g32,g33,ack_reads,station_probes,sd_calls,core_power,sense_calls;
+bool panel_ok,pmic_ok=true,reset_ok=true;
+namespace lgfx {namespace i2c {
+ response_t beginTransaction(int,int addr,int freq,bool){++ack_reads;assert(freq==100000);assert(addr==0x38||addr==0x2e);return {addr==0x38?bool(core_ack):bool(tough_ack)};}
+ response_t endTransaction(int){return {true};}}}
+namespace startup_detail {
+ bool description_valid(const board_desc_t&){return true;}bool gpio_valid(int){return true;}
+ struct i2c_scope_t {bool opened=true;int port=0;i2c_scope_t(tx_t&,int,decltype(board_desc_t::internal_i2c)) {}};
+ void pin_level(int,bool){}
+ void hold_chip_selects(const board_desc_t&){}
+ bool prepare_power(const board_desc_t& d,board_result_t& r,int,bool){if(d.def.id==1||d.def.id==2)++core_power;r.prepared|=prepared_power;return true;}
+ bool prepare_sd_spi(const board_desc_t&,board_result_t& r,const prepare_ctx_t&){++sd_calls;r.prepared|=prepared_sd_spi;return true;}
+}
+namespace detail {constexpr int station_pmic_id=3,core2_touch_address=0x38,tough_touch_address=0x2e;
+ constexpr unsigned station_id_mask=0xfb,station_id=0x81,panel_id_command=4;
+ pmic_variant_t pmic;
+ const pmic_variant_t* observe_core_pmic(int){pmic={unsigned(pmic_id),pmic_id==0x4a?1u:0u};return pmic_ok?&pmic:nullptr;}
+ bool sd_pull_mask(const board_desc_t&,std::uint64_t* mask){*mask=7;return true;}
+ bool refine_core_family(board_result_t&,const prepare_ctx_t&){return true;}
+ bool observe_confirmed_core_panel(board_result_t&,const prepare_ctx_t&){return true;}}
+struct pulls_t {std::uint64_t pulldown_high,pullup_high;};
+pulls_t probe_pin_pulls(probe_ctx_t&,std::uint64_t mask){if(mask==7)return {7,7};++sense_calls;
+ return {std::uint64_t(g12&1)<<12|std::uint64_t(g32&1)<<32|std::uint64_t(g33&1)<<33,
+ std::uint64_t((g12>>1)&1)<<12|std::uint64_t((g32>>1)&1)<<32|std::uint64_t((g33>>1)&1)<<33};}
+bool probe_i2c_ack(probe_ctx_t&,int,int,int addr){++ack_reads;assert(addr==0x38||addr==0x2e);return addr==0x38?core_ack:tough_ack;}
+bool prepare_reset(const board_desc_t&,board_result_t&,const prepare_ctx_t&,int){return reset_ok;}
+bool prepare_reset(const board_desc_t&,board_result_t&,const prepare_ctx_t&,int,void*,bool){return reset_ok;}
+unsigned soft_spi_read32(probe_ctx_t&,int,int,int,int,int,int,int){++station_probes;return panel_ok?0x81:0;}
+bool select_provisional_member(const prepare_ctx_t& ctx,board_result_t* result,const board_desc_t* preferred_if_possible,const board_desc_t* hinted_if_possible,const board_desc_t* family_default,const char* why) ${helper}
+bool confirm_member(probe_ctx_t& ctx,board_result_t* result) ${confirm}
+bool prepare_member(const board_desc_t& desc,board_result_t& result,const prepare_ctx_t& ctx) ${prepare}
+int main(){tx_t tx;
+ for(int pmic_value:{3,0x4a})for(core_ack=0;core_ack<=1;++core_ack)for(tough_ack=0;tough_ack<=1;++tough_ack)
+ for(g12=0;g12<4;++g12)for(g32=0;g32<4;++g32)for(g33=0;g33<4;++g33)
+ for(bool final:{false,true})for(bool panel:{false,true})
+ for(board_id_t preference:{board_id_t(0),board_id_t(1),board_id_t(2),board_id_t(22),board_id_t(42)})
+ for(board_id_t hint:{board_id_t(0),board_id_t(1),board_id_t(2),board_id_t(22),board_id_t(42)}){
+ probe_ctx_t ctx;ctx.transaction=&tx;ctx.final_attempt=final;ctx.attempt=final?4:0;ctx.preferred=preference;ctx.hint=hint;
+ pmic_id=pmic_value;panel_ok=panel;ack_reads=station_probes=sd_calls=core_power=sense_calls=0;board_result_t r;
+ bool ok=confirm_member(ctx,&r);int expected=0;bool provisional=false,refine=false,observe=false,station=false;
+ if(!(core_ack&&tough_ack)&&!(pmic_id==0x4a&&tough_ack)){
+ if(core_ack||tough_ack){expected=core_ack?1:2;observe=true;}
+ else if(pmic_id==0x4a){if(final){expected=1;provisional=true;observe=true;}}
+ else if(g12==0&&g32==3&&g33==3){expected=1;refine=true;}
+ else if(g12==2||g12==0){station=true;if(panel)expected=22;}}
+ assert(ack_reads==2&&ok==(expected!=0));assert(ctx.family_identified);
+ assert(sense_calls==int(!core_ack&&!tough_ack&&pmic_id==3));assert(station_probes==int(station)&&sd_calls==int(station));
+ if(ok){assert(r.def->id==expected&&r.provisional==provisional);
+ assert(bool(r.refine)==refine&&bool(r.observe_after_power)==observe);
+ assert(r.option==(pmic_id==0x4a?1u:0u));assert(prepare_member(*r.desc,r,ctx));}
+ assert(core_power==int(ok&&(expected==1||expected==2)));
+ if(station||(!core_ack&&!tough_ack&&pmic_id==3&&g12!=0&&g12!=2))assert(core_power==0);
+ }
+ probe_ctx_t ctx;ctx.transaction=&tx;board_result_t r;pmic_ok=false;assert(!confirm_member(ctx,&r));assert(!ctx.family_identified);
+}
+`,"AXP pre-power table");
+});
+
+test("production AXP refinement reads both touches after SD preparation and panel-only observation preserves identity", async () => {
+ const source=await fs.readFile(path.join(src,"m5/esp32_d0wdq6.inl"),"utf8");
+ const detector=await fs.readFile(path.join(src,"board_detect.inl"),"utf8");
+ const panel=body(source,'bool observe_core_panel('),observer=body(source,'bool observe_confirmed_core_panel('),refine=body(source,'bool refine_core_family(');
+ const helper=body(detector,'static bool select_provisional_member');
+ const extended=common.replace('struct board_desc_t {board_def_t def;};',`struct board_desc_t {board_def_t def;
+ struct {int sda,scl;} internal_i2c;struct {std::int8_t dc,cs,sclk,mosi,miso;} display;struct {int sd_cs;} sd;};`)
+ .replace('struct prepare_ctx_t {','struct tx_t {template<class T>void restore_start(T){}};\nstruct prepare_ctx_t {tx_t* transaction=nullptr; int i2c_port_probe=0; bool allow_reset=false; ');
+ await compileRun(extended+`
+namespace generated_options {namespace core2 {constexpr unsigned new_pmic=1,lcd_e=2;}}
+enum class panel_variant_t {unknown,e};
+unsigned clock_ms;int sd_calls,panel_calls,tough_reads,core_reads;bool tough_ack,core_ack,panel_i2c_ok=true,panel_reset_ok=true;
+namespace lgfx {unsigned millis(){return clock_ms;}void delay(unsigned ms){clock_ms+=ms;}
+namespace i2c {struct response {bool ok;bool has_value(){return ok;}};
+ response readRegister8(int,int addr,int,int){if(addr==0x2e){++tough_reads;return {tough_ack};}assert(addr==0x38);++core_reads;return {core_ack};}}}
+namespace startup_detail {void pin_level(int,bool){}
+ struct i2c_scope_t {bool opened;int port=0;i2c_scope_t(tx_t&,int,decltype(board_desc_t::internal_i2c)):opened(panel_i2c_ok) {}};
+ bool prepare_sd_spi(const board_desc_t&,board_result_t& r,const prepare_ctx_t&){if(!(r.prepared&prepared_sd_spi)){++sd_calls;r.prepared|=prepared_sd_spi;}return true;}}
+struct soft_spi_t {soft_spi_t(int,int,int,int){}void init(){assert(sd_calls==1);}};
+panel_variant_t identify_panel_variant(soft_spi_t&,int,std::uint32_t*,int,bool=true){assert(sd_calls==1);++panel_calls;return panel_variant_t::e;}
+bool prepare_reset(const board_desc_t&,board_result_t&,const prepare_ctx_t&,int){return panel_reset_ok;}
+void log_panel_variant(panel_variant_t,const std::uint32_t*){}
+constexpr int tough_touch_address=0x2e,core2_touch_address=0x38,touch_probe_register=0,tough_touch_i2c_frequency=400000,touch_startup_poll_ms=300;
+bool select_provisional_member(const prepare_ctx_t& ctx,board_result_t* result,const board_desc_t* preferred_if_possible,const board_desc_t* hinted_if_possible,const board_desc_t* family_default,const char* why) ${helper}
+bool observe_core_panel(board_result_t& result,const prepare_ctx_t& ctx,panel_variant_t& variant,std::uint32_t keys[4]) ${panel}
+bool observe_panel(board_result_t& result,const prepare_ctx_t& ctx) ${observer}
+bool refine_member(board_result_t& result,const prepare_ctx_t& ctx) ${refine}
+int main(){tx_t tx;
+ for(bool new_pmic:{false,true})for(bool core:{false,true})for(bool tough:{false,true})for(bool final:{false,true})
+ for(board_id_t preference:{board_id_t(0),board_id_t(1),board_id_t(2),board_id_t(22),board_id_t(42)})
+ for(board_id_t hint:{board_id_t(0),board_id_t(1),board_id_t(2),board_id_t(22),board_id_t(42)}){
+ prepare_ctx_t ctx;ctx.transaction=&tx;ctx.final_attempt=final;ctx.preferred=preference;ctx.hint=hint;
+ board_result_t r;r.assign(&desc_core2);r.option=new_pmic?1:0;sd_calls=panel_calls=tough_reads=core_reads=0;clock_ms=0;tough_ack=tough;core_ack=core;
+ bool ok=refine_member(r,ctx);assert(tough_reads==core_reads&&tough_reads>0);assert(sd_calls==1&&panel_calls==1);
+ const bool contradiction=(core&&tough)||(new_pmic&&tough);
+ assert(ok==(!contradiction&&(core||tough||final)));
+ if(ok){const auto possible=[&](board_id_t id){return id==1||(id==2&&!new_pmic);};
+ const auto expected=core?1:tough?2:possible(preference)?preference:possible(hint)?hint:1;
+ assert(r.def->id==expected&&r.provisional==(!core&&!tough));assert(r.option==(unsigned(expected==2?0:new_pmic)|2));}
+ }
+ for(const auto* confirmed:{&desc_core2,&desc_tough}){
+ board_result_t r;r.assign(confirmed);prepare_ctx_t ctx;ctx.transaction=&tx;
+ sd_calls=panel_calls=tough_reads=core_reads=0;tough_ack=core_ack=true;
+ assert(observe_panel(r,ctx));assert(r.def==&confirmed->def&&r.option==2&&!r.provisional);
+ assert(sd_calls==1&&panel_calls==1&&tough_reads==0&&core_reads==0);
+ assert(observe_panel(r,ctx));assert(sd_calls==1);
+ }
+ for(bool opened:{false,true})for(bool reset:{false,true}){
+ board_result_t r;r.assign(&desc_core2);prepare_ctx_t ctx;ctx.transaction=&tx;ctx.allow_reset=true;
+ sd_calls=panel_calls=0;panel_i2c_ok=opened;panel_reset_ok=reset;
+ assert(observe_panel(r,ctx)==(opened&&reset));assert(r.def==&desc_core2.def&&!r.provisional);
+ if(!opened||!reset)assert(!(r.option&generated_options::core2::lcd_e));
+ }
+}
+`,"AXP post-power refinement and observation");
+});
+
+test("production detector runner stops later families only after identified AXP or PM1", async () => {
+ const source=await fs.readFile(path.join(src,"board_detect.inl"),"utf8");
+ const run=body(source,'bool run_detector('),detect=body(source,'board_result_t detect_board(');
+ const extended=common.replace('#define ESP_LOGW', '#define ESP_LOGE(...) ((void)0)\n#define ESP_LOGW')
+ .replace('struct board_desc_t {board_def_t def;};','struct board_desc_t {board_def_t def;struct {const char* const* data;unsigned size;} option_names;};')
+ .replace('struct prepare_ctx_t {', 'struct tx_t {int rollbacks=0;void rollback(){++rollbacks;}};\nstruct prepare_ctx_t {tx_t* transaction=nullptr; ')
+ .replace('bool family_identified=false;', 'bool confirm_attempted=false;bool family_identified=false;');
+ await compileRun(extended+`
+#include <array>
+#include <cstring>
+#include <cstdio>
+const char* tag="host";constexpr unsigned max_detector_families=4;
+struct edge_t {board_id_t before,after;};const std::array<edge_t,0> detector_order_edges={};
+struct board_detector_t {
+ const board_def_t* const* members;board_detector_t(const board_def_t* const* m):members(m){}
+ virtual bool signature(probe_ctx_t&) const=0;virtual bool confirm(probe_ctx_t&,board_result_t*) const=0;
+ bool has_member(board_id_t id) const {for(auto p=members;*p;++p)if((*p)->id==id)return true;return false;}
+};
+bool enabled(const probe_ctx_t&,board_id_t){return true;}
+bool fallback_only(const board_detector_t*){return false;}
+bool gpio_power_hold_family(const board_detector_t*){return false;}
+bool run_detector(const board_detector_t* detector,probe_ctx_t& ctx,board_result_t* result) ${run}
+board_result_t detect_board(const board_detector_t* const* list,board_id_t hint,probe_ctx_t& ctx) ${detect}
+const board_desc_t desc_pm1={{20,"StopWatch",0}};
+struct fake_detector_t:board_detector_t {
+ mutable int signatures=0,confirms=0;bool signature_ok=true,id_ok=false,member_ok=false;const board_desc_t* desc;
+ fake_detector_t(const board_def_t* const* members,const board_desc_t* d):board_detector_t(members),desc(d){}
+ bool signature(probe_ctx_t&) const override {++signatures;return signature_ok;}
+ bool confirm(probe_ctx_t& ctx,board_result_t* r) const override {++confirms;if(!id_ok)return false;ctx.family_identified=true;if(!member_ok)return false;r->assign(desc);return true;}
+};
+int main(){for(const auto* desc:{&desc_core2,&desc_pm1})for(bool signature:{false,true})for(bool identified:{false,true})for(bool member:{false,true}){
+ const board_def_t* first_members[]={&desc->def,nullptr};const board_def_t* later_members[]={&desc_tough.def,nullptr};
+ fake_detector_t first(first_members,desc),later(later_members,&desc_tough);first.signature_ok=signature;first.id_ok=identified;first.member_ok=member;later.id_ok=later.member_ok=true;
+ const board_detector_t* list[]={&first,&later,nullptr};tx_t tx;probe_ctx_t ctx;ctx.transaction=&tx;ctx.family_identified=true;
+ const auto result=detect_board(list,0,ctx);const bool stops=signature&&identified;
+ assert(first.signatures==1&&later.signatures==int(!stops));assert(first.confirms==int(signature));
+ if(stops&&member)assert(result.def==&desc->def);
+ else if(stops)assert(result.status==detect_status_t::no_match&&result.desc==nullptr&&result.def->id==board_id_unknown);
+ else assert(result.def==&desc_tough.def);
+ // A known-family miss still rolls back this probe before the session retries.
+ if(signature&&!member)assert(tx.rollbacks==1);
+ }
+}
+`,"identified family stops subsequent probes");
 });

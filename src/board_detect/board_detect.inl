@@ -423,6 +423,7 @@ namespace board_detect
   {
     board_result_t result;
     ctx.confirm_attempted = false;
+    ctx.family_identified = false;
     if (list == nullptr) { return result; }
     ctx.hint = hint;
 
@@ -481,6 +482,7 @@ namespace board_detect
       if (chosen == count) { break; } // Generated constraints must be acyclic.
       tried[chosen] = true;
       if (run_detector(list[chosen], ctx, &result)) { return result; }
+      if (ctx.family_identified) { break; }
       if (list[chosen] == hinted)
       {
         ESP_LOGD(tag, "hint=%u did not match its detector family", static_cast<unsigned>(hint));
@@ -1881,6 +1883,19 @@ namespace board_detect
     else if (result.desc != nullptr)
     {
       current = result.desc;
+    }
+    if (!(result.prepared & prepared_observation) && result.observe_after_power != nullptr)
+    {
+      // Panel metadata is optional after retained power failure; the member
+      // was already confirmed before this observer was attached.
+      if (!(result.prepared & prepared_power_failed)
+       && !result.observe_after_power(result, ctx))
+      {
+        // Optional panel metadata must not discard a member confirmed by touch.
+        ESP_LOGW("board_detect", "post-power observation failed; retaining board=%u",
+                 static_cast<unsigned>(result.def->id));
+      }
+      result.prepared |= prepared_observation;
     }
     if (!startup_detail::prepare_sd_spi(*current, result, ctx)) { return false; }
     const bool reset_was_prepared = result.prepared & prepared_reset;

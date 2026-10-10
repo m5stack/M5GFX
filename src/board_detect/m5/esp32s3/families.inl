@@ -532,6 +532,7 @@ namespace m5
       {
         return false;
       }
+      ctx.family_identified = true;
       // IOE1 takes hundreds of milliseconds to boot; its presence is not
       // member evidence. Wait only when its selected power sequence needs it.
       const bool stopwatch_touch = probe_i2c_ack(

@@ -1005,16 +1005,6 @@ namespace m5gfx
     probe.i2c_port_probe = probe_i2c_port;
     probe.transaction = &transaction;
     probe.enabled_ids = request.target_set;
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-#if defined (M5GFX_AUTODETECT_TEST_STATION_TO_CORE2)
-    // Test-only: after the forced Station miss and Core2 match, convert the
-    // result to excluded so the retained success-state GPIOs are rolled back.
-    static const board_detect::board_id_t enabled_ids[] = {
-      board_detect::board_id_unknown,
-    };
-    probe.enabled_ids = enabled_ids;
-#endif
-#endif
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     probe.conditional_pins_unavailable = conditional_pins_unavailable;
 #if defined (M5GFX_AUTODETECT_TEST_EXCLUDE_ATOMS3)

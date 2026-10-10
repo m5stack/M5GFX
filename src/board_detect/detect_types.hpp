@@ -49,6 +49,7 @@ namespace board_detect
     prepared_refine = 1u << 5,
     // The confirmed board was retained after its power operation list stopped.
     prepared_power_failed = 1u << 6,
+    prepared_observation = 1u << 7,
   };
 
   enum class detect_status_t : std::uint8_t
@@ -80,6 +81,9 @@ namespace board_detect
     detect_status_t status = detect_status_t::no_match;
     // Optional read-only member refinement after power preparation.
     refine_fn_t refine = nullptr;
+    // Optional post-power observation for an already confirmed member. Unlike
+    // refinement, failure of retained power may skip it without losing identity.
+    refine_fn_t observe_after_power = nullptr;
 
     void assign(const board_desc_t* value);
   };
