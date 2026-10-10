@@ -81,6 +81,8 @@ namespace board_detect
     detect_status_t status = detect_status_t::no_match;
     // Optional read-only member refinement after power preparation.
     refine_fn_t refine = nullptr;
+    // Detector-private state passed to refine; construction and NVS ignore it.
+    std::uint8_t refine_state = 0;
     // Optional post-power observation for an already confirmed member. Unlike
     // refinement, failure of retained power may skip it without losing identity.
     refine_fn_t observe_after_power = nullptr;

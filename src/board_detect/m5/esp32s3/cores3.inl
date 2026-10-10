@@ -5,7 +5,11 @@
     constexpr std::uint32_t vbus_5v = generated_options::cores3::vbus_5v;
     constexpr std::uint32_t internal_camera_confirmed =
       generated_options::cores3::internal_camera_confirmed;
-    constexpr std::uint32_t release_probe_unavailable = std::uint32_t(1) << 31;
+    constexpr std::uint8_t release_unavailable = 3;
+    static_assert(release_unavailable != static_cast<unsigned>(pin_release_band_t::short_release)
+               && release_unavailable != static_cast<unsigned>(pin_release_band_t::ambiguous)
+               && release_unavailable != static_cast<unsigned>(pin_release_band_t::long_release),
+                  "Unavailable release must not alias a measured band");
     constexpr int sda = wiring::cores3::internal_i2c_sda;
     constexpr int scl = wiring::cores3::internal_i2c_scl;
     constexpr std::uint32_t i2c_freq = specs::cores3::pmic::i2c_freq;
@@ -223,18 +227,60 @@
       return prepare(desc, result, ctx);
     }
 
+    bool stackchan_base_gate(probe_ctx_t& probe)
+    {
+      // Sample one pin at a time: the base couples G6 and G7 electrically.
+      constexpr std::uint64_t mask = (std::uint64_t(1) << 5)
+                                   | (std::uint64_t(1) << 6) | (std::uint64_t(1) << 7);
+      const auto pulls = probe_pin_pulls(probe, mask);
+      const auto high = std::uint64_t(1) << 6;
+      bool gate = (pulls.pulldown_high & mask) == high
+               && (pulls.pullup_high & mask) == high;
+#if defined(M5GFX_AUTODETECT_TEST_CORES3_STACKCHAN_GATE)
+      gate = true;
+#endif
+      return gate;
+    }
+
+    bool stackchan_ack(const prepare_ctx_t& ctx, bool gate)
+    {
+#if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_STACKCHAN)
+      return true;
+#else
+      // Initialize once; the ACK loop does not repeat the base's pull measurements.
+      // Software I2C START may recover held SDA on each ACK with up to nine
+      // clocks and STOP.
+      startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc_cores3.internal_i2c);
+      if (!i2c.opened) { return false; }
+      const auto started = lgfx::millis();
+      do
+      {
+#if defined(M5GFX_AUTODETECT_TEST_CORES3_STACKCHAN_NACK)
+        const bool ack = false;
+#else
+        const bool began = lgfx::i2c::beginTransaction(
+          i2c.port, specs::stackchan::i2c_stackchan_ioe::i2c_addr,
+          specs::stackchan::i2c_stackchan_ioe::i2c_freq, false).has_value();
+        const bool ended = lgfx::i2c::endTransaction(i2c.port).has_value();
+        const bool ack = began && ended;
+#endif
+        // In-flight ACK timeout and START recovery may overrun the 50 ms window.
+        if (ack || !gate || lgfx::millis() - started >= 50) { return ack; }
+        lgfx::delay(1);
+      } while (true);
+#endif
+    }
+
     bool refine(board_result_t& result, const prepare_ctx_t& ctx)
     {
       if (result.option & vbus_5v) { enable_bus_out(ctx); }
-      const bool capacitance_said_se = result.desc == &desc_cores3se;
+      const unsigned band = result.refine_state;
+      result.refine_state = 0;
       const bool confirmed_before_power = result.option & internal_camera_confirmed;
-      const bool release_was_unavailable = result.option & release_probe_unavailable;
-      result.option &= ~release_probe_unavailable;
       bool has_camera = confirmed_before_power;
       if (!confirmed_before_power)
       {
-        // One post-power read is deliberately retained for GPIO-classified
-        // boards so a now-responsive camera can correct only toward CoreS3.
+        // One post-power read is deliberately retained to recover waking cameras.
 #if defined(M5GFX_AUTODETECT_TEST_CORES3_NO_CAMERA)
         has_camera = false;
 #else
@@ -242,36 +288,72 @@
         static_cast<prepare_ctx_t&>(probe) = ctx;
         has_camera = camera_id(probe);
 #endif
-        if (!has_camera)
-        {
-          // Only an unavailable release probe falls back to the legacy
-          // camera-absence rule; a completed ambiguous probe still biases CoreS3.
-          if (capacitance_said_se || release_was_unavailable)
-          {
-            if (release_was_unavailable) { result.assign(&desc_cores3se); }
-            return refine_panel(result, ctx);
-          }
-          ESP_LOGW("M5GFX", "[Autodetect] CoreS3 capacitance indicated camera family, but camera ID was unavailable");
-        }
-        else if (capacitance_said_se)
-        {
-          ESP_LOGW("M5GFX", "[Autodetect] CoreS3 capacitance indicated SE, but camera ID matched; using camera family");
-          result.assign(&desc_cores3);
-        }
       }
+      probe_ctx_t probe;
+      static_cast<prepare_ctx_t&>(probe) = ctx;
+      const bool gate = stackchan_base_gate(probe);
+      const bool ioe_ack = stackchan_ack(ctx, gate);
       std::uint8_t firmware = 0;
+      bool firmware_read = false;
+      if (ioe_ack)
+      {
 #if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_STACKCHAN)
-      firmware = specs::stackchan::i2c_stackchan_ioe::firmware_min;
-      const bool has_ioe = true;
+        firmware = specs::stackchan::i2c_stackchan_ioe::firmware_min;
+        firmware_read = true;
 #else
-      const bool has_ioe = read(ctx, specs::stackchan::i2c_stackchan_ioe::i2c_addr,
-                                specs::stackchan::i2c_stackchan_ioe::firmware_reg,
-                                &firmware, specs::stackchan::i2c_stackchan_ioe::i2c_freq);
+        firmware_read = read(ctx, specs::stackchan::i2c_stackchan_ioe::i2c_addr,
+                             specs::stackchan::i2c_stackchan_ioe::firmware_reg,
+                             &firmware, specs::stackchan::i2c_stackchan_ioe::i2c_freq);
 #endif
-      result.assign(has_ioe && firmware >= specs::stackchan::i2c_stackchan_ioe::firmware_min
-                  ? &desc_stackchan : &desc_cores3);
+      }
+      const auto possible = [&](board_id_t id) -> const board_desc_t*
+      {
+        if (id == desc_cores3.def.id) { return &desc_cores3; }
+        if (id == desc_cores3se.def.id && !has_camera
+         && band != static_cast<unsigned>(pin_release_band_t::long_release)) { return &desc_cores3se; }
+        if (id == desc_stackchan.def.id && ioe_ack) { return &desc_stackchan; }
+        return nullptr;
+      };
+      const auto fallback = [&](const board_desc_t* representative, const char* why) -> bool
+      {
+        if (!select_provisional_member(ctx, &result, possible(ctx.preferred),
+                                       possible(ctx.hint), representative, why)) { return false; }
+        return refine_panel(result, ctx);
+      };
+      if (!has_camera)
+      {
+        if (band == static_cast<unsigned>(pin_release_band_t::short_release))
+        { result.assign(&desc_cores3se); return refine_panel(result, ctx); }
+        if (band == static_cast<unsigned>(pin_release_band_t::ambiguous))
+        { return fallback(&desc_cores3, "CoreS3 release ambiguous and camera unanswered"); }
+        if (band == release_unavailable)
+        {
+          // Dedicated GPIO timing can be unavailable from an unpinned task.
+          // Retain legacy camera-absence selection so normal SE boots do not
+          // regress to five retries and an uncached candidate; elimination remains.
+          result.assign(&desc_cores3se);
+          return refine_panel(result, ctx);
+        }
+        ESP_LOGW("M5GFX", "[Autodetect] CoreS3 capacitance indicated camera family, but camera ID was unavailable");
+      }
+      else if (band == static_cast<unsigned>(pin_release_band_t::short_release))
+      {
+        ESP_LOGW("M5GFX", "[Autodetect] CoreS3 capacitance indicated SE, but camera ID matched; using camera family");
+      }
+      if (ioe_ack && !firmware_read)
+      { return fallback(&desc_stackchan, "StackChan ACK but firmware unreadable"); }
+      if (gate && !ioe_ack)
+      {
+        // An M-Bus module can mimic the base gate, adding at most a 50 ms
+        // new-probe window; an in-flight fixed-time I2C call may overrun it.
+        ESP_LOGW("M5GFX", "[Autodetect] StackChan base gate without IOE ACK");
+      }
+      // Older base firmware remains CoreS3, matching the established contract.
+      result.assign(firmware_read && firmware >= specs::stackchan::i2c_stackchan_ioe::firmware_min
+                    ? &desc_stackchan : &desc_cores3);
       return refine_panel(result, ctx);
     }
+
   }
 
   class cores3_family_detector_t final : public board_detector_t
@@ -312,6 +394,7 @@
       has_camera = cores3_detail::camera_id(ctx);
 #endif
       pin_release_band_t family_band = pin_release_band_t::long_release;
+      bool release_unavailable = false;
       if (!has_camera)
       {
         const auto release = probe_dedicated_pin_release(
@@ -322,7 +405,7 @@
         const auto summary = summarize_dedicated_release(
           release, specs::cores3::release_probe::short_max_ns,
           specs::cores3::release_probe::long_min_ns);
-        if (!release.available) { result->option |= cores3_detail::release_probe_unavailable; }
+        release_unavailable = !release.available;
         family_band = summary.band;
 #if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_SE)
         family_band = pin_release_band_t::short_release;
@@ -342,9 +425,11 @@
                  unsigned(summary.average_ns), unsigned(summary.valid_pins), unsigned(summary.pin_count));
         if (family_band == pin_release_band_t::ambiguous)
         {
-          ESP_LOGW("M5GFX", "[Autodetect] CoreS3 release result was ambiguous; biasing toward camera family");
+          ESP_LOGW("M5GFX", "[Autodetect] CoreS3 release result was ambiguous; awaiting member refinement");
         }
       }
+      result->refine_state = release_unavailable ? cores3_detail::release_unavailable
+                                                : static_cast<std::uint8_t>(family_band);
       const auto vbus_option = cores3_detail::observe_vbus(ctx);
       result->assign(family_band == pin_release_band_t::short_release ? &desc_cores3se
                                                                       : &desc_cores3);

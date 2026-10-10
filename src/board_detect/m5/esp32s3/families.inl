@@ -765,38 +765,48 @@ namespace m5
         ctx, pulls, sense_mask, wiring::cardputer_adv::internal_i2c_sda,
         wiring::cardputer_adv::internal_i2c_scl);
 
-      const board_desc_t* chosen = &desc_cardputer;
-      bool variant_unanswered = false;
-      if ((pulls.pulldown_high & vameter_mask) == vameter_mask)
+      // Recovery may resample without release; obtain fresh released levels
+      // before deciding whether these keyboard/I2C lines genuinely float.
+      pulls = probe_pin_pulls(ctx, sense_mask, pull_release_us);
+      const bool vameter_up = (pulls.pulldown_high & pulls.pullup_high & vameter_mask) == vameter_mask;
+      const bool adv_up = (pulls.pulldown_high & pulls.pullup_high & adv_mask) == adv_mask;
+      bool all_floating = true;
+      for (const auto pin : wiring::cardputer::cardputer_subdivision::sense_pins)
       {
-        // INA226 manufacturer ID register FEh is 5449h (TI). The second
-        // VAMeter device must also answer; a probe miss cannot prove Cardputer.
+        all_floating = all_floating && classify_pin_pull(pulls, pin) == pull_class_t::floating;
+      }
+      const board_desc_t* chosen = &desc_cardputer;
+      bool vameter_answers = false, adv_answers = false;
+      if (vameter_up)
+      {
+        // INA226 manufacturer ID FEh is 5449h; its companion must also ACK.
         std::uint8_t manufacturer[2] = {};
-        variant_unanswered = !probe_i2c_read(ctx,
+        vameter_answers = probe_i2c_read(ctx,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
                             wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[0],
                             0xFE, manufacturer, sizeof(manufacturer), 100000, 0, false)
-                          || manufacturer[0] != 0x54 || manufacturer[1] != 0x49
-                          || !probe_i2c_ack(ctx,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
-                           wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]);
-        if (!variant_unanswered) { chosen = &desc_vameter; }
+                       && manufacturer[0] == 0x54 && manufacturer[1] == 0x49
+                       && probe_i2c_ack(ctx,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_sda,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_scl,
+                            wiring::cardputer::cardputer_subdivision::vameter_i2c_addrs[1]);
       }
-      else if ((pulls.pulldown_high & adv_mask) == adv_mask)
+      if (adv_up)
       {
-        // The ADV keyboard scanner is a TCA8418 at its fixed 34h address.
-        variant_unanswered = !probe_i2c_ack(
-          ctx, wiring::cardputer_adv::internal_i2c_sda,
-          wiring::cardputer_adv::internal_i2c_scl, 0x34);
-        if (!variant_unanswered) { chosen = &desc_cardputer_adv; }
+        // Read independently when both pairs are high; two answers conflict.
+        adv_answers = probe_i2c_ack(ctx, wiring::cardputer_adv::internal_i2c_sda,
+                                   wiring::cardputer_adv::internal_i2c_scl, 0x34);
       }
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_VARIANT)
-      if ((pulls.pulldown_high & vameter_mask) == vameter_mask
-       || (pulls.pulldown_high & adv_mask) == adv_mask)
-      { variant_unanswered = true; }
+      vameter_answers = adv_answers = false;
 #endif
+      if (vameter_answers && adv_answers) { return false; }
+      if (vameter_answers) { chosen = &desc_vameter; }
+      if (adv_answers) { chosen = &desc_cardputer_adv; }
+      // A pressed key or a weak/held line is not evidence for normal Cardputer.
+      // Keep retrying; its displayable provisional fallback takes all attempts.
+      const bool variant_unanswered = !vameter_answers && !adv_answers && !all_floating;
       if (variant_unanswered)
       {
         if (!ctx.final_attempt) { return false; }

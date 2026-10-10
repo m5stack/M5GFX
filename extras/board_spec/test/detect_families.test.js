@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.resolve(here, "../../../src/board_detect");
 const common = `
 #include "board_detect/detect_session.hpp"
+#include "board_detect/detect_class.hpp"
 #include <cassert>
 #include <initializer_list>
 #define ESP_LOGW(...) ((void)0)
@@ -37,10 +38,11 @@ namespace cardputer_adv {constexpr int internal_i2c_sda=2,internal_i2c_scl=3;}
 }
 namespace specs {namespace cardputer {constexpr bool bus_three_wire=true;}}
 const int cardputer_probes[]={1};
-struct pulls_t {std::uint64_t pulldown_high;};
+using pulls_t=pin_pull_result_t;
+constexpr unsigned pull_release_us=128;
 std::uint64_t observed;
 bool probe_spi_id(probe_ctx_t&,const board_desc_t& d,const int*,int,board_result_t* r,bool) {r->assign(&d); return true;}
-pulls_t probe_pin_pulls(probe_ctx_t&,std::uint64_t) {return {observed};}
+pulls_t probe_pin_pulls(probe_ctx_t&,std::uint64_t,unsigned release=0) {pulls_t r;r.pulldown_high=observed;r.pullup_high=15;r.pulldown_release_high=observed;r.pullup_release_high=15;r.release_sampled=release!=0;return r;}
 pulls_t recover_held_sda_and_resample(probe_ctx_t&,pulls_t p,std::uint64_t,int,int) {return p;}
 bool probe_i2c_read(probe_ctx_t&,int,int,int,int,std::uint8_t*,int,int,int,bool) {return false;}
 bool probe_i2c_ack(probe_ctx_t&,int,int,int) {return false;}
@@ -367,6 +369,10 @@ int main(){int tx=0,variant=0;
  board_desc_t desc={{21,"PaperMono",0},{nullptr},{-1,47,48},{reset_kind_t::none}};
  board_result_t r;r.assign(&desc);r.refine=refine_member;r.prepared=prepared_power|prepared_power_failed|prepared_refine;
  prepare_ctx_t ctx;ctx.transaction=&tx;assert(prepare_member(desc,r,ctx));assert(!r.provisional);
+ // Retained final power failure skips refinement without publishing its private state.
+ board_result_t pending;pending.assign(&desc);pending.refine=refine_member;pending.refine_state=3;pending.option=7;
+ ctx.final_attempt=true;fail_power=true;assert(prepare_member(desc,pending,ctx));
+ assert(pending.provisional&&pending.refine_state==3&&pending.option==7);
 }
 `,"pending-refinement power failure");
 });
