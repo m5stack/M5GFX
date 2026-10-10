@@ -88,7 +88,7 @@ test("GPIO power-hold catalog and M5GFX descriptions agree", async () => {
     const expected = hasGpioPowerHold(board);
     const files = ["esp32_d0wdq6.inl", "esp32_pico.inl", "esp32s3/families.inl", "esp32s3/cores3.inl",
       "esp32c3.inl", "esp32c5/toughc5.inl", "esp32c6/c6_display.inl", "esp32c6/c6_displayless.inl", "esp32h2.inl",
-      "esp32c61/corematrix.inl", "esp32p4/corep4x.inl", "esp32p4/tab5.inl", "esp32p4/unitpoep4.inl", "esp32p4/stampp4.inl"];
+      "esp32c61/corematrix.inl", "esp32p4/corep4x.inl", "esp32p4/tab5.inl", "esp32p4/unitpoep4.inl"];
     const sources = await Promise.all(files.map((name) => fs.readFile(path.join(sourceRoot, "src/board_detect/m5", name), "utf8")));
     const source = sources.find((text) => text.includes(`${target.desc_name} = {`));
     assert.ok(source, id);

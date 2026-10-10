@@ -489,6 +489,9 @@ namespace board_detect
       }
     }
     result.candidate = ctx.candidate;
+    if (ctx.candidate != nullptr)
+    { ESP_LOGD(tag, "weak candidate board=%u name=%s",
+               static_cast<unsigned>(ctx.candidate->id), ctx.candidate->name); }
     return result;
   }
 

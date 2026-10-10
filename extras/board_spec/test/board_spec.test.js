@@ -83,8 +83,7 @@ const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_de
 const esp32c61Source = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c61/corematrix.inl"), "utf8");
 const esp32p4Source = (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/corep4x.inl"), "utf8"))
   + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5.inl"), "utf8"))
-  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/unitpoep4.inl"), "utf8"))
-  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/stampp4.inl"), "utf8"));
+  + "\n" + (await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/unitpoep4.inl"), "utf8"));
 const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5_setup.inl"), "utf8");
 const pmicOpsSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/pmic_ops.hpp"), "utf8");
 const i18nMatch = /<script type="application\/json" id="board-spec-i18n">([\s\S]*?)<\/script>/.exec(editorHtml);
@@ -2388,7 +2387,7 @@ test("gpio_power keeps the active-high hold level for existing members", () => {
 });
 
 test("no_display_pins is used only when a display has no GPIO bus or is absent", () => {
-  const allowed = new Set(["papers3", "paperdiy", "corematrix", "corep4x", "tab5", "tab5x", "atompsram", "atomvoice", "atommatrix", "atomlite", "atomu", "stamppico", "timercam", "nanoc6", "nanoh2", "stampc3", "stampc3u", "stampc5", "stampc6", "atoms3lite", "atoms3u", "stamps3", "dualkey", "capsule", "powerhub", "atoms3rcam", "atoms3rext", "atomvoices3r", "stamps3bat", "stamps3mini", "unitpoep4", "stampp4", "stampp4x"]);
+  const allowed = new Set(["papers3", "paperdiy", "corematrix", "corep4x", "tab5", "tab5x", "atompsram", "atomvoice", "atommatrix", "atomlite", "atomu", "stamppico", "timercam", "nanoc6", "nanoh2", "stampc3", "stampc3u", "stampc5", "stampc6", "atoms3lite", "atoms3u", "stamps3", "dualkey", "capsule", "powerhub", "atoms3rcam", "atoms3rext", "atomvoices3r", "stamps3bat", "stamps3mini", "unitpoep4"]);
   for (const source of [d0wdq6Source, esp32s3Source, esp32c3Source, esp32c5Source, esp32c6Source, esp32h2Source, esp32c61Source, esp32p4Source]) {
     const descs = [...source.matchAll(/static constexpr board_desc_t desc_([a-z0-9_]+) = \{([\s\S]*?)\n\s*\};/g)];
     assert.ok(descs.length > 0);

@@ -144,13 +144,6 @@
         "boards": [
           "m5unitpoep4"
         ]
-      },
-      {
-        "detector": "stampp4_detector",
-        "boards": [
-          "m5stampp4",
-          "m5stampp4x"
-        ]
       }
     ],
     "constraints": [
@@ -163,11 +156,6 @@
         "before": "tab5_family_detector",
         "after": "unitpoep4_detector",
         "reason": "Probe Tab5 internal devices before driving Ethernet management pins"
-      },
-      {
-        "before": "unitpoep4_detector",
-        "after": "stampp4_detector",
-        "reason": "StampP4 is only a fallback candidate after all P4 probes"
       }
     ]
   }
