@@ -21,13 +21,30 @@ namespace m5
   using construct_fn_t = construct_status_t (*)(const board_result_t&, display_parts_t*);
   using success_annotation_fn_t = const char* (*)(const board_result_t&);
 
+  using fixed_start_fn_t = bool (*)(board_result_t&, const prepare_ctx_t&);
+
   struct board_entry_t
   {
     const board_desc_t* desc;
     construct_fn_t construct;
     const char* success_log_name;
     success_annotation_fn_t success_annotation;
+    fixed_start_fn_t fixed_start;
+
+    constexpr board_entry_t(const board_desc_t* desc_, construct_fn_t construct_,
+                            const char* name_, success_annotation_fn_t annotation_,
+                            fixed_start_fn_t fixed_start_ = nullptr)
+    : desc(desc_), construct(construct_), success_log_name(name_),
+      success_annotation(annotation_), fixed_start(fixed_start_) {}
   };
+
+  template <std::size_t BoardCount>
+  const board_entry_t* find_board(const board_entry_t (&boards)[BoardCount], board_id_t id)
+  {
+    for (const auto& entry : boards)
+    { if (entry.desc->def.id == id) { return &entry; } }
+    return nullptr;
+  }
 
   struct success_log_t
   {

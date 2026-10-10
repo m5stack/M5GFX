@@ -1583,6 +1583,61 @@ namespace board_detect
     return ok;
   }
 
+  bool observe_spi_variant(probe_ctx_t& ctx, const board_desc_t& desc,
+                           const spi_id_probe_t* probes, std::size_t probe_count,
+                           std::uint32_t* option, bool three_wire,
+                           std::uint8_t slow_retry_half_us, bool legacy_zero_preamble)
+  {
+    const int read_pin = three_wire || desc.display.miso < 0
+                       ? desc.display.mosi : desc.display.miso;
+    std::uint8_t last_cmd = 0;
+    std::uint8_t last_dummy_bits = 0;
+    std::uint32_t id = 0;
+    bool have_id = false;
+    for (std::size_t index = 0; index < probe_count; ++index)
+    {
+      const auto& probe = probes[index];
+      if (!have_id || probe.cmd != last_cmd || probe.dummy_bits != last_dummy_bits)
+      {
+        id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
+                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits,
+                             1, legacy_zero_preamble);
+        last_cmd = probe.cmd;
+        last_dummy_bits = probe.dummy_bits;
+        have_id = true;
+      }
+      for (std::size_t value = 0; value < probe.value_count; ++value)
+      {
+        if ((id & probe.mask) != probe.values[value]) { continue; }
+        *option = probe.option_bit;
+        return true;
+      }
+    }
+    if (slow_retry_half_us > 0)
+    {
+      // AtomS3R has shipped with GC9107 batches that answer only at a slow
+      // clock. Its alternatives share one command, so re-read that command
+      // exactly once and compare the result against every matching probe.
+      const auto retry_cmd = probes[0].cmd;
+      id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
+                           desc.display.dc, desc.display.cs, retry_cmd,
+                           probes[0].dummy_bits,
+                           slow_retry_half_us, legacy_zero_preamble);
+      for (std::size_t index = 0; index < probe_count; ++index)
+      {
+        const auto& probe = probes[index];
+        if (probe.cmd != retry_cmd) { continue; }
+        for (std::size_t value = 0; value < probe.value_count; ++value)
+        {
+          if ((id & probe.mask) != probe.values[value]) { continue; }
+          *option = probe.option_bit;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
@@ -1626,54 +1681,11 @@ namespace board_detect
       restore_probe_pins();
       return false;
     }
-    const int read_pin = three_wire || desc.display.miso < 0
-                       ? desc.display.mosi : desc.display.miso;
-    std::uint8_t last_cmd = 0;
-    std::uint8_t last_dummy_bits = 0;
-    std::uint32_t id = 0;
-    bool have_id = false;
-    for (std::size_t index = 0; index < probe_count; ++index)
+    if (observe_spi_variant(ctx, desc, probes, probe_count, &candidate.option,
+                            three_wire, slow_retry_half_us, legacy_zero_preamble))
     {
-      const auto& probe = probes[index];
-      if (!have_id || probe.cmd != last_cmd || probe.dummy_bits != last_dummy_bits)
-      {
-        id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
-                             desc.display.dc, desc.display.cs, probe.cmd, probe.dummy_bits,
-                             1, legacy_zero_preamble);
-        last_cmd = probe.cmd;
-        last_dummy_bits = probe.dummy_bits;
-        have_id = true;
-      }
-      for (std::size_t value = 0; value < probe.value_count; ++value)
-      {
-        if ((id & probe.mask) != probe.values[value]) { continue; }
-        candidate.option = probe.option_bit;
-        *result = candidate;
-        return true;
-      }
-    }
-    if (slow_retry_half_us > 0)
-    {
-      // AtomS3R has shipped with GC9107 batches that answer only at a slow
-      // clock. Its alternatives share one command, so re-read that command
-      // exactly once and compare the result against every matching probe.
-      const auto retry_cmd = probes[0].cmd;
-      id = soft_spi_read32(ctx, desc.display.sclk, desc.display.mosi, read_pin,
-                           desc.display.dc, desc.display.cs, retry_cmd,
-                           probes[0].dummy_bits,
-                           slow_retry_half_us, legacy_zero_preamble);
-      for (std::size_t index = 0; index < probe_count; ++index)
-      {
-        const auto& probe = probes[index];
-        if (probe.cmd != retry_cmd) { continue; }
-        for (std::size_t value = 0; value < probe.value_count; ++value)
-        {
-          if ((id & probe.mask) != probe.values[value]) { continue; }
-          candidate.option = probe.option_bit;
-          *result = candidate;
-          return true;
-        }
-      }
+      *result = candidate;
+      return true;
     }
     restore_probe_pins();
     return false;
@@ -1689,6 +1701,25 @@ namespace board_detect
     std::uint8_t slow_retry_half_us;
     bool legacy_zero_preamble;
   };
+
+  bool fixed_start_spi_variant(board_result_t& result, const prepare_ctx_t& ctx,
+                               const spi_id_member_t& member)
+  {
+    if (!prepare(*result.desc, result, ctx)) { return false; }
+    probe_ctx_t probe;
+    static_cast<prepare_ctx_t&>(probe) = ctx;
+    if (!observe_spi_variant(probe, *result.desc, member.probes, member.probe_count,
+                             &result.option, member.three_wire,
+                             member.slow_retry_half_us, member.legacy_zero_preamble))
+    {
+      ESP_LOGW("M5GFX", "Fixed board:%u panel variant unreadable; using default",
+               static_cast<unsigned>(result.def->id));
+    }
+    const auto& display = result.desc->display;
+    const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
+    ctx.transaction->restore_start(signals);
+    return true;
+  }
 
   class spi_id_detector_t final : public board_detector_t
   {

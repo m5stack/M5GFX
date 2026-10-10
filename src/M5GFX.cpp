@@ -845,6 +845,30 @@ namespace m5gfx
     return package;
   }
 
+  static const board_detect::m5::board_entry_t* select_fixed_board(board_t board)
+  {
+    using namespace board_detect::m5;
+#if !defined(CONFIG_IDF_TARGET) || defined(CONFIG_IDF_TARGET_ESP32)
+    const auto& boards = esp32_d0wdq6_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+    const auto& boards = esp32s3_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+    const auto& boards = esp32c3_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32C5)
+    const auto& boards = esp32c5_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32C6)
+    const auto& boards = esp32c6_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32C61)
+    const auto& boards = esp32c61_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32H2)
+    const auto& boards = esp32h2_boards;
+#elif defined(CONFIG_IDF_TARGET_ESP32P4)
+    const auto& boards = esp32p4_boards;
+#endif
+    const auto id = static_cast<board_detect::board_id_t>(board);
+    return static_cast<std::uint32_t>(board) == id ? find_board(boards, id) : nullptr;
+  }
+
   static bool reject_detected_setup(board_t setup_board)
   {
     (void)setup_board;
@@ -902,6 +926,52 @@ namespace m5gfx
     return false;
   }
 
+
+  template <class SetupDetected>
+  static board_detect::detect_outcome_t finish_detection_setup(
+    board_detect::board_result_t& result, board_detect::detect_outcome_t outcome,
+    board_detect::detection_transaction_t& transaction,
+    board_t setup_board, SetupDetected setup)
+  {
+    board_detect::m5::display_parts_t parts;
+    const auto construct_result = board_detect::m5::setup_detected_board(result, &parts);
+    if (construct_result == board_detect::m5::construct_status_t::failed)
+    {
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
+               static_cast<unsigned>(result.def->id));
+      outcome.result = result;
+      outcome.reason = board_detect::fail_reason_t::construct_failed;
+      transaction.rollback();
+      return outcome;
+    }
+    if (construct_result == board_detect::m5::construct_status_t::no_display)
+    {
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] display is unavailable for detected board:%u",
+               static_cast<unsigned>(result.def->id));
+      transaction.restore_start(result.desc->hold_high_pins.data,
+                                result.desc->hold_high_pins.size);
+    }
+    if (!setup(parts, setup_board))
+    {
+      // A rejecting adopter must not retain any of these raw pointers. Release
+      // the bus before rollback restores its GPIO routing, then destroy every
+      // constructed part so repeated failure injection cannot leak them.
+      board_detect::m5::destroy_display_parts(&parts);
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
+               static_cast<unsigned>(result.def->id));
+      outcome.result = result;
+      outcome.reason = board_detect::fail_reason_t::adopt_failed;
+      transaction.rollback();
+      return outcome;
+    }
+    transaction.commit();
+    outcome.result = result;
+    outcome.setup_succeeded = true;
+    const auto log = board_detect::m5::success_log(result);
+    if (log.name != nullptr && log.name[0] != '\0')
+    { ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s%s", log.name, log.annotation); }
+    return outcome;
+  }
 
   template <class SetupDetected>
   static board_detect::detect_outcome_t run_detection_attempt(
@@ -1007,43 +1077,108 @@ namespace m5gfx
       transaction.rollback();
       return outcome;
     }
-    board_detect::m5::display_parts_t parts;
-    const auto construct_result = board_detect::m5::setup_detected_board(result, &parts);
-    if (construct_result == board_detect::m5::construct_status_t::failed)
+    return finish_detection_setup(result, outcome, transaction, setup_board, setup);
+  }
+
+  // Fixed startup honors constructor/adopter hooks and observe_* injections (CORES3_FORCE_VBUS), but bypasses detector-only hooks.
+  template <class SetupDetected>
+  static board_detect::detect_outcome_t run_fixed_detection(
+    const board_detect::m5::board_entry_t& entry, bool allow_reset, SetupDetected setup)
+  {
+    using namespace board_detect;
+    detect_outcome_t outcome;
+    const auto& desc = *entry.desc;
+    if (!startup_detail::description_valid(desc))
     {
-      ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
-               static_cast<unsigned>(result.def->id));
-      outcome.result = result;
-      outcome.reason = board_detect::fail_reason_t::construct_failed;
-      transaction.rollback();
+      ESP_LOGW(LIBRARY_NAME, "Fixed board:%u has an invalid startup description", unsigned(desc.def.id));
       return outcome;
     }
-    if (construct_result == board_detect::m5::construct_status_t::no_display)
+    std::int8_t owned[max_detection_pins];
+    std::size_t count = 0;
+    bool complete = true;
+    const auto add_pin = [&](int pin)
     {
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] display is unavailable for detected board:%u",
-               static_cast<unsigned>(result.def->id));
-      transaction.restore_start(result.desc->hold_high_pins.data,
-                                result.desc->hold_high_pins.size);
-    }
-    if (!setup(parts, setup_board))
+      if (pin < 0) { return; }
+      for (std::size_t i = 0; i < count; ++i) { if (owned[i] == pin) { return; } }
+      if (count == max_detection_pins) { complete = false; return; }
+      owned[count++] = static_cast<std::int8_t>(pin);
+    };
+    add_pin(desc.power.hold_pin); add_pin(desc.reset.pin);
+    add_pin(desc.display.sclk); add_pin(desc.display.mosi); add_pin(desc.display.miso);
+    add_pin(desc.display.dc); add_pin(desc.display.cs); add_pin(desc.display.rst);
+    add_pin(desc.display.busy);
+    add_pin(desc.sd.sclk); add_pin(desc.sd.mosi); add_pin(desc.sd.miso);
+    add_pin(desc.sd.sd_cs); add_pin(desc.sd.other_cs);
+    add_pin(desc.internal_i2c.sda); add_pin(desc.internal_i2c.scl);
+    for (std::size_t i = 0; i < desc.hold_high_pins.size; ++i) { add_pin(desc.hold_high_pins.data[i]); }
+    for (std::size_t i = 0; i < desc.op_gpio_pins.size; ++i) { add_pin(desc.op_gpio_pins.data[i]); }
+    if (!complete)
     {
-      // A rejecting adopter must not retain any of these raw pointers. Release
-      // the bus before rollback restores its GPIO routing, then destroy every
-      // constructed part so repeated failure injection cannot leak them.
-      board_detect::m5::destroy_display_parts(&parts);
-      ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
-               static_cast<unsigned>(result.def->id));
-      outcome.result = result;
-      outcome.reason = board_detect::fail_reason_t::adopt_failed;
-      transaction.rollback();
+      ESP_LOGW(LIBRARY_NAME, "Fixed board:%u exceeds the startup pin limit", unsigned(desc.def.id));
       return outcome;
     }
-    transaction.commit();
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    if (conditional_detection_pins_unavailable())
+    {
+      for (std::size_t i = 0; i < count; ++i)
+      {
+        for (const auto reserved : m5::wiring::detection::opi_pins)
+        {
+          if (owned[i] == reserved)
+          {
+            // Acceptance is chip-based; active memory ownership can prevent startup.
+            ESP_LOGW(LIBRARY_NAME, "Fixed board:%u needs active OPI PSRAM pin:%d",
+                     unsigned(desc.def.id), int(reserved));
+            return outcome;
+          }
+        }
+      }
+    }
+#endif
+    detection_transaction_t transaction({ owned, static_cast<std::uint8_t>(count) }, no_pins(), false);
+    if (!transaction.valid())
+    {
+      ESP_LOGW(LIBRARY_NAME, "Fixed board:%u could not capture startup GPIO state", unsigned(desc.def.id));
+      return outcome;
+    }
+    // Fixed startup must not inherit a detected member's state or refinement.
+    board_result_t result{};
+    result.assign(&desc);
+    prepare_ctx_t ctx;
+    ctx.allow_reset = allow_reset;
+    ctx.i2c_port_probe = probe_i2c_port;
+    ctx.transaction = &transaction;
+    const int port = desc.internal_i2c.hw_port;
+    const bool was_open = port >= 0 && lgfx::i2c::isInitialized(port);
+    const bool started = entry.fixed_start ? entry.fixed_start(result, ctx)
+                                          : prepare(desc, result, ctx);
+    if (port >= 0 && !was_open && lgfx::i2c::isInitialized(port))
+    { transaction.buses().opened_i2c(port); }
     outcome.result = result;
-    outcome.setup_succeeded = true;
-    const auto log = board_detect::m5::success_log(result);
-    if (log.name != nullptr && log.name[0] != '\0')
-    { ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s%s", log.name, log.annotation); }
+    outcome.verdict = verdict_t::confirmed;
+    outcome.attempts = 1;
+    if (!started)
+    {
+      outcome.reason = fail_reason_t::prepare_failed;
+      transaction.rollback();
+      return outcome;
+    }
+    return finish_detection_setup(result, outcome, transaction,
+                                  static_cast<board_t>(desc.def.id), setup);
+  }
+
+  template <class SetupDetected>
+  static board_detect::detect_outcome_t run_fixed_detection_session(
+    const board_detect::m5::board_entry_t& entry, bool allow_reset, SetupDetected setup)
+  {
+    board_detect::detect_outcome_t outcome;
+    for (std::uint8_t attempt = 0; attempt < 5; ++attempt)
+    {
+      if (attempt == 3) { allow_reset = true; }
+      outcome = run_fixed_detection(entry, allow_reset, setup);
+      outcome.attempts = attempt + 1;
+      if (outcome.setup_succeeded) { return outcome; }
+    }
     return outcome;
   }
 
@@ -1062,7 +1197,8 @@ namespace m5gfx
 
   void M5GFX::setDetectConfig(const detect_config_t& config)
   {
-    const bool changed = _detect_config.fallback_board != config.fallback_board;
+    const bool changed = _detect_config.fallback_board != config.fallback_board
+                      || _detect_config.fixed_board != config.fixed_board;
     _detect_config = config;
 #if defined (ESP_PLATFORM)
     if (_detect_started && changed)
@@ -1099,6 +1235,29 @@ namespace m5gfx
     if (getBoard() != board_t::board_unknown)
     {
       return true;
+    }
+
+    _fixed_board = board_t::board_unknown;
+    if (_detect_config.fixed_board != board_t::board_unknown)
+    {
+      const auto* entry = select_fixed_board(_detect_config.fixed_board);
+      if (entry == nullptr)
+      {
+        ESP_LOGW(LIBRARY_NAME, "Fixed board:%u is not supported by this chip",
+                 static_cast<unsigned>(_detect_config.fixed_board));
+        return false;
+      }
+      // Acceptance is independent of display construction; a failed init may retry.
+      _fixed_board = _detect_config.fixed_board;
+      const auto outcome = run_fixed_detection_session(*entry, use_reset,
+        [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
+        {
+          return !reject_detected_setup(setup_board)
+              && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
+        });
+      if (!outcome.setup_succeeded) { return false; }
+      _board = _fixed_board;
+      return _finish_detected_init(use_clear);
     }
 
     static constexpr char NVS_KEY[] = "AUTODETECT";
@@ -1204,6 +1363,11 @@ namespace m5gfx
       }
     }
 
+    return _finish_detected_init(use_clear);
+  }
+
+  bool M5GFX::_finish_detected_init(bool use_clear)
+  {
     // The new path performs every permitted reset in prepare(). Construction
     // and panel initialisation never pulse reset a second time.
     if (false == LGFX_Device::init_impl(false, use_clear)) {
@@ -1211,7 +1375,7 @@ namespace m5gfx
     }
 
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
-    switch (board) {
+    switch (_board) {
     default:
       break;
 

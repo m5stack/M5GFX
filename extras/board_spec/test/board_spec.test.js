@@ -640,7 +640,7 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   assert.ok(explicit >= 0 && explicit < candidate && candidate < build);
   assert.match(selection, /if \(!board_detected\)/);
   const defaults = await fs.readFile(path.join(m5unified, "src/M5Unified.inl"), "utf8");
-  assert.match(defaults, /BOARD_ID == 147[\s\S]*?return board_t::board_M5DualKey;/);
+  assert.doesNotMatch(defaults, /BOARD_ID/);
   assert.match(defaults, /get_pkg_ver\(\) == 1\) \{ return board_t::board_M5StampS3Mini; \}/);
 });
 
@@ -1628,7 +1628,7 @@ test("embedded autodetect routes detected boards through descriptor setup", asyn
 test("confirmed boards tolerate reset-list faults while confirm remains strict", async () => {
   const implementation = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
   const esp32 = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_d0wdq6.inl"), "utf8");
-  assert.match(implementation, /prepare_reset\(\*current, result, ctx, i2c\.port, nullptr, true\)/);
+  assert.match(implementation, /prepare_reset\(\*current, result, ctx, i2c\.port,\s*nullptr, true\)/);
   assert.match(implementation, /variant_confirmed && desc\.power\.variant_count == 1[\s\S]*?&desc\.power\.variants\[0\]/);
   assert.match(implementation, /if \(!retain_confirmed_board\) \{ return false; \}[\s\S]*?reset_release stopped after board confirmation: op=%u status=%u native=%d/);
   assert.match(implementation, /reset_assert stopped after board confirmation: op=%u status=%u native=%d/);
@@ -2466,7 +2466,7 @@ test("every descriptor operation GPIO is inside its execution and rollback scope
     ["papercolor", "papercolor_power_on"],
   ]) {
     assert.match(esp32s3Source, new RegExp(
-      `ops::list\\(pmic_ops::${sequence}\\)[\\s\\S]*?desc_${boardName} = \\{[\\s\\S]*?pins\\(wiring::${boardName}::hold\\)[\\s\\S]*?pins\\(wiring::${boardName}::hold\\)`,
+      `ops::list\\(pmic_ops::${sequence}\\)[\\s\\S]*?desc_${boardName} = \\{[\\s\\S]*?pins\\(wiring::${boardName}::hold\\)[\\s\\S]*?pins\\(${boardName === "stopwatch" ? "stopwatch_startup_pins" : `wiring::${boardName}::hold`}\\)`,
     ));
     for (const pin of gpioPins[sequence]) assert.ok(s3Wiring[boardName].hold.includes(pin), `${boardName} GPIO${pin}`);
   }

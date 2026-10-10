@@ -240,6 +240,11 @@ namespace m5
                           reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
                           { nullptr, 0 }, 0),
   };
+  // Construction configures the panel TE input before display adoption.
+  static constexpr std::int8_t stopwatch_te_pin = GPIO_NUM_38;
+  static const std::int8_t stopwatch_startup_pins[] = {
+    wiring::stopwatch::display_cs, stopwatch_te_pin,
+  };
   static constexpr board_desc_t desc_stopwatch = {
     { id(lgfx::board_M5StopWatch), "M5StopWatch", 0 },
     i2c_power_confirmed(specs::stopwatch::pmic::i2c_freq, stopwatch_pmic_variants,
@@ -253,7 +258,8 @@ namespace m5
     pins(wiring::stopwatch::hold),
     internal_i2c(wiring::stopwatch::internal_i2c_sda, wiring::stopwatch::internal_i2c_scl,
                  wiring::stopwatch::internal_i2c_port),
-    no_options(), pins(wiring::stopwatch::hold),
+    // op_gpio_pins also captures the construction-time TE input (GPIO38) for fixed startup rollback.
+    no_options(), pins(stopwatch_startup_pins),
   };
   static constexpr board_desc_t desc_papermono = {
     { id(lgfx::board_M5PaperMono), "M5PaperMono", 0 },
@@ -807,6 +813,8 @@ namespace m5
     { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
       specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false },
   };
+  static bool fixed_start_atoms3(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_start_spi_variant(result, ctx, spi_id_member_descs[0]); }
   static const spi_id_detector_t spi_display_detector(
     spi_id_members, spi_id_member_descs,
     sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
@@ -949,6 +957,8 @@ namespace m5
     { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
       specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false },
   };
+  static bool fixed_start_atoms3r(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_start_spi_variant(result, ctx, atoms3r_member_descs[0]); }
   static const spi_id_detector_t atoms3r_display_detector(
     atoms3r_members, atoms3r_member_descs,
     sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
@@ -1106,6 +1116,8 @@ namespace m5
     { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
       specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0, false },
   };
+  static bool fixed_start_airq(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_start_spi_variant(result, ctx, airq_member_descs[0]); }
   static const spi_id_detector_t airq_detector(
     airq_members, airq_member_descs,
     sizeof(airq_member_descs) / sizeof(airq_member_descs[0]), false, airq_signature);
@@ -1179,23 +1191,23 @@ namespace m5
 
   static const board_entry_t esp32s3_boards[] = {
     { &desc_dualkey, construct_displayless, "board_M5DualKey", nullptr },
-    { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr },
-    { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr },
-    { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr },
-    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation },
+    { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr, cores3_detail::fixed_start },
+    { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr, cores3_detail::fixed_start },
+    { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr, cores3_detail::fixed_start },
+    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation, fixed_start_atoms3 },
     { &desc_atoms3lite, construct_displayless, "board_M5AtomS3Lite", nullptr },
     { &desc_atoms3u, construct_displayless, "board_M5AtomS3U", nullptr },
     { &desc_stamps3, construct_displayless, "board_M5StampS3", nullptr },
     { &desc_capsule, construct_displayless, "board_M5Capsule", nullptr },
     { &desc_powerhub, construct_displayless, "board_M5PowerHub", nullptr },
-    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation },
+    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation, fixed_start_atoms3r },
     { &desc_atoms3rcam, construct_displayless, "board_M5AtomS3RCam", nullptr },
     { &desc_atoms3rext, construct_displayless, "board_M5AtomS3RExt", nullptr },
     { &desc_atomvoices3r, construct_displayless, "board_M5AtomVoiceS3R", nullptr },
     { &desc_stamps3bat, construct_displayless, "board_M5StampS3Bat", nullptr },
     { &desc_stamps3mini, construct_displayless, "board_M5StampS3Mini", nullptr },
     { &desc_dinmeter, construct_dinmeter, "board_M5DinMeter", nullptr },
-    { &desc_airq, construct_airq, "M5AirQ", nullptr },
+    { &desc_airq, construct_airq, "M5AirQ", nullptr, fixed_start_airq },
     { &desc_stamplc, construct_stamplc, "board_M5StamPLC", nullptr },
     { &desc_dial, construct_dial, "board_M5Dial", nullptr },
     { &desc_cardputer, construct_cardputer, "board_M5Cardputer", nullptr },

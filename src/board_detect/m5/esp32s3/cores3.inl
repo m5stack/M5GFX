@@ -81,6 +81,24 @@
           && camera == specs::cores3::i2c_camera::id_value;
     }
 
+    std::uint32_t observe_vbus(probe_ctx_t& ctx)
+    {
+      constexpr std::uint64_t spi_mask =
+          (std::uint64_t(1) << wiring::cores3::display_miso)
+        | (std::uint64_t(1) << wiring::cores3::display_sclk)
+        | (std::uint64_t(1) << wiring::cores3::display_mosi);
+      const auto pull = probe_pin_pulls(ctx, spi_mask);
+      (void)pull;  // FORCE_VBUS still performs/restores the legacy-equivalent measurement.
+      // Unlike the legacy input_pullup sequence, probe_pin_pulls restores the
+      // captured pin modes immediately. Construction's SPI init overwrites
+      // these pins next, so retaining the temporary pull-ups had no effect.
+#if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_VBUS)
+      return vbus_5v;
+#else
+      return (pull.pullup_high & spi_mask) == 0 ? vbus_5v : 0;
+#endif
+    }
+
     bool refine_panel(board_result_t& result, const prepare_ctx_t& ctx)
     {
       const auto& display = desc_cores3.display;
@@ -186,6 +204,23 @@
       {
         ESP_LOGW("M5GFX", "[Autodetect] CoreS3 BUS_OUT_EN not enabled: %s", failed);
       }
+    }
+
+    bool fixed_start(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      probe_ctx_t probe;
+      static_cast<prepare_ctx_t&>(probe) = ctx;
+      result.option |= observe_vbus(probe);
+      const auto& desc = *result.desc;
+      {
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
+        if (!i2c.opened || !startup_detail::prepare_power(desc, result, i2c.port, true))
+        { return false; }
+      }
+      if (result.option & vbus_5v) { enable_bus_out(ctx); }
+      // Identity is fixed: no capacitance, camera or IOE firmware observation.
+      if (!refine_panel(result, ctx)) { return false; }
+      return prepare(desc, result, ctx);
     }
 
     bool refine(board_result_t& result, const prepare_ctx_t& ctx)
@@ -310,23 +345,11 @@
           ESP_LOGW("M5GFX", "[Autodetect] CoreS3 release result was ambiguous; biasing toward camera family");
         }
       }
-      constexpr std::uint64_t spi_mask =
-          (std::uint64_t(1) << wiring::cores3::display_miso)
-        | (std::uint64_t(1) << wiring::cores3::display_sclk)
-        | (std::uint64_t(1) << wiring::cores3::display_mosi);
-      const auto pull = probe_pin_pulls(ctx, spi_mask);
-      (void)pull;  // FORCE_VBUS still performs/restores the legacy-equivalent measurement.
-      // Unlike the legacy input_pullup sequence, probe_pin_pulls restores the
-      // captured pin modes immediately. Construction's SPI init overwrites
-      // these pins next, so retaining the temporary pull-ups had no effect.
+      const auto vbus_option = cores3_detail::observe_vbus(ctx);
       result->assign(family_band == pin_release_band_t::short_release ? &desc_cores3se
                                                                       : &desc_cores3);
       if (has_camera) { result->option |= cores3_detail::internal_camera_confirmed; }
-#if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_VBUS)
-      result->option |= cores3_detail::vbus_5v;
-#else
-      if ((pull.pullup_high & spi_mask) == 0) { result->option |= cores3_detail::vbus_5v; }
-#endif
+      result->option |= vbus_option;
       result->refine = cores3_detail::refine;
       return true;
     }

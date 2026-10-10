@@ -131,6 +131,8 @@ static const board_def_t* const coreink_members[] = { &desc_coreink.def, nullptr
 static const spi_id_member_t coreink_member_descs[] = {
   { &desc_coreink, coreink_probes, 2, true, false, 0, true },
 };
+static bool fixed_start_coreink(board_result_t& result, const prepare_ctx_t& ctx)
+{ return fixed_start_spi_variant(result, ctx, coreink_member_descs[0]); }
 static const spi_id_detector_t coreink_detector(coreink_members, coreink_member_descs, 1);
 
 static const board_def_t* const stickcplus2_members[] = { &desc_stickcplus2.def, nullptr };

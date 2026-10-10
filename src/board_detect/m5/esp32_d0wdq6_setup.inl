@@ -71,7 +71,10 @@ namespace m5
   {
     display_parts_owner_t out;
     construct_core_panel(result, generated_options::tough::lcd_e, bus_tough, &out);
-    out.light.reset(make_default_part<Light_M5Tough>());
+    // Only fixed Tough can carry AXP2101; avoid sending it AXP192 backlight writes.
+    out.light.reset((result.option & generated_options::core2::new_pmic)
+                  ? static_cast<lgfx::ILight*>(make_default_part<Light_M5StackCore2_AXP2101>())
+                  : static_cast<lgfx::ILight*>(make_default_part<Light_M5Tough>()));
     out.touch.reset(make_i2c_touch<lgfx::Touch_CHSC6540>(touch_tough));
     out.panel->touch(out.touch.get());
     return construct_status(out.release_to(parts));

@@ -62,6 +62,7 @@ namespace m5gfx
   struct detect_config_t
   {
     board_t fallback_board = board_t::board_unknown;
+    board_t fixed_board = board_t::board_unknown;
   };
 //----------------------------------------------------------------------------
 
@@ -200,8 +201,10 @@ namespace m5gfx
     board_t _board_candidate = board_t::board_unknown;
     detect_config_t _detect_config;
     bool _detect_started = false;
+    board_t _fixed_board = board_t::board_unknown;
 
     bool init_impl(bool use_reset, bool use_clear) override;
+    bool _finish_detected_init(bool use_clear);
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown,
                        bool final_attempt = false, bool* transient_fallback = nullptr,
                        bool* no_signature = nullptr,
@@ -218,6 +221,7 @@ namespace m5gfx
 
     static M5GFX* getInstance(void) { return _instance; }
     board_t getBoardCandidate(void) const { return _board_candidate; }
+    board_t getFixedBoard(void) const { return _fixed_board; }
     void setDetectConfig(const detect_config_t& config);
     const detect_config_t& getDetectConfig(void) const { return _detect_config; }
 

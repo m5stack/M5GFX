@@ -424,7 +424,7 @@ namespace m5
     display_parts_owner_t out;
     out.bus.reset(make_spi_bus(bus_stopwatch));
     out.panel.reset(make_panel<Panel_StopWatch>(panel_stopwatch, out.bus.get()));
-    lgfx::pinMode(GPIO_NUM_38, lgfx::pin_mode_t::input_pullup);
+    lgfx::pinMode(stopwatch_te_pin, lgfx::pin_mode_t::input_pullup);
     out.touch.reset(make_i2c_touch<lgfx::Touch_CST816S>(touch_stopwatch));
     out.panel->touch(out.touch.get());
     return construct_status(out.release_to(parts));

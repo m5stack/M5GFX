@@ -36,6 +36,7 @@ namespace m5
 
   namespace detail
   {
+    bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx);
     bool stack_reset_and_sample_ips(const board_desc_t& desc, const prepare_ctx_t& ctx,
                                     std::uint32_t* detected_option);
   }
@@ -195,13 +196,13 @@ namespace m5
   static const board_entry_t esp32_d0wdq6_boards[] = {
     { &desc_timercam, construct_displayless, "board_M5TimerCam", nullptr },
     { &desc_station, construct_station, nullptr, nullptr },
-    { &desc_core2, construct_core2, nullptr, nullptr },
-    { &desc_tough, construct_tough, nullptr, nullptr },
+    { &desc_core2, construct_core2, nullptr, nullptr, detail::fixed_start_core },
+    { &desc_tough, construct_tough, nullptr, nullptr, detail::fixed_start_core },
     { &desc_stack, construct_stack, nullptr, nullptr },
     { &desc_paper, construct_paper, nullptr, nullptr },
     { &desc_stickcplus, construct_stickcplus, "M5StickCPlus", nullptr },
     { &desc_stickc, construct_stickc, "M5StickC", nullptr },
-    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr },
+    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr, fixed_start_coreink },
     { &desc_stickcplus2, construct_stickcplus2, "M5StickCPlus2", nullptr },
     { &desc_atompsram, construct_atompsram, "", nullptr },
     { &desc_atomvoice, construct_displayless, "board_M5AtomVoice", nullptr },
@@ -213,7 +214,11 @@ namespace m5
 
   namespace detail
   {
-    bool refine_core_family(board_result_t& result, const prepare_ctx_t& ctx)
+    const pmic_variant_t* observe_core_pmic(int port)
+    { return startup_detail::read_variant(desc_core2.power, port); }
+
+    bool observe_core_panel(board_result_t& result, const prepare_ctx_t& ctx,
+                            panel_variant_t& variant, std::uint32_t keys[4])
     {
       const auto& display = desc_core2.display;
       const std::int8_t signals[] = {
@@ -223,9 +228,8 @@ namespace m5
       startup_detail::pin_level(desc_core2.sd.sd_cs, true);
       soft_spi_t bus(display.sclk, display.mosi, display.mosi, display.dc);
       bus.init();
-      std::uint32_t keys[4] = {};
       // Without reset, leave the same 120 ms window for a waking panel.
-      auto variant = identify_panel_variant(bus, display.cs, keys,
+      variant = identify_panel_variant(bus, display.cs, keys,
                                             ctx.allow_reset ? 1 : 120);
       if (ctx.allow_reset)
       {
@@ -245,6 +249,45 @@ namespace m5
           for (int i = 0; i < 4; ++i) { keys[i] = after_keys[i]; }
         }
       }
+      return true;
+    }
+
+    bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      const auto& desc = *result.desc;
+      {
+        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
+        const auto* pmic = i2c.opened ? observe_core_pmic(i2c.port) : nullptr;
+        // Never send a default controller's write list when its identity is unknown.
+        if (pmic == nullptr)
+        {
+          ESP_LOGW("M5GFX", "Fixed board:%u PMIC unreadable; startup stopped",
+                   static_cast<unsigned>(desc.def.id));
+          return false;
+        }
+        result.option |= pmic->detected_option;
+        if (!startup_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
+      }
+      panel_variant_t variant;
+      std::uint32_t keys[4] = {};
+      if (!observe_core_panel(result, ctx, variant, keys)) { return false; }
+      log_panel_variant(variant, keys);
+      if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
+      const auto& display = desc.display;
+      const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
+      ctx.transaction->restore_start(signals);
+      return prepare(desc, result, ctx);
+    }
+
+    bool refine_core_family(board_result_t& result, const prepare_ctx_t& ctx)
+    {
+      const auto& display = desc_core2.display;
+      const std::int8_t signals[] = {
+        display.dc, display.sclk, display.mosi, display.miso
+      };
+      std::uint32_t keys[4] = {};
+      panel_variant_t variant;
+      if (!observe_core_panel(result, ctx, variant, keys)) { return false; }
       startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
                                        desc_core2.internal_i2c);
       if (!i2c.opened)
@@ -339,7 +382,7 @@ namespace m5
       if (!i2c.opened) { return false; }
       prepare_ctx_t prepare_ctx = ctx;
       prepare_ctx.i2c_port_probe = i2c.port;
-      const auto* pmic = startup_detail::read_variant(desc_core2.power, i2c.port);
+      const auto* pmic = detail::observe_core_pmic(i2c.port);
       if (pmic == nullptr) { return false; }
       ESP_LOGD("board_detect_m5", "power controller id=%02x", pmic->id_value);
 

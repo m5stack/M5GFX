@@ -12,6 +12,7 @@ import { body, compileRun } from "./detect_host_helpers.js";
 test("production attempt yields before construction and preserves adoption and rollback semantics", async () => {
   const main = await fs.readFile(path.join(src, "M5GFX.cpp"), "utf8");
   const attempt = body(main, "static board_detect::detect_outcome_t run_detection_attempt(");
+  const finish = body(main, "static board_detect::detect_outcome_t finish_detection_setup(");
   const compat = body(main, "board_t M5GFX::autodetect(");
   const projection = main.slice(main.indexOf("    const auto board = outcome.setup_succeeded"), main.indexOf("#if defined ( ARDUINO_M5STACK_ATOM )", main.indexOf("    const auto board = outcome.setup_succeeded")));
   const header = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
@@ -58,6 +59,7 @@ log_t success_log(const board_result_t&) {return {nullptr,nullptr};}
 }
 } }
 const int probe_i2c_port=0;
+template<class SetupDetected> board_detect::detect_outcome_t finish_detection_setup(board_detect::board_result_t& result, board_detect::detect_outcome_t outcome, board_detect::detection_transaction_t& transaction, board_t setup_board, SetupDetected setup) ${finish}
 template<class SetupDetected> board_detect::detect_outcome_t run_detection_attempt(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, SetupDetected setup) ${attempt}
 struct package_t {const board_detect::board_detector_t* const* detectors;bool conditional_pins_unavailable=false;};
 package_t active_package;
@@ -167,6 +169,9 @@ int main(){M5GFX gfx;detect_config_t cfg;assert(gfx.getDetectConfig().fallback_b
  gfx.adopted=board_t::member;cfg.fallback_board=board_t::other;gfx.setDetectConfig(cfg);
  assert(warnings==1);assert(gfx.adopted==board_t::member);assert(gfx.getDetectConfig().fallback_board==board_t::other);
  cfg.fallback_board=board_t::board_unknown;gfx.setDetectConfig(cfg);assert(gfx.getDetectConfig().fallback_board==board_t::board_unknown);assert(warnings==2);
+ cfg.fixed_board=board_t::member;gfx.setDetectConfig(cfg);assert(warnings==3);
+ gfx.setDetectConfig(cfg);assert(warnings==3);assert(gfx.adopted==board_t::member);
+ cfg.fixed_board=board_t::other;gfx.setDetectConfig(cfg);assert(warnings==4);
 }
 `,"public config");
 });

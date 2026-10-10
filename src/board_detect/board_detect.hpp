@@ -239,6 +239,7 @@ namespace board_detect
     option_list_t option_names;
     // GPIOs that typed operation lists may access. This is intentionally
     // separate from hold_high_pins: an operation may restore a pin to input.
+    // Also includes construction pins captured during fixed startup, beyond power-operation GPIO permissions.
     pin_list_t op_gpio_pins;
   };
 
