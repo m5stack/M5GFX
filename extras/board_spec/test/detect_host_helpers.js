@@ -14,7 +14,7 @@ export function body(source, marker) {
   assert.equal(depth, 0); return source.slice(brace, end);
 }
 export async function compileRun(source, label) {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-s1-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-detect-host-"));
   try {
     const file = path.join(directory, "host.cpp"), binary = path.join(directory, "host");
     await fs.writeFile(file, source);

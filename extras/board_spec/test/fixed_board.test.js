@@ -350,10 +350,13 @@ int main(){
 `,"fixed SPI-only observation");
 });
 
-test("fixed GPIO46 pre-hold follows the existing power pin table", async () => {
+test("fixed GPIO46 pre-hold follows the existing power pin table", async (t) => {
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
- const header=await fs.readFile(path.join(unified,"src/M5Unified.hpp"),"utf8");
- const impl=await fs.readFile(path.join(unified,"src/M5Unified.inl"),"utf8");
+ let header, impl;
+ try {
+  header=await fs.readFile(path.join(unified,"src/M5Unified.hpp"),"utf8");
+  impl=await fs.readFile(path.join(unified,"src/M5Unified.inl"),"utf8");
+ } catch { return t.skip("M5Unified checkout not found"); }
  const table=/static constexpr const uint8_t _pin_table_other1\[\]\[2\] = \{[\s\S]*?\n\};/.exec(impl)[0];
  const getter=body(impl,"int8_t M5Unified::_get_power_hold_pin(board_t id)");
  const guard=[...header.matchAll(/#if defined \(BOARD_ID\) && \(\(BOARD_ID \+ 0\) > 0\)[\s\S]*?#endif/g)].map(m=>m[0]).find(s=>s.includes("gpio46_hold"));

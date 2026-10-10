@@ -628,8 +628,11 @@ test("DualKey requires NC pins to float and treats a pressed second key as a can
 
 test("explicit fallback takes precedence over detector candidates", async (t) => {
   const m5unified = process.env.M5UNIFIED_PATH || path.resolve(root, "../../../M5Unified");
-  let source;
-  try { source = await fs.readFile(path.join(m5unified, "src/M5Unified.hpp"), "utf8"); }
+  let source, defaults;
+  try {
+    source = await fs.readFile(path.join(m5unified, "src/M5Unified.hpp"), "utf8");
+    defaults = await fs.readFile(path.join(m5unified, "src/M5Unified.inl"), "utf8");
+  }
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
   const selection = /bool board_detected = \(board != board_t::board_unknown\);([\s\S]*?)_board = board;/.exec(source)?.[1];
   assert.ok(selection);
@@ -638,7 +641,6 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   const build = selection.indexOf("board = _default_fallback_board();");
   assert.ok(explicit >= 0 && explicit < candidate && candidate < build);
   assert.match(selection, /if \(!board_detected\)/);
-  const defaults = await fs.readFile(path.join(m5unified, "src/M5Unified.inl"), "utf8");
   assert.doesNotMatch(defaults, /BOARD_ID/);
   assert.match(defaults, /get_pkg_ver\(\) == 1\) \{ return board_t::board_M5StampS3Mini; \}/);
 });

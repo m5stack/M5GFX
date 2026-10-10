@@ -115,9 +115,11 @@ int main(){for(bool weak:{false,true}){board_detector_t::weak=weak;probe_ctx_t c
 `,"P4 has no module-only candidate");
 });
 
-test("Unified defaults preserve build selections and supported package defaults only", async()=>{
+test("Unified defaults preserve build selections and supported package defaults only", async(t)=>{
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
- const impl=await fs.readFile(path.join(unified,"src/M5Unified.inl"),"utf8");
+ let impl;
+ try { impl=await fs.readFile(path.join(unified,"src/M5Unified.inl"),"utf8"); }
+ catch { return t.skip("M5Unified checkout not found"); }
  const fallback=body(impl,"board_t M5Unified::_default_fallback_board(");
  const names=[...new Set(fallback.match(/board_[A-Za-z0-9_]+/g))];
  const base=`#include <cassert>\nenum class board_t {${names.join(',')}};\nunsigned pkg=0,revision=0,pkg_reads=0;namespace m5gfx {unsigned get_pkg_ver(){++pkg_reads;return pkg;}}\nstruct esp_chip_info_t {unsigned revision;};void esp_chip_info(esp_chip_info_t*p){p->revision=revision;}\nstruct M5Unified {static board_t fallback() ${fallback}};\n`;
