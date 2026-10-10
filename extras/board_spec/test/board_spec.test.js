@@ -596,15 +596,11 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
   assert.deepEqual(parseGeneratedWiring(source), legacyEsp32Wiring);
 });
 
-test("ESP32 detector reset permission is promoted before the final retry", async () => {
+test("all chip entries pass reset and hint policy through the common session", async () => {
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  const loop = /int retry = 4;([\s\S]*?)board = autodetect\(use_reset, board, retry == 0, &transient_fallback,\s*&no_signature, &_board_candidate\);/.exec(main)?.[1];
-  assert.ok(loop);
-  const promotion = loop.indexOf("if (retry == 1) { use_reset = true; }");
-  const detected = loop.indexOf("try_setup_detected(esp32_detectors");
-  assert.ok(promotion >= 0 && promotion < detected);
-  assert.match(loop, /static_cast<board_t>\(nvs_board\), use_reset,/);
-  assert.doesNotMatch(loop, /detector_allow_reset/);
+  assert.match(main, /request.allow_reset = use_reset;[\s\S]*?request.max_attempts = 5;[\s\S]*?run_detection_session/);
+  assert.match(main, /package.policy.keep_initial_hint = true;/);
+  assert.match(main, /probe.allow_reset = request.allow_reset;/);
 });
 
 test("displayless candidates do not retry and confirmed boards clear candidates", async () => {
@@ -612,7 +608,8 @@ test("displayless candidates do not retry and confirmed boards clear candidates"
   const detector = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
   const c3 = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c3.inl"), "utf8");
   assert.match(detector, /if \(!signature\)[\s\S]*?return false;[\s\S]*?ctx\.confirm_attempted = true;/);
-  assert.match(main, /if \(board == board_t::board_unknown && no_signature\)[\s\S]*?break;/);
+  const session = await fs.readFile(path.join(root, "../../src/board_detect/detect_session.hpp"), "utf8");
+  assert.match(session, /outcome.reason == fail_reason_t::no_signature[\s\S]*?return outcome;/);
   assert.match(main, /if \(board != board_t::board_unknown\) \{ _board_candidate = board_t::board_unknown; \}/);
   assert.match(c3, /if \(c3_detail::sof_advances\(\)\) \{ return true; \}/);
   assert.match(c3, /ctx\.candidate = &desc_stampc3\.def;[\s\S]*?return false;/);
@@ -1301,7 +1298,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
     /specs::unitc6l::i2c_ioe::id_reg[\s\S]*?!is_pi4io\(value\)[\s\S]*?ctx\.final_attempt[\s\S]*?transient_fallback = true/);
   const c6Main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(c6Main,
-    /try_setup_detected\(board_detect::m5::esp32c6_detectors_qfn40,[\s\S]*?board, use_reset, final_attempt, &board,[\s\S]*?transient_fallback,\s*no_signature\)/);
+    /package.detectors = board_detect::m5::esp32c6_detectors_qfn40;/);
   assert.match(esp32c6Source,
     /i2c_pi4io2::id_reg[\s\S]*?is_pi4io\(value\)[\s\S]*?i2c_pi4io1::id_reg[\s\S]*?is_pi4io\(value\)/);
   assert.match(boardRegistrySource, /is_pi4io\(std::uint8_t value\).*?\(value & 0xE0\) == 0xA0/);
@@ -1328,7 +1325,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.equal(classify({ pulldownHigh: 0n, pullupHigh: 0n }), "none");
 
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  assert.match(main, /pkg_ver == 0[\s\S]*?try_setup_detected\(board_detect::m5::esp32c6_detectors_qfn40/);
+  assert.match(main, /pkg == 0[\s\S]*?package.detectors = board_detect::m5::esp32c6_detectors_qfn40/);
 });
 
 test("M5GFX probe dummy bits reject invalid catalog values", () => {
@@ -1617,7 +1614,7 @@ test("confirmed boards survive post-detection power setup failures", async () =>
   assert.match(implementation, /prepare_power\(desc, result, i2c\.port, true\)/);
   assert.match(implementation, /if \(!retain_confirmed_board\) \{ return false; \}[\s\S]*?power_on stopped after board confirmation:[\s\S]*?failed_index[\s\S]*?status[\s\S]*?0/);
   assert.match(main, /construct_result == board_detect::m5::construct_status_t::no_display[\s\S]*?transaction\.restore_start\(result\.desc->hold_high_pins\.data,[\s\S]*?result\.desc->hold_high_pins\.size\)/);
-  assert.match(main, /if \(!setup\(parts\)\)[\s\S]*?destroy_display_parts\(&parts\)[\s\S]*?transaction\.rollback\(\)/);
+  assert.match(main, /if \(!setup\(parts, setup_board\)\)[\s\S]*?destroy_display_parts\(&parts\)[\s\S]*?transaction\.rollback\(\)/);
   assert.match(setup, /destroy_display_parts\(display_parts_t\* parts\)[\s\S]*?parts->bus->release\(\)[\s\S]*?delete parts->touch;[\s\S]*?delete parts->light;[\s\S]*?delete parts->panel;[\s\S]*?delete parts->bus;/);
 });
 
@@ -1641,7 +1638,8 @@ test("confirmed boards tolerate reset-list faults while confirm remains strict",
 });
 
 test("post-power member refinement and confirmed option variants are opt-in", async () => {
-  const header = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.hpp"), "utf8");
+  const header = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.hpp"), "utf8")
+    + await fs.readFile(path.join(root, "../../src/board_detect/detect_types.hpp"), "utf8");
   const implementation = await fs.readFile(path.join(root, "../../src/board_detect/board_detect.inl"), "utf8");
   assert.match(header, /refine_fn_t refine = nullptr/);
   assert.match(header, /option_select_mask;[\s\S]*?option_select_value;/);
@@ -1653,10 +1651,10 @@ test("post-power member refinement and confirmed option variants are opt-in", as
 
 test("PM1 extension failure injection rejects only its selected board", async () => {
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  assert.match(main, /board_t setup_board = board_t::board_unknown/);
+  assert.match(main, /const auto setup_board = static_cast<board_t>\(result.def->id\)/);
   assert.match(main, /FAIL_CHAINCAPTAIN_SETUP[\s\S]*?setup_board == board_t::board_M5ChainCaptain/);
   assert.match(main, /FAIL_PAPERCOLOR_SETUP[\s\S]*?setup_board == board_t::board_M5PaperColor/);
-  assert.doesNotMatch(main, /FAIL_PAPERCOLOR_SETUP\)[\s\S]{0,100}\(void\)parts;\s*return false;\s*#endif\s*return _adopt/);
+  assert.doesNotMatch(main, /FAIL_PAPERCOLOR_SETUP\)[\s\S]{0,100}\(void\)parts;\s*return true;\s*#endif\s*return _adopt/);
 });
 
 test("generated wiring header links from two translation units", async (t) => {
@@ -2414,7 +2412,7 @@ test("CoreP4X generated DSI setup preserves the legacy fields", async () => {
   assert.deepEqual(detectionPinsForEntries([{ board: source, chip: chipP4, emitted: wiring }]), [9, 11]);
   assert.match(esp32p4Source, /probe_i2c_read[\s\S]*?pm1_i2c_addr[\s\S]*?200[\s\S]*?probe_i2c_read[\s\S]*?ioe1_i2c_addr[\s\S]*?200/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  assert.match(main, /pkg_ver == 0[\s\S]*?try_setup_detected\(board_detect::m5::esp32p4_detectors/);
+  assert.match(main, /pkg == 0[\s\S]*?package.detectors = board_detect::m5::esp32p4_detectors/);
 });
 
 test("Tab5 touch identities select the three DSI panels", () => {
@@ -2628,8 +2626,8 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   assert.match(coreSource, /refine_panel[\s\S]*?soft_spi_read32\(\s*probe, display\.sclk, display\.mosi, display\.mosi, display\.dc/);
   assert.doesNotMatch(detectorSource, /pin_miso_ == pin_dc_/);
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
-  assert.match(main, /assigned before prepare\/refine[\s\S]*?representative family ID[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
-  assert.match(main, /case 0: detectors = board_detect::m5::esp32s3_detectors_qfn56;[\s\S]*?case 1: detectors = board_detect::m5::esp32s3_detectors_lga56;[\s\S]*?try_setup_detected\(detectors, board/);
+  assert.match(main, /representative before refine[\s\S]*?setup_board = static_cast<board_t>\(result\.def->id\)/);
+  assert.match(main, /case 0: package.detectors = board_detect::m5::esp32s3_detectors_qfn56;[\s\S]*?case 1: package.detectors = board_detect::m5::esp32s3_detectors_lga56;[\s\S]*?run_detection_attempt\(package.detectors/);
 });
 
 test("detect classes include only explicit pins and retain 64-bit GPIO masks", () => {

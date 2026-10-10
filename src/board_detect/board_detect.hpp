@@ -9,88 +9,13 @@
 #include "../lgfx/v1/platforms/esp32/common.hpp"
 #include "dedicated_release_probe.hpp"
 #include "ops.hpp"
+#include "detect_types.hpp"
 #include "detect_class.hpp"
 
 namespace m5gfx
 {
 namespace board_detect
 {
-  using board_id_t = std::uint16_t;
-  static constexpr board_id_t board_id_unknown = 0;
-
-  enum board_def_flag_t : std::uint8_t
-  {
-    // A board with no positive signature. Such members cannot promote their
-    // detector through an NVS hint; a detector may expose them as candidates.
-    def_flag_fallback = 1 << 0,
-  };
-
-  struct board_def_t
-  {
-    board_id_t id;
-    const char* name;
-    std::uint8_t flags;
-  };
-
-#if __cplusplus >= 201703L
-  inline const board_def_t board_def_unknown = { board_id_unknown, "unknown", 0 };
-#else
-  // Arduino-ESP32 2.x still compiles as C++11. Internal linkage provides the
-  // same ODR safety there; C++17 and newer use the single inline definition.
-  static const board_def_t board_def_unknown = { board_id_unknown, "unknown", 0 };
-#endif
-
-  enum prepared_state_t : std::uint32_t
-  {
-    // Bits 0..15 are manufacturer-independent completed operations or probe
-    // side effects. Bits 16..31 are reserved for board-specific state.
-    prepared_power  = 1u << 0,
-    prepared_reset  = 1u << 1,
-    prepared_sd_spi = 1u << 2,
-    // The GPIO reset line has been driven inactive, but a reset pulse may not
-    // have been allowed. Keep this distinct from prepared_reset so a later
-    // reset-enabled prepare can still pulse the panel reset.
-    prepared_reset_line = 1u << 4,
-    // A confirmed family's post-power refinement has been resolved (run, or
-    // deliberately skipped after a failed retained power sequence).
-    prepared_refine = 1u << 5,
-    // The confirmed board was retained after its power operation list stopped.
-    prepared_power_failed = 1u << 6,
-  };
-
-  enum class detect_status_t : std::uint8_t
-  {
-    no_match,
-    matched,
-    excluded,
-  };
-
-  struct board_desc_t;
-  struct prepare_ctx_t;
-  class detection_transaction_t;
-  struct board_result_t;
-  using refine_fn_t = bool (*)(board_result_t&, const prepare_ctx_t&);
-
-  struct board_result_t
-  {
-    // A matched/direct result owns no description; this points at the static
-    // canonical description and def aliases &desc->def. Unknown results have
-    // desc == nullptr and retain board_def_unknown for compatibility.
-    const board_desc_t* desc = nullptr;
-    const board_def_t* def = &board_def_unknown;
-    std::uint32_t option = 0;
-    std::uint32_t prepared = 0;
-    // A final-attempt family default can show the display, but is not an NVS hint.
-    bool transient_fallback = false;
-    // A weak, displayless suggestion returned only when no board is confirmed.
-    const board_def_t* candidate = nullptr;
-    detect_status_t status = detect_status_t::no_match;
-    // Optional read-only member refinement after power preparation.
-    refine_fn_t refine = nullptr;
-
-    void assign(const board_desc_t* value);
-  };
-
   struct prepare_ctx_t
   {
     // A retry must not override the caller's reset policy.

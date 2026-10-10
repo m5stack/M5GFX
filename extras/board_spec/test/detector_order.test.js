@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -95,4 +96,26 @@ test("GPIO power-hold catalog and M5GFX descriptions agree", async () => {
     const power = beginning.slice(0, beginning.indexOf("display_pins("));
     assert.equal(/gpio_power(?:_low)?\(/.test(power), expected, id);
   }
+});
+
+test("generated detector count accepts the limit and rejects an overflowing list", (t) => {
+  const compiler = process.env.CXX || "c++";
+  if (spawnSync(compiler, ["--version"]).error?.code === "ENOENT") return t.skip("C++ compiler unavailable");
+  const board = { id: "board", chip: "test", legacy_board_id: 1 };
+  const groups = { test_detectors: { chip: "test", output: "test_order.hpp", families: [
+    { detector: "first", boards: ["board"] }, { detector: "second", boards: ["board"] },
+  ] } };
+  const array = renderDetectorOrderHeaders([board], groups).get("test_order.hpp");
+  const compile = (limit) => spawnSync(compiler, ["-std=c++11", "-x", "c++", "-fsyntax-only", "-"], {
+    encoding: "utf8", input: `struct board_detector_t {};
+static const board_detector_t first{}, second{};
+`
+      + `static constexpr unsigned max_detector_families = ${limit};
+` + array,
+  });
+  const atLimit = compile(2);
+  assert.equal(atLimit.status, 0, atLimit.stderr);
+  const overflow = compile(1);
+  assert.notEqual(overflow.status, 0);
+  assert.match(overflow.stderr, /test_detectors exceeds the detection session family limit/);
 });
