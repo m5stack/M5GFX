@@ -672,10 +672,12 @@ namespace board_detect
     return success;
   }
 
-  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask)
+  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask,
+                                    std::uint32_t release_us)
   {
     static constexpr std::size_t max_pins = 64;
     pin_pull_result_t result;
+    result.release_sampled = release_us != 0;
     for (std::size_t pin = 0; pin < max_pins; ++pin)
     {
       const std::uint64_t bit = std::uint64_t(1) << pin;
@@ -685,31 +687,24 @@ namespace board_detect
       lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
       lgfx::delayMicroseconds(10);
       if (lgfx::gpio_in(pin)) { result.pulldown_high |= bit; }
+      if (release_us != 0)
+      {
+        lgfx::pinMode(pin, lgfx::pin_mode_t::input);
+        lgfx::delayMicroseconds(release_us);
+        if (lgfx::gpio_in(pin)) { result.pulldown_release_high |= bit; }
+      }
       lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
       lgfx::delayMicroseconds(10);
       if (lgfx::gpio_in(pin)) { result.pullup_high |= bit; }
+      if (release_us != 0)
+      {
+        lgfx::pinMode(pin, lgfx::pin_mode_t::input);
+        lgfx::delayMicroseconds(release_us);
+        if (lgfx::gpio_in(pin)) { result.pullup_release_high |= bit; }
+      }
       ctx.transaction->restore_start(static_cast<std::int8_t>(pin));
     }
     return result;
-  }
-
-  bool probe_pin_floating(probe_ctx_t& ctx, std::int8_t pin, std::uint32_t release_us)
-  {
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
-    lgfx::delayMicroseconds(10);
-    const bool charged_high = lgfx::gpio_in(pin);
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input);
-    lgfx::delayMicroseconds(release_us);
-    const bool held_high = lgfx::gpio_in(pin);
-
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
-    lgfx::delayMicroseconds(10);
-    const bool charged_low = !lgfx::gpio_in(pin);
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input);
-    lgfx::delayMicroseconds(release_us);
-    const bool held_low = !lgfx::gpio_in(pin);
-    ctx.transaction->restore_start(pin);
-    return charged_high && held_high && charged_low && held_low;
   }
 
   dedicated_release_result_t probe_dedicated_pin_release(

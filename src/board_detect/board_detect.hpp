@@ -492,10 +492,12 @@ namespace board_detect
   // its rail is powered, but must not be used as a board signature. U is high
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
-  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask);
-  // True only when a pin retains both internally biased levels after release.
-  // A rapid reversal indicates an external pull, so an NC assumption is false.
-  bool probe_pin_floating(probe_ctx_t& ctx, std::int8_t pin, std::uint32_t release_us);
+  static constexpr std::uint32_t pull_release_us = 128;
+  // Zero preserves the legacy pull-only sequence and timing.
+  // Release masks contain levels read without pulls after each bias; release_sampled
+  // marks those masks as measured only when release_us is nonzero.
+  pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask,
+                                    std::uint32_t release_us = 0);
 
   // On an already high SCL, release a held SDA and resample the same pins.
   // Reuse the previous sample so successive candidate pairs do not probe twice.
