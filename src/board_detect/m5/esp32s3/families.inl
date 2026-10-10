@@ -496,10 +496,10 @@ namespace m5
         }
       }
       if (!stopwatch_touch && !ctx.final_attempt) { return false; }
-      if (stopwatch_touch || ctx.hint == desc_stopwatch.def.id)
+      if (stopwatch_touch)
       {
         // The provisional PaperMono sequence has run. Apply StopWatch power
-        // before selecting it, whether touch replied or the hint is used.
+        // before selecting the member confirmed by its touch response.
         board_result_t stopwatch;
         stopwatch.assign(&desc_stopwatch);
         if (!i2c.opened
@@ -508,7 +508,7 @@ namespace m5
         result.assign(&desc_stopwatch);
       }
       if (stopwatch_touch) { return true; }
-      result.transient_fallback = true;
+      result.provisional = true;
       ESP_LOGW("board_detect_m5", "StopWatch/PaperMono touch unanswered; using %s for this boot",
                result.def->name);
       return true;
@@ -658,8 +658,8 @@ namespace m5
       if (result == nullptr) { return false; }
       // The legacy block skipped the PM1 read when hinted PaperS3 and the
       // GT911 read when hinted PaperDIY; each skip saves up to 200 ms or two
-      // touch-controller transactions, so the hint keeps that meaning here.
-      if (ctx.hint != desc_papers3.def.id)
+      // touch-controller transactions. Restrict these skips to the first attempt.
+      if (ctx.attempt != 0 || ctx.final_attempt || ctx.hint != desc_papers3.def.id)
       {
         std::uint8_t pm1_id[2] = {};
         if (probe_i2c_read(ctx, wiring::papers3::internal_i2c_sda,
@@ -672,7 +672,7 @@ namespace m5
           return true;
         }
       }
-      if (ctx.hint != desc_paperdiy.def.id)
+      if (ctx.attempt != 0 || ctx.final_attempt || ctx.hint != desc_paperdiy.def.id)
       {
         // An ACK alone is not enough to identify the PaperS3 touch controller
         // (DinMeter shares these pins): require the GT911 product ID string.
@@ -765,17 +765,28 @@ namespace m5
           wiring::cardputer_adv::internal_i2c_scl, 0x34);
         if (!variant_unanswered) { chosen = &desc_cardputer_adv; }
       }
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_VARIANT)
+      if ((pulls.pulldown_high & vameter_mask) == vameter_mask
+       || (pulls.pulldown_high & adv_mask) == adv_mask)
+      { variant_unanswered = true; }
+#endif
       if (variant_unanswered)
       {
         if (!ctx.final_attempt) { return false; }
-        // A same-family NVS hint is a better last resort than the base model.
-        if (ctx.hint == desc_vameter.def.id
-         && (pulls.pulldown_high & vameter_mask) == vameter_mask)
-        { chosen = &desc_vameter; }
-        else if (ctx.hint == desc_cardputer_adv.def.id
-              && (pulls.pulldown_high & adv_mask) == adv_mask)
-        { chosen = &desc_cardputer_adv; }
-        result->transient_fallback = true;
+        // Only select members compatible with the observed subdivision pulls.
+        const auto possible = [&](board_id_t id) -> const board_desc_t*
+        {
+          if (id == desc_cardputer.def.id) { return &desc_cardputer; }
+          if (id == desc_vameter.def.id
+           && (pulls.pulldown_high & vameter_mask) == vameter_mask) { return &desc_vameter; }
+          if (id == desc_cardputer_adv.def.id
+           && (pulls.pulldown_high & adv_mask) == adv_mask) { return &desc_cardputer_adv; }
+          return nullptr;
+        };
+        const auto* preferred = possible(ctx.preferred);
+        const auto* hinted = possible(ctx.hint);
+        chosen = preferred ? preferred : hinted ? hinted : &desc_cardputer;
+        result->provisional = true;
         ESP_LOGW("board_detect_m5", "Cardputer variant unanswered; using %s for this boot",
                  chosen->def.name);
       }

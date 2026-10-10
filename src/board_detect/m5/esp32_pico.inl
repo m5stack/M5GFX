@@ -182,7 +182,7 @@ private:
     if (down)
     {
       result->assign(&desc_atomvoice); // Microphone DATA remains high with G23 low.
-      if (!(up1 && down2 && up2)) { result->transient_fallback = true; }
+      if (!(up1 && down2 && up2)) { result->provisional = true; }
       return true;
     }
     if (!measured_)
@@ -211,17 +211,17 @@ private:
       esp_rom_delay_us(10);
       const bool matrix_pulls = lgfx::gpio_in(21) && lgfx::gpio_in(25);
       ctx.transaction->restore_start({ 21, 25 });
-      if (!linked || !matrix_pulls) { result->transient_fallback = true; }
+      if (!linked || !matrix_pulls) { result->provisional = true; }
     }
     else if (ratio100 <= lite_limit * reference)
     {
       result->assign(&desc_atomlite);
-      if (!linked) { result->transient_fallback = true; }
+      if (!linked) { result->provisional = true; }
     }
     else
     {
       result->assign(&desc_atomu);
-      if (linked || up1 || down2 || up2) { result->transient_fallback = true; }
+      if (linked || up1 || down2 || up2) { result->provisional = true; }
     }
     return true;
   }

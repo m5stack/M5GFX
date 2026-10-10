@@ -599,7 +599,7 @@ test("generated ESP32 wiring preserves the replaced board values", async () => {
 test("all chip entries pass reset and hint policy through the common session", async () => {
   const main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(main, /request.allow_reset = use_reset;[\s\S]*?request.max_attempts = 5;[\s\S]*?run_detection_session/);
-  assert.match(main, /package.policy.keep_initial_hint = true;/);
+  assert.doesNotMatch(main, /package\.policy/);
   assert.match(main, /probe.allow_reset = request.allow_reset;/);
 });
 
@@ -1295,7 +1295,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.match(esp32c6Source,
     /probe_i2c_bus_present\(ctx, c6_display_detail::sda,\s*c6_display_detail::scl\)[\s\S]*?probe_pin_pulls\(ctx, c6_display_detail::signature_bit\)/);
   assert.match(esp32c6Source,
-    /specs::unitc6l::i2c_ioe::id_reg[\s\S]*?!is_pi4io\(value\)[\s\S]*?ctx\.final_attempt[\s\S]*?transient_fallback = true/);
+    /specs::unitc6l::i2c_ioe::id_reg[\s\S]*?!is_pi4io\(value\)[\s\S]*?ctx\.candidate == nullptr[\s\S]*?ctx\.candidate = &desc_unitc6l.def;[\s\S]*?return false/);
   const c6Main = await fs.readFile(path.join(root, "../../src/M5GFX.cpp"), "utf8");
   assert.match(c6Main,
     /package.detectors = board_detect::m5::esp32c6_detectors_qfn40;/);

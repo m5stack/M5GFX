@@ -21,6 +21,8 @@ namespace board_detect
     // A retry must not override the caller's reset policy.
     bool allow_reset = true;
     board_id_t hint = board_id_unknown;
+    board_id_t preferred = board_id_unknown;
+    std::uint8_t attempt = 0;
     bool final_attempt = false;
     int i2c_port_probe = -1;
     // Non-null while board-detection components are running.

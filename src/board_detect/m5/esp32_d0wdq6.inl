@@ -267,6 +267,9 @@ namespace m5
         if (core2) { break; }
         lgfx::delay(1);
       } while (lgfx::millis() - touch_start < touch_startup_poll_ms);
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH)
+      tough = core2 = false;
+#endif
       // Core2 requires its own touch response; a Station LCD miss on shared
       // AXP192 must not be saved as Core2 when neither touch answers.
       if (!tough && !core2)
@@ -278,9 +281,17 @@ namespace m5
           ctx.transaction->restore_start(signals);
           return false;
         }
-        if (!finish_unresolved(ctx, &result,
-                               ctx.hint == desc_tough.def.id ? &desc_tough : nullptr,
-                               &desc_core2, false, "Core2/Tough touch unidentified"))
+        const auto possible = [&](board_id_t id) -> const board_desc_t*
+        {
+          if (id == desc_core2.def.id) { return &desc_core2; }
+          // Tough has no AXP2101 variant; an explicit preference cannot negate it.
+          if (id == desc_tough.def.id
+           && !(result.option & generated_options::core2::new_pmic)) { return &desc_tough; }
+          return nullptr;
+        };
+        if (!select_provisional_member(ctx, &result,
+                               possible(ctx.preferred), possible(ctx.hint),
+                               &desc_core2, "Core2/Tough touch unidentified"))
         {
           ctx.transaction->restore_start(signals);
           return false;
@@ -462,6 +473,8 @@ namespace m5
       const auto& values = ctx.detector_workspace.values;
       if (values[2] & 2u)
       {
+        // A bypassed signature can display, but cannot establish a saved identity.
+        result->provisional = true;
         ESP_LOGI("board_detect_m5",
                  "M5Stack detected after bypassing pull signature pd=%08x%08x pu=%08x%08x",
                  static_cast<unsigned>(values[0] >> 32),

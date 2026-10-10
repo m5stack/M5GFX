@@ -127,18 +127,18 @@ namespace board_detect
   // that member remains possible. Defaults may be absent for open families.
   // Only some chips' detectors use it.
   __attribute__((unused))
-  static bool finish_unresolved(const prepare_ctx_t& ctx, board_result_t* result,
+  static bool select_provisional_member(const prepare_ctx_t& ctx, board_result_t* result,
+                                const board_desc_t* preferred_if_possible,
                                 const board_desc_t* hinted_if_possible,
-                                const board_desc_t* family_default,
-                                bool persist, const char* why)
+                                const board_desc_t* family_default, const char* why)
   {
     if (!ctx.final_attempt || result == nullptr) { return false; }
-    const auto* chosen = hinted_if_possible ? hinted_if_possible : family_default;
+    const auto* chosen = preferred_if_possible ? preferred_if_possible
+                       : hinted_if_possible ? hinted_if_possible : family_default;
     if (chosen == nullptr) { return false; }
     result->assign(chosen);
-    if (!persist) { result->transient_fallback = true; }
-    ESP_LOGW("board_detect_m5", "%s; using %s%s", why, chosen->def.name,
-             persist ? "" : " for this boot");
+    result->provisional = true;
+    ESP_LOGW("board_detect_m5", "%s; using %s for this boot", why, chosen->def.name);
     return true;
   }
 
@@ -1704,7 +1704,7 @@ namespace board_detect
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
       if (shared_id_read_) { return probe_family(ctx, result); }
-      if (ctx.hint != board_id_unknown)
+      if (ctx.attempt == 0 && !ctx.final_attempt && ctx.hint != board_id_unknown)
       {
         for (std::uint8_t index = 0; index < member_count_; ++index)
         {
@@ -1829,7 +1829,7 @@ namespace board_detect
       if (result.prepared & prepared_power_failed)
       {
         // The family member is still provisional: show it, but do not cache it.
-        result.transient_fallback = true;
+        result.provisional = true;
         ESP_LOGW("board_detect",
                  "member refinement skipped after retained power_on failure; board=%u",
                  static_cast<unsigned>(result.def->id));

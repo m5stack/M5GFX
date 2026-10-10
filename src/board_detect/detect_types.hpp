@@ -73,8 +73,8 @@ namespace board_detect
     const board_def_t* def = &board_def_unknown;
     std::uint32_t option = 0;
     std::uint32_t prepared = 0;
-    // A final-attempt family default can show the display, but is not an NVS hint.
-    bool transient_fallback = false;
+    // Family evidence permits setup, but its member is not confirmed.
+    bool provisional = false;
     // A weak, displayless suggestion returned only when no board is confirmed.
     const board_def_t* candidate = nullptr;
     detect_status_t status = detect_status_t::no_match;
@@ -85,6 +85,7 @@ namespace board_detect
   };
 
   enum class verdict_t : std::uint8_t { unknown, candidate, confirmed };
+  enum class candidate_kind_t : std::uint8_t { none, weak, provisional };
   enum class fail_reason_t : std::uint8_t
   {
     none, no_signature, confirm_transient, confirm_definitive, excluded_by_set,
@@ -95,6 +96,7 @@ namespace board_detect
   {
     const board_id_t* target_set = nullptr;
     board_id_t hint = board_id_unknown;
+    board_id_t preferred = board_id_unknown;
     bool allow_reset = false;
     std::uint8_t attempt = 0;
     std::uint8_t max_attempts = 1;
@@ -104,6 +106,7 @@ namespace board_detect
   struct detect_outcome_t
   {
     verdict_t verdict = verdict_t::unknown;
+    candidate_kind_t candidate_kind = candidate_kind_t::none;
     board_result_t result;
     fail_reason_t reason = fail_reason_t::none;
     std::uint8_t attempts = 0;

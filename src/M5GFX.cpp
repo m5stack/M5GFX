@@ -793,7 +793,6 @@ namespace m5gfx
   struct detection_package_t
   {
     const board_detect::board_detector_t* const* detectors = nullptr;
-    board_detect::detect_session_policy_t policy;
     bool conditional_pins_unavailable = false;
     bool direct_setup = false;
   };
@@ -802,10 +801,8 @@ namespace m5gfx
   {
     detection_package_t package;
     (void)legacy_autodetect;
-    // Retain these legacy differences until S1 aligns hint and final-attempt
-    // semantics. Selection itself does not probe or configure any GPIO.
+    // Selection does not probe or configure any GPIO.
 #if !defined(CONFIG_IDF_TARGET) || defined(CONFIG_IDF_TARGET_ESP32)
-    package.policy.keep_initial_hint = true;
     package.direct_setup = true;
     // The protected legacy autodetect method never probed ESP32 directly.
     if (legacy_autodetect) { return package; }
@@ -825,17 +822,8 @@ namespace m5gfx
     default: break;
     }
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
-    static const board_detect::board_id_t gate[] = {
-      board_t::board_M5StampC3, board_t::board_M5StampC3U, board_detect::board_id_unknown,
-    };
-    package.policy.hint_gate = gate;
     package.detectors = board_detect::m5::esp32c3_detectors;
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
-    static const board_detect::board_id_t gate[] = {
-      board_t::board_M5ToughC5, board_t::board_M5StampC5, board_detect::board_id_unknown,
-    };
-    package.policy.hint_gate = gate;
-    package.policy.suppress_final_attempt = true;
     package.detectors = board_detect::m5::esp32c5_detectors;
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
     const auto pkg = m5gfx::get_pkg_ver();
@@ -843,18 +831,9 @@ namespace m5gfx
     if (pkg == 1) { package.detectors = board_detect::m5::esp32c6_detectors_qfn32; }
     else if (pkg == 0)
     {
-      static const board_detect::board_id_t gate[] = {
-        board_t::board_ArduinoNessoN1, board_t::board_M5UnitC6L, board_detect::board_id_unknown,
-      };
-      package.policy.hint_gate = gate;
       package.detectors = board_detect::m5::esp32c6_detectors_qfn40;
     }
 #elif defined(CONFIG_IDF_TARGET_ESP32C61)
-    static const board_detect::board_id_t gate[] = {
-      board_t::board_M5CoreMatrix, board_detect::board_id_unknown,
-    };
-    package.policy.hint_gate = gate;
-    package.policy.suppress_final_attempt = true;
     package.detectors = board_detect::m5::esp32c61_detectors;
 #elif defined(CONFIG_IDF_TARGET_ESP32H2)
     package.detectors = board_detect::m5::esp32h2_detectors;
@@ -950,6 +929,8 @@ namespace m5gfx
     }
     board_detect::probe_ctx_t probe;
     probe.allow_reset = request.allow_reset;
+    probe.preferred = request.preferred;
+    probe.attempt = request.attempt;
     probe.final_attempt = final_attempt;
     probe.i2c_port_probe = probe_i2c_port;
     probe.transaction = &transaction;
@@ -981,7 +962,8 @@ namespace m5gfx
       detectors, request.hint, probe);
     outcome.result = result;
     if (!probe.confirm_attempted) { outcome.reason = board_detect::fail_reason_t::no_signature; }
-    if (result.candidate != nullptr) { outcome.verdict = board_detect::verdict_t::candidate; }
+    if (result.candidate != nullptr)
+    { outcome.verdict = board_detect::verdict_t::candidate; outcome.candidate_kind = board_detect::candidate_kind_t::weak; }
     if (result.status == board_detect::detect_status_t::excluded)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] detected board:%u is excluded",
@@ -995,7 +977,6 @@ namespace m5gfx
       transaction.rollback();
       return outcome;
     }
-    outcome.verdict = board_detect::verdict_t::confirmed;
     // Failure injection historically sees the representative before refine.
     const auto setup_board = static_cast<board_t>(result.def->id);
 
@@ -1003,19 +984,28 @@ namespace m5gfx
     const int adopted_i2c_port = result.desc->internal_i2c.hw_port;
     const bool adopted_i2c_was_open = adopted_i2c_port >= 0
                                    && lgfx::i2c::isInitialized(adopted_i2c_port);
-    if (result.desc == nullptr || !board_detect::prepare(*result.desc, result, prepare_ctx))
-    {
-      ESP_LOGW(LIBRARY_NAME, "[Autodetect] prepare failed for detected board:%u",
-               static_cast<unsigned>(result.def->id));
-      outcome.result = result;
-      outcome.reason = board_detect::fail_reason_t::prepare_failed;
-      transaction.rollback();
-      return outcome;
-    }
+    const bool prepared = result.desc != nullptr
+                       && board_detect::prepare(*result.desc, result, prepare_ctx);
     if (adopted_i2c_port >= 0 && !adopted_i2c_was_open
      && lgfx::i2c::isInitialized(adopted_i2c_port))
     {
       transaction.buses().opened_i2c(adopted_i2c_port);
+    }
+    outcome.result = result;
+    const bool accepted = board_detect::finalize_prepared_result(outcome, request.preferred);
+    if (!prepared)
+    {
+      // Preserve the matched family's identification; adoption still failed.
+      ESP_LOGW(LIBRARY_NAME, "[Autodetect] prepare failed for detected board:%u",
+               static_cast<unsigned>(result.def->id));
+      outcome.reason = board_detect::fail_reason_t::prepare_failed;
+      transaction.rollback();
+      return outcome;
+    }
+    if (!accepted)
+    {
+      transaction.rollback();
+      return outcome;
     }
     board_detect::m5::display_parts_t parts;
     const auto construct_result = board_detect::m5::setup_detected_board(result, &parts);
@@ -1070,6 +1060,18 @@ namespace m5gfx
   }
 #endif
 
+  void M5GFX::setDetectConfig(const detect_config_t& config)
+  {
+    const bool changed = _detect_config.fallback_board != config.fallback_board;
+    _detect_config = config;
+#if defined (ESP_PLATFORM)
+    if (_detect_started && changed)
+    { ESP_LOGW(LIBRARY_NAME, "[Autodetect] configuration stored after init; applies to the next detection"); }
+#else
+    (void)changed;
+#endif
+  }
+
   void M5GFX::_set_backlight(lgfx::ILight* bl)
   {
 //  if (_light_last) { delete _light_last; }
@@ -1092,6 +1094,7 @@ namespace m5gfx
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {
+    _detect_started = true;
     _board_candidate = board_t::board_unknown;
     if (getBoard() != board_t::board_unknown)
     {
@@ -1151,15 +1154,15 @@ namespace m5gfx
     }
 
     board_detect::detect_request_t request;
-    request.hint = static_cast<board_detect::board_id_t>(nvs_board);
+    request.hint = nvs_board <= UINT16_MAX
+                 ? static_cast<board_detect::board_id_t>(nvs_board) : board_detect::board_id_unknown;
+    request.preferred = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
     request.allow_reset = use_reset;
     request.max_attempts = 5;
     auto package = select_detection_package();
-    package.policy.reject_initial_hint = package.policy.hint_gate != nullptr
-                                      && nvs_board != request.hint;
     request.conditional_pins_unavailable = package.conditional_pins_unavailable;
     const auto outcome = board_detect::run_detection_session(
-      request, package.policy,
+      request,
       [this, &package](const board_detect::detect_request_t& attempt, bool final_attempt)
       {
         if (!package.direct_setup) { panel(nullptr); }
@@ -1169,7 +1172,7 @@ namespace m5gfx
             return !reject_detected_setup(setup_board)
                 && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
           });
-        if (!package.direct_setup || result.verdict != board_detect::verdict_t::confirmed)
+        if (!package.direct_setup || !result.setup_succeeded)
         {
           if (package.direct_setup) { panel(nullptr); }
           panel(_panel_last.get());
@@ -1178,10 +1181,6 @@ namespace m5gfx
       });
     const auto board = outcome.setup_succeeded
                      ? static_cast<board_t>(outcome.result.def->id) : board_t::board_unknown;
-    // Only a successful adopter exported transient_fallback in the old path.
-    // A partial failed result must not change the NVS write decision in S0.
-    const bool transient_fallback = outcome.reason == board_detect::fail_reason_t::no_signature
-                                || (outcome.setup_succeeded && outcome.result.transient_fallback);
     if (outcome.result.candidate != nullptr)
     { _board_candidate = static_cast<board_t>(outcome.result.candidate->id); }
     _board = board;
@@ -1196,7 +1195,8 @@ namespace m5gfx
 
 #endif
 
-    if (!transient_fallback && nvs_board != board) {
+    // Unresolved members and failed adoption must never replace a saved hint.
+    if (board_detect::should_persist_detection(outcome, nvs_board)) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
         ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", (int)board);
         nvs_set_u32(nvs_handle, NVS_KEY, board);
@@ -1239,39 +1239,28 @@ namespace m5gfx
     panel(nullptr);
     const auto package = select_detection_package(true);
     board_detect::detect_request_t request;
-    request.hint = static_cast<board_detect::board_id_t>(board);
+    request.hint = static_cast<std::uint32_t>(board) <= UINT16_MAX
+                 ? static_cast<board_detect::board_id_t>(board) : board_detect::board_id_unknown;
+    request.preferred = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
     request.allow_reset = use_reset;
     request.conditional_pins_unavailable = package.conditional_pins_unavailable;
-    auto policy = package.policy;
-    policy.reject_initial_hint = policy.hint_gate != nullptr
-                              && static_cast<std::uint32_t>(board) != request.hint;
-    policy.suppress_final_attempt = policy.suppress_final_attempt || !final_attempt;
-    const auto outcome = board_detect::run_detection_session(request, policy,
-      [this, &package](const board_detect::detect_request_t& attempt, bool last)
+    const auto outcome = board_detect::run_detection_session(request,
+      [this, &package, final_attempt](const board_detect::detect_request_t& attempt, bool)
       {
-        return run_detection_attempt(package.detectors, attempt, last,
+        return run_detection_attempt(package.detectors, attempt, final_attempt,
           [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
           {
             return !reject_detected_setup(setup_board)
                 && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
           });
       });
-    if (package.detectors != nullptr && !policy.reject_initial_hint
-     && board_detect::session_hint_allowed(policy, request.hint))
-    {
-      if (no_signature != nullptr)
-      { *no_signature = outcome.reason == board_detect::fail_reason_t::no_signature; }
-      if (candidate_board != nullptr && *candidate_board == board_t::board_unknown
-       && outcome.result.candidate != nullptr)
-      { *candidate_board = static_cast<board_t>(outcome.result.candidate->id); }
-    }
-    // These legacy chip entries did not export a transient output, even on success.
-#if !defined(CONFIG_IDF_TARGET_ESP32C5) && !defined(CONFIG_IDF_TARGET_ESP32C61)
+    if (no_signature != nullptr)
+    { *no_signature = outcome.reason == board_detect::fail_reason_t::no_signature; }
+    if (candidate_board != nullptr && *candidate_board == board_t::board_unknown
+     && outcome.result.candidate != nullptr)
+    { *candidate_board = static_cast<board_t>(outcome.result.candidate->id); }
     if (outcome.setup_succeeded && transient_fallback != nullptr)
-    { *transient_fallback = outcome.result.transient_fallback; }
-#else
-    (void)transient_fallback;
-#endif
+    { *transient_fallback = outcome.result.provisional; }
     panel(_panel_last.get());
     return outcome.setup_succeeded ? static_cast<board_t>(outcome.result.def->id)
                                    : board_t::board_unknown;
@@ -1281,6 +1270,7 @@ namespace m5gfx
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {
+    _detect_started = true;
     board_t b = board_t::board_unknown;
 #if defined (M5GFX_BOARD)
     b = M5GFX_BOARD;

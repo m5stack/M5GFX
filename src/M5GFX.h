@@ -58,6 +58,11 @@
 namespace m5gfx
 {
   using namespace lgfx;
+
+  struct detect_config_t
+  {
+    board_t fallback_board = board_t::board_unknown;
+  };
 //----------------------------------------------------------------------------
 
   namespace ili9341_colors  // Color definitions for backwards compatibility with old sketches
@@ -193,6 +198,8 @@ namespace m5gfx
 #endif
     std::vector<DisplayState> _displayStateStack;
     board_t _board_candidate = board_t::board_unknown;
+    detect_config_t _detect_config;
+    bool _detect_started = false;
 
     bool init_impl(bool use_reset, bool use_clear) override;
     board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown,
@@ -211,6 +218,8 @@ namespace m5gfx
 
     static M5GFX* getInstance(void) { return _instance; }
     board_t getBoardCandidate(void) const { return _board_candidate; }
+    void setDetectConfig(const detect_config_t& config);
+    const detect_config_t& getDetectConfig(void) const { return _detect_config; }
 
     void progressBar(int x, int y, int w, int h, uint8_t val);
     void pushState(void);
