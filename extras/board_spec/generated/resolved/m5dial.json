@@ -22,6 +22,14 @@
     "storage": {
       "psram_mb": 0,
       "flash_mb": 8
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Dial",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/499/Sch_M5Dial.pdf"
     }
   },
   "pins": {

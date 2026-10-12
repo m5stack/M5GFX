@@ -5,6 +5,16 @@
   "official_name": "M5Stack M5PowerHub",
   "legacy_board_id": 146,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/PowerHub",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1183/PowerHub_SCH_Main_b0.3_20250704_Docs_2025_09_09_14_01_58.pdf"
+    }
+  },
   "pins": {
     "1": {
       "roles": [
@@ -20,6 +30,38 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:ext_bus.15"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:ext_bus.16"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:ext_bus.14"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:ext_bus.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "15": {
@@ -38,6 +80,38 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "41": {
+      "roles": [
+        "conn:ext_bus.13"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "42": {
+      "roles": [
+        "conn:ext_bus.11"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "43": {
+      "roles": [
+        "conn:ext_bus.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:ext_bus.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "45": {
@@ -106,11 +180,37 @@
     "port_c": {
       "type": "hy2_4p",
       "standard": "port_uart",
+      "note": "The product color table lists white GPIO2/yellow GPIO1. The existing port_c terminal contract remains 1=GPIO1/2=GPIO2 for compatibility with the library pin table; terminal order is logical.",
       "positions": {
         "1": "gpio:1",
         "2": "gpio:2",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      }
+    },
+    "ext_bus": {
+      "type": "logical_terminals_16",
+      "positions": {
+        "1": "pwr:bat",
+        "2": "pwr:bat",
+        "3": "pwr:vin",
+        "4": "pwr:5vout",
+        "5": "pwr:gnd",
+        "6": "pwr:gnd",
+        "7": "gpio:43",
+        "8": "chip:en",
+        "9": "gpio:44",
+        "10": "fixed:pmu.nwkup",
+        "11": "gpio:42",
+        "12": "gpio:7",
+        "13": "gpio:41",
+        "14": "gpio:6",
+        "15": "gpio:4",
+        "16": "gpio:5"
+      },
+      "note": "Rear EXT 2.54-16P numbered as the official table. BAT-2S is the two-cell battery rail; nWKUP is the PMU wake signal, not an ESP32 GPIO. 5VOUT is enabled by GPIO14. Logical terminal order; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
       }
     }
   }

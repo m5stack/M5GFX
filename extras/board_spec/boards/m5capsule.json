@@ -5,13 +5,71 @@
   "official_name": "M5Stack M5Capsule",
   "legacy_board_id": 139,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Capsule",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/496/Sch_M5Capsule.pdf"
+    }
+  },
   "pins": {
+    "0": {
+      "roles": [
+        "conn:capsule_bus.16"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:capsule_bus.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:capsule_bus.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:capsule_bus.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:capsule_bus.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "8": {
       "roles": [
         "bus:internal_i2c.sda"
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:capsule_bus.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "10": {
@@ -43,7 +101,8 @@
     "13": {
       "roles": [
         "bus:port_a_i2c.sda",
-        "conn:port_a.2"
+        "conn:port_a.2",
+        "conn:capsule_bus.15"
       ],
       "verified": {
         "roles": "generated"
@@ -61,7 +120,8 @@
     "15": {
       "roles": [
         "bus:port_a_i2c.scl",
-        "conn:port_a.1"
+        "conn:port_a.1",
+        "conn:capsule_bus.17"
       ],
       "verified": {
         "roles": "generated"
@@ -82,6 +142,30 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "42": {
+      "roles": [
+        "conn:capsule_bus.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "43": {
+      "roles": [
+        "conn:capsule_bus.10"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:capsule_bus.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "46": {
@@ -163,6 +247,22 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c"
+    },
+    "capsule_bus": {
+      "type": "logical_terminals_18",
+      "positions": {
+        "2": "pwr:5vout",
+        "4": "pwr:bat",
+        "8": "pwr:3v3",
+        "11": "pwr:gnd",
+        "13": "pwr:5vin",
+        "14": "chip:en",
+        "18": "pwr:gnd"
+      },
+      "note": "Capsule Bus numbered as the official table. WAKE=GPIO42 and Boot=GPIO0. GPIO13/15 are shared with Grove; UART is GPIO43/44. Logical terminal order; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
+      }
     }
   }
 }

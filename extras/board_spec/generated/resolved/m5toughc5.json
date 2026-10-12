@@ -22,6 +22,14 @@
       "flash_mb": 8,
       "sd": true,
       "psram_mode": "quad"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/ToughC5",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1275/K162_ToughC5_sche.pdf"
     }
   },
   "pins": {
@@ -285,6 +293,7 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c",
+      "note": "User wiring connector on the internal expansion board; cables route through the M12 housing cable holes. The holes are not electrical M12 pin connectors.",
       "positions": {
         "1": "gpio:3",
         "2": "gpio:2",
@@ -295,6 +304,7 @@
     "port_b": {
       "type": "hy2_4p",
       "standard": "port_io",
+      "note": "User wiring connector on the internal expansion board; cables route through the M12 housing cable holes. The holes are not electrical M12 pin connectors.",
       "positions": {
         "1": "gpio:1",
         "2": "gpio:6",
@@ -305,6 +315,7 @@
     "port_c": {
       "type": "hy2_4p",
       "standard": "port_uart",
+      "note": "User wiring connector on the internal expansion board; cables route through the M12 housing cable holes. The holes are not electrical M12 pin connectors. The official color table lists white GPIO11/yellow GPIO12. The existing port_c terminal contract remains 1=GPIO12/2=GPIO11 for compatibility with the library pin table; terminal order is logical.",
       "positions": {
         "1": "gpio:12",
         "2": "gpio:11",

@@ -45,7 +45,10 @@
     "3v3_l2",
     "sys_vbus",
     "sys_5v",
-    "lcd_bl"
+    "lcd_bl",
+    "isolated_gnd",
+    "measurement_in",
+    "measurement_out"
   ],
   "note": "Positions are a logical terminal order. Physical placement and pitch are not represented; use the board note and official pin map for the physical layout.",
   "verified": {
