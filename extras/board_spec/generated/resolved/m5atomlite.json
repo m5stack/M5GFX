@@ -2,9 +2,20 @@
   "schema_version": 1,
   "id": "m5atomlite",
   "name": "M5AtomLite",
-  "official_name": "M5Stack AtomLite",
+  "official_name": "M5Stack Atom-Lite",
+  "official_name_verified": true,
   "legacy_board_id": 128,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Atom-Lite",
+      "schematic": "https://static-cdn.m5stack.com/resource/docs/products/core/ATOM%20Lite/img-2e58eac3-d9ef-4be4-b486-d4dd9a8324fa.webp",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
     "12": {
       "roles": [
@@ -16,17 +27,43 @@
       "roles": [],
       "note": "Unconnected GPIO sampled by the Atom family exclusion gate."
     },
+    "19": {
+      "roles": [
+        "conn:rear_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "21": {
       "roles": [
-        "bus:internal_i2c.scl"
+        "bus:internal_i2c.scl",
+        "conn:rear_right.1"
       ],
       "verified": {
         "roles": "generated"
       }
     },
+    "22": {
+      "roles": [
+        "conn:rear_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "23": {
+      "roles": [
+        "conn:rear_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "25": {
       "roles": [
-        "bus:internal_i2c.sda"
+        "bus:internal_i2c.sda",
+        "conn:rear_right.2"
       ],
       "verified": {
         "roles": "generated"
@@ -54,6 +91,14 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "conn:rear_left.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     }
   },
@@ -98,7 +143,41 @@
         "2": "gpio:26",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      },
+      "verified": {
+        "positions": "datasheet"
       }
+    },
+    "rear_left": {
+      "type": "socket_1x5_254",
+      "positions": {
+        "1": "pwr:3v3",
+        "2": "gpio:22",
+        "3": "gpio:19",
+        "4": "gpio:23",
+        "5": "gpio:33"
+      },
+      "note": "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "group": "bottom"
+    },
+    "rear_right": {
+      "type": "socket_1x4_254",
+      "positions": {
+        "1": "gpio:21",
+        "2": "gpio:25",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      },
+      "note": "Rear right socket in the same bottom view; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "group": "bottom"
     }
   }
 }

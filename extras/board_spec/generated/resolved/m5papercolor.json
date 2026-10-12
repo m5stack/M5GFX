@@ -23,6 +23,14 @@
       "psram_mb": 8,
       "psram_mode": "opi",
       "sd": true
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/PaperColor",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1239/C151-SCH_PaperColor_V0.5_SCH_PDF_20260424_EN_2026_04_24_11_01_17.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
@@ -404,6 +412,7 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c",
+      "note": "Grove 5V direction is controlled by PY_GROVE_OUT_EN (M5PM1 BOOST5V_EN_PP); the official pin map assigns white GPIO5 and yellow GPIO4.",
       "positions": {
         "1": "gpio:5",
         "2": "gpio:4",

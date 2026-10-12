@@ -20,6 +20,14 @@
     },
     "storage": {
       "psram_mb": 0
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/AtomS3",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/472/Sch_M5_AtomS3_v1.0.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
@@ -39,6 +47,38 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:rear_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:rear_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:rear_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:rear_left.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "15": {
@@ -79,7 +119,8 @@
     },
     "38": {
       "roles": [
-        "bus:internal_i2c.sda"
+        "bus:internal_i2c.sda",
+        "conn:rear_right.2"
       ],
       "verified": {
         "roles": "generated"
@@ -87,7 +128,8 @@
     },
     "39": {
       "roles": [
-        "bus:internal_i2c.scl"
+        "bus:internal_i2c.scl",
+        "conn:rear_right.1"
       ],
       "verified": {
         "roles": "generated"
@@ -208,7 +250,41 @@
         "2": "gpio:2",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      },
+      "verified": {
+        "positions": "datasheet"
       }
+    },
+    "rear_left": {
+      "type": "socket_1x5_254",
+      "positions": {
+        "1": "pwr:3v3",
+        "2": "gpio:5",
+        "3": "gpio:6",
+        "4": "gpio:7",
+        "5": "gpio:8"
+      },
+      "note": "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "group": "bottom"
+    },
+    "rear_right": {
+      "type": "socket_1x4_254",
+      "positions": {
+        "1": "gpio:39",
+        "2": "gpio:38",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      },
+      "note": "Rear right socket in the same bottom view; positions numbered top to bottom. GPIO39/38 share the onboard MPU6886 I2C bus.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "group": "bottom"
     }
   }
 }

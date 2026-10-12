@@ -3,13 +3,40 @@
   "id": "m5dualkey",
   "name": "M5DualKey",
   "official_name": "M5Stack Chain DualKey",
+  "official_name_verified": true,
   "legacy_board_id": 147,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/chain/Chain_DualKey",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1176/Chain_DualKey_SCH_V1.5_20250725_2025_07_25_16_06_51.pdf"
+    }
+  },
   "pins": {
     "0": {
       "roles": [
         "dev:btn_a.in"
       ]
+    },
+    "5": {
+      "roles": [
+        "conn:chain_2.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:chain_2.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     },
     "17": {
       "roles": [
@@ -31,6 +58,22 @@
     "39": {
       "roles": [],
       "note": "NC; measured floating"
+    },
+    "47": {
+      "roles": [
+        "conn:chain_1.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "48": {
+      "roles": [
+        "conn:chain_1.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     }
   },
   "buses": {},
@@ -53,6 +96,30 @@
     },
     "rgb_led": {
       "kind": "led_strip"
+    }
+  },
+  "connectors": {
+    "chain_1": {
+      "type": "logical_terminals_4",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5v"
+      },
+      "note": "HY2.0-4P_1 in logical official table order GND/VOUT/UART1_RX/UART1_TX. A physical Chain connector, not a library Port A/B/C contract. Logical terminal order; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "chain_2": {
+      "type": "logical_terminals_4",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5v"
+      },
+      "note": "HY2.0-4P_2 in logical official table order GND/VOUT/UART2_RX/UART2_TX. A physical Chain connector, not a library Port A/B/C contract. Logical terminal order; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
+      }
     }
   }
 }

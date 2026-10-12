@@ -15,6 +15,14 @@
   "legacy_board_id": 1,
   "chip": "esp32_d0wdq6",
   "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Basic",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/480/M5-Core-Schematic_20171206.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    },
     "storage": {
       "psram_mb": 0
     }
@@ -445,6 +453,7 @@
     },
     "mbus": {
       "type": "mbus",
+      "note": "Basic/Gray/Fire/M5GO share this host M-Bus mapping. Port B/C belong to M5GO Bottom accessories. GPIO16/17 are used by PSRAM on Fire; HPWR and battery availability depend on the attached base.",
       "positions": {
         "1": "pwr:gnd",
         "2": "gpio:35",

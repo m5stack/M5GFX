@@ -2,10 +2,241 @@
   "schema_version": 1,
   "id": "m5stampc5",
   "name": "M5StampC5",
-  "official_name": "M5Stack StampC5",
+  "official_name": "M5Stack Stamp-C5",
+  "official_name_verified": true,
   "legacy_board_id": 153,
   "chip": "esp32c5",
-  "pins": {},
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Stamp-C5",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1258/S016_StampC5_V0.3_SCH_PDF_20260207_2026_02_07_11_34_57.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "conn:ext_fpc.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:stamp_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "2": {
+      "roles": [
+        "conn:stamp_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:stamp_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:extra_gpio.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:stamp_right.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:stamp_right.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:stamp_right.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:stamp_right.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:stamp_right.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:stamp_right.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "11": {
+      "roles": [
+        "conn:ext_fpc.10"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "12": {
+      "roles": [
+        "conn:ext_fpc.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "23": {
+      "roles": [
+        "conn:ext_fpc.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "24": {
+      "roles": [
+        "conn:ext_fpc.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "25": {
+      "roles": [
+        "conn:ext_fpc.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "26": {
+      "roles": [
+        "conn:ext_fpc.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "27": {
+      "roles": [
+        "conn:ext_fpc.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "28": {
+      "roles": [
+        "conn:stamp_right.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    }
+  },
   "buses": {},
-  "devices": {}
+  "devices": {},
+  "connectors": {
+    "stamp_left": {
+      "type": "logical_terminals_7",
+      "positions": {
+        "1": "pwr:3v3",
+        "2": "gpio:1",
+        "3": "gpio:2",
+        "4": "gpio:3",
+        "5": "pwr:bat",
+        "6": "pwr:vbus",
+        "7": "pwr:gnd"
+      },
+      "note": "JP1 positions 1-7 follow the official CELL Header schematic, top to bottom in component-side PinMap.",
+      "verified": {
+        "positions": "datasheet"
+      },
+      "group": "pins"
+    },
+    "stamp_right": {
+      "type": "logical_terminals_7",
+      "positions": {
+        "1": "gpio:5",
+        "2": "gpio:6",
+        "3": "gpio:7",
+        "4": "gpio:8",
+        "5": "gpio:9",
+        "6": "gpio:10",
+        "7": "gpio:28"
+      },
+      "note": "JP2 positions 1-7 follow the official CELL Header schematic. GPIO28 is also BOOT and the blue LED control.",
+      "verified": {
+        "positions": "datasheet"
+      },
+      "group": "pins"
+    },
+    "extra_gpio": {
+      "type": "logical_terminals_1",
+      "positions": {
+        "1": "gpio:4"
+      },
+      "note": "Single exposed GPIO4 pad between the GPIO2/3 pads, documented in the official PinMap and as TP1 in the CELL Header schematic. It is separate from the seven side holes.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "ext_fpc": {
+      "type": "logical_terminals_12",
+      "positions": {
+        "1": "pwr:3v3",
+        "2": "pwr:3v3",
+        "3": "gpio:23",
+        "4": "gpio:0",
+        "5": "gpio:24",
+        "6": "gpio:25",
+        "7": "pwr:gnd",
+        "8": "gpio:26",
+        "9": "gpio:27",
+        "10": "gpio:11",
+        "11": "pwr:gnd",
+        "12": "gpio:12"
+      },
+      "note": "Rear 12-pin 0.5mm FPC connector JP3. Numbers follow the official EXT.FPC table. GPIO11 TXD connects through 499 ohms. Check cable terminal ordering against the official diagram. The FPC connector is unpopulated on Stamp-C5 and populated on Stamp-C5 DIP, as shown in the official Product Comparison.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    }
+  }
 }

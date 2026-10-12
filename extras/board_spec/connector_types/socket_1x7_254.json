@@ -1,0 +1,49 @@
+{
+  "id": "socket_1x7_254",
+  "name": "1x7 pin socket (2.54 mm)",
+  "layout": {
+    "rows": 7,
+    "cols": 1,
+    "pitch_mm": 2.54,
+    "numbering": "row_major",
+    "key": "none",
+    "view": "mating_face"
+  },
+  "positions": [
+    {
+      "id": "1",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "2",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "3",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "4",
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "5",
+      "row": 4,
+      "col": 0
+    },
+    {
+      "id": "6",
+      "row": 5,
+      "col": 0
+    },
+    {
+      "id": "7",
+      "row": 6,
+      "col": 0
+    }
+  ]
+}

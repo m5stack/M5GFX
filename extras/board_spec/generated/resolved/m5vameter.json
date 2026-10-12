@@ -22,6 +22,14 @@
     "storage": {
       "psram_mb": 0,
       "sd": false
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/VAMeter",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/518/Sch_VAMeter_V1.2.pdf"
     }
   },
   "pins": {
@@ -60,7 +68,8 @@
     "8": {
       "roles": [
         "bus:port_a_i2c.sda",
-        "conn:port_a.2"
+        "conn:port_a.2",
+        "conn:ext_in.1"
       ],
       "note": "External Port A SDA",
       "verified": {
@@ -70,11 +79,20 @@
     "9": {
       "roles": [
         "bus:port_a_i2c.scl",
-        "conn:port_a.1"
+        "conn:port_a.1",
+        "conn:ext_in.2"
       ],
       "note": "External Port A SCL",
       "verified": {
         "roles": "generated"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:ext_in.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "33": {
@@ -112,6 +130,14 @@
       "roles": [
         "dev:backlight.pwm"
       ]
+    },
+    "42": {
+      "roles": [
+        "conn:ext_out.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     }
   },
   "buses": {
@@ -247,11 +273,42 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c",
+      "note": "The physical Grove (white GPIO9/yellow GPIO8) is on the included VAMeter Base, not the bare host. The existing library Port A contract is retained; no additional Grove is registered on the host.",
       "positions": {
         "1": "gpio:9",
         "2": "gpio:8",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      }
+    },
+    "ext_in": {
+      "type": "logical_terminals_6",
+      "positions": {
+        "1": "gpio:8",
+        "2": "gpio:9",
+        "3": "gpio:10",
+        "4": "pwr:isolated_gnd",
+        "5": "pwr:measurement_in",
+        "6": "pwr:measurement_in"
+      },
+      "note": "Bare-host J3 CON6; FGND and FBUS_IN are the isolated measurement ground/input rail, not system ground/5V. Numbering follows the official schematic; logical terminal order, physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "ext_out": {
+      "type": "logical_terminals_6",
+      "positions": {
+        "1": "gpio:42",
+        "2": "pwr:5v",
+        "3": "pwr:gnd",
+        "4": "pwr:isolated_gnd",
+        "5": "pwr:measurement_out",
+        "6": "pwr:measurement_out"
+      },
+      "note": "Bare-host J4 CON6; FGND and FBUS_OUT are the isolated measurement ground/output rail. GPIO42 is WAKE. Numbering follows the official schematic; logical terminal order, physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
       }
     }
   }

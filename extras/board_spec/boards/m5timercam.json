@@ -17,6 +17,14 @@
     "storage": {
       "psram_mb": 8,
       "psram_mode": "quad"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/unit/timercam",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1042/Sch_M5TimerCAM.pdf"
     }
   },
   "pins": {

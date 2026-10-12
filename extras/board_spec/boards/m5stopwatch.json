@@ -22,9 +22,19 @@
       "psram_mb": 8,
       "psram_mode": "opi",
       "flash_mb": 16
+    },
+    "links": {
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1242/C152-SCH_Stopwatch_PRJ_Main_VA_20251201_2026_04_24_17_46_22.pdf",
+      "product": "https://docs.m5stack.com/en/core/StopWatch"
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "conn:rear_mux.5"
+      ],
+      "note": "BOOT; connected to M5PM1 BOOT_OUT_OD."
+    },
     "1": {
       "roles": [
         "dev:btn_b.in"
@@ -34,6 +44,48 @@
       "roles": [
         "dev:btn_a.in"
       ]
+    },
+    "3": {
+      "roles": [
+        "conn:rear_gpio.1"
+      ],
+      "note": "J5 EXT_GPIO3."
+    },
+    "4": {
+      "roles": [
+        "conn:rear_gpio.2"
+      ],
+      "note": "J5 EXT_GPIO4."
+    },
+    "5": {
+      "roles": [
+        "conn:rear_gpio.3"
+      ],
+      "note": "J5 EXT_GPIO5."
+    },
+    "6": {
+      "roles": [
+        "conn:rear_gpio.4"
+      ],
+      "note": "J5 EXT_GPIO6."
+    },
+    "7": {
+      "roles": [
+        "conn:rear_gpio.5"
+      ],
+      "note": "J5 EXT_GPIO7."
+    },
+    "8": {
+      "roles": [
+        "conn:rear_gpio.6"
+      ],
+      "note": "J5 EXT_GPIO8."
+    },
+    "9": {
+      "roles": [
+        "conn:rear_mux.4"
+      ],
+      "note": "J6 EXT_GPIO9."
     },
     "10": {
       "roles": [
@@ -53,10 +105,20 @@
         "roles": "generated"
       }
     },
+    "12": {
+      "roles": [
+        "dev:pmic.int"
+      ],
+      "note": "G12_PY_IRQ from M5PM1 G1_IRQout."
+    },
     "13": {
       "roles": [
         "dev:touch.int"
       ]
+    },
+    "14": {
+      "roles": [],
+      "note": "R34 is not populated, so GPIO14 is unconnected by default. Fitting R34 connects it to PYB_SPK_EN; the stock amplifier enable is controlled by M5IOE1 PYG10."
     },
     "26": {
       "roles": [
@@ -334,12 +396,50 @@
     "psram": {
       "kind": "psram",
       "part": "psram"
+    },
+    "rear_mux": {
+      "kind": "transceiver",
+      "part": "ch442e",
+      "pins": {
+        "io1": {
+          "roles": [
+            "conn:rear_mux.2"
+          ],
+          "note": "MUX_IO_1 / DB (U26 pin 4)."
+        },
+        "io2": {
+          "roles": [
+            "conn:rear_mux.3"
+          ],
+          "note": "MUX_IO_2 / DC (U26 pin 6)."
+        }
+      },
+      "note": "U26 CH442E routes MUX_IO_1/2 through a switch, not a direct GPIO connection. M5IOE1 at 0x4F controls IN via PYG1 (PYB_MUX_CTR): low selects G43 UART0 TX / G44 UART0 RX (default); high selects G20 USB_P / G19 USB_N."
     }
   },
   "connectors": {
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c"
+    },
+    "rear_gpio": {
+      "type": "socket_1x7_254",
+      "positions": {
+        "7": "pwr:bat"
+      },
+      "note": "Rear right J5: pins 1-6 are G3-G8; pin 7 is BAT on v1.0.1. On v1.0, pin 7 is an external 5V input, including batches incorrectly labeled BAT. Never connect a battery to the v1.0 pin. The linked schematic shows the older Int_5V connection.",
+      "group": "rear"
+    },
+    "rear_mux": {
+      "type": "socket_1x6_254",
+      "positions": {
+        "1": "pwr:3v3",
+        "2": "pin:rear_mux.io1",
+        "3": "pin:rear_mux.io2",
+        "6": "pwr:gnd"
+      },
+      "note": "Rear left J6: pin 1 is the switched 3V3_L2 output through R59 (0 ohm); do not exceed 200 mA. Pins 2/3 are CH442E MUX_IO_1/2: G43/G44 UART0 by default, G20/G19 USB when M5IOE1 PYG1 is high. Pin 4 is G9, pin 5 is G0 BOOT, pin 6 is GND.",
+      "group": "rear"
     }
   }
 }

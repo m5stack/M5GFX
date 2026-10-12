@@ -57,7 +57,23 @@ function buildAtomS3(onMidway) {
 }
 
 test("board operations create AtomS3 byte-for-byte", () => {
-  assert.equal(formatBoard(buildAtomS3()), atoms3Text);
+  const board = buildAtomS3();
+  setSpec(board, "links", {
+    product: "https://docs.m5stack.com/en/core/AtomS3",
+    schematic: "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/472/Sch_M5_AtomS3_v1.0.pdf",
+    verified: { product: "datasheet", schematic: "datasheet" },
+  });
+  for (const [id, type, positions, note] of [
+    ["rear_left", "socket_1x5_254", { 1: "pwr:3v3" }, "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom."],
+    ["rear_right", "socket_1x4_254", { 3: "pwr:5v", 4: "pwr:gnd" }, "Rear right socket in the same bottom view; positions numbered top to bottom. GPIO39/38 share the onboard MPU6886 I2C bus."],
+  ]) {
+    addConnector(board, id, { type });
+    Object.assign(board.connectors[id], { positions, note, verified: { type: "datasheet", positions: "datasheet" }, group: "bottom" });
+  }
+  Object.assign(board.connectors.port_a, { positions: { 3: "pwr:5v" }, verified: { positions: "datasheet" } });
+  for (const [gpio, role] of [[5, "conn:rear_left.2"], [6, "conn:rear_left.3"], [7, "conn:rear_left.4"], [8, "conn:rear_left.5"], [39, "conn:rear_right.1"], [38, "conn:rear_right.2"]]) addRole(board, gpio, role, { chip });
+  for (const gpio of [1, 2, 5, 6, 7, 8, 38, 39]) setPin(board, gpio, { verified: { roles: "datasheet" } });
+  assert.equal(formatBoard(board), atoms3Text);
 });
 
 test("required part signals are missing midway and complete at the end", () => {
@@ -144,5 +160,44 @@ test("duplicate operations can produce StickS3 byte-for-byte", () => {
   for (const [gpio, items] of Object.entries(roles)) for (const role of items) addRole(board, gpio, role, { chip });
   setPin(board, 47, { pull: "up" });
   setPin(board, 48, { pull: "up" });
+  setSpec(board, "links", {
+  "product": "https://docs.m5stack.com/en/core/StickS3",
+  "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1207/K150_Stick_S3_PRJ_V0.6_20251111_2025_11_17_16_10_24.pdf",
+  "verified": {
+    "product": "datasheet",
+    "schematic": "datasheet"
+  }
+});
+  addConnector(board, "hat2", { type: "socket_2x8_254" });
+  Object.assign(board.connectors.hat2, {
+  "type": "socket_2x8_254",
+  "positions": {
+    "1": "pwr:gnd",
+    "3": "pwr:5vout",
+    "11": "pwr:bat",
+    "13": "pwr:3v3_l2",
+    "15": "pwr:5vin"
+  },
+  "verified": {
+    "type": "datasheet",
+    "positions": "datasheet"
+  },
+  "note": "Hat2: logical positions follow the official Hat2-Bus table (odd pins left, even pins right), not schematic CN2 numbering. Pin 5 BOOT is ESP32-S3 GPIO0, driven by M5PM1 BOOT_OUT_OD. EXT_5V (pin 3) and Grove 5V default to input mode and can supply the device from external 5V. They become 5V outputs only when EXT_5V_EN is enabled; in output mode supply power only through USB or 5V_IN (pin 15), not through Grove/EXT_5V. Pin 13 is the switched 3V3_L2 rail."
+});
+  Object.assign(board.connectors.port_a, {
+  "type": "hy2_4p",
+  "standard": "port_i2c",
+  "positions": {
+    "3": "pwr:5v"
+  },
+  "note": "Grove 5V shares Hat2 EXT_5V. With the default disabled EXT_5V_EN it is an input and external 5V can power the device through Grove or Hat2 EXT_5V. Enabling EXT_5V_EN makes these terminals 5V outputs; then supply power only through USB or Hat2 5V_IN.",
+  "verified": {
+    "positions": "datasheet"
+  }
+});
+  for (const [gpio, role] of [[0, "conn:hat2.5"], [1, "conn:hat2.7"], [2, "conn:hat2.14"], [3, "conn:hat2.16"], [4, "conn:hat2.4"], [5, "conn:hat2.2"], [6, "conn:hat2.6"], [7, "conn:hat2.8"], [8, "conn:hat2.9"], [43, "conn:hat2.10"], [44, "conn:hat2.12"]]) {
+    addRole(board, gpio, role, { chip });
+    setPin(board, gpio, { verified: { roles: "datasheet" } });
+  }
   assert.equal(formatBoard(board), sticks3Text);
 });

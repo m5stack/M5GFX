@@ -26,12 +26,14 @@ import { isGeneratedField, pintableAssignments } from "../lib/pintable_roles.js"
 import { validateOwners } from "../lib/owners.js";
 import { validatePartCatalog, validateParts } from "../lib/parts.js";
 import { resolveAll, resolveBoard, resolvedFilename } from "../lib/resolve.js";
+import { validateSchema } from "../lib/schema.js";
 import { validateTarget, validateTargets } from "../lib/targets.js";
 import { validateBoard, validateCatalog, validateFormat, validateResolvedVariants } from "../lib/validate.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const board = JSON.parse(await fs.readFile(path.join(root, "boards/m5stack_core2.json"), "utf8"));
 const schema = JSON.parse(await fs.readFile(path.join(root, "schema/board.schema.json"), "utf8"));
+const connectorTypeSchema = JSON.parse(await fs.readFile(path.join(root, "schema/connector_type.schema.json"), "utf8"));
 const chip = JSON.parse(await fs.readFile(path.join(root, "chips/esp32_d0wdq6.json"), "utf8"));
 const chipS3 = JSON.parse(await fs.readFile(path.join(root, "chips/esp32s3.json"), "utf8"));
 const chipC3 = JSON.parse(await fs.readFile(path.join(root, "chips/esp32c3.json"), "utf8"));
@@ -175,6 +177,29 @@ test("board aliases validate, format after name, and never affect generated outp
 
 test("only catalog names confirmed against official sources carry the verified flag", () => {
   const documentedProductNames = {
+    m5atomlite: "Atom-Lite",
+    m5atommatrix: "Atom-Matrix",
+    m5atoms3lite: "AtomS3-Lite",
+    m5atoms3rcam: "AtomS3R-CAM",
+    m5atoms3rext: "AtomS3R-Ext",
+    m5atoms3u: "AtomS3U",
+    m5atomu: "AtomU",
+    m5atomvoice: "Atom Voice",
+    m5atomvoices3r: "Atom VoiceS3R",
+    m5capsule: "Capsule",
+    m5dualkey: "Chain DualKey",
+    m5nanoc6: "NanoC6",
+    m5nanoh2: "NanoH2",
+    m5powerhub: "PowerHub",
+    m5stampc3: "Stamp-C3",
+    m5stampc3u: "Stamp-C3U",
+    m5stampc5: "Stamp-C5",
+    m5stampp4: "Stamp-P4",
+    m5stamppico: "Stamp-Pico",
+    m5stamps3: "Stamp-S3",
+    m5stamps3bat: "Stamp-S3Bat",
+    m5toughc5: "ToughC5",
+    m5unitpoep4: "Unit PoE-P4",
     arduino_nesso_n1: "Arduino Nesso N1",
     m5airq: "Air Quality",
     m5atoms3: "AtomS3",
@@ -207,9 +232,7 @@ test("only catalog names confirmed against official sources carry the verified f
     m5vameter: "VAMeter",
   };
   const unverified = catalogBoards.filter((item) => item.official_name_verified !== true).map((item) => item.id).sort();
-  assert.deepEqual(unverified, [
-    "m5atom_psram", "m5atomlite", "m5atommatrix", "m5atoms3lite", "m5atoms3rcam", "m5atoms3rext", "m5atoms3u", "m5atomu", "m5atomvoice", "m5atomvoices3r", "m5capsule", "m5dualkey", "m5nanoc6", "m5nanoh2", "m5paperdiy", "m5powerhub", "m5stack", "m5stack_corematrix", "m5stack_tab5x", "m5stampc3", "m5stampc3u", "m5stampc5", "m5stampc6", "m5stampp4", "m5stampp4x", "m5stamppico", "m5stamps3", "m5stamps3bat", "m5stamps3mini", "m5station", "m5toughc5", "m5unitpoep4",
-  ]);
+  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_corematrix", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stamps3mini", "m5station"]);
   const verified = catalogBoards.filter((item) => item.official_name_verified === true).map((item) => item.id).sort();
   assert.deepEqual(verified, Object.keys(documentedProductNames).sort());
   for (const source of catalogBoards.filter((item) => item.official_name_verified === true)) {
@@ -2207,6 +2230,19 @@ test("multi_gpio permits a declared physical fan-out", () => {
   assert.deepEqual(validateBoard(value, context).filter((item) => item.severity !== "warning"), []);
 });
 
+test("resolved multi_gpio endpoints pass schema validation and require their declaration", () => {
+  const value = fixture((item) => {
+    item.connectors.port_a.multi_gpio = ["1"];
+    item.pins[1].roles.push("conn:port_a.1");
+  });
+  const resolved = resolveBoard(value, {}, connectorTypes, { chip, parts });
+  assert.ok(Array.isArray(resolved.connectors.port_a.positions["1"]));
+  assert.equal(resolved.connectors.port_a.positions["1"].length, 2);
+  assert.deepEqual(validateBoard(resolved, { ...context, resolved: true }).filter((item) => item.severity !== "warning"), []);
+  delete resolved.connectors.port_a.multi_gpio;
+  assert.ok(validateBoard(resolved, { ...context, resolved: true }).some((item) => item.id === "E_CONN_POS_DUP"));
+});
+
 test("shared_gpio permits one GPIO on multiple physical connector positions", () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_corematrix");
   const resolved = resolveAll(source, connectorTypes, { chip: chipC61, parts })[0].board;
@@ -2719,4 +2755,43 @@ test("AXP family measurement pins are captured without other board descriptors",
     const pins = /unconditional_pins\[\] = \{ ([^}]*) \}/.exec(header)[1].split(", ").map(Number);
     for (const pin of [12, 32, 33]) assert.ok(pins.includes(pin), `${id}: G${pin} must be captured`);
   }
+});
+
+test("StopWatch rear socket GPIOs cannot be used as invariant detection classes", () => {
+  const source = catalogBoards.find((item) => item.id === "m5stopwatch");
+  const context = { schema, chip: chipS3, connectorTypes, parts, target };
+  assert.deepEqual(validateBoard(source, context), []);
+  for (const gpio of [0, 3, 4, 5, 6, 7, 8, 9]) {
+    for (const classification of ["up", "down", "floating", "fixed"]) {
+      const changed = clone(source);
+      changed.pins[gpio].detect_class = classification;
+      const errors = validateBoard(changed, context);
+      assert.ok(errors.some((issue) => issue.id === "E_DETECT_CLASS_CONNECTOR"
+        && issue.path === `/pins/${gpio}/detect_class`), `G${gpio} ${classification}`);
+    }
+  }
+});
+
+// Numbered terminal tables can be verified without a measured physical layout.
+test("connector types permit explicitly unverified pitch and layout provenance", () => {
+  const type = {
+    id: "logical_terminals", name: "Logical terminals",
+    layout: { rows: 1, cols: 1, pitch_mm: null, numbering: "custom", key: "none", view: "component_side" },
+    positions: [{ id: "1", row: 0, col: 0 }],
+    note: "Terminal numbering is documented; physical geometry is unverified.",
+    verified: { layout: null, positions: "datasheet" },
+  };
+  assert.deepEqual(validateSchema(type, connectorTypeSchema), []);
+  assert.deepEqual(validateConnectorTypes({ logical_terminals: type }), []);
+  assert.ok(validateSchema({ ...type, layout: { ...type.layout, pitch_mm: "unknown" } }, connectorTypeSchema).some((issue) => issue.id === "E_SCHEMA_TYPE"));
+});
+
+
+test("connector display groups validate identifiers and warn about a solitary member", () => {
+  const sample = clone(board);
+  const ids = Object.keys(sample.connectors);
+  sample.connectors[ids[0]].group = "paired";
+  assert.ok(validateBoard(sample, context).some((item) => item.id === "W_CONN_GROUP_SINGLE"));
+  sample.connectors[ids[1]] = { ...sample.connectors[ids[0]], group: "paired" };
+  assert.equal(validateBoard(sample, context).some((item) => item.id === "W_CONN_GROUP_SINGLE"), false);
 });

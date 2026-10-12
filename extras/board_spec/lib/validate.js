@@ -229,6 +229,7 @@ function validateConnectors(board, chip, connectorTypes, errors, resolved) {
 
   for (const [id, connector] of Object.entries(board.connectors ?? {})) {
     const path = `/connectors/${id}`;
+    if (connector.group && Object.values(board.connectors).filter((item) => item.group === connector.group).length < 2) errors.push(warning("W_CONN_GROUP_SINGLE", `${path}/group`, `display group ${connector.group} contains only one connector`));
     const type = resolveConnectorType(connectorTypes, connector.type);
     if (!type) {
       errors.push(error("E_CONN_TYPE_MISSING", `${path}/type`, `connector type ${connector.type ?? "<missing>"} is not in the catalog`));

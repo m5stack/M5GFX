@@ -2,9 +2,20 @@
   "schema_version": 1,
   "id": "m5atoms3u",
   "name": "M5AtomS3U",
-  "official_name": "M5Stack M5AtomS3U",
+  "official_name": "M5Stack AtomS3U",
+  "official_name_verified": true,
   "legacy_board_id": 138,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/AtomS3U",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/477/Sch_AtomS3U_v1.0.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
     "1": {
       "roles": [
@@ -32,8 +43,24 @@
         "dev:ir_led.on"
       ]
     },
+    "14": {
+      "roles": [
+        "conn:rear_gpio.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "16": {
       "roles": []
+    },
+    "17": {
+      "roles": [
+        "conn:rear_gpio.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     },
     "35": {
       "roles": [
@@ -59,10 +86,26 @@
         "roles": "generated"
       }
     },
+    "40": {
+      "roles": [
+        "conn:rear_gpio.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "41": {
       "roles": [
         "dev:btn_a.in"
       ]
+    },
+    "42": {
+      "roles": [
+        "conn:rear_gpio.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     }
   },
   "buses": {
@@ -112,7 +155,25 @@
   "connectors": {
     "port_a": {
       "type": "hy2_4p",
-      "standard": "port_i2c"
+      "standard": "port_i2c",
+      "positions": {
+        "3": "pwr:5v"
+      },
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "rear_gpio": {
+      "type": "socket_1x6_254",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5v"
+      },
+      "note": "Rear expansion socket; positions numbered from GND toward the last GPIO in the official pin map.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
     }
   }
 }

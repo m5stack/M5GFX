@@ -22,9 +22,89 @@
     "storage": {
       "psram_mb": 8,
       "psram_mode": "opi"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/StickS3",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1207/K150_Stick_S3_PRJ_V0.6_20251111_2025_11_17_16_10_24.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "conn:hat2.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:hat2.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "2": {
+      "roles": [
+        "conn:hat2.14"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:hat2.16"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:hat2.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:hat2.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:hat2.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:hat2.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:hat2.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "9": {
       "roles": [
         "bus:port_a_i2c.sda",
@@ -163,6 +243,22 @@
       "roles": [
         "dev:lcd.cs"
       ]
+    },
+    "43": {
+      "roles": [
+        "conn:hat2.10"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:hat2.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     },
     "45": {
       "roles": [
@@ -343,7 +439,29 @@
   "connectors": {
     "port_a": {
       "type": "hy2_4p",
-      "standard": "port_i2c"
+      "standard": "port_i2c",
+      "positions": {
+        "3": "pwr:5v"
+      },
+      "note": "Grove 5V shares Hat2 EXT_5V. With the default disabled EXT_5V_EN it is an input and external 5V can power the device through Grove or Hat2 EXT_5V. Enabling EXT_5V_EN makes these terminals 5V outputs; then supply power only through USB or Hat2 5V_IN.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "hat2": {
+      "type": "socket_2x8_254",
+      "positions": {
+        "1": "pwr:gnd",
+        "3": "pwr:5vout",
+        "11": "pwr:bat",
+        "13": "pwr:3v3_l2",
+        "15": "pwr:5vin"
+      },
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "note": "Hat2: logical positions follow the official Hat2-Bus table (odd pins left, even pins right), not schematic CN2 numbering. Pin 5 BOOT is ESP32-S3 GPIO0, driven by M5PM1 BOOT_OUT_OD. EXT_5V (pin 3) and Grove 5V default to input mode and can supply the device from external 5V. They become 5V outputs only when EXT_5V_EN is enabled; in output mode supply power only through USB or 5V_IN (pin 15), not through Grove/EXT_5V. Pin 13 is the switched 3V3_L2 rail."
     }
   }
 }

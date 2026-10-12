@@ -21,6 +21,14 @@
     "storage": {
       "psram_mb": 0,
       "flash_mb": 8
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/DinMeter",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/500/DIN_Meter_v1.0.pdf"
     }
   },
   "pins": {

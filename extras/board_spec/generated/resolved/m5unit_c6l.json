@@ -20,6 +20,14 @@
         48
       ],
       "touch": false
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/unit/Unit_C6L",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1185/SCH_Unit_C6L_SCH_B0.4.1_20250827_2025_09_02_15_04_22.pdf"
     }
   },
   "pins": {
@@ -209,6 +217,7 @@
     "port_b": {
       "type": "hy2_4p",
       "standard": "port_io",
+      "note": "The product has one physical socket marked PORT.A (white GPIO4/yellow GPIO5). M5Unified assigns this pair to both port_b and port_c; these are library contracts for the same socket.",
       "positions": {
         "1": "gpio:4",
         "2": "gpio:5",
@@ -219,6 +228,7 @@
     "port_c": {
       "type": "hy2_4p",
       "standard": "port_uart",
+      "note": "The product has one physical socket marked PORT.A (white GPIO4/yellow GPIO5). M5Unified assigns this pair to both port_b and port_c; these are library contracts for the same socket.",
       "positions": {
         "1": "gpio:4",
         "2": "gpio:5",

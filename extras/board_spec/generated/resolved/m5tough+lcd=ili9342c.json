@@ -14,6 +14,14 @@
     "storage": {
       "psram_mb": 8,
       "psram_mode": "quad"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Tough",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/647/Tough-Schematics-PDF.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
@@ -542,6 +550,7 @@
   "connectors": {
     "mbus": {
       "type": "mbus",
+      "note": "Port A/B/C, RESET and RS485 are on the bundled Tough Ext Board, modeled by the tough_subboard accessory. Host pin-map HPWR terminals are NC; the Ext Board routes the input rail to its regulator.",
       "positions": {
         "1": "pwr:gnd",
         "2": "gpio:35",

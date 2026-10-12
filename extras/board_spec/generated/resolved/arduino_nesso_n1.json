@@ -19,9 +19,23 @@
         240
       ],
       "touch": true
+    },
+    "links": {
+      "product": "https://docs.arduino.cc/hardware/nesso-n1/",
+      "verified": {
+        "product": "datasheet"
+      }
     }
   },
   "pins": {
+    "2": {
+      "roles": [
+        "conn:expansion.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "3": {
       "roles": [
         "dev:touch.int"
@@ -43,6 +57,22 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:expansion.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:expansion.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "8": {
@@ -296,18 +326,23 @@
   },
   "connectors": {
     "port_a": {
-      "type": "hy2_4p",
+      "type": "qwiic_4p",
       "standard": "port_i2c",
       "positions": {
         "1": "gpio:8",
         "2": "gpio:10",
-        "3": "pwr:5v",
+        "3": "pwr:3v3",
         "4": "pwr:gnd"
+      },
+      "note": "Qwiic physical pins in Arduino full pinout page 3: 1=GND, 2=3V3 output, 3=SDA GPIO10, 4=SCL GPIO8. port_a retains the library logical terminal order 1=SCL GPIO8, 2=SDA GPIO10, 3=3V3, 4=GND. Shared with internal I2C.",
+      "verified": {
+        "positions": "datasheet"
       }
     },
     "port_b": {
       "type": "hy2_4p",
       "standard": "port_io",
+      "note": "Both library contracts refer to the same physical Grove socket: manufacturer pins 1=GND, 2=5V, 3=GPIO5, 4=GPIO4. Logical terminal 1=GPIO4/2=GPIO5.",
       "positions": {
         "1": "gpio:4",
         "2": "gpio:5",
@@ -318,11 +353,29 @@
     "port_c": {
       "type": "hy2_4p",
       "standard": "port_uart",
+      "note": "Both library contracts refer to the same physical Grove socket: manufacturer pins 1=GND, 2=5V, 3=GPIO5, 4=GPIO4. Logical terminal 1=GPIO4/2=GPIO5.",
       "positions": {
         "1": "gpio:4",
         "2": "gpio:5",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      }
+    },
+    "expansion": {
+      "type": "logical_terminals_8",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5v",
+        "3": "gpio:7",
+        "4": "gpio:2",
+        "5": "gpio:6",
+        "6": "pwr:bat",
+        "7": "pwr:3v3",
+        "8": "pwr:5v"
+      },
+      "note": "8-pin expansion port numbered as Arduino official full pinout page 6. BATTERY is an unregulated approximately 3–4.2V output rail; do not back-feed. Logical terminal order; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
       }
     }
   }

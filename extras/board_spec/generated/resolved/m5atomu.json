@@ -3,8 +3,19 @@
   "id": "m5atomu",
   "name": "M5AtomU",
   "official_name": "M5Stack AtomU",
+  "official_name_verified": true,
   "legacy_board_id": 130,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/AtomU",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/675/Sch_AtomU_01.jpg",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
     "12": {
       "roles": [
@@ -14,15 +25,25 @@
     },
     "21": {
       "roles": [
-        "bus:internal_i2c.scl"
+        "bus:internal_i2c.scl",
+        "conn:rear_gpio.6"
       ],
       "verified": {
         "roles": "generated"
       }
     },
+    "22": {
+      "roles": [
+        "conn:rear_gpio.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "25": {
       "roles": [
-        "bus:internal_i2c.sda"
+        "bus:internal_i2c.sda",
+        "conn:rear_gpio.3"
       ],
       "verified": {
         "roles": "generated"
@@ -50,6 +71,14 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "conn:rear_gpio.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     }
   },
@@ -94,6 +123,25 @@
         "2": "gpio:26",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      },
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "rear_gpio": {
+      "type": "socket_1x6_254",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5v",
+        "3": "gpio:25",
+        "4": "gpio:33",
+        "5": "gpio:22",
+        "6": "gpio:21"
+      },
+      "note": "Rear expansion socket; positions numbered from GND toward the last GPIO in the official pin map.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
       }
     }
   }

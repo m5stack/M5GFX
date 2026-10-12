@@ -1,0 +1,88 @@
+{
+  "id": "logical_terminals_14",
+  "name": "14 terminals (logical order)",
+  "layout": {
+    "rows": 14,
+    "cols": 1,
+    "pitch_mm": null,
+    "numbering": "custom",
+    "key": "none",
+    "view": "component_side"
+  },
+  "positions": [
+    {
+      "id": "1",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "2",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "3",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "4",
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "5",
+      "row": 4,
+      "col": 0
+    },
+    {
+      "id": "6",
+      "row": 5,
+      "col": 0
+    },
+    {
+      "id": "7",
+      "row": 6,
+      "col": 0
+    },
+    {
+      "id": "8",
+      "row": 7,
+      "col": 0
+    },
+    {
+      "id": "9",
+      "row": 8,
+      "col": 0
+    },
+    {
+      "id": "10",
+      "row": 9,
+      "col": 0
+    },
+    {
+      "id": "11",
+      "row": 10,
+      "col": 0
+    },
+    {
+      "id": "12",
+      "row": 11,
+      "col": 0
+    },
+    {
+      "id": "13",
+      "row": 12,
+      "col": 0
+    },
+    {
+      "id": "14",
+      "row": 13,
+      "col": 0
+    }
+  ],
+  "note": "Positions are a logical terminal order. Physical placement and pitch are not represented; use the board note and official pin map for the physical layout.",
+  "verified": {
+    "layout": null
+  }
+}

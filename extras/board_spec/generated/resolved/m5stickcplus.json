@@ -24,13 +24,25 @@
     "storage": {
       "psram_mb": 0,
       "flash_mb": 4
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/StickC-Plus",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/669/k016-p-StickC-Plus-sche.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
     "0": {
       "roles": [
-        "dev:usb_serial.boot"
-      ]
+        "dev:usb_serial.boot",
+        "conn:hat.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     },
     "1": {
       "roles": [
@@ -97,6 +109,22 @@
         "dev:lcd.dc"
       ]
     },
+    "25": {
+      "roles": [
+        "conn:hat.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "26": {
+      "roles": [
+        "conn:hat.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "32": {
       "roles": [
         "bus:port_a_i2c.sda",
@@ -113,6 +141,14 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "36": {
+      "roles": [
+        "conn:hat.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "37": {
@@ -287,6 +323,30 @@
         "3": "pwr:5v",
         "4": "pwr:gnd"
       }
+    },
+    "hat": {
+      "type": "socket_1x8_254",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5vout",
+        "3": "gpio:26",
+        "4": [
+          "gpio:25",
+          "gpio:36"
+        ],
+        "5": "gpio:0",
+        "6": "pwr:bat",
+        "7": "pwr:3v3",
+        "8": "pwr:5vin"
+      },
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "note": "HAT socket: positions 1-8 run from GND to 5V input, left to right in the rear-label view. GPIO0 is shared with the microphone clock. 5V output and 5V input are separate rails. The current official rear photo is labeled CPlus 1.1 and identifies pin 4 as G36/G25; the linked older schematic labels its external pad only GPIO36. The Specifications External Pins field says G25/G26, which differs from the rear-label G36/G25 notation. This catalog follows the rear label and documented G36/G25 shared terminal without treating either notation as a confirmed typo. When using GPIO36 or GPIO25, leave the other as an input with both internal pulls disabled, as instructed by the official StickC-Plus documentation.",
+      "multi_gpio": [
+        "4"
+      ]
     }
   }
 }

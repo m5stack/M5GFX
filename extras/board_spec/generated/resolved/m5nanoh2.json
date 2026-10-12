@@ -3,9 +3,36 @@
   "id": "m5nanoh2",
   "name": "M5NanoH2",
   "official_name": "M5Stack NanoH2",
+  "official_name_verified": true,
   "legacy_board_id": 151,
   "chip": "esp32h2",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/NanoH2",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      },
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1204/SCH_M5NanoH2_v0.0.3_2025_08_20_17_17_26.pdf"
+    }
+  },
   "pins": {
+    "1": {
+      "roles": [
+        "conn:port_a.1"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "conn:port_a.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
     "3": {
       "roles": [
         "dev:ir_led.on"
@@ -25,6 +52,19 @@
       "kind": "led",
       "signals": {
         "on": "gpio:3"
+      }
+    }
+  },
+  "connectors": {
+    "port_a": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "note": "Product marking PORT.CUSTOM; registered as port_a because M5Unified external I2C uses GPIO1 (SCL)/GPIO2 (SDA).",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:2",
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
       }
     }
   }
