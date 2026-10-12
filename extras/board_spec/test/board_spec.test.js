@@ -2720,3 +2720,18 @@ test("AXP family measurement pins are captured without other board descriptors",
     for (const pin of [12, 32, 33]) assert.ok(pins.includes(pin), `${id}: G${pin} must be captured`);
   }
 });
+
+test("StopWatch rear socket GPIOs cannot be used as invariant detection classes", () => {
+  const source = catalogBoards.find((item) => item.id === "m5stopwatch");
+  const context = { schema, chip: chipS3, connectorTypes, parts, target };
+  assert.deepEqual(validateBoard(source, context), []);
+  for (const gpio of [0, 3, 4, 5, 6, 7, 8, 9]) {
+    for (const classification of ["up", "down", "floating", "fixed"]) {
+      const changed = clone(source);
+      changed.pins[gpio].detect_class = classification;
+      const errors = validateBoard(changed, context);
+      assert.ok(errors.some((issue) => issue.id === "E_DETECT_CLASS_CONNECTOR"
+        && issue.path === `/pins/${gpio}/detect_class`), `G${gpio} ${classification}`);
+    }
+  }
+});

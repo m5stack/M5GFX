@@ -1,0 +1,24 @@
+{
+  "id": "ch442e",
+  "name": "CH442E dual-channel analog switch",
+  "kind": "transceiver",
+  "pins": {
+    "io1": {
+      "cap": [
+        "input",
+        "output"
+      ]
+    },
+    "io2": {
+      "cap": [
+        "input",
+        "output"
+      ]
+    }
+  },
+  "note": "IO1 is DB (pin 4); IO2 is DC (pin 6). IN selects S1B/S1C when low and S2B/S2C when high.",
+  "verified": {
+    "pins": "datasheet",
+    "note": "datasheet"
+  }
+}

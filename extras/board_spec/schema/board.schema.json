@@ -134,7 +134,7 @@
         "display": ["cs", "dc", "rst", "busy", "backlight", "power"],
         "sd": ["clk", "cmd", "d0", "d1", "d2", "d3", "cd", "wp"],
         "touch": ["int", "rst"],
-        "pmic": [],
+        "pmic": ["int"],
         "io_expander": [],
         "sensor": [],
         "speaker": ["data_out", "enable"],
