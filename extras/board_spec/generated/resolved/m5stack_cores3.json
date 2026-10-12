@@ -23,6 +23,14 @@
       "psram_mode": "quad",
       "flash_mb": 16,
       "sd": true
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/CoreS3",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/490/Sch_M5_CoreS3_v1.0.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
@@ -513,6 +521,7 @@
     "port_d": {
       "type": "hy2_4p",
       "standard": "port_io",
+      "note": "Library port alias retained for pin-table compatibility; the official product pin map shows physical Port A/B/C, not a separate PORT_D.",
       "positions": {
         "1": "gpio:14",
         "2": "gpio:10",
@@ -523,6 +532,7 @@
     "port_e": {
       "type": "hy2_4p",
       "standard": "port_uart",
+      "note": "Library port alias retained for pin-table compatibility; the official product pin map shows physical Port A/B/C, not a separate PORT_E.",
       "positions": {
         "1": "gpio:18",
         "2": "gpio:17",
@@ -532,6 +542,7 @@
     },
     "mbus": {
       "type": "mbus",
+      "note": "The generic M-Bus defaults retain NC at HPWR positions 25/27/29. The official product table labels these HVIN, whose availability depends on the power/base assembly.",
       "positions": {
         "1": "pwr:gnd",
         "2": "gpio:10",

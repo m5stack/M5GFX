@@ -30,6 +30,14 @@
       "flash_mb": 16,
       "sd": true,
       "psram_mode": "quad"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Core2",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/644/CORE2_V1.0_SCH.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
@@ -583,6 +591,7 @@
     },
     "mbus": {
       "type": "mbus",
+      "note": "Official Core2 host mapping. Port B/C are provided by optional bottom accessories, not the bare host. GPIO34 is shared with the microphone on the attached Core2 Ext Board.",
       "positions": {
         "1": "pwr:gnd",
         "2": "gpio:35",

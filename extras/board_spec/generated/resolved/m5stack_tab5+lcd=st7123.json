@@ -22,9 +22,33 @@
       "psram_mb": 32,
       "sd": true,
       "psram_mode": "opi"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Tab5",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "conn:side_header.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:side_header.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "2": {
       "roles": [
         "conn:mbus.21"
@@ -51,7 +75,8 @@
     },
     "5": {
       "roles": [
-        "conn:mbus.11"
+        "conn:mbus.11",
+        "conn:stamp_pads.10"
       ],
       "verified": {
         "roles": "generated"
@@ -60,7 +85,8 @@
     "6": {
       "roles": [
         "conn:port_c.2",
-        "conn:mbus.16"
+        "conn:mbus.16",
+        "conn:stamp_pads.3"
       ],
       "verified": {
         "roles": "generated"
@@ -124,7 +150,8 @@
     },
     "18": {
       "roles": [
-        "conn:mbus.7"
+        "conn:mbus.7",
+        "conn:stamp_pads.11"
       ],
       "verified": {
         "roles": "generated"
@@ -132,7 +159,8 @@
     },
     "19": {
       "roles": [
-        "conn:mbus.9"
+        "conn:mbus.9",
+        "conn:stamp_pads.12"
       ],
       "verified": {
         "roles": "generated"
@@ -153,7 +181,8 @@
       "roles": [
         "bus:internal_i2c.sda",
         "bus:touch_i2c.sda",
-        "conn:mbus.17"
+        "conn:mbus.17",
+        "conn:stamp_pads.4"
       ],
       "verified": {
         "roles": "generated"
@@ -163,10 +192,19 @@
       "roles": [
         "bus:internal_i2c.scl",
         "bus:touch_i2c.scl",
-        "conn:mbus.18"
+        "conn:mbus.18",
+        "conn:stamp_pads.5"
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "conn:stamp_pads.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "35": {
@@ -255,6 +293,14 @@
         "roles": "generated"
       }
     },
+    "46": {
+      "roles": [
+        "conn:stamp_pads.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "47": {
       "roles": [
         "conn:mbus.23"
@@ -269,6 +315,22 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "49": {
+      "roles": [
+        "conn:side_header.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "50": {
+      "roles": [
+        "conn:side_header.10"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "51": {
@@ -486,6 +548,7 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c",
+      "note": "EXT5V output is shared with the rear M-Bus and side expansion header and controlled by EXT5V_EN on the internal IO expander.",
       "positions": {
         "1": "gpio:54",
         "2": "gpio:53",
@@ -496,6 +559,7 @@
     "port_b": {
       "type": "hy2_4p",
       "standard": "port_io",
+      "note": "Library port contract on the M-Bus; the product shows a physical Grove Port A only.",
       "positions": {
         "1": "gpio:17",
         "2": "gpio:52",
@@ -506,6 +570,7 @@
     "port_c": {
       "type": "hy2_4p",
       "standard": "port_uart",
+      "note": "Library port contract on the M-Bus; the product shows a physical Grove Port A only.",
       "positions": {
         "1": "gpio:7",
         "2": "gpio:6",
@@ -515,6 +580,7 @@
     },
     "mbus": {
       "type": "mbus",
+      "note": "HPWR positions 25/27/29 are wired to SYS_VIN inside Tab5, the same rail as side header J9 pin 2.",
       "positions": {
         "1": "pwr:gnd",
         "2": "gpio:16",
@@ -540,12 +606,55 @@
         "22": "gpio:48",
         "23": "gpio:47",
         "24": "gpio:35",
-        "25": "nc",
+        "25": "pwr:vin",
         "26": "gpio:51",
-        "27": "nc",
+        "27": "pwr:vin",
         "28": "pwr:5v",
-        "29": "nc",
+        "29": "pwr:vin",
         "30": "pwr:bat"
+      },
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "side_header": {
+      "type": "logical_terminals_10",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:vin",
+        "3": "pwr:gnd",
+        "4": "pwr:gnd",
+        "5": "pwr:5v",
+        "6": "pwr:3v3",
+        "7": "gpio:0",
+        "8": "gpio:1",
+        "9": "gpio:49",
+        "10": "gpio:50"
+      },
+      "note": "Side 2.54-10P header J9, numbered as the official schematic. Pin 2 is SYS_VIN; pin 5 is SYS_EXT5V controlled by EXT5V_EN. Positions are logical ordering; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "stamp_pads": {
+      "type": "logical_terminals_12",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "gpio:46",
+        "3": "gpio:6",
+        "4": "gpio:31",
+        "5": "gpio:32",
+        "6": "gpio:33",
+        "7": "pwr:sys_5v",
+        "8": "pwr:3v3",
+        "9": "pwr:gnd",
+        "10": "gpio:5",
+        "11": "gpio:18",
+        "12": "gpio:19"
+      },
+      "note": "STAMP COMM expansion pads numbered TP1 through TP12 in the official schematic. TP7 is SYS_INT5V (system 5V), distinct from switched SYS_EXT5V on Grove/side header. GPIO31/32 share internal I2C; GPIO5/18/19 share SPI. Logical terminal order only; physical geometry is unverified.",
+      "verified": {
+        "positions": "datasheet"
       }
     }
   }
