@@ -2,7 +2,8 @@
   "schema_version": 1,
   "id": "m5stampc3",
   "name": "M5StampC3",
-  "official_name": "M5Stack StampC3",
+  "official_name": "M5Stack Stamp-C3",
+  "official_name_verified": true,
   "legacy_board_id": 134,
   "chip": "esp32c3",
   "spec": {

@@ -3,6 +3,7 @@
   "id": "m5nanoh2",
   "name": "M5NanoH2",
   "official_name": "M5Stack NanoH2",
+  "official_name_verified": true,
   "legacy_board_id": 151,
   "chip": "esp32h2",
   "spec": {

@@ -3,6 +3,7 @@
   "id": "m5dualkey",
   "name": "M5DualKey",
   "official_name": "M5Stack Chain DualKey",
+  "official_name_verified": true,
   "legacy_board_id": 147,
   "chip": "esp32s3",
   "spec": {

@@ -2,7 +2,8 @@
   "schema_version": 1,
   "id": "m5atomvoices3r",
   "name": "M5AtomVoiceS3R",
-  "official_name": "M5Stack M5AtomVoiceS3R",
+  "official_name": "M5Stack Atom VoiceS3R",
+  "official_name_verified": true,
   "legacy_board_id": 145,
   "chip": "esp32s3",
   "spec": {

@@ -177,6 +177,29 @@ test("board aliases validate, format after name, and never affect generated outp
 
 test("only catalog names confirmed against official sources carry the verified flag", () => {
   const documentedProductNames = {
+    m5atomlite: "Atom-Lite",
+    m5atommatrix: "Atom-Matrix",
+    m5atoms3lite: "AtomS3-Lite",
+    m5atoms3rcam: "AtomS3R-CAM",
+    m5atoms3rext: "AtomS3R-Ext",
+    m5atoms3u: "AtomS3U",
+    m5atomu: "AtomU",
+    m5atomvoice: "Atom Voice",
+    m5atomvoices3r: "Atom VoiceS3R",
+    m5capsule: "Capsule",
+    m5dualkey: "Chain DualKey",
+    m5nanoc6: "NanoC6",
+    m5nanoh2: "NanoH2",
+    m5powerhub: "PowerHub",
+    m5stampc3: "Stamp-C3",
+    m5stampc3u: "Stamp-C3U",
+    m5stampc5: "Stamp-C5",
+    m5stampp4: "Stamp-P4",
+    m5stamppico: "Stamp-Pico",
+    m5stamps3: "Stamp-S3",
+    m5stamps3bat: "Stamp-S3Bat",
+    m5toughc5: "ToughC5",
+    m5unitpoep4: "Unit PoE-P4",
     arduino_nesso_n1: "Arduino Nesso N1",
     m5airq: "Air Quality",
     m5atoms3: "AtomS3",
@@ -209,9 +232,7 @@ test("only catalog names confirmed against official sources carry the verified f
     m5vameter: "VAMeter",
   };
   const unverified = catalogBoards.filter((item) => item.official_name_verified !== true).map((item) => item.id).sort();
-  assert.deepEqual(unverified, [
-    "m5atom_psram", "m5atomlite", "m5atommatrix", "m5atoms3lite", "m5atoms3rcam", "m5atoms3rext", "m5atoms3u", "m5atomu", "m5atomvoice", "m5atomvoices3r", "m5capsule", "m5dualkey", "m5nanoc6", "m5nanoh2", "m5paperdiy", "m5powerhub", "m5stack", "m5stack_corematrix", "m5stack_tab5x", "m5stampc3", "m5stampc3u", "m5stampc5", "m5stampc6", "m5stampp4", "m5stampp4x", "m5stamppico", "m5stamps3", "m5stamps3bat", "m5stamps3mini", "m5station", "m5toughc5", "m5unitpoep4",
-  ]);
+  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_corematrix", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stamps3mini", "m5station"]);
   const verified = catalogBoards.filter((item) => item.official_name_verified === true).map((item) => item.id).sort();
   assert.deepEqual(verified, Object.keys(documentedProductNames).sort());
   for (const source of catalogBoards.filter((item) => item.official_name_verified === true)) {

@@ -2,7 +2,8 @@
   "schema_version": 1,
   "id": "m5atoms3u",
   "name": "M5AtomS3U",
-  "official_name": "M5Stack M5AtomS3U",
+  "official_name": "M5Stack AtomS3U",
+  "official_name_verified": true,
   "legacy_board_id": 138,
   "chip": "esp32s3",
   "spec": {

@@ -3,6 +3,7 @@
   "id": "m5unitpoep4",
   "name": "M5UnitPoEP4",
   "official_name": "M5Stack Unit PoE-P4",
+  "official_name_verified": true,
   "legacy_board_id": 148,
   "chip": "esp32p4",
   "spec": {

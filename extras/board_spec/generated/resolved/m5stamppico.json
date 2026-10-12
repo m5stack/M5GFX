@@ -2,7 +2,8 @@
   "schema_version": 1,
   "id": "m5stamppico",
   "name": "M5StampPico",
-  "official_name": "M5Stack StampPico",
+  "official_name": "M5Stack Stamp-Pico",
+  "official_name_verified": true,
   "legacy_board_id": 133,
   "chip": "esp32_d0wdq6",
   "spec": {

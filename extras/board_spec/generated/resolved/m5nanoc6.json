@@ -3,6 +3,7 @@
   "id": "m5nanoc6",
   "name": "M5NanoC6",
   "official_name": "M5Stack NanoC6",
+  "official_name_verified": true,
   "legacy_board_id": 140,
   "chip": "esp32c6",
   "spec": {

@@ -2,7 +2,8 @@
   "schema_version": 1,
   "id": "m5atomvoice",
   "name": "M5AtomVoice",
-  "official_name": "M5Stack AtomVoice",
+  "official_name": "M5Stack Atom Voice",
+  "official_name_verified": true,
   "legacy_board_id": 142,
   "chip": "esp32_d0wdq6",
   "spec": {

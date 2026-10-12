@@ -2,7 +2,8 @@
   "schema_version": 1,
   "id": "m5atoms3rcam",
   "name": "M5AtomS3RCam",
-  "official_name": "M5Stack M5AtomS3RCam",
+  "official_name": "M5Stack AtomS3R-CAM",
+  "official_name_verified": true,
   "legacy_board_id": 144,
   "chip": "esp32s3",
   "spec": {
