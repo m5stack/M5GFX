@@ -5,18 +5,60 @@
   "official_name": "M5Stack AtomVoice",
   "legacy_board_id": 142,
   "chip": "esp32_d0wdq6",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/atom/atomecho",
+      "schematic": "https://static-cdn.m5stack.com/resource/docs/products/atom/atomecho/atomecho_sch_01.webp",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
+    "19": {
+      "roles": [
+        "conn:rear_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet",
+        "note": "datasheet"
+      },
+      "note": "GPIO19/22/23/33 are reserved for the internal audio interface. The official documentation prohibits external reuse, expansion modules, or additional wiring on these pins."
+    },
     "21": {
       "roles": [
-        "bus:internal_i2c.scl"
+        "bus:internal_i2c.scl",
+        "conn:rear_right.1"
       ],
       "verified": {
         "roles": "generated"
       }
     },
+    "22": {
+      "roles": [
+        "conn:rear_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet",
+        "note": "datasheet"
+      },
+      "note": "GPIO19/22/23/33 are reserved for the internal audio interface. The official documentation prohibits external reuse, expansion modules, or additional wiring on these pins."
+    },
+    "23": {
+      "roles": [
+        "conn:rear_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet",
+        "note": "datasheet"
+      },
+      "note": "GPIO19/22/23/33 are reserved for the internal audio interface. The official documentation prohibits external reuse, expansion modules, or additional wiring on these pins."
+    },
     "25": {
       "roles": [
-        "bus:internal_i2c.sda"
+        "bus:internal_i2c.sda",
+        "conn:rear_right.2"
       ],
       "verified": {
         "roles": "generated"
@@ -45,6 +87,16 @@
       "verified": {
         "roles": "generated"
       }
+    },
+    "33": {
+      "roles": [
+        "conn:rear_left.5"
+      ],
+      "verified": {
+        "roles": "datasheet",
+        "note": "datasheet"
+      },
+      "note": "GPIO19/22/23/33 are reserved for the internal audio interface. The official documentation prohibits external reuse, expansion modules, or additional wiring on these pins."
     }
   },
   "buses": {
@@ -70,7 +122,36 @@
   "connectors": {
     "port_a": {
       "type": "hy2_4p",
-      "standard": "port_i2c"
+      "standard": "port_i2c",
+      "positions": {
+        "3": "pwr:5v"
+      },
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "rear_left": {
+      "type": "socket_1x5_254",
+      "positions": {
+        "1": "pwr:3v3"
+      },
+      "note": "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom. GPIO19/22/23/33 are reserved for the internal audio interface. The official documentation prohibits external reuse, expansion modules, or additional wiring on these pins.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
+    },
+    "rear_right": {
+      "type": "socket_1x4_254",
+      "positions": {
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      },
+      "note": "Rear right socket in the same bottom view; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
     }
   }
 }

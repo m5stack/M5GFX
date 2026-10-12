@@ -57,7 +57,23 @@ function buildAtomS3(onMidway) {
 }
 
 test("board operations create AtomS3 byte-for-byte", () => {
-  assert.equal(formatBoard(buildAtomS3()), atoms3Text);
+  const board = buildAtomS3();
+  setSpec(board, "links", {
+    product: "https://docs.m5stack.com/en/core/AtomS3",
+    schematic: "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/472/Sch_M5_AtomS3_v1.0.pdf",
+    verified: { product: "datasheet", schematic: "datasheet" },
+  });
+  for (const [id, type, positions, note] of [
+    ["rear_left", "socket_1x5_254", { 1: "pwr:3v3" }, "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom."],
+    ["rear_right", "socket_1x4_254", { 3: "pwr:5v", 4: "pwr:gnd" }, "Rear right socket in the same bottom view; positions numbered top to bottom. GPIO39/38 share the onboard MPU6886 I2C bus."],
+  ]) {
+    addConnector(board, id, { type });
+    Object.assign(board.connectors[id], { positions, note, verified: { type: "datasheet", positions: "datasheet" } });
+  }
+  Object.assign(board.connectors.port_a, { positions: { 3: "pwr:5v" }, verified: { positions: "datasheet" } });
+  for (const [gpio, role] of [[5, "conn:rear_left.2"], [6, "conn:rear_left.3"], [7, "conn:rear_left.4"], [8, "conn:rear_left.5"], [39, "conn:rear_right.1"], [38, "conn:rear_right.2"]]) addRole(board, gpio, role, { chip });
+  for (const gpio of [1, 2, 5, 6, 7, 8, 38, 39]) setPin(board, gpio, { verified: { roles: "datasheet" } });
+  assert.equal(formatBoard(board), atoms3Text);
 });
 
 test("required part signals are missing midway and complete at the end", () => {

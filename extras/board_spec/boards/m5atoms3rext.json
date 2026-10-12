@@ -5,6 +5,16 @@
   "official_name": "M5Stack M5AtomS3RExt",
   "legacy_board_id": 143,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/AtomS3R-Ext",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/681/main_board_schematic.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
     "0": {
       "roles": [
@@ -32,17 +42,173 @@
         "roles": "generated"
       }
     },
+    "3": {
+      "roles": [
+        "conn:proto.5"
+      ],
+      "note": "Exposed on Proto board terminal 5 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:proto.6"
+      ],
+      "note": "Exposed on Proto board terminal 6 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:rear_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:rear_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:rear_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:rear_left.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "9": {
-      "roles": []
+      "roles": [
+        "conn:proto.7"
+      ],
+      "note": "Exposed on Proto board terminal 7 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:proto.8"
+      ],
+      "note": "Exposed on Proto board terminal 8 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "11": {
+      "roles": [
+        "conn:proto.9"
+      ],
+      "note": "Exposed on Proto board terminal 9 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
     },
     "12": {
-      "roles": []
+      "roles": [
+        "conn:proto.10"
+      ],
+      "note": "Exposed on Proto board terminal 10 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "13": {
+      "roles": [
+        "conn:proto.11"
+      ],
+      "note": "Exposed on Proto board terminal 11 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "14": {
+      "roles": [],
+      "note": "The official Specifications list GPIO14 among Proto Board Reserved GPIOs, but the Proto Pin table and PinMap assign no exposed Proto terminal to it. Terminal assignments follow the numbered Proto Pin table; no connector role is assigned to GPIO14.",
+      "verified": {
+        "note": "datasheet"
+      }
+    },
+    "17": {
+      "roles": [
+        "conn:proto.12"
+      ],
+      "note": "Exposed on Proto board terminal 12 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
     },
     "18": {
       "roles": []
     },
     "21": {
-      "roles": []
+      "roles": [
+        "conn:proto.13"
+      ],
+      "note": "Exposed on Proto board terminal 13 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "38": {
+      "roles": [
+        "conn:rear_right.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "39": {
+      "roles": [
+        "conn:rear_right.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "40": {
+      "roles": [
+        "conn:proto.14"
+      ],
+      "note": "Exposed on Proto board terminal 14 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "42": {
+      "roles": [
+        "conn:proto.15"
+      ],
+      "note": "Exposed on Proto board terminal 15 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
     },
     "45": {
       "roles": [
@@ -50,6 +216,26 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "46": {
+      "roles": [
+        "conn:proto.16"
+      ],
+      "note": "Exposed on Proto board terminal 16 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
+      }
+    },
+    "48": {
+      "roles": [
+        "conn:proto.17"
+      ],
+      "note": "Exposed on Proto board terminal 17 in the official Proto Pin table.",
+      "verified": {
+        "note": "datasheet",
+        "roles": "datasheet"
       }
     }
   },
@@ -92,7 +278,51 @@
   "connectors": {
     "port_a": {
       "type": "hy2_4p",
-      "standard": "port_i2c"
+      "standard": "port_i2c",
+      "positions": {
+        "3": "pwr:5v"
+      },
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "rear_left": {
+      "type": "socket_1x5_254",
+      "positions": {
+        "1": "pwr:3v3"
+      },
+      "note": "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
+    },
+    "rear_right": {
+      "type": "socket_1x4_254",
+      "positions": {
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      },
+      "note": "Rear right socket in the same bottom view; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
+    },
+    "proto": {
+      "type": "atoms3r_ext_proto",
+      "positions": {
+        "1": "pwr:3v3",
+        "2": "pwr:1v2",
+        "3": "pwr:2v8",
+        "4": "chip:en",
+        "18": "pwr:gnd",
+        "19": "pwr:gnd"
+      },
+      "note": "Terminal numbers and wiring follow the official Proto Pin table and PinMap, not a verified physical layout. RST is the ESP32-S3 enable/reset input. The Specifications include GPIO14 among reserved Proto GPIOs, but the numbered table and PinMap give GPIO14 no terminal; it is not assigned here.",
+      "verified": {
+        "positions": "datasheet"
+      }
     }
   }
 }

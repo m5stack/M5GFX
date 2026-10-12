@@ -5,6 +5,16 @@
   "official_name": "M5Stack M5AtomVoiceS3R",
   "legacy_board_id": 145,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Atom_VoiceS3R",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1182/Sch_M5_AtomS3R_v0.4.1.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
     "0": {
       "roles": [
@@ -30,6 +40,54 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:rear_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:rear_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:rear_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:rear_left.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "38": {
+      "roles": [
+        "conn:rear_right.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "39": {
+      "roles": [
+        "conn:rear_right.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "45": {
@@ -79,7 +137,36 @@
   "connectors": {
     "port_a": {
       "type": "hy2_4p",
-      "standard": "port_i2c"
+      "standard": "port_i2c",
+      "positions": {
+        "3": "pwr:5v"
+      },
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "rear_left": {
+      "type": "socket_1x5_254",
+      "positions": {
+        "1": "pwr:3v3"
+      },
+      "note": "Rear left socket viewed from the bottom with USB at the bottom; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
+    },
+    "rear_right": {
+      "type": "socket_1x4_254",
+      "positions": {
+        "3": "pwr:5v",
+        "4": "pwr:gnd"
+      },
+      "note": "Rear right socket in the same bottom view; positions numbered top to bottom.",
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      }
     }
   }
 }
