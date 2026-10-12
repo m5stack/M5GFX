@@ -1,3 +1,4 @@
+import { connectorTableColumns } from "../editor/html.js";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
@@ -744,14 +745,9 @@ test("editor translations are complete and every static reference exists", async
   assert.match(editorSource, /--combobox-max-height/);
   assert.match(editorHtml, /<colgroup>[\s\S]*gpio-col-validation[\s\S]*<\/colgroup>/);
   assert.match(editorCSS, /#gpio-table \{ table-layout: fixed; \}/);
-  assert.match(editorHtml, /id="board-info"[^>]*data-layout-section="boardInfo"/);
-  assert.match(editorHtml, /id="side-resizer"[^>]*role="separator"[^>]*aria-valuemin="360"[^>]*aria-valuemax="620"/);
-  assert.match(editorSource, /m5-board-spec-layout:v1/);
-  assert.match(editorSource, /sidebarWidthLimits = \{ min: 360, max: 620, default: 460 \}/);
-  assert.match(editorSource, /event\.key === "ArrowLeft" \? step : -step/);
-  assert.match(editorCSS, /\.side-column \{[^}]*position:\s*sticky[^}]*max-height:\s*100%[^}]*overflow-y:\s*auto/s);
-  assert.match(editorCSS, /@media \(max-width: 980px\)[\s\S]*?\.side-resizer \{ display: none; \}/);
-  assert.match(editorCSS, /\.workspace \{[^}]*--side-width, 460px/s);
+  assert.match(editorHtml, /id="board-info"[^>]*data-page="board"/);
+  assert.match(editorSource, /m5-board-spec-layout:v3/);
+  assert.doesNotMatch(editorHtml, /id="side-resizer"|id="view-tabs"/);
   assert.match(editorCSS, /\.row-edit-hint \{[^}]*opacity:\s*0[^}]*visibility:\s*hidden/s);
   assert.doesNotMatch(editorCSS, /\.gpio-row:hover \.row-edit-hint \{\s*display:/);
   assert.match(editorSource, /internalRoles: `<td class="gpio-roles-cell gpio-internal-roles-cell"><div class="role-row-main">[\s\S]*\$\{rowHint\}/);
@@ -2794,4 +2790,350 @@ test("connector display groups validate identifiers and warn about a solitary me
   assert.ok(validateBoard(sample, context).some((item) => item.id === "W_CONN_GROUP_SINGLE"));
   sample.connectors[ids[1]] = { ...sample.connectors[ids[0]], group: "paired" };
   assert.equal(validateBoard(sample, context).some((item) => item.id === "W_CONN_GROUP_SINGLE"), false);
+});
+
+test("editor reference links reject executable URLs and escape labels", async () => {
+  const { externalLinkHtml } = await import("../editor/html.js");
+  assert.equal(externalLinkHtml("javascript:alert(1)", "open"), "");
+  assert.equal(externalLinkHtml("invalid", "open"), "");
+  assert.match(externalLinkHtml("https://example.com/?a=1&b=2", "<open>"), /target="_blank" rel="noopener noreferrer"/);
+  assert.match(externalLinkHtml("https://example.com", "<open>"), /&lt;open&gt;/);
+});
+
+test("editor GPIO links enumerate shared connector terminals without duplicates", async () => {
+  const { gpioConnectorTargets } = await import("../editor/html.js");
+  const board = { pins: { 8: { roles: ["conn:a.1", "conn:a.2", "conn:b.1", "conn:a.1", "dev:test.in"] } }, connectors: { a: {}, b: {} } };
+  assert.deepEqual(gpioConnectorTargets(board, 8), [{ connector: "a", position: "1" }, { connector: "a", position: "2" }, { connector: "b", position: "1" }]);
+});
+
+test("compact header keeps all runtime selectors and only exposes base reset for resolved data", () => {
+  const source = editorSource.slice(editorSource.indexOf("function renderOptions()"), editorSource.indexOf("function renderTable("));
+  const panel = { innerHTML: "", title: "", querySelector: () => ({ after: () => {}, title: "" }) };
+  const editBase = { hidden: false };
+  const runtime = { lcd: "panel_a", epd: "panel_b" };
+  let slots = [["lcd", { selected_by: "runtime", choices: { panel_a: {} } }], ["epd", { selected_by: "runtime", choices: { panel_b: {} } }]];
+  let resolved = true;
+  const sandbox = vm.createContext({
+    state: { currentId: "demo", selectedOptions: new Set(), runtimePanelOpen: true, runtimeSelections: new Map([["demo", runtime]]) },
+    elements: { optionPanel: panel, editBase, modeNote: { textContent: "" } },
+    currentBase: () => ({ name: "Demo", revisions: [] }), choiceSlots: () => slots,
+    revisionSelection: () => ({}), isResolvedMode: () => resolved,
+    escapeHtml: (value) => String(value ?? ""), t: (key) => key,
+  });
+  vm.runInContext(source + "\nrenderOptions();", sandbox);
+  assert.match(panel.innerHTML, /data-display-runtime="lcd"/);
+  assert.match(panel.innerHTML, /data-display-runtime="epd"/);
+  assert.match(panel.innerHTML, /aria-expanded="true"/);
+  assert.equal(editBase.hidden, false);
+  assert.deepEqual(runtime, { lcd: "panel_a", epd: "panel_b" });
+  slots = []; resolved = false;
+  vm.runInContext("renderOptions();", sandbox);
+  assert.doesNotMatch(panel.innerHTML, /data-runtime-toggle/);
+  assert.equal(editBase.hidden, true);
+});
+
+test("compact header retains unique action targets and uses a dialog for Guide", () => {
+  const ids = [...editorHtml.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(ids.length, new Set(ids).size);
+  assert.match(editorHtml, /<dialog id="onboarding"/);
+  assert.match(editorHtml, /<body id="drop-zone">/);
+  const header = /<header[\s\S]*?<\/header>/.exec(editorHtml)[0];
+  for (const id of ["board-select", "option-panel", "file-menu", "download-button", "discard-button", "save-state", "onboarding-help", "language-select"]) assert.match(header, new RegExp(`id="${id}"`));
+  assert.doesNotMatch(header, /<h1|class="mode-bar"/);
+  assert.match(editorSource, /elements\.onboarding\.showModal\(\)/);
+});
+
+test("editor routes validate object and terminal IDs and fall back to their categories", async () => {
+  const { resolveEditorRoute, editorPageKey } = await import("../editor/html.js");
+  const board = { connectors: { port: { type: "socket" } }, buses: { bus: {} }, devices: { dev: {} }, revisions: [{ id: "rev" }] };
+  const context = { chip: { gpio_count: 5, absent: [4] }, connectorTypes: { socket: { positions: [{ id: "1" }] } }, ownerKeys: ["dev:part"] };
+  assert.deepEqual(resolveEditorRoute({ kind: "connector", id: "port", position: "1" }, board, context), { kind: "connector", id: "port", position: "1" });
+  assert.deepEqual(resolveEditorRoute({ kind: "connector", id: "removed" }, board, context), { kind: "connectors" });
+  assert.deepEqual(resolveEditorRoute({ kind: "connector", id: "port", position: "removed" }, board, context), { kind: "connector", id: "port" });
+  for (const kind of ["buses", "devices", "revisions", "owners"]) assert.deepEqual(resolveEditorRoute({ kind, id: "removed" }, board, context), { kind });
+  assert.deepEqual(resolveEditorRoute({ kind: "gpio", gpio: 4 }, board, context), { kind: "gpio" });
+  assert.deepEqual(resolveEditorRoute({ kind: "gpio", gpio: 5 }, board, context), { kind: "gpio" });
+  assert.deepEqual(resolveEditorRoute({ kind: "gpio", gpio: 1 }, board, context), { kind: "gpio", gpio: "1" });
+  assert.deepEqual(resolveEditorRoute(null, board, context), { kind: "gpio" });
+});
+
+test("editor validation destinations cover non-GPIO objects", async () => {
+  const { editorErrorRoute, resolveEditorRoute } = await import("../editor/html.js");
+  const board = { connectors: { port: { type: "socket" } }, buses: { bus: {} }, devices: { dev: {} }, revisions: [{ id: "rev" }] };
+  assert.deepEqual(editorErrorRoute({ path: "/pins/2/roles" }, board), { kind: "gpio", gpio: "2" });
+  assert.deepEqual(editorErrorRoute({ path: "/connectors/port/positions/1" }, board), { kind: "connector", id: "port", position: "1" });
+  assert.deepEqual(editorErrorRoute({ path: "/buses/bus/signals" }, board), { kind: "buses", id: "bus" });
+  assert.deepEqual(editorErrorRoute({ path: "/devices/dev/signals/sda" }, board), { kind: "devices", id: "dev" });
+  assert.deepEqual(editorErrorRoute({ path: "/revisions/0/select" }, board), { kind: "revisions", id: "rev" });
+  assert.deepEqual(resolveEditorRoute(editorErrorRoute({ path: "/connectors/missing" }, board), board), { kind: "connectors" });
+  assert.deepEqual(editorErrorRoute({ path: "/spec/storage" }, board), { kind: "board" });
+});
+
+test("editor navigation shows pages before scrolling, preserves data and resets connector context on board changes", async () => {
+  const { resolveEditorRoute, editorPageKey } = await import("../editor/html.js");
+  let shown = { id: "one", pins: {}, connectors: { port: { type: "socket" } } };
+  const before = JSON.stringify(shown);
+  const entry = { expandedGPIO: null };
+  const state = { currentId: "one", page: null, previousPage: null, routeBoardId: null, pageScroll: new Map(), connectorId: null, connectorPosition: null, layout: {}, undo: { marker: true } };
+  const steps = [], frames = [];
+  const node = { dataset: { connectorPosition: "1" }, closest: () => ({ dataset: { connectorId: "port" } }), scrollIntoView: () => steps.push("scroll"), focus: () => steps.push("focus") };
+  const sandbox = vm.createContext({
+    state, shownBoard: () => shown, routeContext: () => ({ ownerKeys: ["device:a"], chip: { gpio_count: 5, absent: [] }, connectorTypes: { socket: { positions: [{ id: "1" }, { id: "2" }] } } }), resolveEditorRoute, editorPageKey,
+    currentPageScroll: () => ({ top: 70, left: 0, gpioTop: 100, connectorTop: 80, connectorLeft: 45 }), saveLayoutState: () => {},
+    currentEntry: () => entry, currentBase: () => shown, writeDraft: () => {}, validationFor: () => [],
+    renderTable: () => steps.push("table"), renderConnectors: () => steps.push("connector"), renderOwnerEditor: () => {}, renderNavigation: () => {},
+    applyPageVisibility: () => steps.push("visible"), requestAnimationFrame: (fn) => frames.push(fn), sizeConnectorLanes: () => {}, assignConnectorLanes: () => ({ lanes: [] }), prefersReducedMotion: () => true,
+    document: { getElementById: () => node }, elements: { pageHost: { scrollTop: 0, scrollLeft: 0 }, tableBody: { closest: () => ({ scrollTop: 0 }) }, connectorPinout: { querySelectorAll: () => [node] } },
+    renderAll: () => { throw new Error("navigation must not redraw all pages"); },
+  });
+  const source = editorSource.slice(editorSource.indexOf("function navigateTo("), editorSource.indexOf("function renderNavigation("));
+  vm.runInContext(source + '\nnavigateTo({kind:"gpio",gpio:1});', sandbox);
+  assert.equal(steps.includes("scroll"), false);
+  frames.shift()();
+  assert.ok(steps.indexOf("visible") < steps.indexOf("scroll"));
+  vm.runInContext('navigateTo({kind:"connector",id:"port",position:"1"});', sandbox);
+  frames.shift()();
+  assert.equal(state.previousPage.route.kind, "gpio");
+  vm.runInContext('navigateTo({kind:"connector",id:"port",position:"2"});', sandbox);
+  frames.shift()();
+  assert.equal(state.previousPage.route.kind, "gpio", "terminal selection does not replace page history");
+  steps.length = 0;
+  vm.runInContext('navigateTo({kind:"gpio",gpio:1}); navigateTo({kind:"connector",id:"port",position:"1"});', sandbox);
+  frames.shift()();
+  assert.equal(steps.includes("scroll"), false, "a superseded navigation frame must not scroll or focus a hidden page");
+  frames.shift()();
+  assert.equal(steps.includes("scroll"), true);
+  vm.runInContext('navigateTo({kind:"connector",id:"port"},{restoreScroll:{top:70,left:0,connectorTop:80,connectorLeft:45}});', sandbox);
+  frames.shift()();
+  assert.equal(sandbox.elements.connectorPinout.scrollTop, 80);
+  assert.equal(sandbox.elements.connectorPinout.scrollLeft, 45);
+  vm.runInContext('navigateTo({kind:"owners"});', sandbox); frames.shift()();
+  const previousPage = state.previousPage;
+  vm.runInContext('navigateTo({kind:"owners",id:"device:a"});', sandbox); frames.shift()();
+  assert.equal(state.previousPage, previousPage, "owner tabs must preserve the previous page");
+  assert.equal(JSON.stringify(shown), before);
+  assert.deepEqual(state.undo, { marker: true });
+  shown = { id: "two", pins: {}, connectors: { port: { type: "socket" } } }; state.currentId = "two";
+  vm.runInContext('navigateTo({kind:"connector",id:"port"});', sandbox);
+  assert.equal(state.page.kind, "connectors", "same-named connector is not carried into another board");
+  assert.equal(state.previousPage, null);
+});
+
+test("editor pages stay mounted with unique IDs and centralized route writes", () => {
+  const ids = [...editorHtml.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(ids.length, new Set(ids).size);
+  assert.match(editorHtml, /<nav id="page-nav"/);
+  assert.doesNotMatch(editorHtml, /id="view-tabs"|id="side-resizer"/);
+  for (const page of ["board", "gpio", "connector", "revisions", "owners", "validation"]) assert.match(editorHtml, new RegExp(`data-page="${page}"[^>]*hidden`));
+  const routerStart = editorSource.indexOf("function navigateTo(");
+  const routerEnd = editorSource.indexOf("function renderNavigation(");
+  const outsideRouter = editorSource.slice(0, routerStart) + editorSource.slice(routerEnd);
+  assert.doesNotMatch(outsideRouter, /state\.(?:activeView|connectorId)\s*=(?!=)/);
+  assert.doesNotMatch(editorSource.slice(routerStart, routerEnd), /renderAll\(/);
+  const renderViews = editorSource.slice(editorSource.indexOf("function renderViews("), editorSource.indexOf("function renderSaveState("));
+  for (const renderer of ["renderBoardInfo", "renderConfiguration", "renderRevisionEditor", "renderOwnerEditor"]) assert.match(renderViews, new RegExp(`${renderer}\\(`));
+});
+
+
+test("connector edits retain the GPIO page and validation prefers a linked GPIO", () => {
+  const board = { connectors: { port: {} }, pins: {} };
+  const state = { page: { kind: "gpio" } };
+  const routes = [];
+  const sandbox = vm.createContext({ state, connectorTableColumns, resolveConnectorType: () => ({}), connectorTypes: {}, resolveConnectorPositions: () => ({ sources: { "1": { gpios: [], fixed: false } } }), rememberConnectorUndo: () => {}, navigateTo: (route) => routes.push(route), removeConnectorRole: () => {}, clearVerification: () => {}, markDirty: () => {}, renderAll: () => {}, editablePin: () => ({ roles: [] }) });
+  const source = editorSource.slice(editorSource.indexOf("function assignConnectorPosition("), editorSource.indexOf("function focusGPIO("));
+  vm.runInContext(source, sandbox);
+  sandbox.board = board;
+  vm.runInContext('assignConnectorPosition(board,"port","1","gpio:2"); assignConnectorPosition(board,"port","1",null,{removeGPIO:2});', sandbox);
+  assert.equal(routes.length, 0);
+  state.page = { kind: "connector", id: "port" };
+  vm.runInContext('assignConnectorPosition(board,"port","1",null);', sandbox);
+  assert.equal(routes.length, 1);
+  const handler = editorSource.slice(editorSource.indexOf('elements.validationList.addEventListener("click"'), editorSource.indexOf('elements.relatedList.addEventListener("click"'));
+  let click;
+  const validation = vm.createContext({ elements: { validationList: { addEventListener: (_, fn) => { click = fn; } } }, shownBoard: () => board, currentBase: () => board, validationFor: () => [{ path: "/devices/dev/signals/sda" }], gpioForError: () => "0", editorErrorRoute: () => ({ kind: "devices", id: "dev" }), navigateTo: (route) => routes.push(route) });
+  vm.runInContext(handler, validation);
+  click({ target: { closest: () => ({ dataset: { errorIndex: "0" } }) } });
+  assert.equal(routes.at(-1).kind, "gpio");
+  assert.equal(routes.at(-1).gpio, "0");
+});
+
+
+test("connector sets retain socket identities, isolate selection, and share a page history key", async () => {
+  const { connectorDisplaySets, resolveEditorRoute, editorPageKey } = await import("../editor/html.js");
+  const sample = { connectors: { left: { type: "socket", group: "bottom" }, right: { type: "socket", group: "bottom" }, grove: { type: "socket" } } };
+  const context = { connectorTypes: { socket: { positions: [{ id: "1" }] } } };
+  assert.deepEqual(connectorDisplaySets(sample), [{ group: "bottom", ids: ["left", "right"] }, { group: null, ids: ["grove"] }]);
+  const left = resolveEditorRoute({ kind: "connector", id: "left", position: "1" }, sample, context);
+  const right = resolveEditorRoute({ kind: "connector", id: "right", position: "1" }, sample, context);
+  assert.equal(left.id, "left"); assert.equal(right.id, "right");
+  assert.equal(editorPageKey(left), editorPageKey(right));
+  assert.deepEqual(resolveEditorRoute({ kind: "connector-group", id: "bottom" }, sample, context), { kind: "connector", id: "left", group: "bottom" });
+  assert.deepEqual(resolveEditorRoute({ kind: "connector-group", id: "missing" }, sample, context), { kind: "connectors" });
+  const sandbox = vm.createContext({ state: { connectorId: "left", connectorPosition: "1" }, currentEntry: () => ({ expandedGPIO: null }), endpointGPIOs: () => [] });
+  const start = editorSource.indexOf("function connectorPositionClasses(");
+  vm.runInContext(editorSource.slice(start, editorSource.indexOf("function boardReferenceLinks(", start)), sandbox);
+  assert.match(vm.runInContext('connectorPositionClasses({},null,"1","left")', sandbox), /selected/);
+  assert.doesNotMatch(vm.runInContext('connectorPositionClasses({},null,"1","right")', sandbox), /selected/);
+});
+
+
+test("paired socket tables render one editor and selection targets the clicked socket", () => {
+  const routes = [];
+  const state = { connectorId: "left", connectorPosition: "1" };
+  const sample = { connectors: { left: { type: "socket" }, right: { type: "socket" } } };
+  const type = { layout: { cols: 1, rows: 1 }, positions: [{ id: "1", row: 0, col: 0 }] };
+  const sandbox = vm.createContext({ state, connectorTableColumns, resolveConnectorType: () => type, connectorTypes: {}, resolveConnectorPositions: () => ({ sources: {}, positions: {} }), currentBase: () => sample, renderConnectorTableCells: (_, __, ___, position, id) => `<td>${id}.${position.id}</td>`, connectorEditorMarkup: () => "editor", connectorMeta: () => "metadata", escapeHtml: String, t: (key) => key, navigateTo: (route) => routes.push(route) });
+  const start = editorSource.indexOf("function renderConnectorTable(");
+  vm.runInContext(editorSource.slice(start, editorSource.indexOf("function gpioChoices(", start)), sandbox);
+  sandbox.sample = sample;
+  const left = vm.runInContext('renderConnectorTable(sample,"left")', sandbox);
+  const right = vm.runInContext('renderConnectorTable(sample,"right")', sandbox);
+  assert.match(left, /connector-inline-row/);
+  assert.doesNotMatch(right, /connector-inline-row/);
+  assert.match(left, /left.1/); assert.match(right, /right.1/);
+  assert.deepEqual([...left.matchAll(/<th scope="col">connector\.(\w+)<\/th>/g)].map((match) => match[1]), ["terminal", "endpoint", "function"]);
+  assert.match(left, /colspan="3"/);
+  assert.deepEqual([...left.matchAll(/<col class="pin-col-(\w+)">/g)].map((match) => match[1]), ["terminal", "endpoint", "function"]);
+  type.layout.cols = 2;
+  type.positions.push({ id: "2", row: 0, col: 1 });
+  const double = vm.runInContext('renderConnectorTable(sample,"left")', sandbox);
+  assert.deepEqual([...double.matchAll(/<th scope="col">connector\.(\w+)<\/th>/g)].map((match) => match[1]), ["function", "endpoint", "terminal", "terminal", "endpoint", "function"]);
+  assert.match(double, /colspan="6"/);
+  type.positions[0].color = "#ffffff";
+  const wiredDouble = vm.runInContext('renderConnectorTable(sample,"left")', sandbox);
+  assert.deepEqual([...wiredDouble.matchAll(/<th scope="col">connector\.(\w+)<\/th>/g)].map((match) => match[1]), ["function", "endpoint", "wire", "terminal", "terminal", "wire", "endpoint", "function"]);
+  assert.match(wiredDouble, /colspan="8"/);
+  type.layout.cols = 1;
+  const wiredSingle = vm.runInContext('renderConnectorTable(sample,"left")', sandbox);
+  assert.deepEqual([...wiredSingle.matchAll(/<th scope="col">connector\.(\w+)<\/th>/g)].map((match) => match[1]), ["terminal", "wire", "endpoint", "function"]);
+  assert.match(wiredSingle, /colspan="4"/);
+  type.layout.cols = 2;
+
+  assert.deepEqual([...double.matchAll(/<col class="pin-col-(\w+)">/g)].map((match) => match[1]), ["function", "endpoint", "terminal", "terminal", "endpoint", "function"]);
+
+  const selection = editorSource.indexOf("function selectConnectorPosition(");
+  vm.runInContext(editorSource.slice(selection, editorSource.indexOf('elements.connectorPinout.addEventListener("click"', selection)), sandbox);
+  sandbox.target = { dataset: { connectorPosition: "1" }, closest: () => ({ dataset: { connectorId: "right" } }) };
+  vm.runInContext('selectConnectorPosition(target)', sandbox);
+  assert.equal(routes[0].id, "right"); assert.equal(routes[0].position, "1");
+});
+
+
+test("first connector terminal uses ID 1 regardless of definition ordering", async () => {
+  const { firstConnectorPosition } = await import("../editor/html.js");
+  assert.equal(firstConnectorPosition({ positions: [{ id: "3" }, { id: "1" }, { id: "2" }] }), "1");
+  assert.equal(firstConnectorPosition({ positions: [{ id: "a" }, { id: "b" }] }), "a");
+  assert.equal(firstConnectorPosition({ positions: [] }), "1");
+});
+
+test("paired pinout markup supplies the three shared grid rows in table mode", () => {
+  assert.match(editorCSS, /\.connector-set\.grouped\s*\{[^}]*grid-template-rows: auto auto auto/);
+  assert.match(editorCSS, /\.connector-set\.grouped > \.connector-socket\s*\{[^}]*grid-row: 1 \/ 4;[^}]*grid-template-rows: subgrid/);
+  const start = editorSource.indexOf("function renderConnectors(");
+  const render = editorSource.slice(start, editorSource.indexOf("function renderRelated(", start));
+  assert.match(render, /<section class="connector-socket"[^`]*<h3>/);
+  for (const name of ["renderConnectorTable"]) {
+    const begin = editorSource.indexOf(`function ${name}(`);
+    const body = editorSource.slice(begin, editorSource.indexOf("\nfunction ", begin + 1));
+    assert.match(body, /return `\$\{connectorMeta\(board, connector, type\)\}<table/);
+  }
+});
+
+
+test("connector endpoint roles omit their own socket and retain shared and power roles", async () => {
+  const { connectorEndpointRoles } = await import("../editor/role_colors.js");
+  const sample = { pins: { 2: { roles: ["conn:left.1", "conn:right.1", "dev:lcd.cs", "bus:main_spi.sclk", "dev:lcd.cs"] } } };
+  const roles = connectorEndpointRoles(sample, "gpio:2", "left");
+  assert.deepEqual(roles, ["conn:right.1", "dev:lcd.cs", "bus:main_spi.sclk"]);
+  assert.deepEqual(connectorEndpointRoles(sample, "pwr:5v", "left"), ["pwr:5v"]);
+});
+
+test("connector cells reuse role chips and custom colors while GPIO endpoints remain neutral", async () => {
+  const { connectorEndpointRoles, roleOwner, objectRoleOwner, roleColor } = await import("../editor/role_colors.js");
+  const { firstConnectorPosition, escapeHtml } = await import("../editor/html.js");
+  const board = { connectors: { left: { type: "socket" } }, pins: { 2: { roles: ["conn:left.1", "conn:right.1", "bus:spi.sclk"] } } };
+  const state = { roleColors: { "bus:spi": "#112233", "conn:right": "#123456", "pwr:5v": "#654321" } };
+  const socketType = { positions: [{ id: "1" }] };
+  const sandbox = vm.createContext({ state, connectorTableColumns, connectorEndpointRoles, roleOwner, objectRoleOwner, roleColor, firstConnectorPosition, escapeHtml, roleDisplay: (_, role) => ({ plain: role }), connectorPositionClasses: () => "", connectorTableEndpointLabel: (endpoint) => endpoint, connectorFunctionLabel: () => "", resolveConnectorType: () => socketType, connectorTypes: {}, endpointGPIOs: (endpoint) => /^gpio:/.test(endpoint) ? ["2"] : [], endpointLabel: (endpoint) => endpoint });
+  const start = editorSource.indexOf("function roleChip(");
+  vm.runInContext(editorSource.slice(start, editorSource.indexOf("function roleOwnerAttributes(", start)), sandbox);
+  const cells = editorSource.indexOf("function renderConnectorTableCells(");
+  vm.runInContext(editorSource.slice(cells, editorSource.indexOf("function renderConnectorTable(", cells)), sandbox);
+  sandbox.board = board;
+  const render = (endpoint) => { sandbox.display = { positions: { "1": endpoint } }; return vm.runInContext('renderConnectorTableCells(board,display,{sources:{}},{id:"1",name:"vcc"},"left")', sandbox); };
+  const gpio = render("gpio:2");
+  const columnClasses = (markup) => [...markup.matchAll(/<td[^>]*class="[^"]*pin-(number|endpoint|function)(?: |")/g)].map((match) => match[1]);
+  assert.deepEqual(columnClasses(gpio), ["number", "endpoint", "function"]);
+  assert.deepEqual(columnClasses(vm.runInContext('renderConnectorTableCells(board,display,{sources:{}},{id:"1"},"left","left")', sandbox)), ["function", "endpoint", "number"]);
+  assert.deepEqual(columnClasses(vm.runInContext('renderConnectorTableCells(board,display,{sources:{}},{id:"1"},"left","right")', sandbox)), ["number", "endpoint", "function"]);
+
+  assert.match(gpio, /--role-bg:#112233;--role-fg:#ffffff/);
+  assert.match(gpio, /--role-bg:#123456/);
+  assert.doesNotMatch(gpio, />conn:left.1</);
+  assert.match(gpio, />gpio:2<\/td>/);
+
+  socketType.positions[0].color = "#ffffff";
+  sandbox.position = { id: "1", color: "#ffffff" };
+  const wiredGPIO = vm.runInContext('renderConnectorTableCells(board,display,{sources:{}},position,"left")', sandbox);
+  assert.match(wiredGPIO, /pin-wire/);
+  assert.match(wiredGPIO, /--position-color:#ffffff/);
+  const terminalCell = wiredGPIO.match(/<td[^>]*class="[^" ]*[^"]*pin-number[^"]*"[^>]*>(.*?)<\/td>/)?.[1];
+  assert.equal(terminalCell, "▸ 1");
+  const power = render("pwr:5v");
+  assert.match(power, /data-role-kind="pwr" style="--role-bg:#654321/);
+  assert.equal((power.match(/>pwr:5v<\/span>/g) ?? []).length, 1);
+  assert.match(power, /<\/span> \(VCC\)<\/td>/);
+});
+
+
+test("voltage rail color overrides survive reload without accepting malformed owners", () => {
+  const sandbox = vm.createContext({ roleColorStorageKey: "colors", localStorage: { getItem: () => JSON.stringify({ "pwr:5v": "#112233", "pwr:3v3": "#445566", "conn:3bad": "#123456", "pwr:bad!": "#123456" }) } });
+  const start = editorSource.indexOf("function initialRoleColors(");
+  vm.runInContext(editorSource.slice(start, editorSource.indexOf("function saveRoleColors(", start)), sandbox);
+  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("initialRoleColors()", sandbox))), { "pwr:5v": "#112233", "pwr:3v3": "#445566" });
+});
+
+test("connector legends omit GPIO explanations", () => {
+  const state = { roleColorsOpen: true, connectorRoleColorsOpen: false };
+  const elements = { roleColorLegend: {}, connectorRoleColorLegend: {} };
+  const sandbox = vm.createContext({ state, elements, t: (key) => key, escapeHtml: String, roleOwnersForBoard: () => [] });
+  const legend = editorSource.indexOf("function renderRoleColorLegend(");
+  vm.runInContext(editorSource.slice(legend, editorSource.indexOf("function verificationSummary(", legend)), sandbox);
+  vm.runInContext("renderRoleColorLegend({})", sandbox);
+  assert.match(elements.roleColorLegend.innerHTML, /role-prefix-legend/);
+  assert.match(elements.roleColorLegend.innerHTML, /<details open>/);
+  assert.doesNotMatch(elements.connectorRoleColorLegend.innerHTML, /role-prefix-legend/);
+  assert.match(elements.connectorRoleColorLegend.innerHTML, /^<details>/);
+});
+
+ test("table-only pinouts ignore stored diagram preferences and retain the inline editor", () => {
+  const sandbox = vm.createContext({ layoutStorageKey: "layout", localStorage: { getItem: () => JSON.stringify({ connectorView: "svg", boardId: "sample", page: { kind: "connector", id: "port" } }) }, window: { matchMedia: () => ({ matches: false }) } });
+  const start = editorSource.indexOf("function initialLayoutState(");
+  vm.runInContext(editorSource.slice(start, editorSource.indexOf("function saveLayoutState(", start)), sandbox);
+  const layout = vm.runInContext("initialLayoutState()", sandbox);
+  assert.equal(layout.boardId, "sample");
+  assert.equal(Object.hasOwn(layout, "connectorView"), false);
+  assert.doesNotMatch(editorHtml, /connector-view-toggle|id="connector-editor"/);
+  assert.doesNotMatch(editorSource, /renderConnectorDiagram|connectorKeyMarkup|state\.connectorView|diagram-highlight/);
+  assert.doesNotMatch(editorCSS, /connector-position|connector-role-band|diagram-highlight/);
+  assert.match(editorSource, /hydrateConnectorEditor\(elements\.connectorPinout\.querySelector/);
+});
+
+
+test("connector undo appears only when usable and describes the recorded socket and terminal", () => {
+  const state = { page: { kind: "connector", group: "bottom", id: "right" }, currentId: "board", undo: null };
+  const button = {};
+  let resolved = false;
+  const sandbox = vm.createContext({ state, elements: { connectorUndo: button }, isResolvedMode: () => resolved, t: (key, values) => values ? `${values.id} ${values.position}` : key, applyControlLock: (_, reason) => { button.disabled = Boolean(reason); } });
+  const start = editorSource.indexOf("function renderConnectorUndo(");
+  vm.runInContext(editorSource.slice(start, editorSource.indexOf("function renderConnectors(", start)), sandbox);
+  const render = () => vm.runInContext("renderConnectorUndo()", sandbox);
+  render(); assert.equal(button.hidden, true);
+  state.undo = { boardId: "board", connectorId: "left", positionId: "17" };
+  render(); assert.equal(button.hidden, false); assert.equal(button.title, "left 17");
+  state.page.kind = "gpio"; render(); assert.equal(button.hidden, true);
+  state.page.kind = "connector"; resolved = true; render(); assert.equal(button.hidden, true);
+  resolved = false; state.currentId = "other"; render(); assert.equal(button.hidden, true);
+  assert.match(editorHtml, /class="page-heading"[^\n]*id="connector-undo"/);
+  assert.doesNotMatch(editorHtml, /connector-actions/);
 });
