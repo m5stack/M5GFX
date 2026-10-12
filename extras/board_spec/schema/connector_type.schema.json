@@ -14,7 +14,9 @@
     "fixed_positions": { "$ref": "#/definitions/endpointMap" },
     "default_positions": { "$ref": "#/definitions/endpointMap" },
     "standards": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
-    "rails": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true }
+    "rails": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+    "note": { "type": "string" },
+    "verified": { "type": "object", "additionalProperties": { "enum": ["generated", "measured", "datasheet", null] } }
   },
   "definitions": {
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
@@ -28,7 +30,7 @@
       "properties": {
         "rows": { "type": "integer", "minimum": 1 },
         "cols": { "type": "integer", "minimum": 1 },
-        "pitch_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "pitch_mm": { "type": ["number", "null"], "exclusiveMinimum": 0 },
         "numbering": { "enum": ["row_major", "col_major", "custom"] },
         "key": { "enum": ["top", "bottom", "left", "right", "none"] },
         "view": { "enum": ["component_side", "mating_face"] },

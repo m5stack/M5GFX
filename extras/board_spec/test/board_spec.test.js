@@ -26,12 +26,14 @@ import { isGeneratedField, pintableAssignments } from "../lib/pintable_roles.js"
 import { validateOwners } from "../lib/owners.js";
 import { validatePartCatalog, validateParts } from "../lib/parts.js";
 import { resolveAll, resolveBoard, resolvedFilename } from "../lib/resolve.js";
+import { validateSchema } from "../lib/schema.js";
 import { validateTarget, validateTargets } from "../lib/targets.js";
 import { validateBoard, validateCatalog, validateFormat, validateResolvedVariants } from "../lib/validate.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const board = JSON.parse(await fs.readFile(path.join(root, "boards/m5stack_core2.json"), "utf8"));
 const schema = JSON.parse(await fs.readFile(path.join(root, "schema/board.schema.json"), "utf8"));
+const connectorTypeSchema = JSON.parse(await fs.readFile(path.join(root, "schema/connector_type.schema.json"), "utf8"));
 const chip = JSON.parse(await fs.readFile(path.join(root, "chips/esp32_d0wdq6.json"), "utf8"));
 const chipS3 = JSON.parse(await fs.readFile(path.join(root, "chips/esp32s3.json"), "utf8"));
 const chipC3 = JSON.parse(await fs.readFile(path.join(root, "chips/esp32c3.json"), "utf8"));
@@ -2207,6 +2209,19 @@ test("multi_gpio permits a declared physical fan-out", () => {
   assert.deepEqual(validateBoard(value, context).filter((item) => item.severity !== "warning"), []);
 });
 
+test("resolved multi_gpio endpoints pass schema validation and require their declaration", () => {
+  const value = fixture((item) => {
+    item.connectors.port_a.multi_gpio = ["1"];
+    item.pins[1].roles.push("conn:port_a.1");
+  });
+  const resolved = resolveBoard(value, {}, connectorTypes, { chip, parts });
+  assert.ok(Array.isArray(resolved.connectors.port_a.positions["1"]));
+  assert.equal(resolved.connectors.port_a.positions["1"].length, 2);
+  assert.deepEqual(validateBoard(resolved, { ...context, resolved: true }).filter((item) => item.severity !== "warning"), []);
+  delete resolved.connectors.port_a.multi_gpio;
+  assert.ok(validateBoard(resolved, { ...context, resolved: true }).some((item) => item.id === "E_CONN_POS_DUP"));
+});
+
 test("shared_gpio permits one GPIO on multiple physical connector positions", () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_corematrix");
   const resolved = resolveAll(source, connectorTypes, { chip: chipC61, parts })[0].board;
@@ -2734,4 +2749,18 @@ test("StopWatch rear socket GPIOs cannot be used as invariant detection classes"
         && issue.path === `/pins/${gpio}/detect_class`), `G${gpio} ${classification}`);
     }
   }
+});
+
+// Numbered terminal tables can be verified without a measured physical layout.
+test("connector types permit explicitly unverified pitch and layout provenance", () => {
+  const type = {
+    id: "logical_terminals", name: "Logical terminals",
+    layout: { rows: 1, cols: 1, pitch_mm: null, numbering: "custom", key: "none", view: "component_side" },
+    positions: [{ id: "1", row: 0, col: 0 }],
+    note: "Terminal numbering is documented; physical geometry is unverified.",
+    verified: { layout: null, positions: "datasheet" },
+  };
+  assert.deepEqual(validateSchema(type, connectorTypeSchema), []);
+  assert.deepEqual(validateConnectorTypes({ logical_terminals: type }), []);
+  assert.ok(validateSchema({ ...type, layout: { ...type.layout, pitch_mm: "unknown" } }, connectorTypeSchema).some((issue) => issue.id === "E_SCHEMA_TYPE"));
 });
