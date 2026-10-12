@@ -6,29 +6,34 @@
   <title>M5 Board Spec Editor</title>
   <!-- @inline style -->
 </head>
-<body>
-  <header class="app-header">
-    <div>
-      <p class="eyebrow" data-i18n="app.catalog">M5 board specification catalog</p>
-      <h1 data-i18n="app.heading">GPIO specification editor</h1>
-    </div>
+<body id="drop-zone">
+  <header class="app-header toolbar" aria-label="Files and board" data-i18n-aria-label="toolbar.label">
+    <label class="board-picker"><span class="visually-hidden" data-i18n="toolbar.board">Board</span>
+      <span id="board-select" class="search-combobox board-combobox"><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off"><ul role="listbox"></ul></span>
+    </label>
+    <section id="option-panel" class="option-panel" aria-label="Resolved revisions" data-i18n-aria-label="options.label"></section>
+    <button id="edit-base-button" type="button" class="secondary" data-i18n="mode.editBase" data-i18n-title="mode.returnHint" hidden>Return to base data</button>
+    <p id="mode-note" hidden></p>
+    <details id="file-menu" class="header-menu">
+      <summary data-i18n="toolbar.openMenu">Open ▾</summary>
+      <div class="header-menu-panel">
+        <label class="file-button"><span data-i18n="toolbar.open">Open JSON</span><input id="file-input" type="file" accept="application/json,.json"></label>
+        <button id="new-board-button" type="button" data-i18n="toolbar.new">New</button>
+        <button id="duplicate-board-button" type="button" class="secondary" data-i18n="toolbar.duplicate">Duplicate</button>
+        <button id="close-board-button" type="button" class="secondary" data-i18n="toolbar.close" data-i18n-title="toolbar.closeHint">Remove board</button>
+      </div>
+    </details>
+    <button id="download-button" type="button" data-i18n="toolbar.exportShort" data-i18n-title="toolbar.download">Export</button>
+    <button id="discard-button" type="button" class="secondary" data-i18n="toolbar.discardShort" data-i18n-title="toolbar.discard">Discard</button>
+    <div id="save-state" class="save-state" aria-live="polite"></div>
     <div class="header-controls">
-      <div id="save-state" class="save-state" aria-live="polite"></div>
-      <button id="onboarding-help" class="help-button" type="button" aria-expanded="false" data-i18n-aria-label="onboarding.open" data-i18n-title="onboarding.open" data-i18n="onboarding.guide">Guide</button>
-      <label class="language-picker">
-        <span aria-hidden="true">🌐</span>
-        <select id="language-select" aria-label="Language" data-i18n-aria-label="toolbar.language">
-          <option value="en" data-i18n="language.en">English</option>
-          <option value="zh" data-i18n="language.zh">Chinese (Simplified)</option>
-          <option value="ja" data-i18n="language.ja">Japanese</option>
-        </select>
-      </label>
+      <button id="onboarding-help" class="help-button" type="button" aria-expanded="false" data-i18n-aria-label="onboarding.open" data-i18n-title="onboarding.open">?</button>
+      <label class="language-picker"><span aria-hidden="true">🌐</span><select id="language-select" aria-label="Language" data-i18n-aria-label="toolbar.language"><option value="en" data-i18n="language.en">English</option><option value="zh" data-i18n="language.zh">Chinese (Simplified)</option><option value="ja" data-i18n="language.ja">Japanese</option></select></label>
     </div>
   </header>
-
-  <section id="onboarding" class="onboarding" aria-labelledby="onboarding-title" hidden>
+  <dialog id="onboarding" class="onboarding" aria-labelledby="onboarding-title" hidden>
     <div class="onboarding-heading">
-      <div><p class="eyebrow" data-i18n="onboarding.eyebrow">Getting started</p><h2 id="onboarding-title" data-i18n="onboarding.heading">Edit a board JSON in four steps</h2></div>
+      <div><h1 data-i18n="app.heading">GPIO specification editor</h1><p class="eyebrow" data-i18n="onboarding.eyebrow">Getting started</p><h2 id="onboarding-title" data-i18n="onboarding.heading">Edit a board JSON in four steps</h2></div>
       <button id="onboarding-close" class="secondary" type="button" data-i18n="onboarding.close">Got it</button>
     </div>
     <p class="onboarding-purpose" data-i18n="onboarding.purpose">Review or correct the catalog wiring here, then download the JSON and place it back in the repository.</p>
@@ -38,49 +43,22 @@
       <li><strong>3</strong><span data-i18n="onboarding.step3">Changes stay as a draft only in this browser and are removed when the board is removed.</span></li>
       <li class="onboarding-export"><strong>4</strong><div><span data-i18n="onboarding.step4">Export the JSON, then update the repository yourself.</span><details><summary data-i18n="repository.showSteps">Repository steps</summary><ol><li data-i18n="repository.replaceGeneric">Replace extras/board_spec/boards/&lt;id&gt;.json.</li><li><code>node cli/spec.js check</code></li><li data-i18n="repository.commit">Review the diff, then commit and open a PR.</li></ol><p data-i18n="repository.notAutomatic">Downloading does not modify the repository.</p></details></div></li>
     </ol>
-  </section>
-
-  <section class="toolbar" aria-label="Files and board" data-i18n-aria-label="toolbar.label">
-    <label><span data-i18n="toolbar.board">Board</span>
-      <span id="board-select" class="search-combobox board-combobox"><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off"><ul role="listbox"></ul></span>
-    </label>
-    <button id="new-board-button" type="button" data-i18n="toolbar.new">New</button>
-    <button id="duplicate-board-button" type="button" class="secondary" data-i18n="toolbar.duplicate">Duplicate</button>
-    <button id="close-board-button" type="button" class="secondary" data-i18n="toolbar.close" data-i18n-title="toolbar.closeHint">Remove board</button>
-    <div class="file-open-group"><label class="file-button"><span data-i18n="toolbar.open">Open JSON</span>
-      <input id="file-input" type="file" accept="application/json,.json">
-    </label><div id="drop-zone" class="drop-zone" tabindex="0" data-i18n="toolbar.drop">Drop JSON to open</div></div>
-    <button id="download-button" type="button" data-i18n="toolbar.download">Export repository JSON</button>
-    <button id="discard-button" type="button" class="secondary" data-i18n="toolbar.discard">Discard draft</button>
-  </section>
+  </dialog>
 
   <section id="repository-next" class="repository-next" aria-live="polite" hidden></section>
-
-  <section id="option-panel" class="option-panel" aria-label="Resolved revisions" data-i18n-aria-label="options.label"></section>
-  <div class="mode-bar">
-    <p id="mode-note" class="mode-note"></p>
-    <button id="edit-base-button" type="button" class="secondary" data-i18n="mode.editBase" data-i18n-title="help.rawData">Edit raw data</button>
-    <span class="help-mark" data-i18n-title="help.rawData" data-i18n-aria-label="help.rawData">?</span>
-  </div>
-
-  <nav id="view-tabs" class="view-tabs" aria-label="Editor views" data-i18n-aria-label="views.label">
-    <button type="button" data-view="configuration" class="active"><span data-i18n="views.configuration">Configuration</span><span class="help-mark" data-i18n-title="help.configuration" data-i18n-aria-label="help.configuration">?</span></button>
-    <button type="button" data-view="revisions"><span data-i18n="views.revisions">Revisions</span><span class="help-mark" data-i18n-title="help.revisions" data-i18n-aria-label="help.revisions">?</span></button>
-    <button type="button" data-view="owners"><span data-i18n="views.owners">Pin owners</span><span class="help-mark" data-i18n-title="help.owners" data-i18n-aria-label="help.owners">?</span></button>
-  </nav>
-
+  <div class="global-drop-hint" aria-hidden="true" data-i18n="toolbar.drop">Drop JSON to open</div>
   <main id="configuration-view" class="workspace view-panel">
-    <details id="board-info" class="card board-info layout-disclosure" data-layout-section="boardInfo">
-      <summary><span data-i18n="layout.boardInfo">Board information</span><strong id="board-info-summary"></strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
-      <div id="board-info-body" class="board-info-body"></div>
-    </details>
-    <section class="card gpio-card">
+    <nav id="page-nav" class="page-nav" data-i18n-aria-label="nav.label" aria-label="Catalog pages">
+      <div class="nav-heading"><strong data-i18n="nav.label">Catalog pages</strong><button id="nav-toggle" class="secondary" type="button" aria-controls="page-nav-items" aria-expanded="true">«</button></div>
+      <div id="page-nav-items"></div>
+      <button type="button" class="nav-validation" data-route-kind="validation"><span data-i18n="validation.heading">Validation</span> <strong id="validation-count"></strong></button>
+    </nav>
+    <div class="page-area">
+      <div class="page-heading"><button id="page-back" type="button" class="secondary" hidden></button><h2 id="page-title"></h2><button id="connector-undo" type="button" class="secondary" data-i18n="connector.undo" hidden>Undo</button></div>
+      <div id="page-host" class="page-host">
+        <section id="board-info" class="card board-info" data-page="board" hidden><strong id="board-info-summary"></strong><div id="board-info-body" class="board-info-body"></div></section>
+    <section class="card gpio-card" data-page="gpio" hidden>
       <div class="section-heading">
-        <div>
-          <p class="eyebrow" data-i18n="gpio.eyebrow">Main</p>
-          <h2 data-i18n="gpio.heading">GPIO</h2>
-          <p class="section-description" data-i18n="gpio.description">Click a row to inspect or edit the roles assigned to that pin.</p>
-        </div>
         <div class="gpio-heading-tools">
           <div class="legend" aria-label="GPIO attribute legend" data-i18n-aria-label="gpio.legend">
             <span class="legend-reserved" data-i18n="gpio.reserved">reserved</span>
@@ -109,52 +87,20 @@
         </table>
       </div>
     </section>
-
-    <div id="side-resizer" class="side-resizer" role="separator" aria-orientation="vertical" aria-valuemin="360" aria-valuemax="620" aria-valuenow="460" tabindex="0" data-i18n-aria-label="layout.resizeSidebar"></div>
-
-    <aside class="side-column">
-      <section class="card configuration-card">
-        <div id="configuration-list"></div>
-      </section>
-      <details id="validation-section" class="card sidebar-disclosure validation-card" data-layout-section="validation">
-        <summary>
-          <span><span data-i18n="validation.heading">Validation</span> <span class="help-mark" data-i18n-title="help.validation" data-i18n-aria-label="help.validation">?</span></span>
-          <strong id="validation-count"></strong>
-          <span class="disclosure-chevron" aria-hidden="true">⌄</span>
-        </summary>
-        <div class="sidebar-section-body"><p class="section-description" data-i18n="validation.description">Checks the draft continuously; ✓ means no problem was found.</p><div id="validation-list" aria-live="polite"></div></div>
-      </details>
-
-      <details id="connector-section" class="card sidebar-disclosure connector-card" data-layout-section="connectorMap">
-        <summary><strong id="connector-section-title"></strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <section id="connector-section" class="card connector-card" data-page="connector" hidden>
+        <div class="section-heading connector-heading"><strong id="connector-section-title" hidden></strong><span id="connector-reference-links" class="reference-links"></span></div>
         <div class="sidebar-section-body">
-          <p class="section-description" data-i18n="connector.description">Select a connector position to review or change its endpoint.</p>
-          <div class="connector-actions">
-            <div id="connector-view-toggle" class="connector-view-toggle" aria-label="View" data-i18n-aria-label="connector.view">
-              <button type="button" data-connector-view="table" aria-pressed="true" data-i18n="connector.table">Table</button>
-              <button type="button" data-connector-view="svg" aria-pressed="false" data-i18n="connector.diagram">Diagram</button>
-            </div>
-            <button id="connector-undo" type="button" class="secondary" data-i18n="connector.undo">Undo</button>
-          </div>
-          <div id="connector-tabs" class="connector-tabs" role="tablist"></div>
-          <div id="connector-diagram" class="connector-diagram"></div>
-          <div id="connector-editor" class="connector-editor"></div>
+          <div id="connector-role-color-legend" class="role-color-legend"></div>
+          <div id="connector-pinout" class="connector-pinout"></div>
         </div>
-      </details>
-
-      <details id="related-section" class="card sidebar-disclosure related-card" data-layout-section="related">
-        <summary><strong id="related-section-title"></strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
-        <div class="sidebar-section-body"><p class="section-description" data-i18n="related.description">Read-only summary of where declared objects are assigned.</p><div id="related-list"></div></div>
-      </details>
-    </aside>
-  </main>
-
-  <main id="revisions-view" class="single-view view-panel" hidden>
-    <section class="card"><div class="section-heading"><div><p class="eyebrow" data-i18n="revisions.eyebrow">choices</p><h2 data-i18n="revisions.heading">Revisions</h2><p class="section-description" data-i18n="revisions.description">Record which device choice belongs to each hardware revision.</p></div></div><div id="revision-editor"></div></section>
-  </main>
-
-  <main id="owners-view" class="single-view view-panel" hidden>
-    <section class="card owner-card"><div class="section-heading"><div><p class="eyebrow" data-i18n="owners.eyebrow">device pins</p><h2 data-i18n="owners.heading">Pin owners</h2><p class="section-description" data-i18n="owners.description">Inspect terminals owned by devices such as PMICs and I/O expanders.</p></div></div><div id="owner-editor"></div></section>
+      </section>
+        <div id="configuration-list" class="configuration-pages"></div>
+        <section id="validation-section" class="card validation-card" data-page="validation" hidden><div class="sidebar-section-body"><p class="section-description" data-i18n="validation.description">Checks the draft continuously; ✓ means no problem was found.</p><div id="validation-list" aria-live="polite"></div></div></section>
+        <div id="related-section" class="related-pages"><strong id="related-section-title" hidden></strong><div id="related-list"></div></div>
+        <section id="revisions-view" class="card" data-page="revisions" hidden><div id="revision-editor"></div></section>
+        <section id="owners-view" class="card owner-card" data-page="owners" hidden><div id="owner-editor"></div></section>
+      </div>
+    </div>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -178,6 +124,22 @@
     "app.catalog": { "en": "M5 board specification catalog", "zh": "M5 板卡规格目录", "ja": "M5 ボード仕様カタログ" },
     "app.heading": { "en": "GPIO specification editor", "zh": "GPIO 规格编辑器", "ja": "GPIO 仕様エディタ" },
     "toolbar.label": { "en": "Files and board", "zh": "文件与板卡", "ja": "ファイルと機種" },
+    "toolbar.openMenu": {"en": "Open ▾", "zh": "打开 ▾", "ja": "開く ▾"},
+    "toolbar.exportShort": {"en": "Export", "zh": "导出", "ja": "書き出し"},
+    "toolbar.discardShort": {"en": "Discard", "zh": "丢弃", "ja": "破棄"},
+    "options.conditions": {"en": "Conditions", "zh": "条件", "ja": "条件"},
+    "mode.returnHint": {"en": "Clear revision and runtime selections to return to base data.", "zh": "清除版本和运行时选择，返回基本数据。", "ja": "版と実行時構成の選択を解除して基本データに戻します。"},
+    "repository.dismiss": {"en": "Close export instructions", "zh": "关闭导出说明", "ja": "書き出し案内を閉じる"},
+    "nav.label": {"en": "Catalog pages", "zh": "目录页面", "ja": "項目一覧"},
+    "nav.collapse": {"en": "Collapse list", "zh": "收起列表", "ja": "一覧を畳む"},
+    "nav.expand": {"en": "Expand list", "zh": "展开列表", "ja": "一覧を開く"},
+    "nav.back": {"en": "← {page}", "zh": "← {page}", "ja": "← {page}"},
+    "nav.gpioCount": {"en": "GPIO with assigned roles / available GPIO", "zh": "有角色的 GPIO / 可用 GPIO", "ja": "役割のあるGPIO / 実在するGPIO"},
+    "nav.objectCount": {"en": "Declared objects in this category", "zh": "此类别的对象数", "ja": "この種類で宣言された項目数"},
+    "nav.terminalCount": {"en": "Connector positions declared by its type", "zh": "类型定义的端子数", "ja": "型で定義された端子数"},
+    "nav.validationCount": {"en": "All validation errors and warnings", "zh": "所有验证错误和警告", "ja": "検証のエラーと警告の合計"},
+    "nav.connectorChildren": {"en": "Show connector entries", "zh": "显示连接器条目", "ja": "コネクタ項目を表示"},
+    "nav.connector": {"en": "Connector", "zh": "连接器", "ja": "コネクタ"},
     "toolbar.board": { "en": "Board", "zh": "板卡", "ja": "機種" },
     "toolbar.boardSearch": { "en": "Search board name, ID, or alias", "zh": "搜索板卡名称、ID 或别名", "ja": "機種名・ID・別名で検索" },
     "toolbar.language": { "en": "Language", "zh": "语言", "ja": "言語" },
@@ -255,7 +217,7 @@
     "options.runtime": { "en": "Detected variant preview", "zh": "实机判别变体预览", "ja": "起動時判別バリエーション（表示のみ）" },
     "mode.base": { "en": "Editing the shared definition. All GPIO rows are editable; changes are auto-saved only in this browser.", "zh": "正在编辑共通定义。所有 GPIO 行均可编辑；更改仅自动保存在此浏览器。", "ja": "共通定義を編集中。すべての GPIO 行を編集でき、変更はこのブラウザだけに自動下書き保存されます。" },
     "mode.resolved": { "en": "Viewing {board} {revision} ({choices}). Values supplied by this selection are read-only.", "zh": "正在查看 {board} {revision}（{choices}）。由此选择提供的值为只读。", "ja": "{board} {revision} ({choices}) を表示中。この選択で決まる値は読み取り専用です。" },
-    "mode.editBase": { "en": "Clear preview and edit shared definition", "zh": "清除预览并编辑共通定义", "ja": "表示条件を解除して共通定義を編集" },
+    "mode.editBase": {"en": "Return to base data", "zh": "返回基本数据", "ja": "基本データに戻す"},
     "readonly.configuration": { "en": "Supplied by the displayed variant; clear the preview to edit", "zh": "由当前显示变体提供；清除预览后可编辑", "ja": "表示中のバリエーション由来です。表示条件を解除すると編集できます" },
     "readonly.revision": { "en": "Changed by revision {revision}", "zh": "由版本 {revision} 的差分更改", "ja": "版 {revision} の差分で変わる値です" },
     "readonly.runtime": { "en": "Changed by detected-hardware choice {choice}", "zh": "来自实机判别选项 {choice}", "ja": "実機判別 {choice} で変わる値です" },
@@ -396,12 +358,21 @@
     "validation.count": { "en": "{count}", "zh": "{count} 项", "ja": "{count} 件" },
     "validation.ok": { "en": "✓ No errors", "zh": "✓ 没有错误", "ja": "✓ エラーはありません" },
     "connector.eyebrow": { "en": "positions and endpoints", "zh": "位置与连接目标", "ja": "位置と接続先" },
+    "connector.groupLabel": { "en": "Set {group}", "zh": "连接器组 {group}", "ja": "セット {group}" },
+    "connector.firstPin": { "en": "First pin: {pin}", "zh": "首引脚: {pin}", "ja": "1番端子: {pin}" },
     "connector.heading": { "en": "Connectors", "zh": "connector", "ja": "コネクタ" },
+    "connector.unverified": {"en": "unverified", "zh": "未验证", "ja": "未確認"},
+    "connector.typeView": {"en": "Type view", "zh": "类型视角", "ja": "型の視点"},
+    "connector.layoutStatus": {"en": "Physical layout", "zh": "物理布局", "ja": "物理配置"},
+    "connector.pitch": {"en": "Pitch", "zh": "间距", "ja": "ピッチ"},
+    "connector.typeNote": {"en": "Type note", "zh": "类型备注", "ja": "型の注記"},
+    "connector.wire": {"en": "Wire", "zh": "线色", "ja": "線色"},
+    "connector.terminal": {"en": "Terminal", "zh": "端子", "ja": "端子"},
+    "connector.function": {"en": "Function", "zh": "功能", "ja": "機能"},
+    "connector.endpoint": {"en": "Endpoint", "zh": "连接目标", "ja": "接続先"},
     "connector.pinoutHeading": { "en": "Connector diagrams & pinouts", "zh": "连接器图和引脚排列", "ja": "コネクタ図・ピン配置" },
     "connector.description": { "en": "Select a connector position to review or change its endpoint.", "zh": "选择连接器位置以查看或更改其端点。", "ja": "コネクタ位置を選び、接続先を確認・変更します。" },
-    "connector.view": { "en": "View", "zh": "显示方式", "ja": "表示形式" },
-    "connector.table": { "en": "Table", "zh": "表格", "ja": "表" },
-    "connector.diagram": { "en": "Diagram", "zh": "图", "ja": "図" },
+    "connector.undoTarget": { "en": "Undo assignment of {id} {position}", "zh": "撤销 {id} {position} 的分配", "ja": "{id} {position} の割り当てを戻す" },
     "connector.undo": { "en": "Undo connector change", "zh": "撤销连接器更改", "ja": "直前のコネクタ変更を戻す" },
     "connector.noType": { "en": "Type data is unavailable", "zh": "没有类型数据", "ja": "型データがありません" },
     "connector.pinoutAria": { "en": "{id} connector pinout", "zh": "{id} connector 引脚排列", "ja": "{id} コネクタのピン配置" },

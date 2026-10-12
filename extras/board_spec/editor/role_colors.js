@@ -36,7 +36,8 @@ export function roleOwner(role) {
   const plain = String(role ?? "").split("/").at(-1);
   const object = /^(bus|dev|conn):([a-z][a-z0-9_]*)\./.exec(plain);
   if (object) return objectRoleOwner(object[1], object[2]);
-  const power = /^pwr:([a-z][a-z0-9_]*)$/.exec(plain);
+  // Voltage rail names such as 3v3 and 5v begin with a digit.
+  const power = /^pwr:([a-z0-9_]+)$/.exec(plain);
   return power ? objectRoleOwner("pwr", power[1]) : null;
 }
 
@@ -109,4 +110,18 @@ export function connectorRolesByLane(roles, assignment) {
     if (id !== null) byLane[assignment.laneByConnector[id]].push(role);
   }
   return byLane;
+}
+
+
+export function connectorEndpointRoles(board, endpoint, connectorId) {
+  const roles = [];
+  for (const value of Array.isArray(endpoint) ? endpoint : [endpoint]) {
+    const gpio = /^gpio:(\d+)$/.exec(value ?? "")?.[1];
+    if (gpio !== undefined) roles.push(...(board.pins?.[gpio]?.roles ?? []));
+    if (/^pwr:/.test(value ?? "")) roles.push(value);
+  }
+  return [...new Set(roles)].filter((role) => {
+    const owner = roleOwner(role);
+    return owner?.kind !== "conn" || owner.id !== connectorId;
+  });
 }

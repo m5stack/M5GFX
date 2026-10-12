@@ -6,8 +6,8 @@ import { formatBoard } from "../lib/format.js";
 import { pinChangeLayer } from "./provenance.js";
 import { BoardOperationError, addBus, addChoice, addConnector, addDevice, addRole, boardRoleOptions, createBoard, duplicateBoard, removeBus, removeChoice, removeConnector, removeDevice, setBoardField, setChoiceDefaults, setDeviceSpec, setSpec } from "./board_ops.js";
 import { filterBoardOptions, gpioMatchesFilter, matchesSearchText } from "./filters.js";
-import { assignConnectorLanes, connectorRolesByLane, objectRoleOwner, roleColor, roleOwner } from "./role_colors.js";
-import { escapeHtml, gpioTargetButton, ownerSignalsHtml } from "./html.js";
+import { connectorEndpointRoles, assignConnectorLanes, connectorRolesByLane, objectRoleOwner, roleColor, roleOwner } from "./role_colors.js";
+import { connectorTableColumns, firstConnectorPosition, connectorDisplaySets, editorPageKey, editorErrorRoute, resolveEditorRoute, escapeHtml, externalLinkHtml, gpioConnectorTargets, gpioTargetButton, ownerSignalsHtml } from "./html.js";
 
 const schema = readEmbedded("board-spec-schema");
 const chips = readEmbedded("board-spec-chips");
@@ -22,9 +22,8 @@ const draftIndexKey = "m5-board-spec-drafts:v1";
 const gpioFilterStorageKey = "m5-board-spec-gpio-filter:v1";
 const roleColorStorageKey = "m5-board-spec-role-colors:v1";
 const onboardingStorageKey = "m5-board-spec-onboarding:v1";
-const layoutStorageKey = "m5-board-spec-layout:v1";
+const layoutStorageKey = "m5-board-spec-layout:v3";
 const motionDuration = 200;
-const sidebarWidthLimits = { min: 360, max: 620, default: 460 };
 let comboboxSerial = 0;
 
 const chipForBoard = (board) => effectiveChip(chips[board.chip], board);
@@ -54,13 +53,16 @@ const elements = {
   dropZone: document.querySelector("#drop-zone"),
   repositoryNext: document.querySelector("#repository-next"),
   optionPanel: document.querySelector("#option-panel"),
-  viewTabs: document.querySelector("#view-tabs"),
+  pageNav: document.querySelector("#page-nav"),
+  navItems: document.querySelector("#page-nav-items"),
+  navToggle: document.querySelector("#nav-toggle"),
+  pageBack: document.querySelector("#page-back"),
+  pageTitle: document.querySelector("#page-title"),
+  pageHost: document.querySelector("#page-host"),
   configurationView: document.querySelector("#configuration-view"),
   boardInfo: document.querySelector("#board-info"),
   boardInfoSummary: document.querySelector("#board-info-summary"),
   boardInfoBody: document.querySelector("#board-info-body"),
-  sideResizer: document.querySelector("#side-resizer"),
-  sideColumn: document.querySelector(".side-column"),
   revisionsView: document.querySelector("#revisions-view"),
   ownersView: document.querySelector("#owners-view"),
   configurationList: document.querySelector("#configuration-list"),
@@ -75,13 +77,11 @@ const elements = {
   gpioFilter: document.querySelector("#gpio-filter"),
   gpioAssignedOnly: document.querySelector("#gpio-assigned-only"),
   roleColorLegend: document.querySelector("#role-color-legend"),
+  connectorRoleColorLegend: document.querySelector("#connector-role-color-legend"),
   validationCount: document.querySelector("#validation-count"),
   validationSection: document.querySelector("#validation-section"),
   validationList: document.querySelector("#validation-list"),
-  connectorTabs: document.querySelector("#connector-tabs"),
-  connectorViewToggle: document.querySelector("#connector-view-toggle"),
-  connectorDiagram: document.querySelector("#connector-diagram"),
-  connectorEditor: document.querySelector("#connector-editor"),
+  connectorPinout: document.querySelector("#connector-pinout"),
   connectorUndo: document.querySelector("#connector-undo"),
   connectorSection: document.querySelector("#connector-section"),
   connectorSectionTitle: document.querySelector("#connector-section-title"),
@@ -97,12 +97,15 @@ const state = {
   selectedOptions: new Set(),
   runtimeSelections: new Map(),
   compositionEntries: new Map(),
-  activeView: "configuration",
+  page: null,
+  previousPage: null,
+  routeBoardId: null,
+  pageScroll: new Map(),
+  navMarkup: null,
   ownerKey: null,
   compareRevisions: ["", ""],
   connectorId: null,
   connectorPosition: null,
-  connectorView: "table",
   connectorEditorTab: "gpio",
   language: initialLanguage(),
   undo: null,
@@ -111,7 +114,9 @@ const state = {
   ...initialGPIOFilterState(),
   roleColors: initialRoleColors(),
   roleColorsOpen: false,
+  connectorRoleColorsOpen: false,
   onboardingOpen: initialOnboardingOpen(),
+  runtimePanelOpen: false,
   layout: initialLayoutState(),
   lastExported: null,
 };
@@ -291,16 +296,16 @@ function initialOnboardingOpen() {
 }
 
 function initialLayoutState() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(layoutStorageKey) ?? "{}");
-    const width = Number(stored.sidebarWidth);
-    return {
-      sidebarWidth: Number.isFinite(width) ? Math.max(sidebarWidthLimits.min, Math.min(sidebarWidthLimits.max, width)) : sidebarWidthLimits.default,
-      sections: stored.sections && typeof stored.sections === "object" ? stored.sections : {},
-    };
-  } catch {
-    return { sidebarWidth: sidebarWidthLimits.default, sections: {} };
-  }
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem(layoutStorageKey) ?? "{}") ?? {}; } catch { /* storage is optional */ }
+  // Legacy connectorView preferences are deliberately ignored; pinouts use tables only.
+  return {
+    page: stored.page && typeof stored.page === "object" ? stored.page : { kind: "gpio" },
+    boardId: typeof stored.boardId === "string" ? stored.boardId : null,
+    navCollapsed: typeof stored.navCollapsed === "boolean" ? stored.navCollapsed : window.matchMedia("(max-width: 980px)").matches,
+    navGroups: { connectors: stored.navGroups?.connectors !== false },
+    sections: stored.sections && typeof stored.sections === "object" ? stored.sections : {},
+  };
 }
 
 function saveLayoutState() {
@@ -311,10 +316,107 @@ function disclosureOpen(id, fallback = false) {
   return Object.hasOwn(state.layout.sections, id) ? Boolean(state.layout.sections[id]) : fallback;
 }
 
-function setSidebarWidth(width) {
-  state.layout.sidebarWidth = Math.max(sidebarWidthLimits.min, Math.min(sidebarWidthLimits.max, Math.round(width)));
-  elements.configurationView.style.setProperty("--side-width", `${state.layout.sidebarWidth}px`);
-  elements.sideResizer.setAttribute("aria-valuenow", String(state.layout.sidebarWidth));
+function routeContext(board) {
+  return { chip: chipForBoard(board), connectorTypes: Object.fromEntries(Object.values(board.connectors ?? {}).map((connector) => [connector.type, resolveConnectorType(connectorTypes, connector.type)])), ownerKeys: ownerDefinitions(currentBase()).map((owner) => owner.key) };
+}
+
+function pageLabel(route) {
+  const keys = { board: "layout.boardInfo", gpio: "gpio.heading", connectors: "configuration.connectors", connector: "nav.connector", buses: "configuration.buses", devices: "configuration.devices", accessories: "configuration.accessories", revisions: "views.revisions", owners: "views.owners", validation: "validation.heading" };
+  return `${t(keys[route.kind] ?? "gpio.heading")}${route.group ? ` · ${t("connector.groupLabel", { group: route.group })}` : route.id ? ` · ${route.id}` : ""}${route.position ? ` · ${route.position}` : ""}${route.gpio ? ` ${route.gpio}` : ""}`;
+}
+
+function currentPageScroll() {
+  return { top: elements.pageHost.scrollTop, left: elements.pageHost.scrollLeft, gpioTop: elements.tableBody.closest(".table-wrap").scrollTop, connectorTop: elements.connectorPinout.scrollTop, connectorLeft: elements.connectorPinout.scrollLeft };
+}
+
+function applyPageVisibility() {
+  elements.configurationView.querySelectorAll("[data-page]").forEach((page) => { page.hidden = page.dataset.page !== state.page.kind; });
+  elements.configurationView.classList.toggle("nav-collapsed", state.layout.navCollapsed);
+  elements.navItems.hidden = state.layout.navCollapsed;
+  elements.navToggle.setAttribute("aria-expanded", String(!state.layout.navCollapsed));
+  elements.navToggle.textContent = state.layout.navCollapsed ? "»" : "«";
+  elements.navToggle.title = t(state.layout.navCollapsed ? "nav.expand" : "nav.collapse");
+  elements.navToggle.setAttribute("aria-label", elements.navToggle.title);
+  elements.pageTitle.textContent = pageLabel(state.page);
+  elements.pageTitle.title = state.page.kind === "gpio" ? t("gpio.description") : state.page.kind === "connector" ? t("connector.description") : "";
+  renderConnectorUndo();
+  elements.pageBack.hidden = !state.previousPage;
+  if (state.previousPage) elements.pageBack.textContent = t("nav.back", { page: pageLabel(state.previousPage.route) });
+  elements.pageNav.querySelectorAll("[data-route-kind]").forEach((button) => {
+    const active = button.dataset.routeKind === "connector-group" ? state.page.kind === "connector" && button.dataset.routeId === state.page.group : button.dataset.routeKind === state.page.kind && (!button.dataset.routeId || (!state.page.group && button.dataset.routeId === state.page.id));
+    if (active) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
+  });
+}
+
+function navigateTo(target, options = {}) {
+  const board = shownBoard();
+  const boardId = state.currentId;
+  const changedBoard = state.routeBoardId !== null && state.routeBoardId !== state.currentId;
+  const reset = options.reset || changedBoard;
+  const requested = reset && ["connector", "connector-group"].includes(target?.kind) ? { kind: "connectors" } : target;
+  const route = resolveEditorRoute(requested, board, routeContext(board));
+  const different = JSON.stringify(route) !== JSON.stringify(state.page);
+  const pageChanged = editorPageKey(route) !== (state.page ? editorPageKey(state.page) : null);
+  if (reset) { state.previousPage = null; state.pageScroll.clear(); }
+  else if (options.remember !== false && pageChanged && state.page) {
+    const previous = { ...state.page };
+    if (previous.kind === "gpio" && currentEntry().expandedGPIO != null) previous.gpio = String(currentEntry().expandedGPIO);
+    state.previousPage = { route: previous, scroll: currentPageScroll(), boardId: state.currentId };
+  }
+  if (different && state.page && !reset) state.pageScroll.set(editorPageKey(state.page), currentPageScroll());
+  const oldConnector = state.connectorId;
+  const oldPosition = state.connectorPosition;
+  const ids = Object.keys(board.connectors ?? {});
+  state.page = route;
+  state.routeBoardId = state.currentId;
+  state.connectorId = route.kind === "connector" ? route.id : (!reset && ids.includes(state.connectorId) ? state.connectorId : ids[0] ?? null);
+  state.connectorPosition = route.kind === "connector" ? route.position ?? null : (state.connectorId === oldConnector ? state.connectorPosition : null);
+  if (route.kind === "owners" && route.id) state.ownerKey = route.id;
+  state.layout.page = route;
+  state.layout.boardId = state.currentId;
+  saveLayoutState();
+  if (options.render === false) return;
+  if (route.gpio != null && (currentEntry().expandedGPIO !== route.gpio || !document.getElementById(`gpio-${route.gpio}`))) {
+    currentEntry().expandedGPIO = route.gpio;
+    writeDraft(currentEntry());
+    renderTable(board, validationFor(currentBase()));
+  }
+  if (route.kind === "connector" && (oldConnector !== state.connectorId || oldPosition !== state.connectorPosition)) renderConnectors(board);
+  if (route.kind === "owners" && route.id) renderOwnerEditor(board);
+  renderNavigation(board);
+  applyPageVisibility();
+  requestAnimationFrame(() => {
+    if (state.currentId !== boardId || JSON.stringify(state.page) !== JSON.stringify(route)) return;
+    if (route.kind === "gpio") sizeConnectorLanes(assignConnectorLanes(board.pins).lanes.length);
+    const saved = options.restoreScroll ?? state.pageScroll.get(editorPageKey(route));
+    if (saved) {
+      elements.pageHost.scrollTop = saved.top;
+      elements.pageHost.scrollLeft = saved.left;
+      if (route.kind === "gpio") elements.tableBody.closest(".table-wrap").scrollTop = saved.gpioTop;
+      if (route.kind === "connector") { elements.connectorPinout.scrollTop = saved.connectorTop ?? 0; elements.connectorPinout.scrollLeft = saved.connectorLeft ?? 0; }
+    } else if (different) elements.pageHost.scrollTop = 0;
+    if (options.restoreScroll) return;
+    let node;
+    if (route.gpio != null) node = document.getElementById(`gpio-${route.gpio}`);
+    else if (route.kind === "connector" && route.position) node = [...elements.connectorPinout.querySelectorAll("[data-connector-position][tabindex]")].find((item) => item.dataset.connectorPosition === route.position && item.closest("[data-connector-id]")?.dataset.connectorId === route.id);
+    else if (route.id && ["buses", "devices"].includes(route.kind)) {
+      node = [...elements.configurationList.querySelectorAll("[data-config-object]")].find((item) => item.dataset.configObject === `${route.kind}:${route.id}`);
+      if (node?.tagName === "DETAILS") setDisclosureOpen(node, true);
+    }
+    if (node) { node.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" }); node.focus?.({ preventScroll: true }); }
+    options.after?.();
+  });
+}
+
+function renderNavigation(board) {
+  const chip = chipForBoard(board);
+  const available = Array.from({ length: chip.gpio_count }, (_, gpio) => gpio).filter((gpio) => !chip.absent.includes(gpio));
+  const assigned = available.filter((gpio) => board.pins?.[gpio]?.roles?.length).length;
+  const navButton = (kind, label, count = "", title = "nav.objectCount", id = null) => `<button type="button" class="nav-item" data-route-kind="${kind}"${id ? ` data-route-id="${escapeHtml(id)}"` : ""} title="${escapeHtml(t(title))}"><span>${escapeHtml(label)}</span>${count !== "" ? `<small>${escapeHtml(count)}</small>` : ""}</button>`;
+  const children = connectorDisplaySets(board).map((set) => navButton(set.group ? "connector-group" : "connector", set.group ?? set.ids[0], set.ids.reduce((count, id) => count + (resolveConnectorType(connectorTypes, board.connectors[id].type)?.positions?.length ?? 0), 0), "nav.terminalCount", set.group ?? set.ids[0])).join("");
+  const markup = navButton("board", t("layout.boardInfo"), "", "layout.boardInfo") + navButton("gpio", t("gpio.heading"), `${assigned}/${available.length}`, "nav.gpioCount") + `<div class="nav-connector-heading">${navButton("connectors", t("configuration.connectors"), Object.keys(board.connectors ?? {}).length)}<button type="button" class="secondary" data-nav-group="connectors" aria-expanded="${state.layout.navGroups.connectors}" aria-label="${escapeHtml(t("nav.connectorChildren"))}">${state.layout.navGroups.connectors ? "▾" : "▸"}</button></div><div class="nav-children"${state.layout.navGroups.connectors ? "" : " hidden"}>${children}</div>` + navButton("buses", t("configuration.buses"), Object.keys(board.buses ?? {}).length) + navButton("devices", t("configuration.devices"), Object.keys(board.devices ?? {}).length) + navButton("accessories", t("configuration.accessories")) + navButton("revisions", t("views.revisions"), currentBase().revisions?.length ?? 0) + navButton("owners", t("views.owners"));
+  if (state.navMarkup !== markup) { elements.navItems.innerHTML = markup; state.navMarkup = markup; }
+  elements.validationCount.title = t("nav.validationCount");
 }
 
 function dismissOnboarding() {
@@ -341,7 +443,7 @@ function saveGPIOFilterState() {
 function initialRoleColors() {
   try {
     const stored = JSON.parse(localStorage.getItem(roleColorStorageKey) ?? "{}");
-    return Object.fromEntries(Object.entries(stored).filter(([key, value]) => /^(?:bus|dev|conn|pwr):[a-z][a-z0-9_]*$/.test(key) && /^#[0-9a-f]{6}$/i.test(value)));
+    return Object.fromEntries(Object.entries(stored).filter(([key, value]) => /^(?:(?:bus|dev|conn):[a-z][a-z0-9_]*|pwr:[a-z0-9_]+)$/.test(key) && /^#[0-9a-f]{6}$/i.test(value)));
   } catch {
     return {};
   }
@@ -369,10 +471,9 @@ function applyStaticTranslations() {
 }
 
 function renderOnboarding() {
-  prepareMotionRegion(elements.onboarding);
-  elements.onboarding.classList.toggle("is-open", state.onboardingOpen);
-  elements.onboarding.setAttribute("aria-hidden", String(!state.onboardingOpen));
-  elements.onboarding.inert = !state.onboardingOpen;
+  elements.onboarding.hidden = false;
+  if (state.onboardingOpen && !elements.onboarding.open) elements.onboarding.showModal();
+  else if (!state.onboardingOpen && elements.onboarding.open) elements.onboarding.close();
   elements.onboardingHelp.setAttribute("aria-expanded", String(state.onboardingOpen));
 }
 
@@ -388,7 +489,7 @@ function prepareMotionRegion(element) {
 }
 
 function prepareDisclosureTransitions(root = document) {
-  for (const details of root.querySelectorAll("details:not(.motion-details)")) {
+  for (const details of root.querySelectorAll("details:not(.motion-details, .header-menu)")) {
     const summary = details.querySelector(":scope > summary");
     if (!summary) continue;
     const collapse = document.createElement("div");
@@ -575,7 +676,7 @@ function addEmbeddedBoards() {
     const board = state.documents.get(id).base;
     state.runtimeSelections.set(id, Object.fromEntries(choiceSlots(board).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => [slot, device.default])));
   }
-  state.currentId = state.documents.has("m5stack_core2") ? "m5stack_core2" : [...state.documents.keys()][0];
+  state.currentId = state.documents.has(state.layout.boardId) ? state.layout.boardId : state.documents.has("m5stack_core2") ? "m5stack_core2" : [...state.documents.keys()][0];
 }
 
 function initializeDocument(board, { original = board, dirty = true, source = "editor" } = {}) {
@@ -585,8 +686,7 @@ function initializeDocument(board, { original = board, dirty = true, source = "e
   state.currentId = board.id;
   state.lastExported = null;
   state.selectedOptions.clear();
-  state.connectorId = null;
-  state.connectorPosition = null;
+  navigateTo({ kind: state.page?.kind ?? "gpio" }, { reset: true, render: false });
   state.undo = null;
   if (dirty) writeDraft(state.documents.get(board.id));
 }
@@ -641,7 +741,7 @@ function closeCurrentDocument() {
   state.currentId = state.documents.keys().next().value;
   state.lastExported = null;
   state.selectedOptions.clear();
-  state.connectorId = null;
+  navigateTo({ kind: state.page?.kind ?? "gpio" }, { reset: true, render: false });
   renderAll();
 }
 
@@ -696,7 +796,8 @@ function applyControlLock(control, reason = "") {
   } else {
     control.removeAttribute("aria-disabled");
     delete control.dataset.readonlyReason;
-    control.removeAttribute("title");
+    if (control.dataset.i18nTitle) control.title = t(control.dataset.i18nTitle);
+    else control.removeAttribute("title");
   }
 }
 
@@ -836,6 +937,13 @@ function roleOwnersForBoard(board) {
     }
   };
   addRoles(board.pins);
+  for (const id of Object.keys(board.connectors ?? {})) {
+    const display = resolveConnectorPositions(board, id, connectorTypes);
+    for (const endpoint of Object.values(display.positions)) for (const role of connectorEndpointRoles(board, endpoint, id)) {
+      const owner = roleOwner(role);
+      if (owner) owners.set(owner.key, owner);
+    }
+  }
   for (const device of Object.values(board.devices ?? {})) {
     addRoles(device.pins);
     for (const choice of Object.values(device.choices ?? {})) addRoles(choice.pins);
@@ -851,7 +959,9 @@ function renderRoleColorLegend(board) {
     return `<label class="role-color-item"><span class="role-owner-label" data-role-kind="${owner.kind}" style="${roleColorInlineStyle(owner)}">${escapeHtml(label)}</span><input type="color" value="${color.background}" data-role-color="${escapeHtml(owner.key)}" aria-label="${escapeHtml(t("roleColors.pick", { owner: label }))}"></label>`;
   }).join("");
   const prefixes = `<div class="role-prefix-legend"><strong>${escapeHtml(t("rolePrefixes.heading"))}</strong><span><code>bus:</code> ${escapeHtml(t("rolePrefixes.bus").replace(/^bus:\s*/, ""))}</span><span><code>dev:</code> ${escapeHtml(t("rolePrefixes.dev").replace(/^dev:\s*/, ""))}</span><span><code>conn:</code> ${escapeHtml(t("rolePrefixes.conn").replace(/^conn:\s*/, ""))}</span><span><code>|</code> ${escapeHtml(t("rolePrefixes.source").replace(/^\|\s*/, ""))}</span></div>`;
-  elements.roleColorLegend.innerHTML = `${prefixes}<details${state.roleColorsOpen ? " open" : ""}><summary>${escapeHtml(t("roleColors.heading"))}</summary><div class="role-color-grid">${items || `<span>${escapeHtml(t("roleColors.empty"))}</span>`}<button type="button" class="secondary role-color-reset" data-reset-role-colors>${escapeHtml(t("roleColors.reset"))}</button></div></details>`;
+  const detailsMarkup = (open) => `<details${open ? " open" : ""}><summary>${escapeHtml(t("roleColors.heading"))}</summary><div class="role-color-grid">${items || `<span>${escapeHtml(t("roleColors.empty"))}</span>`}<button type="button" class="secondary role-color-reset" data-reset-role-colors>${escapeHtml(t("roleColors.reset"))}</button></div></details>`;
+  elements.roleColorLegend.innerHTML = prefixes + detailsMarkup(state.roleColorsOpen);
+  elements.connectorRoleColorLegend.innerHTML = detailsMarkup(state.connectorRoleColorsOpen);
 }
 
 function verificationSummary(pin) {
@@ -925,8 +1035,7 @@ function renderBoardSelect() {
       state.currentId = id;
       state.lastExported = null;
       state.selectedOptions.clear();
-      state.connectorId = null;
-      state.connectorPosition = null;
+      navigateTo({ kind: state.page?.kind ?? "gpio" }, { reset: true, render: false });
       renderAll();
     }, "", { preserveInput: true, selectOnFocus: true, showAllOnFocus: true, filterOptions: filterBoardOptions });
   } else boardCombobox.setOptions(options);
@@ -937,17 +1046,22 @@ function renderBoardSelect() {
 function renderOptions() {
   const revisions = currentBase().revisions ?? [];
   const selectedRevision = [...state.selectedOptions][0] ?? "";
-  const revisionHtml = `<label>${escapeHtml(t("options.revision"))}<select data-display-revision><option value="">${escapeHtml(t("options.none"))}</option>${revisions.map((revision) => `<option value="${escapeHtml(revision.id)}"${revision.id === selectedRevision ? " selected" : ""}>${escapeHtml(revision.name)}</option>`).join("")}</select></label>`;
+  const revisionHtml = `<label class="revision-control"><span class="visually-hidden">${escapeHtml(t("options.revision"))}</span><select data-display-revision aria-label="${escapeHtml(t("options.revision"))}"><option value="">${escapeHtml(t("options.none"))}</option>${revisions.map((revision) => `<option value="${escapeHtml(revision.id)}"${revision.id === selectedRevision ? " selected" : ""}>${escapeHtml(revision.name)}</option>`).join("")}</select></label>`;
   const runtime = state.runtimeSelections.get(state.currentId) ?? {};
   const runtimeHtml = choiceSlots(currentBase()).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => (
     `<label>${escapeHtml(t("options.runtime"))}: ${escapeHtml(slot.replaceAll("_", " ").toUpperCase())}<select data-display-runtime="${escapeHtml(slot)}"><option value=""${runtime[slot] === undefined ? " selected" : ""}>${escapeHtml(t("options.none"))}</option>${Object.keys(device.choices).map((choice) => `<option value="${escapeHtml(choice)}"${choice === runtime[slot] ? " selected" : ""}>${escapeHtml(choice)}</option>`).join("")}</select></label>`
   )).join("");
-  elements.optionPanel.innerHTML = `<fieldset><legend>${escapeHtml(t("options.legend"))} ${helpMark("help.displayConfiguration")}</legend>${revisionHtml}${runtimeHtml}</fieldset>`;
+  const runtimeSummary = Object.values(runtime).filter(Boolean).join(" / ") || t("options.none");
+  elements.optionPanel.innerHTML = `${revisionHtml}${runtimeHtml ? `<div class="runtime-control"><button type="button" class="secondary runtime-toggle" data-runtime-toggle aria-controls="runtime-panel" aria-expanded="${state.runtimePanelOpen}" title="${escapeHtml(runtimeSummary)}">${escapeHtml(t("options.conditions"))} ▾ <span>${escapeHtml(runtimeSummary)}</span></button><div id="runtime-panel" class="runtime-panel"${state.runtimePanelOpen ? "" : " hidden"}>${runtimeHtml}</div></div>` : ""}`;
+  elements.optionPanel.querySelector(".revision-control").after(elements.editBase);
+  elements.editBase.hidden = !isResolvedMode();
   const revision = revisions.find((item) => item.id === selectedRevision);
   const choices = Object.entries({ ...revisionSelection(currentBase(), revision), ...runtime }).map(([slot, choice]) => `${slot}: ${choice}`).join(", ") || t("options.none");
   elements.modeNote.textContent = isResolvedMode()
     ? t("mode.resolved", { board: currentBase().name, revision: revision?.name ?? t("options.none"), choices })
     : t("mode.base");
+  elements.optionPanel.title = elements.modeNote.textContent;
+  elements.optionPanel.querySelector("[data-display-revision]").title = elements.modeNote.textContent;
 }
 
 function renderTable(board, errors) {
@@ -978,7 +1092,7 @@ function renderTable(board, errors) {
     if (chip.absent.includes(gpio)) continue;
     const key = String(gpio);
     const pin = board.pins?.[key] ?? { roles: [] };
-    if (!gpioMatchesFilter(key, pin, state.gpioFilter, state.gpioAssignedOnly)) continue;
+    if (state.page?.gpio !== key && !gpioMatchesFilter(key, pin, state.gpioFilter, state.gpioAssignedOnly)) continue;
     const conditionalReserved = (chip.reserved_conditional?.[board.spec?.storage?.psram_mode] ?? []).includes(gpio);
     const readonlyReason = readonlyReasons.get(key) ?? (chip.reserved.includes(gpio) ? t("reason.chipReserved") : conditionalReserved ? t("reason.chipReservedConditional") : "");
     const readonly = readonlyAttributes(readonlyReason);
@@ -1059,6 +1173,7 @@ function renderTable(board, errors) {
 
 function sizeConnectorLanes(laneCount) {
   const table = elements.tableHead.closest("table");
+  if (!table.getClientRects().length || !table.getBoundingClientRect().width) return;
   if (!laneCount) {
     table.style.removeProperty("--connector-lane-columns");
     table.style.removeProperty("--connector-column-width");
@@ -1072,16 +1187,14 @@ function sizeConnectorLanes(laneCount) {
 
 function renderValidation(board, errors) {
   const errorCount = errors.filter((item) => item.severity !== "warning").length;
-  elements.validationCount.textContent = t("validation.count", { count: errors.length });
+  elements.validationCount.textContent = errors.length ? t("validation.count", { count: errors.length }) : "✓";
   elements.validationCount.classList.toggle("has-errors", errorCount > 0);
-  elements.validationSection.open = disclosureOpen("validation", errorCount > 0);
   if (!errors.length) {
     elements.validationList.innerHTML = `<div class="validation-ok">${escapeHtml(t("validation.ok"))}</div>`;
     return;
   }
   elements.validationList.innerHTML = `<ul class="error-list">${errors.map((item, index) => {
-    const gpio = gpioForError(item, board);
-    const reason = gpio === null ? t("unavailable.noGPIO") : "";
+    const reason = "";
     const action = validationAction(item);
     return `<li class="${item.severity === "warning" ? "warning" : "error"}"><button type="button" data-error-index="${index}"${readonlyAttributes(reason)}><strong>${escapeHtml(item.id)}</strong>: ${escapeHtml(validationMessage(item))}<code>${escapeHtml(item.path || "/")}</code>${action ? `<small class="validation-action">${escapeHtml(action)}</small>` : ""}</button></li>`;
   }).join("")}</ul>`;
@@ -1109,11 +1222,16 @@ function relatedObjectsForGPIO(board, gpio) {
   const links = [];
   for (const [field, prefix] of groups) {
     for (const [id, object] of Object.entries(board[field] ?? {})) {
+      if (field === "connectors") continue;
       if (objectAssignments(board, prefix, id, object).includes(gpio)) {
         const owner = objectRoleOwner(prefix, id);
         links.push(`<button type="button" class="related-object-link" ${roleOwnerAttributes(owner)} data-target-object="${field}:${escapeHtml(id)}">${escapeHtml(t("detail.relatedButton", { object: `${prefix}:${id}` }))}</button>`);
       }
     }
+  }
+  for (const target of gpioConnectorTargets(board, gpio)) {
+    const owner = objectRoleOwner("conn", target.connector);
+    links.push(`<button type="button" class="related-object-link" ${roleOwnerAttributes(owner)} data-target-object="connectors:${escapeHtml(target.connector)}" data-target-position="${escapeHtml(target.position)}">${escapeHtml(`conn:${target.connector}.${target.position}`)}</button>`);
   }
   return links.join("");
 }
@@ -1156,24 +1274,6 @@ function endpointGPIOs(endpoint) {
   return values.map((value) => /^gpio:(\d+)$/.exec(value ?? "")?.[1]).filter((value) => value !== undefined);
 }
 
-function connectorFunctionLabel(board, endpoint) {
-  const signalNames = { sclk: "SCK", data_in: "DATA IN", data_out: "DATA OUT" };
-  const labels = [];
-  for (const gpio of endpointGPIOs(endpoint)) {
-    for (const role of board.pins?.[gpio]?.roles ?? []) {
-      const bus = /^bus:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
-      if (bus) {
-        const signal = signalNames[bus[2]] ?? bus[2].replaceAll("_", " ").toUpperCase();
-        labels.push(/^main_/.test(bus[1]) ? signal : `${signal} (${bus[1]})`);
-        continue;
-      }
-      const device = /^dev:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(role);
-      if (device) labels.push(`${device[1].replaceAll("_", " ").toUpperCase()} ${device[2].replaceAll("_", " ").toUpperCase()}`);
-    }
-  }
-  return [...new Set(labels)].join(" / ");
-}
-
 function connectorTableEndpointLabel(endpoint, position) {
   const label = endpointLabel(endpoint);
   const standardName = position?.name?.toUpperCase();
@@ -1181,78 +1281,51 @@ function connectorTableEndpointLabel(endpoint, position) {
   return label;
 }
 
-function connectorPositionClasses(source, endpoint, positionId) {
+function connectorPositionClasses(source, endpoint, positionId, connectorId) {
   const sourceClass = source.fixed ? "fixed" : source.explicit || source.gpios?.length ? "explicit" : source.default ? "default" : "missing";
   const highlighted = currentEntry().expandedGPIO && endpointGPIOs(endpoint).includes(currentEntry().expandedGPIO) ? " gpio-highlight" : "";
-  const selected = state.connectorPosition === positionId ? " selected" : "";
+  const selected = state.connectorId === connectorId && state.connectorPosition === positionId ? " selected" : "";
   return `${sourceClass}${highlighted}${selected}`;
 }
 
-function ensureConnectorSelection(board) {
-  const ids = Object.keys(board.connectors ?? {});
-  if (!ids.includes(state.connectorId)) {
-    state.connectorId = ids[0] ?? null;
-    state.connectorPosition = null;
-  }
+function boardReferenceLinks(board) {
+  return ["product", "schematic"].map((key) => externalLinkHtml(board.spec?.links?.[key], t(`field.${key}Link`))).filter(Boolean).join(" · ");
 }
 
-function connectorKeyMarkup(layout, width, height) {
-  const length = 28;
-  const depth = 10;
-  if (layout.key === "top") return `<path class="connector-key" d="M ${width / 2 - length / 2} 2 h ${length} v ${depth} h -${length} z"></path>`;
-  if (layout.key === "bottom") return `<path class="connector-key" d="M ${width / 2 - length / 2} ${height - 2} h ${length} v -${depth} h -${length} z"></path>`;
-  if (layout.key === "left") return `<path class="connector-key" d="M 2 ${height / 2 - length / 2} v ${length} h ${depth} v -${length} z"></path>`;
-  if (layout.key === "right") return `<path class="connector-key" d="M ${width - 2} ${height / 2 - length / 2} v ${length} h -${depth} v -${length} z"></path>`;
-  return "";
+function connectorMeta(board, connector, type) {
+  const provenance = (values) => Object.entries(values ?? {}).map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(value ?? t("connector.unverified"))}`).join(" · ") || escapeHtml(t("connector.unverified"));
+  const layout = type.verified?.layout ?? t("connector.unverified");
+  const pitch = type.layout.pitch_mm == null ? t("connector.unverified") : `${type.layout.pitch_mm} mm`;
+  return `<div class="connector-meta"><div><strong>${escapeHtml(type.name)}</strong> · ${escapeHtml(connector.standard ?? "")}</div><div>${escapeHtml(t("connector.typeView"))}: ${escapeHtml(type.layout.view)} · ${escapeHtml(t("connector.layoutStatus"))}: ${escapeHtml(layout)} · ${escapeHtml(t("connector.pitch"))}: ${escapeHtml(pitch)}</div><div>${escapeHtml(t("column.verified"))}: ${provenance(connector.verified)}</div>${connector.note ? `<p class="connector-note">${escapeHtml(connector.note)}</p>` : ""}${type.note ? `<p class="connector-note">${escapeHtml(t("connector.typeNote"))}: ${escapeHtml(type.note)}</p>` : ""}</div>`;
 }
 
-function renderConnectorDiagram(board, connectorId) {
-  const connector = board.connectors?.[connectorId];
-  const type = resolveConnectorType(connectorTypes, connector?.type);
-  if (!connector || !type) return `<div class="connector-empty">${escapeHtml(t("connector.noType"))}</div>`;
-  const display = resolveConnectorPositions(board, connectorId, connectorTypes);
-  const source = resolveConnectorPositions(currentBase(), connectorId, connectorTypes);
-  const cellWidth = 92;
-  const cellHeight = 62;
-  const width = type.layout.cols * cellWidth + 24;
-  const height = type.layout.rows * cellHeight + 24;
-  const positions = type.positions.map((position) => {
-    const column = type.layout.mirror ? type.layout.cols - 1 - position.col : position.col;
-    const x = 12 + column * cellWidth + cellWidth / 2;
-    const y = 12 + position.row * cellHeight + cellHeight / 2;
-    const endpoint = display.positions[position.id];
-    const sources = source.sources[position.id] ?? {};
-    const classes = connectorPositionClasses(sources, endpoint, position.id);
-    const label = position.label ?? (position.name ? position.name.toUpperCase() : "");
-    const fill = endpointGPIOs(endpoint).length
-      ? ` style="${roleColorInlineStyle(objectRoleOwner("conn", connectorId), true)}"`
-      : position.color ? ` style="--position-color:${escapeHtml(position.color)}"` : "";
-    return `<g class="connector-position ${classes}" role="button" tabindex="0" data-connector-position="${escapeHtml(position.id)}" transform="translate(${x} ${y})"${fill}>
-      <title>${escapeHtml(`${position.id} ${label} ${endpointLabel(endpoint)}`)}</title>
-      <circle r="25"></circle>
-      <text class="position-id" y="-10">${escapeHtml(position.id)}</text>
-      <text class="position-label" y="4">${escapeHtml(label)}</text>
-      <text class="position-endpoint" y="18">${escapeHtml(endpointLabel(endpoint))}</text>
-    </g>`;
-  }).join("");
-  return `<div class="connector-meta"><strong>${escapeHtml(type.name)}</strong><span>${escapeHtml(type.layout.view)}</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(t("connector.pinoutAria", { id: connectorId }))}">${connectorKeyMarkup(type.layout, width, height)}${positions}</svg>`;
-}
-
-function renderConnectorTableCells(board, display, source, position, side = "single") {
-  if (!position) return '<td colspan="3"></td>';
+function renderConnectorTableCells(board, display, source, position, connectorId, side = "single") {
+  const type = resolveConnectorType(connectorTypes, board.connectors[connectorId].type);
+  const wire = type.positions.some((item) => item.color);
+  if (!position) return `<td colspan="${wire ? 4 : 3}"></td>`;
   const endpoint = display.positions[position.id];
-  const classes = connectorPositionClasses(source.sources[position.id] ?? {}, endpoint, position.id);
+  const classes = connectorPositionClasses(source.sources[position.id] ?? {}, endpoint, position.id, connectorId);
   const data = `data-connector-position="${escapeHtml(position.id)}"`;
   const endpointText = escapeHtml(connectorTableEndpointLabel(endpoint, position));
-  const functionText = escapeHtml(connectorFunctionLabel(board, endpoint));
-  const positionText = escapeHtml(position.id);
-  const connectorOwner = objectRoleOwner("conn", state.connectorId);
-  const color = endpointGPIOs(endpoint).length
-    ? `<span class="connector-color" style="${roleColorInlineStyle(connectorOwner, true)}"></span>`
-    : position.color ? `<span class="connector-color" style="--position-color:${escapeHtml(position.color)}"></span>` : "";
-  if (side === "left") return `<td ${data} class="connector-table-position pin-endpoint pin-left ${classes}" title="${endpointText}">${endpointText}</td><td ${data} class="connector-table-position pin-function pin-left ${classes}" title="${functionText}">${functionText}</td><td ${data} class="connector-table-position pin-number pin-left ${classes}" role="button" tabindex="0">${color}${positionText}</td>`;
-  if (side === "right") return `<td ${data} class="connector-table-position pin-number pin-right pin-divider ${classes}" role="button" tabindex="0">${color}${positionText}</td><td ${data} class="connector-table-position pin-function pin-right ${classes}" title="${functionText}">${functionText}</td><td ${data} class="connector-table-position pin-endpoint pin-right ${classes}" title="${endpointText}">${endpointText}</td>`;
-  return `<td ${data} class="connector-table-position pin-number ${classes}" role="button" tabindex="0">${color}${positionText}</td><td ${data} class="connector-table-position pin-function ${classes}" title="${functionText}">${functionText}</td><td ${data} class="connector-table-position pin-endpoint ${classes}" title="${endpointText}">${endpointText}</td>`;
+  const endpoints = Array.isArray(endpoint) ? endpoint : [endpoint];
+  const standardName = position?.name?.toUpperCase();
+  const standardSuffix = !endpointGPIOs(endpoint).length && standardName && endpointLabel(endpoint) !== standardName && endpointLabel(endpoint) !== "—" ? ` (${escapeHtml(standardName)})` : "";
+  const endpointHtml = endpoints.some((value) => /^pwr:/.test(value ?? "")) ? endpoints.map((value) => /^pwr:/.test(value ?? "") ? roleChip(board, value, true) : escapeHtml(endpointLabel(value))).join(" / ") + standardSuffix : endpointText;
+  const roles = connectorEndpointRoles(board, endpoint, connectorId).filter((role) => roleOwner(role)?.kind !== "pwr");
+  const functionText = escapeHtml(roles.map((role) => roleDisplay(board, role).plain).join(" / "));
+  const functionHtml = `<div class="role-list connector-function-roles">${roles.map((role) => roleChip(board, role, true)).join("")}</div>`;
+  const positionText = `${position.id === firstConnectorPosition(type) ? "▸ " : ""}${escapeHtml(position.id)}`;
+
+  const sideClass = side === "single" ? "" : ` pin-${side}`;
+  const cell = (kind, content, title = "", button = false) => `<td ${data} class="connector-table-position pin-${kind}${sideClass}${kind === "number" && side === "right" ? " pin-divider" : ""} ${classes}"${title ? ` title="${title}"` : ""}${button ? ' role="button" tabindex="0"' : ""}>${content}</td>`;
+  const cells = {
+    terminal: cell("number", positionText, "", true),
+    endpoint: cell("endpoint", endpointHtml, endpointText),
+    function: cell("function", functionHtml, functionText),
+    wire: cell("wire", position.color ? `<span class="connector-color" style="--position-color:${escapeHtml(position.color)}" aria-label="${escapeHtml(position.color)}"></span>` : "", escapeHtml(position.color ?? "")),
+  };
+  const columns = side === "left" ? ["function", "endpoint", ...(wire ? ["wire"] : []), "terminal"] : ["terminal", ...(wire ? ["wire"] : []), "endpoint", "function"];
+  return columns.map((key) => cells[key]).join("");
 }
 
 function renderConnectorTable(board, connectorId) {
@@ -1261,7 +1334,8 @@ function renderConnectorTable(board, connectorId) {
   if (!connector || !type) return `<div class="connector-empty">${escapeHtml(t("connector.noType"))}</div>`;
   const display = resolveConnectorPositions(board, connectorId, connectorTypes);
   const source = resolveConnectorPositions(currentBase(), connectorId, connectorTypes);
-  const editorRow = (positions, colspan) => positions.some((position) => position?.id === state.connectorPosition)
+  const columns = connectorTableColumns(type);
+  const editorRow = (positions, colspan) => state.connectorId === connectorId && positions.some((position) => position?.id === state.connectorPosition)
     ? `<tr class="connector-inline-row"><td class="connector-inline-cell" colspan="${colspan}"><div class="connector-editor open" data-connector-editor>${connectorEditorMarkup(board)}</div></td></tr>`
     : "";
   let rows;
@@ -1272,14 +1346,15 @@ function renderConnectorTable(board, connectorId) {
     }));
     rows = Array.from({ length: type.layout.rows }, (_, row) => {
       const rowPositions = [positions.get(`${row}:0`), positions.get(`${row}:1`)];
-      return `<tr>${renderConnectorTableCells(board, display, source, rowPositions[0], "left")}${renderConnectorTableCells(board, display, source, rowPositions[1], "right")}</tr>${editorRow(rowPositions, 6)}`;
+      return `<tr>${renderConnectorTableCells(board, display, source, rowPositions[0], connectorId, "left")}${renderConnectorTableCells(board, display, source, rowPositions[1], connectorId, "right")}</tr>${editorRow(rowPositions, columns.length)}`;
     }).join("");
   } else {
+    // Extend this table layout when connector types with three or more columns are used.
     const direction = type.layout.mirror ? -1 : 1;
     const positions = [...type.positions].sort((a, b) => a.row - b.row || direction * (a.col - b.col));
-    rows = positions.map((position) => `<tr>${renderConnectorTableCells(board, display, source, position)}</tr>${editorRow([position], 3)}`).join("");
+    rows = positions.map((position) => `<tr>${renderConnectorTableCells(board, display, source, position, connectorId)}</tr>${editorRow([position], columns.length)}`).join("");
   }
-  return `<div class="connector-meta"><strong>${escapeHtml(type.name)}</strong><span>${escapeHtml(type.layout.view)}</span></div><table class="connector-pin-table" aria-label="${escapeHtml(t("connector.pinoutAria", { id: connectorId }))}"><tbody>${rows}</tbody></table>`;
+  return `${connectorMeta(board, connector, type)}<table class="connector-pin-table ${type.layout.cols === 2 ? "double-column" : "single-column"}" aria-label="${escapeHtml(t("connector.pinoutAria", { id: connectorId }))}"><colgroup>${columns.map((key) => `<col class="pin-col-${key}">`).join("")}</colgroup><thead><tr>${columns.map((key) => `<th scope="col">${escapeHtml(t(`connector.${key}`))}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function gpioChoices(board) {
@@ -1325,7 +1400,7 @@ function connectorEditorMarkup(board) {
   const readonly = readonlyAttributes(readonlyReason);
   const status = source.explicit || source.gpios.length ? t("connector.boardStatus") : source.default ? t("connector.defaultStatus") : t("connector.unsetStatus");
   return `<div class="position-editor-heading"><strong>${escapeHtml(positionId)} · ${escapeHtml(label)}</strong><span>${escapeHtml(status)} · ${escapeHtml(endpointLabel(resolved.positions[positionId]))}</span><button type="button" data-connector-close aria-label="${escapeHtml(t("connector.close"))}">×</button></div>
-    <div class="position-editor-tabs" role="tablist"><button type="button" data-connector-editor-tab="gpio" class="${state.connectorEditorTab === "gpio" ? "active" : ""}">${escapeHtml(t("connector.gpioTab"))}</button><button type="button" data-connector-editor-tab="endpoint" class="${state.connectorEditorTab === "endpoint" ? "active" : ""}">${escapeHtml(t("connector.endpointTab"))}</button></div>
+    <div class="gpio-links connector-gpio-links">${source.gpios.map(gpioTargetButton).join("")}</div><div class="position-editor-tabs" role="tablist"><button type="button" data-connector-editor-tab="gpio" class="${state.connectorEditorTab === "gpio" ? "active" : ""}">${escapeHtml(t("connector.gpioTab"))}</button><button type="button" data-connector-editor-tab="endpoint" class="${state.connectorEditorTab === "endpoint" ? "active" : ""}">${escapeHtml(t("connector.endpointTab"))}</button></div>
     <div class="search-combobox" data-connector-combobox><input type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${escapeHtml(state.connectorEditorTab === "gpio" ? t("connector.searchGPIO") : t("connector.searchEndpoint"))}" autocomplete="off"${readonly}><ul role="listbox"></ul></div>
     <button type="button" class="secondary connector-default" data-connector-default${readonly}>${escapeHtml(t("connector.restoreDefault"))}</button>${readonlyNote(readonlyReason)}`;
 }
@@ -1345,44 +1420,30 @@ function hydrateConnectorEditor(root) {
   }, isResolvedMode() ? t("readonly.configuration") : "");
 }
 
-function renderConnectorEditor(board) {
-  if (state.connectorView === "table") {
-    elements.connectorEditor.hidden = true;
-    elements.connectorEditor.innerHTML = "";
-    hydrateConnectorEditor(elements.connectorDiagram.querySelector("[data-connector-editor]"));
-    return;
-  }
-  elements.connectorEditor.hidden = false;
-  elements.connectorEditor.classList.toggle("open", Boolean(state.connectorPosition));
-  elements.connectorEditor.innerHTML = connectorEditorMarkup(board);
-  hydrateConnectorEditor(elements.connectorEditor);
+function renderConnectorUndo() {
+  const undo = state.undo;
+  const reason = isResolvedMode() ? t("readonly.configuration") : !undo || undo.boardId !== state.currentId ? t("unavailable.noUndo") : "";
+  elements.connectorUndo.hidden = state.page?.kind !== "connector" || Boolean(reason);
+  applyControlLock(elements.connectorUndo, reason);
+  elements.connectorUndo.title = reason ? "" : t("connector.undoTarget", { id: undo.connectorId, position: undo.positionId });
 }
 
 function renderConnectors(board) {
-  ensureConnectorSelection(board);
   const ids = Object.keys(board.connectors ?? {});
+  document.getElementById("connector-reference-links").innerHTML = boardReferenceLinks(board);
   elements.connectorSectionTitle.textContent = `${t("connector.pinoutHeading")} (${ids.length})`;
-  elements.connectorSection.open = disclosureOpen("connectorMap");
-  elements.connectorTabs.innerHTML = ids.map((id) => `<button type="button" role="tab" aria-selected="${id === state.connectorId}" class="connector-object-tab ${id === state.connectorId ? "active" : ""}" ${roleOwnerAttributes(objectRoleOwner("conn", id))} data-connector-tab="${escapeHtml(id)}">${escapeHtml(id)}</button>`).join("");
-  elements.connectorViewToggle.querySelectorAll("[data-connector-view]").forEach((button) => {
-    const active = button.dataset.connectorView === state.connectorView;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  const renderer = state.connectorView === "svg" ? renderConnectorDiagram : renderConnectorTable;
-  elements.connectorDiagram.innerHTML = state.connectorId ? renderer(board, state.connectorId) : `<div class="connector-empty">${escapeHtml(t("connector.none"))}</div>`;
-  const undoReason = isResolvedMode()
-    ? t("readonly.configuration")
-    : (!state.undo || state.undo.boardId !== state.currentId) ? t("unavailable.noUndo") : "";
-  applyControlLock(elements.connectorUndo, undoReason);
-  renderConnectorEditor(board);
+  const set = connectorDisplaySets(board).find((item) => item.ids.includes(state.connectorId));
+  elements.connectorPinout.innerHTML = set ? `<div class="connector-set${set.group ? " grouped" : ""}">${set.ids.map((id) => {
+    const type = resolveConnectorType(connectorTypes, board.connectors[id].type);
+    return `<section class="connector-socket" data-connector-id="${escapeHtml(id)}"><h3>${escapeHtml(id)} <small class="first-pin-mark">${escapeHtml(t("connector.firstPin", { pin: firstConnectorPosition(type) }))}</small></h3>${renderConnectorTable(board, id)}</section>`;
+  }).join("")}</div>` : `<div class="connector-empty">${escapeHtml(t("connector.none"))}</div>`;
+  hydrateConnectorEditor(elements.connectorPinout.querySelector("[data-connector-editor]"));
 }
 
 function renderRelated(board) {
   const groups = [["buses", "bus", t("related.buses")], ["devices", "dev", t("related.devices")]];
   const count = groups.reduce((sum, [field]) => sum + Object.keys(board[field] ?? {}).length, 0);
   elements.relatedSectionTitle.textContent = `${t("related.heading")} (${count})`;
-  elements.relatedSection.open = disclosureOpen("related");
   elements.relatedList.innerHTML = groups.map(([field, prefix, label]) => {
     const items = Object.entries(board[field] ?? {}).map(([id, object]) => {
       const pins = objectAssignments(board, prefix, id, object);
@@ -1394,7 +1455,7 @@ function renderRelated(board) {
       const links = gpioLinks + ownerLinks;
       return `<div class="object-item" data-object-key="${field}:${escapeHtml(id)}"><div class="object-title">${roleOwnerLabel(objectRoleOwner(prefix, id), id, "object-owner-label")}<span>${escapeHtml(object.kind ?? object.type ?? "")}</span></div><div class="object-summary">${objectSummary(field, object)}</div><div class="gpio-links">${links || `<span>${escapeHtml(t("related.noGPIO"))}</span>`}</div></div>`;
     }).join("");
-    return `<section class="object-group"><h3>${escapeHtml(label)}</h3>${items || `<div class="object-item">${escapeHtml(t("related.empty"))}</div>`}</section>`;
+    return `<section class="object-group" data-page="${field}" hidden><h3>${escapeHtml(label)}</h3>${items || `<div class="object-item">${escapeHtml(t("related.empty"))}</div>`}</section>`;
   }).join("");
 }
 
@@ -1445,7 +1506,7 @@ function boardSpecFields(board) {
     ["power.battery_mah", "number"], ["power.usb", "string"], ["links.schematic", "string"], ["links.product", "string"],
   ];
   const resolution = valueAtPath(board.spec, "display.resolution") ?? [];
-  return `<div class="field-grid"><label>${escapeHtml(t("field.displayWidth"))}<input data-board-resolution="0" type="number" value="${escapeHtml(resolution[0] ?? "")}"></label><label>${escapeHtml(t("field.displayHeight"))}<input data-board-resolution="1" type="number" value="${escapeHtml(resolution[1] ?? "")}"></label>${fields.map(([path, type]) => `<label>${escapeHtml(fieldLabels[path])}${scalarInput(valueAtPath(board.spec, path), `data-board-spec="${path}" data-value-type="${type}"`, type)}</label>`).join("")}</div>`;
+  return `<div class="field-grid"><label>${escapeHtml(t("field.displayWidth"))}<input data-board-resolution="0" type="number" value="${escapeHtml(resolution[0] ?? "")}"></label><label>${escapeHtml(t("field.displayHeight"))}<input data-board-resolution="1" type="number" value="${escapeHtml(resolution[1] ?? "")}"></label>${fields.map(([path, type]) => `<label>${escapeHtml(fieldLabels[path])}${scalarInput(valueAtPath(board.spec, path), `data-board-spec="${path}" data-value-type="${type}"`, type)}${path.startsWith("links.") ? externalLinkHtml(valueAtPath(board.spec, path), "↗") : ""}</label>`).join("")}</div>`;
 }
 
 function renderBoardInfo(shown) {
@@ -1454,12 +1515,11 @@ function renderBoardInfo(shown) {
   const display = Array.isArray(resolution) && resolution.length >= 2 ? `${resolution[0]}×${resolution[1]}` : "—";
   const psram = shown.spec?.storage?.psram_mb ? `PSRAM ${shown.spec.storage.psram_mb}MB` : "PSRAM —";
   elements.boardInfoSummary.textContent = `${shown.name} — ${shown.chip} — ${display} — ${psram}`;
-  elements.boardInfo.open = disclosureOpen("boardInfo");
   elements.boardInfoBody.innerHTML = `<div class="field-grid board-info-grid"><label>${escapeHtml(t("field.id"))}<code class="readonly-value">${escapeHtml(board.id)}</code></label><label>${escapeHtml(t("field.name"))}<input data-board-field="name" value="${escapeHtml(board.name)}"></label><label>${escapeHtml(t("field.officialName"))}<input data-board-field="official_name" value="${escapeHtml(board.official_name)}"></label><label>${escapeHtml(t("field.legacyId"))}<input data-board-field="legacy_board_id" data-value-type="number" type="number" value="${escapeHtml(board.legacy_board_id)}"></label><label>${escapeHtml(t("field.chip"))}<select data-board-field="chip">${Object.keys(chips).map((id) => `<option value="${escapeHtml(id)}"${id === board.chip ? " selected" : ""}>${escapeHtml(id)}</option>`).join("")}</select></label><label class="official-verification-field"><span>${escapeHtml(t("field.officialNameStatus"))} ${helpMark("help.officialNameVerified")}</span><span class="checkbox-row"><input data-board-field="official_name_verified" data-value-type="boolean" type="checkbox"${board.official_name_verified === true ? " checked" : ""}>${escapeHtml(t("field.officialNameVerified"))}${board.official_name_verified === true ? "" : `<small class="unverified-mark">${escapeHtml(t("field.officialNameUnverified"))}</small>`}</span></label><label class="aliases-field">${escapeHtml(t("field.aliases"))}<input data-board-field="aliases" value="${escapeHtml((board.aliases ?? []).join(", "))}" placeholder="${escapeHtml(t("field.aliasesPlaceholder"))}"></label></div>${boardSpecFields(board)}`;
 }
 
 function configurationDisclosure(id, label, count, description, body) {
-  return `<details class="config-group sidebar-disclosure" data-layout-section="${escapeHtml(id)}"${disclosureOpen(id) ? " open" : ""}><summary><strong>${escapeHtml(label)} (${count})</strong><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary><div class="sidebar-section-body"><p class="config-help">${escapeHtml(description)}</p>${body}</div></details>`;
+  return `<section class="card config-group" data-page="${escapeHtml(id)}" hidden><div class="section-heading"><h3>${escapeHtml(label)} (${count})</h3></div><div class="sidebar-section-body"><p class="config-help">${escapeHtml(description)}</p>${body}</div></section>`;
 }
 
 function busRemovalReason(board, id) {
@@ -1514,7 +1574,7 @@ function deviceRow(board, id, device) {
     ? `<div class="choice-settings"><label>${escapeHtml(t("configuration.selectedBy"))}<select data-choice-selected-by="${escapeHtml(id)}"><option value="revision"${device.selected_by === "revision" ? " selected" : ""}>revision</option><option value="runtime"${device.selected_by === "runtime" ? " selected" : ""}>runtime</option><option value="user"${device.selected_by === "user" ? " selected" : ""}>user</option></select></label><label>${escapeHtml(t("configuration.defaultChoice"))}<select data-choice-default="${escapeHtml(id)}">${Object.keys(device.choices).map((choice) => `<option value="${escapeHtml(choice)}"${choice === device.default ? " selected" : ""}>${escapeHtml(choice)}</option>`).join("")}</select></label></div>`
     : "";
   const partChoices = Object.values(parts).filter((part) => part.kind === device.kind && part.id !== device.part).map((part) => `<option value="${escapeHtml(part.id)}">${escapeHtml(part.name)}</option>`).join("");
-  return `<details class="config-object"><summary>${roleOwnerLabel(objectRoleOwner("dev", id), id, "configuration-owner-label")}<span>${escapeHtml(device.part ?? device.kind)}</span><button type="button" class="secondary" data-remove-device="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></summary>${readonlyNote(reason)}${choiceControls}${choices}<div class="choice-add"><select data-new-choice-part="${escapeHtml(id)}">${partChoices}</select>${device.choices ? "" : `<select data-new-choice-selected-by="${escapeHtml(id)}"><option value="runtime">runtime</option><option value="revision">revision</option><option value="user">user</option></select>`}<button type="button" class="secondary" data-add-choice="${escapeHtml(id)}">${escapeHtml(t("configuration.addChoice"))}</button></div>${missing.length ? `<div class="unassigned"><strong>${escapeHtml(t("configuration.unassigned"))}:</strong>${missing.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}${availableOptional.length ? `<div class="unassigned optional"><strong>${escapeHtml(t("configuration.optional"))}:</strong>${availableOptional.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}</details>`;
+  return `<details class="config-object" data-config-object="devices:${escapeHtml(id)}"><summary>${roleOwnerLabel(objectRoleOwner("dev", id), id, "configuration-owner-label")}<span>${escapeHtml(device.part ?? device.kind)}</span><button type="button" class="secondary" data-remove-device="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></summary>${readonlyNote(reason)}${choiceControls}${choices}<div class="choice-add"><select data-new-choice-part="${escapeHtml(id)}">${partChoices}</select>${device.choices ? "" : `<select data-new-choice-selected-by="${escapeHtml(id)}"><option value="runtime">runtime</option><option value="revision">revision</option><option value="user">user</option></select>`}<button type="button" class="secondary" data-add-choice="${escapeHtml(id)}">${escapeHtml(t("configuration.addChoice"))}</button></div>${missing.length ? `<div class="unassigned"><strong>${escapeHtml(t("configuration.unassigned"))}:</strong>${missing.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}${availableOptional.length ? `<div class="unassigned optional"><strong>${escapeHtml(t("configuration.optional"))}:</strong>${availableOptional.map((signal) => `<button type="button" class="secondary" data-unassigned-role="${escapeHtml(`dev:${id}.${signal}`)}">${escapeHtml(signal)}</button>`).join("")}</div>` : ""}</details>`;
 }
 
 function addField(label, control, className = "") {
@@ -1528,12 +1588,12 @@ function renderConfiguration() {
     const standards = Object.keys(type?.standards ?? {});
     const reason = objectRemovalReason(board, "conn", id);
     const mark = reason ? `<span class="reference-mark" title="${escapeHtml(reason)}" aria-label="${escapeHtml(reason)}">🔗</span>` : "";
-    return `<div class="config-row"><span class="config-id">${mark}${roleOwnerLabel(objectRoleOwner("conn", id), id, "configuration-owner-label")}</span><span>${escapeHtml(connector.type)}</span><select data-config-standard="${escapeHtml(id)}"><option value="">—</option>${standards.map((standard) => `<option value="${escapeHtml(standard)}"${standard === connector.standard ? " selected" : ""}>${escapeHtml(standard)}</option>`).join("")}</select><button type="button" class="secondary" data-remove-connector="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>`;
+    return `<div class="config-row" data-config-object="connectors:${escapeHtml(id)}"><span class="config-id">${mark}${roleOwnerLabel(objectRoleOwner("conn", id), id, "configuration-owner-label")}</span><span>${escapeHtml(connector.type)}</span><select data-config-standard="${escapeHtml(id)}"><option value="">—</option>${standards.map((standard) => `<option value="${escapeHtml(standard)}"${standard === connector.standard ? " selected" : ""}>${escapeHtml(standard)}</option>`).join("")}</select><button type="button" class="secondary" data-remove-connector="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>`;
   }).join("");
   const busRows = Object.entries(board.buses ?? {}).map(([id, bus]) => {
     const reason = busRemovalReason(board, id);
     const mark = reason ? `<span class="reference-mark" title="${escapeHtml(reason)}" aria-label="${escapeHtml(reason)}">🔗</span>` : "";
-    return `<div class="config-row"><span class="config-id">${mark}${roleOwnerLabel(objectRoleOwner("bus", id), id, "configuration-owner-label")}</span><span>${escapeHtml(bus.kind)}</span><span>${escapeHtml((bus.signals ?? []).join(", "))}</span><button type="button" class="secondary" data-remove-bus="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>`;
+    return `<div class="config-row" data-config-object="buses:${escapeHtml(id)}"><span class="config-id">${mark}${roleOwnerLabel(objectRoleOwner("bus", id), id, "configuration-owner-label")}</span><span>${escapeHtml(bus.kind)}</span><span>${escapeHtml((bus.signals ?? []).join(", "))}</span><button type="button" class="secondary" data-remove-bus="${escapeHtml(id)}"${readonlyAttributes(reason)}>${escapeHtml(t("configuration.remove"))}</button></div>`;
   }).join("");
   const deviceRows = Object.entries(board.devices ?? {}).map(([id, device]) => deviceRow(board, id, device)).join("");
   const entries = state.compositionEntries.get(state.currentId) ?? [];
@@ -1670,10 +1730,6 @@ function renderOwnerEditor(board) {
 }
 
 function renderViews(board) {
-  for (const button of elements.viewTabs.querySelectorAll("[data-view]")) button.classList.toggle("active", button.dataset.view === state.activeView);
-  elements.configurationView.hidden = state.activeView !== "configuration";
-  elements.revisionsView.hidden = state.activeView !== "revisions";
-  elements.ownersView.hidden = state.activeView !== "owners";
   renderBoardInfo(board);
   renderConfiguration();
   renderRevisionEditor();
@@ -1693,7 +1749,7 @@ function renderSaveState() {
 function renderRepositoryNext() {
   const file = state.lastExported;
   prepareMotionRegion(elements.repositoryNext);
-  if (file) elements.repositoryNext.querySelector(".motion-region-inner").innerHTML = `<div><strong>${escapeHtml(t("repository.downloaded", { file }))}</strong><p>${escapeHtml(t("repository.notAutomatic"))}</p></div><ol><li>${escapeHtml(t("repository.replace", { file }))}</li><li><code>node cli/spec.js check</code></li><li>${escapeHtml(t("repository.commit"))}</li></ol>`;
+  if (file) elements.repositoryNext.querySelector(".motion-region-inner").innerHTML = `<div><strong>${escapeHtml(t("repository.downloaded", { file }))}</strong><button type="button" class="secondary" data-dismiss-export aria-label="${escapeHtml(t("repository.dismiss"))}">×</button><p>${escapeHtml(t("repository.notAutomatic"))}</p></div><ol><li>${escapeHtml(t("repository.replace", { file }))}</li><li><code>node cli/spec.js check</code></li><li>${escapeHtml(t("repository.commit"))}</li></ol>`;
   elements.repositoryNext.classList.toggle("is-open", Boolean(file));
   elements.repositoryNext.setAttribute("aria-hidden", String(!file));
   elements.repositoryNext.inert = !file;
@@ -1702,10 +1758,10 @@ function renderRepositoryNext() {
 function renderAll() {
   try {
     applyStaticTranslations();
-    setSidebarWidth(state.layout.sidebarWidth);
     renderOnboarding();
     const board = shownBoard();
     const errors = validationFor(currentBase());
+    navigateTo(state.page ?? state.layout.page, { remember: false, render: false });
     renderBoardSelect();
     renderOptions();
     renderViews(board);
@@ -1716,6 +1772,9 @@ function renderAll() {
     renderRelated(board);
     renderSaveState();
     renderRepositoryNext();
+    renderNavigation(board);
+    applyPageVisibility();
+    requestAnimationFrame(() => { if (state.page.kind === "gpio") sizeConnectorLanes(assignConnectorLanes(board.pins).lanes.length); });
     prepareDisclosureTransitions();
   } catch (failure) {
     showToast(failure.message);
@@ -1760,11 +1819,13 @@ function addRoleUI(gpio, role) {
   } catch (failure) { operationFailure(failure); }
 }
 
-function rememberConnectorUndo(board) {
+function rememberConnectorUndo(board, connectorId, positionId) {
   const entry = currentEntry();
   state.undo = {
     boardId: state.currentId,
     base: clone(board),
+    connectorId,
+    positionId,
     dirty: entry.dirty,
     expandedGPIO: entry.expandedGPIO,
   };
@@ -1799,9 +1860,8 @@ function assignConnectorPosition(board, connectorId, positionId, endpoint, optio
     if (!window.confirm(t("connector.multiConfirm"))) return;
   }
 
-  rememberConnectorUndo(board);
-  state.connectorId = connectorId;
-  state.connectorPosition = positionId;
+  rememberConnectorUndo(board, connectorId, positionId);
+  if (state.page?.kind === "connector") navigateTo({ kind: "connector", id: connectorId, position: positionId }, { remember: false, render: false });
 
   if (options.removeGPIO !== undefined) {
     removeConnectorRole(board, connectorId, positionId, options.removeGPIO);
@@ -1842,50 +1902,21 @@ function assignConnectorPosition(board, connectorId, positionId, endpoint, optio
   renderAll();
 }
 
-function connectorForGPIO(board, gpio) {
-  for (const [id, connector] of Object.entries(board.connectors ?? {})) {
-    const positions = connectorRoleGPIOs(board, id);
-    if ([...positions.values()].some((gpios) => gpios.includes(Number(gpio)))) return id;
-  }
-  return null;
-}
-
-function revealConnectorForGPIO(gpio) {
-  const connectorId = connectorForGPIO(currentBase(), gpio);
-  if (connectorId && connectorId !== state.connectorId) {
-    state.connectorId = connectorId;
-    state.connectorPosition = null;
-  }
-}
-
 function focusGPIO(gpio) {
   if (gpio === null || gpio === undefined) return;
-  const entry = currentEntry();
-  entry.expandedGPIO = String(gpio);
-  revealConnectorForGPIO(gpio);
-  writeDraft(entry);
-  renderAll();
-  const row = document.getElementById(`gpio-${gpio}`);
-  if (!row) return;
-  row.scrollIntoView({ behavior: "smooth", block: "center" });
-  row.classList.remove("flash");
-  requestAnimationFrame(() => row.classList.add("flash"));
+  navigateTo({ kind: "gpio", gpio });
 }
 
 function openRoleChooser(role) {
-  state.activeView = "configuration";
   clearResolvedMode();
   const chip = chipForBoard(currentBase());
   const conditional = chip.reserved_conditional?.[currentBase().spec?.storage?.psram_mode] ?? [];
   const gpio = Array.from({ length: chip.gpio_count }, (_, index) => String(index)).find((id) => !chip.absent.includes(Number(id)) && !chip.reserved.includes(Number(id)) && !conditional.includes(Number(id)) && allRoleOptions(currentBase(), id).includes(role) && !(currentBase().pins[id]?.roles?.length)) ?? "0";
-  currentEntry().expandedGPIO = gpio;
   renderAll();
-  const input = elements.tableBody.querySelector(`[data-role-combobox="${gpio}"] input`);
-  if (input) {
-    input.value = role;
-    input.focus();
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  }
+  navigateTo({ kind: "gpio", gpio }, { after: () => {
+    const input = elements.tableBody.querySelector(`[data-role-combobox="${gpio}"] input`);
+    if (input) { input.value = role; input.focus(); input.dispatchEvent(new Event("input", { bubbles: true })); }
+  } });
 }
 
 async function openFile(file) {
@@ -1901,8 +1932,7 @@ async function openFile(file) {
     state.selectedOptions.clear();
     state.runtimeSelections.set(value.id, Object.fromEntries(choiceSlots(value).filter(([, device]) => device.selected_by === "runtime").map(([slot, device]) => [slot, device.default])));
     state.compositionEntries.set(value.id, clone(targets.m5unified_pin_table?.compositions?.[value.id]?.default?.accessories ?? []));
-    state.connectorId = null;
-    state.connectorPosition = null;
+    navigateTo({ kind: state.page?.kind ?? "gpio" }, { reset: true, render: false });
     state.undo = null;
     renderAll();
     showToast(t("file.opened", { file: file.name }));
@@ -2011,8 +2041,40 @@ elements.onboardingHelp.addEventListener("click", () => {
   renderOnboarding();
 });
 elements.onboardingClose.addEventListener("click", dismissOnboarding);
+elements.onboarding.addEventListener("cancel", (event) => { event.preventDefault(); dismissOnboarding(); });
+elements.repositoryNext.addEventListener("click", (event) => {
+  if (event.target.closest("[data-dismiss-export]")) { state.lastExported = null; renderRepositoryNext(); }
+});
+const fileMenu = document.getElementById("file-menu");
+fileMenu.addEventListener("click", (event) => { if (event.target.closest("button")) fileMenu.open = false; });
+fileMenu.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { fileMenu.open = false; fileMenu.querySelector("summary").focus(); }
+});
+function closeRuntimePanel(returnFocus = false) {
+  state.runtimePanelOpen = false;
+  const panel = document.getElementById("runtime-panel");
+  if (panel) panel.hidden = true;
+  const button = elements.optionPanel.querySelector("[data-runtime-toggle]");
+  button?.setAttribute("aria-expanded", "false");
+  if (returnFocus) button?.focus();
+}
+elements.optionPanel.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-runtime-toggle]");
+  if (!button) return;
+  state.runtimePanelOpen = !state.runtimePanelOpen;
+  document.getElementById("runtime-panel").hidden = !state.runtimePanelOpen;
+  button.setAttribute("aria-expanded", String(state.runtimePanelOpen));
+});
+elements.optionPanel.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.runtimePanelOpen) { event.preventDefault(); closeRuntimePanel(true); }
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".runtime-control")) closeRuntimePanel();
+  if (!fileMenu.contains(event.target)) fileMenu.open = false;
+});
 
 elements.fileInput.addEventListener("change", () => {
+  fileMenu.open = false;
   const [file] = elements.fileInput.files;
   if (file) openFile(file);
 });
@@ -2027,32 +2089,37 @@ elements.editBase.addEventListener("click", () => {
 elements.gpioFilter.value = state.gpioFilter;
 elements.gpioAssignedOnly.checked = state.gpioAssignedOnly;
 elements.gpioFilter.addEventListener("input", () => {
+  navigateTo({ kind: "gpio" }, { remember: false, render: false });
   state.gpioFilter = elements.gpioFilter.value;
   saveGPIOFilterState();
   renderWithFade(() => renderTable(shownBoard(), validationFor(currentBase())));
 });
 elements.gpioAssignedOnly.addEventListener("change", () => {
+  navigateTo({ kind: "gpio" }, { remember: false, render: false });
   state.gpioAssignedOnly = elements.gpioAssignedOnly.checked;
   saveGPIOFilterState();
   renderWithFade(() => renderTable(shownBoard(), validationFor(currentBase())));
 });
 
-elements.roleColorLegend.addEventListener("change", (event) => {
+for (const legend of [elements.roleColorLegend, elements.connectorRoleColorLegend]) {
+legend.addEventListener("change", (event) => {
   const owner = event.target.dataset.roleColor;
   if (!owner || !/^#[0-9a-f]{6}$/i.test(event.target.value)) return;
   state.roleColors = { ...state.roleColors, [owner]: event.target.value.toLowerCase() };
   saveRoleColors();
   renderWithFade(renderAll);
 });
-elements.roleColorLegend.addEventListener("toggle", (event) => {
-  if (event.target.matches("details")) state.roleColorsOpen = event.target.open;
+legend.addEventListener("toggle", (event) => {
+  if (event.target.matches("details")) state[legend === elements.roleColorLegend ? "roleColorsOpen" : "connectorRoleColorsOpen"] = event.target.open;
 }, true);
-elements.roleColorLegend.addEventListener("click", (event) => {
+legend.addEventListener("click", (event) => {
   if (!event.target.closest("[data-reset-role-colors]")) return;
   state.roleColors = {};
   saveRoleColors();
   renderWithFade(renderAll);
 });
+
+}
 
 elements.optionPanel.addEventListener("change", (event) => {
   if (event.target.matches("[data-display-revision]")) {
@@ -2069,11 +2136,17 @@ elements.optionPanel.addEventListener("change", (event) => {
   }
 });
 
-elements.viewTabs.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-view]");
-  if (!button) return;
-  state.activeView = button.dataset.view;
-  renderAll();
+elements.pageNav.addEventListener("click", (event) => {
+  const group = event.target.closest("[data-nav-group]");
+  if (group) { const focused = document.activeElement === group; state.layout.navGroups.connectors = !state.layout.navGroups.connectors; renderNavigation(shownBoard()); applyPageVisibility(); saveLayoutState(); if (focused) elements.pageNav.querySelector("[data-nav-group]")?.focus(); return; }
+  const button = event.target.closest("[data-route-kind]");
+  if (button) navigateTo({ kind: button.dataset.routeKind, id: button.dataset.routeId });
+});
+elements.navToggle.addEventListener("click", () => { state.layout.navCollapsed = !state.layout.navCollapsed; applyPageVisibility(); saveLayoutState(); requestAnimationFrame(() => { if (state.page.kind === "gpio") sizeConnectorLanes(assignConnectorLanes(shownBoard().pins).lanes.length); }); });
+elements.pageBack.addEventListener("click", () => {
+  const previous = state.previousPage;
+  state.previousPage = null;
+  if (previous?.boardId === state.currentId) navigateTo(previous.route, { remember: false, restoreScroll: previous.scroll });
 });
 
 elements.configurationView.addEventListener("focusout", (event) => {
@@ -2142,34 +2215,6 @@ elements.configurationView.addEventListener("toggle", (event) => {
   state.layout.sections[section] = event.target.open;
   saveLayoutState();
 }, true);
-
-elements.sideResizer.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0 || window.matchMedia("(max-width: 980px)").matches) return;
-  event.preventDefault();
-  const startX = event.clientX;
-  const startWidth = state.layout.sidebarWidth;
-  elements.sideResizer.classList.add("is-dragging");
-  elements.sideResizer.setPointerCapture?.(event.pointerId);
-  const move = (moveEvent) => setSidebarWidth(startWidth - (moveEvent.clientX - startX));
-  const finish = () => {
-    elements.sideResizer.classList.remove("is-dragging");
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", finish);
-    window.removeEventListener("pointercancel", finish);
-    saveLayoutState();
-  };
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", finish);
-  window.addEventListener("pointercancel", finish);
-});
-
-elements.sideResizer.addEventListener("keydown", (event) => {
-  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-  event.preventDefault();
-  const step = event.shiftKey ? 32 : 16;
-  setSidebarWidth(state.layout.sidebarWidth + (event.key === "ArrowLeft" ? step : -step));
-  saveLayoutState();
-});
 
 elements.configurationList.addEventListener("click", (event) => {
   const roleButton = event.target.closest("[data-unassigned-role]");
@@ -2259,8 +2304,7 @@ elements.revisionEditor.addEventListener("click", (event) => {
 elements.ownerEditor.addEventListener("click", (event) => {
   const tab = event.target.closest("[data-owner-key]");
   if (!tab) return;
-  state.ownerKey = tab.dataset.ownerKey;
-  renderAll();
+  navigateTo({ kind: "owners", id: tab.dataset.ownerKey });
 });
 
 function toggleGPIORow(row) {
@@ -2269,7 +2313,7 @@ function toggleGPIORow(row) {
   const next = previous === row.dataset.gpioRow ? null : row.dataset.gpioRow;
   if (prefersReducedMotion()) {
     entry.expandedGPIO = next;
-    if (next !== null) revealConnectorForGPIO(next);
+    navigateTo({ kind: "gpio", gpio: next }, { remember: false, render: false });
     writeDraft(entry);
     renderAll();
     return;
@@ -2294,7 +2338,7 @@ function toggleGPIORow(row) {
     openingGPIOs.add(next);
   }
   entry.expandedGPIO = next;
-  if (entry.expandedGPIO !== null) revealConnectorForGPIO(entry.expandedGPIO);
+  navigateTo({ kind: "gpio", gpio: next }, { remember: false, render: false });
   writeDraft(entry);
   renderAll();
 }
@@ -2307,16 +2351,8 @@ elements.tableBody.addEventListener("click", (event) => {
   }
   const related = event.target.closest("[data-target-object]");
   if (related) {
-    if (related.dataset.targetObject.startsWith("connectors:")) {
-      state.connectorId = related.dataset.targetObject.slice("connectors:".length);
-      state.connectorPosition = null;
-      renderAll();
-      return;
-    }
-    const object = elements.relatedList.querySelector(`[data-object-key="${related.dataset.targetObject}"]`);
-    object?.scrollIntoView({ behavior: "smooth", block: "center" });
-    object?.classList.add("flash");
-    setTimeout(() => object?.classList.remove("flash"), 1200);
+    const [kind, ...id] = related.dataset.targetObject.split(":");
+    navigateTo({ kind: kind === "connectors" ? "connector" : kind, id: id.join(":"), position: related.dataset.targetPosition });
     return;
   }
   const row = event.target.closest("[data-gpio-row]");
@@ -2344,7 +2380,9 @@ elements.validationList.addEventListener("click", (event) => {
   if (!button) return;
   const board = shownBoard();
   const errors = validationFor(currentBase());
-  focusGPIO(gpioForError(errors[Number(button.dataset.errorIndex)], board));
+  const item = errors[Number(button.dataset.errorIndex)];
+  const gpio = gpioForError(item, board);
+  navigateTo(gpio != null ? { kind: "gpio", gpio } : editorErrorRoute(item, board));
 });
 
 elements.relatedList.addEventListener("click", (event) => {
@@ -2354,39 +2392,24 @@ elements.relatedList.addEventListener("click", (event) => {
   if (owner) {
     const [ownerId, pin] = owner.dataset.ownerTarget.split(":");
     const shown = shownBoard();
-    state.ownerKey = ownerDefinitions(currentBase()).find((item) => item.id === ownerId && item.part === shown.devices?.[ownerId]?.part)?.key ?? ownerId;
-    state.activeView = "owners";
-    renderAll();
-    requestAnimationFrame(() => document.getElementById(`owner-${state.ownerKey}-${pin}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    const key = ownerDefinitions(currentBase()).find((item) => item.id === ownerId && item.part === shown.devices?.[ownerId]?.part)?.key ?? ownerId;
+    navigateTo({ kind: "owners", id: key }, { after: () => document.getElementById(`owner-${key}-${pin}`)?.scrollIntoView({ behavior: "smooth", block: "center" }) });
   }
 });
 
-elements.connectorTabs.addEventListener("click", (event) => {
-  const tab = event.target.closest("[data-connector-tab]");
-  if (!tab) return;
-  state.connectorId = tab.dataset.connectorTab;
-  state.connectorPosition = null;
-  renderAll();
-});
-
-elements.connectorViewToggle.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-connector-view]");
-  if (!button) return;
-  state.connectorView = button.dataset.connectorView;
-  renderAll();
-});
-
 function selectConnectorPosition(target) {
-  state.connectorPosition = state.connectorPosition === target.dataset.connectorPosition ? null : target.dataset.connectorPosition;
-  renderAll();
+  const id = target.closest("[data-connector-id]")?.dataset.connectorId ?? state.connectorId;
+  navigateTo({ kind: "connector", id, position: state.connectorId === id && state.connectorPosition === target.dataset.connectorPosition ? null : target.dataset.connectorPosition });
 }
 
-elements.connectorDiagram.addEventListener("click", (event) => {
+elements.connectorPinout.addEventListener("click", (event) => {
+  const gpio = event.target.closest("[data-target-gpio]");
+  if (gpio) return focusGPIO(gpio.dataset.targetGpio);
   const position = event.target.closest("[data-connector-position]");
   if (position) selectConnectorPosition(position);
 });
 
-elements.connectorDiagram.addEventListener("keydown", (event) => {
+elements.connectorPinout.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
   const position = event.target.closest("[data-connector-position]");
   if (!position) return;
@@ -2394,27 +2417,9 @@ elements.connectorDiagram.addEventListener("keydown", (event) => {
   selectConnectorPosition(position);
 });
 
-elements.connectorDiagram.addEventListener("mouseover", (event) => {
-  const position = event.target.closest("[data-connector-position]");
-  const related = event.relatedTarget?.closest?.("[data-connector-position]");
-  if (!position || related?.dataset.connectorPosition === position.dataset.connectorPosition) return;
-  const endpoint = resolveConnectorPositions(shownBoard(), state.connectorId, connectorTypes).positions[position.dataset.connectorPosition];
-  const rows = endpointGPIOs(endpoint).map((gpio) => document.getElementById(`gpio-${gpio}`)).filter(Boolean);
-  rows.forEach((row) => row.classList.add("diagram-highlight"));
-  rows[0]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
-
-elements.connectorDiagram.addEventListener("mouseout", (event) => {
-  const position = event.target.closest("[data-connector-position]");
-  const related = event.relatedTarget?.closest?.("[data-connector-position]");
-  if (!position || related?.dataset.connectorPosition === position.dataset.connectorPosition) return;
-  elements.tableBody.querySelectorAll(".diagram-highlight").forEach((row) => row.classList.remove("diagram-highlight"));
-});
-
 function handleConnectorEditorClick(event) {
   if (event.target.closest("[data-connector-close]")) {
-    state.connectorPosition = null;
-    renderAll();
+    navigateTo({ kind: "connector", id: state.connectorId });
     return;
   }
   const tab = event.target.closest("[data-connector-editor-tab]");
@@ -2428,8 +2433,7 @@ function handleConnectorEditorClick(event) {
   }
 }
 
-elements.connectorEditor.addEventListener("click", handleConnectorEditorClick);
-elements.connectorDiagram.addEventListener("click", (event) => {
+elements.connectorPinout.addEventListener("click", (event) => {
   if (event.target.closest("[data-connector-editor]")) handleConnectorEditorClick(event);
 });
 
@@ -2442,8 +2446,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (event.key !== "Escape" || !state.connectorPosition) return;
-  state.connectorPosition = null;
-  renderAll();
+  navigateTo({ kind: "connector", id: state.connectorId });
 });
 
 elements.connectorUndo.addEventListener("click", () => {
@@ -2458,24 +2461,29 @@ elements.connectorUndo.addEventListener("click", () => {
   renderAll();
 });
 
+let fileDragDepth = 0;
+const isFileDrag = (event) => [...(event.dataTransfer?.types ?? [])].includes("Files");
 for (const eventName of ["dragenter", "dragover"]) {
   elements.dropZone.addEventListener(eventName, (event) => {
+    if (!isFileDrag(event)) return;
     event.preventDefault();
+    if (eventName === "dragenter") fileDragDepth += 1;
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
     elements.dropZone.classList.add("dragging");
   });
 }
-for (const eventName of ["dragleave", "drop"]) {
-  elements.dropZone.addEventListener(eventName, (event) => {
-    event.preventDefault();
-    elements.dropZone.classList.remove("dragging");
-  });
-}
+elements.dropZone.addEventListener("dragleave", (event) => {
+  if (!isFileDrag(event)) return;
+  fileDragDepth = Math.max(0, fileDragDepth - 1);
+  if (!fileDragDepth) elements.dropZone.classList.remove("dragging");
+});
 elements.dropZone.addEventListener("drop", (event) => {
+  if (!isFileDrag(event) && !event.dataTransfer?.files?.length) return;
+  event.preventDefault();
+  fileDragDepth = 0;
+  elements.dropZone.classList.remove("dragging");
   const [file] = event.dataTransfer.files;
   if (file) openFile(file);
-});
-elements.dropZone.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" || event.key === " ") elements.fileInput.click();
 });
 
 window.addEventListener("beforeunload", (event) => {
