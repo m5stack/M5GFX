@@ -68,7 +68,7 @@ test("board operations create AtomS3 byte-for-byte", () => {
     ["rear_right", "socket_1x4_254", { 3: "pwr:5v", 4: "pwr:gnd" }, "Rear right socket in the same bottom view; positions numbered top to bottom. GPIO39/38 share the onboard MPU6886 I2C bus."],
   ]) {
     addConnector(board, id, { type });
-    Object.assign(board.connectors[id], { positions, note, verified: { type: "datasheet", positions: "datasheet" } });
+    Object.assign(board.connectors[id], { positions, note, verified: { type: "datasheet", positions: "datasheet" }, group: "bottom" });
   }
   Object.assign(board.connectors.port_a, { positions: { 3: "pwr:5v" }, verified: { positions: "datasheet" } });
   for (const [gpio, role] of [[5, "conn:rear_left.2"], [6, "conn:rear_left.3"], [7, "conn:rear_left.4"], [8, "conn:rear_left.5"], [39, "conn:rear_right.1"], [38, "conn:rear_right.2"]]) addRole(board, gpio, role, { chip });

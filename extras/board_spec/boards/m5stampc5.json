@@ -184,7 +184,8 @@
       "note": "JP1 positions 1-7 follow the official CELL Header schematic, top to bottom in component-side PinMap.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     },
     "stamp_right": {
       "type": "logical_terminals_7",
@@ -192,7 +193,8 @@
       "note": "JP2 positions 1-7 follow the official CELL Header schematic. GPIO28 is also BOOT and the blue LED control.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     },
     "extra_gpio": {
       "type": "logical_terminals_1",

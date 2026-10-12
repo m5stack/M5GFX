@@ -178,7 +178,8 @@
       "note": "Positions counted top to bottom in the official component-side PinMap with antenna at the top and Grove pads at the bottom; not schematic connector pin numbers.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     },
     "stamp_right": {
       "type": "logical_terminals_6",
@@ -193,7 +194,8 @@
       "note": "Positions counted top to bottom in the official component-side PinMap with antenna at the top and Grove pads at the bottom; not schematic connector pin numbers.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     }
   }
 }

@@ -427,7 +427,8 @@
       "positions": {
         "7": "pwr:bat"
       },
-      "note": "Rear right J5: pins 1-6 are G3-G8; pin 7 is BAT on v1.0.1. On v1.0, pin 7 is an external 5V input, including batches incorrectly labeled BAT. Never connect a battery to the v1.0 pin. The linked schematic shows the older Int_5V connection."
+      "note": "Rear right J5: pins 1-6 are G3-G8; pin 7 is BAT on v1.0.1. On v1.0, pin 7 is an external 5V input, including batches incorrectly labeled BAT. Never connect a battery to the v1.0 pin. The linked schematic shows the older Int_5V connection.",
+      "group": "rear"
     },
     "rear_mux": {
       "type": "socket_1x6_254",
@@ -437,7 +438,8 @@
         "3": "pin:rear_mux.io2",
         "6": "pwr:gnd"
       },
-      "note": "Rear left J6: pin 1 is the switched 3V3_L2 output through R59 (0 ohm); do not exceed 200 mA. Pins 2/3 are CH442E MUX_IO_1/2: G43/G44 UART0 by default, G20/G19 USB when M5IOE1 PYG1 is high. Pin 4 is G9, pin 5 is G0 BOOT, pin 6 is GND."
+      "note": "Rear left J6: pin 1 is the switched 3V3_L2 output through R59 (0 ohm); do not exceed 200 mA. Pins 2/3 are CH442E MUX_IO_1/2: G43/G44 UART0 by default, G20/G19 USB when M5IOE1 PYG1 is high. Pin 4 is G9, pin 5 is G0 BOOT, pin 6 is GND.",
+      "group": "rear"
     }
   }
 }

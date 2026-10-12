@@ -221,6 +221,7 @@
       "properties": {
         "type": { "$ref": "#/definitions/id" },
         "standard": { "type": "string" },
+        "group": { "$ref": "#/definitions/id", "description": "Optional display group for physically paired connectors; terminal numbering remains local to each connector." },
         "positions": { "type": "object", "additionalProperties": { "type": ["string", "array"], "pattern": "^(gpio:\\d{1,2}|pin:[a-z][a-z0-9_]*\\.[a-z0-9_]+|fixed:[a-z0-9_]+\\.[a-z0-9_]+|pwr:[a-z0-9_]+|chip:[a-z0-9_]+|nc|none)$", "items": { "$ref": "#/definitions/endpoint" } } },
         "multi_gpio": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }, "uniqueItems": true },
         "shared_gpio": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }, "uniqueItems": true },

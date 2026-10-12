@@ -346,7 +346,8 @@
       "verified": {
         "type": "datasheet",
         "positions": "datasheet"
-      }
+      },
+      "group": "bottom"
     },
     "rear_right": {
       "type": "socket_1x4_254",
@@ -360,7 +361,8 @@
       "verified": {
         "type": "datasheet",
         "positions": "datasheet"
-      }
+      },
+      "group": "bottom"
     }
   }
 }

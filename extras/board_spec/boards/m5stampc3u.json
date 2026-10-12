@@ -143,7 +143,8 @@
       "note": "Positions counted top to bottom in the official component-side PinMap with antenna at the top and USB at the bottom; not schematic connector pin numbers.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     },
     "stamp_right": {
       "type": "logical_terminals_10",
@@ -157,7 +158,8 @@
       "note": "Positions counted top to bottom in the official component-side PinMap with antenna at the top and USB at the bottom; not schematic connector pin numbers. GPIO18/19 are native USB D-/D+ pads. The Specifications GPIO list includes G22, while the official PinMap and schematic identify RX0 as GPIO20; the terminal assignment follows the PinMap/schematic.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     }
   }
 }

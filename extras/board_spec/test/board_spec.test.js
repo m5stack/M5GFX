@@ -2785,3 +2785,13 @@ test("connector types permit explicitly unverified pitch and layout provenance",
   assert.deepEqual(validateConnectorTypes({ logical_terminals: type }), []);
   assert.ok(validateSchema({ ...type, layout: { ...type.layout, pitch_mm: "unknown" } }, connectorTypeSchema).some((issue) => issue.id === "E_SCHEMA_TYPE"));
 });
+
+
+test("connector display groups validate identifiers and warn about a solitary member", () => {
+  const sample = clone(board);
+  const ids = Object.keys(sample.connectors);
+  sample.connectors[ids[0]].group = "paired";
+  assert.ok(validateBoard(sample, context).some((item) => item.id === "W_CONN_GROUP_SINGLE"));
+  sample.connectors[ids[1]] = { ...sample.connectors[ids[0]], group: "paired" };
+  assert.equal(validateBoard(sample, context).some((item) => item.id === "W_CONN_GROUP_SINGLE"), false);
+});

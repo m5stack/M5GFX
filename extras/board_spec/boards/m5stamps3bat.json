@@ -303,7 +303,8 @@
       "note": "Official schematic J3 positions 1-9, top to bottom in the component-side PinMap. EXT_5V_OUT is controlled by M5PM1 5VOUT_EN.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     },
     "stamp_right": {
       "type": "logical_terminals_9",
@@ -317,7 +318,8 @@
       "note": "Official schematic J5 positions 1-9, top to bottom in the component-side PinMap. Wake terminal is M5PM1 GPIO4, not ESP32-S3 GPIO4. 3V3 is the switched 3V3_L2 rail.",
       "verified": {
         "positions": "datasheet"
-      }
+      },
+      "group": "pins"
     },
     "btb": {
       "type": "logical_terminals_24",
