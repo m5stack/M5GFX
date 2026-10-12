@@ -5,7 +5,158 @@
   "official_name": "M5Stack StampC3U",
   "legacy_board_id": 135,
   "chip": "esp32c3",
-  "pins": {},
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Stamp-C3U",
+      "schematic": "https://static-cdn.m5stack.com/resource/docs/products/core/stamp_c3u/stamp_c3u_sch_01.webp",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "conn:stamp_left.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:stamp_left.11"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:stamp_left.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:stamp_left.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:stamp_left.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:stamp_left.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:stamp_left.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:stamp_left.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:stamp_right.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:stamp_left.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "18": {
+      "roles": [
+        "conn:stamp_right.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "19": {
+      "roles": [
+        "conn:stamp_right.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "20": {
+      "roles": [
+        "conn:stamp_right.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "21": {
+      "roles": [
+        "conn:stamp_right.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    }
+  },
   "buses": {},
-  "devices": {}
+  "devices": {},
+  "connectors": {
+    "stamp_left": {
+      "type": "logical_terminals_12",
+      "positions": {
+        "8": "pwr:5v",
+        "9": "pwr:gnd",
+        "10": "pwr:5v"
+      },
+      "note": "Positions counted top to bottom in the official component-side PinMap with antenna at the top and USB at the bottom; not schematic connector pin numbers.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "stamp_right": {
+      "type": "logical_terminals_10",
+      "positions": {
+        "1": "pwr:3v3",
+        "4": "chip:en",
+        "6": "pwr:gnd",
+        "9": "pwr:5v",
+        "10": "pwr:gnd"
+      },
+      "note": "Positions counted top to bottom in the official component-side PinMap with antenna at the top and USB at the bottom; not schematic connector pin numbers. GPIO18/19 are native USB D-/D+ pads. The Specifications GPIO list includes G22, while the official PinMap and schematic identify RX0 as GPIO20; the terminal assignment follows the PinMap/schematic.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    }
+  }
 }

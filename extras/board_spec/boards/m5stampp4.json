@@ -5,7 +5,527 @@
   "official_name": "M5StampP4",
   "legacy_board_id": 150,
   "chip": "esp32p4",
-  "pins": {},
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Stamp-P4",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1218/SCH_Stamp-P4_2026_03_16_17_23_06.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "conn:stamp_pads.11"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:stamp_pads.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "2": {
+      "roles": [
+        "conn:stamp_pads.37"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:stamp_pads.45"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:stamp_pads.16"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:stamp_pads.35"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:stamp_pads.18"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:stamp_pads.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:stamp_pads.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:stamp_pads.6",
+        "conn:camera_btb.16",
+        "conn:sdio_btb.14"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:stamp_pads.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "11": {
+      "roles": [
+        "conn:stamp_pads.4",
+        "conn:camera_btb.15",
+        "conn:sdio_btb.16"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "12": {
+      "roles": [
+        "conn:stamp_pads.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "13": {
+      "roles": [
+        "conn:stamp_pads.29"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "14": {
+      "roles": [
+        "conn:stamp_pads.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "15": {
+      "roles": [
+        "conn:stamp_pads.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "16": {
+      "roles": [
+        "conn:stamp_pads.27"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "17": {
+      "roles": [
+        "conn:stamp_pads.26"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "18": {
+      "roles": [
+        "conn:stamp_pads.25"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "19": {
+      "roles": [
+        "conn:stamp_pads.24"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "20": {
+      "roles": [
+        "conn:stamp_pads.23"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "21": {
+      "roles": [
+        "conn:stamp_pads.22"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "22": {
+      "roles": [
+        "conn:stamp_pads.21"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "23": {
+      "roles": [
+        "conn:stamp_pads.20"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "26": {
+      "roles": [
+        "conn:stamp_pads.19"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "27": {
+      "roles": [
+        "conn:stamp_pads.17"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "28": {
+      "roles": [
+        "conn:stamp_pads.52"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "29": {
+      "roles": [
+        "conn:stamp_pads.54"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "30": {
+      "roles": [
+        "conn:stamp_pads.53"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "31": {
+      "roles": [
+        "conn:stamp_pads.51"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "32": {
+      "roles": [
+        "conn:stamp_pads.46"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "33": {
+      "roles": [
+        "conn:stamp_pads.50"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "34": {
+      "roles": [
+        "conn:stamp_pads.33"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "35": {
+      "roles": [
+        "conn:stamp_pads.36",
+        "conn:stamp_pads.48"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "36": {
+      "roles": [
+        "conn:stamp_pads.47"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "37": {
+      "roles": [
+        "conn:stamp_pads.30"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "38": {
+      "roles": [
+        "conn:stamp_pads.32"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "39": {
+      "roles": [
+        "conn:stamp_pads.31"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "40": {
+      "roles": [
+        "conn:sdio_btb.19"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "41": {
+      "roles": [
+        "conn:stamp_pads.49"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "42": {
+      "roles": [
+        "conn:sdio_btb.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "43": {
+      "roles": [
+        "conn:sdio_btb.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:sdio_btb.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "45": {
+      "roles": [
+        "conn:sdio_btb.13"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "46": {
+      "roles": [
+        "conn:sdio_btb.11"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "47": {
+      "roles": [
+        "conn:sdio_btb.15"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "48": {
+      "roles": [
+        "conn:sdio_btb.17"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "49": {
+      "roles": [
+        "conn:stamp_pads.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "50": {
+      "roles": [
+        "conn:stamp_pads.10"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "51": {
+      "roles": [
+        "conn:sdio_btb.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "52": {
+      "roles": [
+        "conn:stamp_pads.55"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "53": {
+      "roles": [
+        "conn:camera_btb.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "54": {
+      "roles": [
+        "conn:camera_btb.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    }
+  },
   "buses": {},
-  "devices": {}
+  "devices": {},
+  "connectors": {
+    "stamp_pads": {
+      "type": "logical_terminals_65",
+      "positions": {
+        "13": "pwr:gnd",
+        "14": "pwr:5vin",
+        "15": "pwr:vbus",
+        "28": "pwr:3v3",
+        "34": "chip:en",
+        "38": "pwr:gnd",
+        "39": "pwr:sys_5v",
+        "40": "fixed:usb2.dp",
+        "41": "fixed:usb2.dn",
+        "42": "pwr:gnd",
+        "43": "chip:usb_dn",
+        "44": "chip:usb_dp",
+        "56": "pwr:gnd",
+        "57": "fixed:mipi_dsi.d0n",
+        "58": "fixed:mipi_dsi.d0p",
+        "59": "pwr:gnd",
+        "60": "fixed:mipi_dsi.clkp",
+        "61": "fixed:mipi_dsi.clkn",
+        "62": "pwr:gnd",
+        "63": "fixed:mipi_dsi.d1n",
+        "64": "fixed:mipi_dsi.d1p",
+        "65": "pwr:gnd"
+      },
+      "note": "Numbers 1-65 follow STAMP1 in the official schematic. This logical order does not imply a uniform physical pitch. GPIO24/25 are represented as dedicated native USB D-/D+ endpoints; USB2_HOST and MIPI DSI pads are dedicated non-GPIO signals. GPIO35 reaches two pads (36 and 48).",
+      "verified": {
+        "positions": "datasheet"
+      },
+      "shared_gpio": [
+        "36",
+        "48"
+      ]
+    },
+    "camera_btb": {
+      "type": "logical_terminals_20",
+      "positions": {
+        "1": "pwr:gnd",
+        "4": "pwr:gnd",
+        "5": "fixed:mipi_csi.d0n",
+        "6": "fixed:mipi_csi.d0p",
+        "7": "pwr:gnd",
+        "8": "fixed:mipi_csi.clkn",
+        "9": "fixed:mipi_csi.clkp",
+        "10": "pwr:gnd",
+        "11": "pwr:gnd",
+        "12": "fixed:mipi_csi.d1n",
+        "13": "fixed:mipi_csi.d1p",
+        "14": "pwr:3v3",
+        "17": "pwr:gnd",
+        "18": "pwr:gnd",
+        "19": "pwr:gnd",
+        "20": "pwr:gnd"
+      },
+      "note": "Exposed MIPI CSI camera BTB connector J2; terminal numbering follows the official schematic and PinMap. GPIO54=CAM_RST, GPIO53=CAM_MCLK, GPIO11=SDA, GPIO9=SCL.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "sdio_btb": {
+      "type": "logical_terminals_20",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:gnd",
+        "3": "pwr:gnd",
+        "4": "pwr:sys_5v",
+        "6": "pwr:sys_5v",
+        "8": "pwr:3v3",
+        "10": "pwr:3v3",
+        "18": "pwr:gnd",
+        "20": "pwr:gnd"
+      },
+      "note": "Exposed 20-pin SDIO BTB connector J3. Numbers follow the official schematic/PinMap. GPIO42 is SDIO_RST, GPIO43 CLK, GPIO44 CMD, GPIO45/46/47/48 D0/D1/D2/D3.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    }
+  }
 }

@@ -5,23 +5,171 @@
   "official_name": "M5Stack M5StampS3",
   "legacy_board_id": 136,
   "chip": "esp32s3",
+  "spec": {
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Stamp-S3",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/522/Sch_M5StampS3_v0.2.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
+    }
+  },
   "pins": {
+    "0": {
+      "roles": [
+        "conn:stamp_pads.20"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "1": {
+      "roles": [
+        "conn:stamp_pads.1"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "2": {
+      "roles": [
+        "conn:stamp_pads.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "3": {
+      "roles": [
+        "conn:stamp_pads.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "4": {
+      "roles": [
+        "conn:stamp_pads.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:stamp_pads.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:stamp_pads.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "7": {
+      "roles": [
+        "conn:stamp_pads.7"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "8": {
+      "roles": [
+        "conn:stamp_pads.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "9": {
+      "roles": [
+        "conn:stamp_pads.9"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "10": {
+      "roles": [
+        "conn:stamp_pads.10"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "11": {
+      "roles": [
+        "conn:stamp_pads.12"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "12": {
+      "roles": [
+        "conn:stamp_pads.14"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "13": {
       "roles": [
         "bus:port_a_i2c.sda",
-        "conn:port_a.2"
+        "conn:port_a.2",
+        "conn:stamp_pads.15"
       ],
       "verified": {
         "roles": "generated"
       }
     },
+    "14": {
+      "roles": [
+        "conn:stamp_pads.16"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "15": {
       "roles": [
         "bus:port_a_i2c.scl",
-        "conn:port_a.1"
+        "conn:port_a.1",
+        "conn:stamp_pads.17"
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "16": {
+      "roles": [
+        "conn:lcd_fpc12.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "17": {
+      "roles": [
+        "conn:lcd_fpc12.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "18": {
+      "roles": [
+        "conn:lcd_fpc12.2"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     },
     "21": {
@@ -30,6 +178,107 @@
       ],
       "verified": {
         "roles": "generated"
+      }
+    },
+    "33": {
+      "roles": [
+        "conn:lcd_fpc12.7",
+        "conn:lcd_fpc8.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "34": {
+      "roles": [
+        "conn:lcd_fpc12.8",
+        "conn:lcd_fpc8.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "35": {
+      "roles": [
+        "conn:lcd_fpc12.9",
+        "conn:lcd_fpc8.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "36": {
+      "roles": [
+        "conn:lcd_fpc12.10",
+        "conn:lcd_fpc8.6"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "37": {
+      "roles": [
+        "conn:lcd_fpc12.12",
+        "conn:lcd_fpc8.8"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "39": {
+      "roles": [
+        "conn:stamp_pads.19"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "40": {
+      "roles": [
+        "conn:stamp_pads.21"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "41": {
+      "roles": [
+        "conn:stamp_pads.23"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "42": {
+      "roles": [
+        "conn:stamp_pads.25"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "43": {
+      "roles": [
+        "conn:stamp_pads.26"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "44": {
+      "roles": [
+        "conn:stamp_pads.24"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "46": {
+      "roles": [
+        "conn:stamp_pads.27"
+      ],
+      "verified": {
+        "roles": "datasheet"
       }
     }
   },
@@ -63,11 +312,87 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c",
+      "note": "Port A uses GPIO15 (SCL) and GPIO13 (SDA), matching the official PinMap. The bare-module schematic has no HY2.0-4P connector; the product includes a separate HY2.0-4P terminal.",
       "positions": {
         "1": "gpio:15",
         "2": "gpio:13",
         "3": "pwr:5v",
         "4": "pwr:gnd"
+      }
+    },
+    "stamp_pads": {
+      "type": "logical_terminals_28",
+      "positions": {
+        "1": "gpio:1",
+        "2": "gpio:2",
+        "3": "gpio:3",
+        "4": "gpio:4",
+        "5": "gpio:5",
+        "6": "gpio:6",
+        "7": "gpio:7",
+        "8": "gpio:8",
+        "9": "gpio:9",
+        "10": "gpio:10",
+        "11": "pwr:gnd",
+        "12": "gpio:11",
+        "13": "pwr:5v",
+        "14": "gpio:12",
+        "15": "gpio:13",
+        "16": "gpio:14",
+        "17": "gpio:15",
+        "18": "pwr:gnd",
+        "19": "gpio:39",
+        "20": "gpio:0",
+        "21": "gpio:40",
+        "22": "chip:en",
+        "23": "gpio:41",
+        "24": "gpio:44",
+        "25": "gpio:42",
+        "26": "gpio:43",
+        "27": "gpio:46",
+        "28": "pwr:3v3"
+      },
+      "note": "Numbers follow M1 in the official v0.2 schematic. Module SMT/DIP pads support different pitch variants; this is an electrical terminal ordering.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "lcd_fpc12": {
+      "type": "logical_terminals_12",
+      "positions": {
+        "1": "pwr:5v",
+        "2": "gpio:18",
+        "3": "gpio:17",
+        "4": "gpio:16",
+        "5": "pwr:lcd_bl",
+        "6": "pwr:gnd",
+        "7": "gpio:33",
+        "8": "gpio:34",
+        "9": "gpio:35",
+        "10": "gpio:36",
+        "11": "pwr:3v3",
+        "12": "gpio:37"
+      },
+      "note": "Rear J1 12-pin 0.5mm LCD/extension footprint, marked NC in the schematic. Pin 5 BL is the SGM2578 regulated output switched by GPIO38, not a direct GPIO38 connection. Numbers follow J1.",
+      "verified": {
+        "positions": "datasheet"
+      }
+    },
+    "lcd_fpc8": {
+      "type": "logical_terminals_8",
+      "positions": {
+        "1": "pwr:lcd_bl",
+        "2": "pwr:gnd",
+        "3": "gpio:33",
+        "4": "gpio:34",
+        "5": "gpio:35",
+        "6": "gpio:36",
+        "7": "pwr:3v3",
+        "8": "gpio:37"
+      },
+      "note": "Rear J3 8-pin 0.5mm LCD footprint, marked NC in the schematic. Pin 1 BL is the SGM2578 regulated output switched by GPIO38, not a direct GPIO38 connection. Numbers follow J3; the 8-pin and 12-pin footprints are assembly alternatives.",
+      "verified": {
+        "positions": "datasheet"
       }
     }
   }
