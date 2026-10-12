@@ -22,13 +22,25 @@
     "storage": {
       "psram_mb": 2,
       "psram_mode": "quad"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/StickC-Plus2",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/512/Sch_M5StickC_Plus2_v0.5.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
     "0": {
       "roles": [
-        "dev:usb_serial.boot"
-      ]
+        "dev:usb_serial.boot",
+        "conn:hat.5"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     },
     "1": {
       "roles": [
@@ -129,6 +141,22 @@
         "pull": "Internal-pull GPIO survey on M5StickCPlus2"
       }
     },
+    "25": {
+      "roles": [
+        "conn:hat.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
+    "26": {
+      "roles": [
+        "conn:hat.3"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
+    },
     "27": {
       "roles": [
         "dev:backlight.pwm"
@@ -156,6 +184,14 @@
       "roles": [
         "dev:btn_pwr.in"
       ]
+    },
+    "36": {
+      "roles": [
+        "conn:hat.4"
+      ],
+      "verified": {
+        "roles": "datasheet"
+      }
     },
     "37": {
       "roles": [
@@ -298,6 +334,24 @@
     "port_a": {
       "type": "hy2_4p",
       "standard": "port_i2c"
+    },
+    "hat": {
+      "type": "socket_1x8_254",
+      "positions": {
+        "1": "pwr:gnd",
+        "2": "pwr:5vout",
+        "6": "pwr:bat",
+        "7": "pwr:3v3",
+        "8": "pwr:5vin"
+      },
+      "verified": {
+        "type": "datasheet",
+        "positions": "datasheet"
+      },
+      "note": "HAT socket: positions 1-8 run from GND to 5V input, left to right in the rear-label view. GPIO0 is shared with the microphone clock. 5V output and 5V input are separate rails. P1 pin 4 joins GPIO36 and GPIO25 in the official v0.5 schematic; the rear label reads G36/G25. The Specifications External Pins field says G25/G26, which differs from the rear-label G36/G25 notation. This catalog follows the rear label and documented G36/G25 shared terminal without treating either notation as a confirmed typo. When using GPIO36 or GPIO25, leave the other as an input with both internal pulls disabled, as instructed by the official StickC-Plus documentation.",
+      "multi_gpio": [
+        "4"
+      ]
     }
   },
   "chip_package": "pico_v3_02"
