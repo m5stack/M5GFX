@@ -24,6 +24,14 @@
       "psram_mode": "opi",
       "flash_mb": 16,
       "sd": true
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/PaperS3",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/517/sch_papers3_V1.0.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
@@ -399,13 +407,17 @@
   },
   "connectors": {
     "port_a": {
-      "type": "hy2_4p",
+      "type": "hc125_4p",
       "standard": "port_i2c",
       "positions": {
         "1": "gpio:1",
         "2": "gpio:2",
-        "3": "pwr:5v",
+        "3": "pwr:3v3",
         "4": "pwr:gnd"
+      },
+      "note": "The physical connector is HC1.25-4PLT. Official schematic J5: 1=GND, 2=3V3 (SOC_VDD), 3=GPIO1, 4=GPIO2. The port_a terminal numbers are the pin-table logical order: 1=GPIO1 (library SCL), 2=GPIO2 (library SDA), 3=3V3, 4=GND. The schematic names the external signals EXT_GPIO1/2, not SCL/SDA; the product color table lists yellow=GPIO1 and white=GPIO2.",
+      "verified": {
+        "positions": "datasheet"
       }
     }
   }

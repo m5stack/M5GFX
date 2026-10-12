@@ -16,6 +16,14 @@
     "storage": {
       "psram_mb": 8,
       "psram_mode": "quad"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/Paper",
+      "schematic": "https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/docs/schematic/Core/m5paper/M5_PAPER_SCH.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {

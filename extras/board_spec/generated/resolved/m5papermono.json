@@ -24,6 +24,14 @@
       "psram_mb": 8,
       "psram_mode": "opi",
       "sd": true
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/PaperMono",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1267/PaperMono_SCH_V0.6.2_20260522.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
