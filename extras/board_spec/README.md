@@ -64,6 +64,34 @@ preserving the declared order within each group. A board qualifies only when a
 give the runtime hint pass the same priority rule. Add a new family to the
 manifest; `npm test` checks that each generated array is included by its source.
 
+## Connector types
+
+`connector_types/<id>.json` describes a connector once, and boards and accessories
+refer to it by `type`. `layout` gives the grid (`rows`, `cols`, `pitch_mm`,
+`numbering`, `key`, `view`), `positions` the pins with their `id`, grid cell and
+optional `name` and wire `color`, and `rails` the power rails the connector
+carries. `standards` names the pin assignments a board can pick with
+`standard`: for example the 4-pin port (`hy2_4p`) defines `port_i2c`
+(`scl`, `sda`), `port_uart` (`rx`, `tx`) and `port_io` (`in`, `out`) on
+positions 1 and 2. `extends` inherits another type. `verified.layout` records how
+the layout was confirmed (`datasheet`, `measured`, `generated`); `null` means not
+confirmed. `logical_terminals_<n>` types carry `pitch_mm: null` and no verified
+layout: they only number the terminals of a group whose placement is not
+documented.
+
+## Accessories
+
+`accessories/<id>.json` describes a base, bottom or module that attaches to a
+board: `attaches` names the host connector type and the slot it occupies
+(`stack`, `bottom`, ...), `compatible_with` lists the boards, `host_pins` maps
+the host connector positions to the roles the accessory adds (for example
+`conn:port_b.1` for a port on a base), and `connectors` / `devices` describe what
+the accessory itself exposes. `settings` lists user-selectable options such as DIP
+switches, each with its choices and the pins they reroute. Accessory wiring is
+resolved through the compositions declared in `targets.json` into
+`generated/docs/<board>_composition.md` and the M5Unified pin table; it does not
+take part in board-detection generation.
+
 ## Exposed connectors
 
 Boards list the connectors that users can reach (headers, sockets, HAT buses,
