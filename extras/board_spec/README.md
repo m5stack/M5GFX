@@ -3,19 +3,38 @@
 This dependency-free prototype keeps board wiring, revision choices, and part
 facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 
-- `boards/`, `parts/`, `chips/`, `schema/`: source data and its declaration
+- `boards/`, `parts/`, `chips/`: source data (boards, replaceable parts, SoC pin facts)
+- `accessories/`: bases, bottoms and modules that attach to a board (see "Accessories")
+- `connector_types/`: physical and logical connector layouts (see "Connector types")
+- `schema/`: JSON schemas for boards, accessories, connector types and `detector_order.json`
 - `targets.json`: generator-specific option-bit to board-choice mappings
+- `detector_order.json`: which catalog boards each package's detector families cover
 - `lib/`, `cli/`: browser-safe model logic and the Node command wrapper
 - `generated/resolved/`: fully resolved revision/runtime combinations
+- `generated/docs/`: revision and composition tables rendered from the catalog
+- `generated/m5unified_pin_table/`: the M5Unified external pin tables, per SoC
 - `editor/`, `build/`: editor sources and the dependency-free bundler
 - `dist/board_spec_editor.html`: standalone editor; open it directly with `file://`
+- `test/`: Node tests and the C++ host tests that compile the generated detection data
 
 ```sh
-node cli/spec.js validate boards/m5stack_core2.json
-node cli/spec.js resolve boards/m5stack_core2.json
-node build/bundle.js
-node cli/spec.js check
+node cli/spec.js validate boards/m5stack_core2.json      # schema and catalog rules (all boards when no file is given)
+node cli/spec.js format boards/m5stack_core2.json --write # canonical formatting (without --write: report only)
+node cli/spec.js resolve boards/m5stack_core2.json       # generated/resolved/ and generated/docs/ for one board
+node cli/spec.js emit-wiring                             # src/board_detect/m5/generated/ (detection wiring, specs, detector order)
+node cli/spec.js emit-pintable                           # generated/m5unified_pin_table/<soc>.{json,inl}
+node cli/spec.js compare-pintable --m5unified <path>     # compile the generated tables against M5Unified's src/M5Unified.inl
+node build/bundle.js                                     # dist/board_spec_editor.html
+node cli/spec.js check                                   # everything below; CI runs this
+npm test                                                 # test/*.test.js (the C++ host tests are skipped without a compiler)
 ```
+
+`check` validates the connector types, parts, accessories and every board, requires
+every board file to be in canonical format, and fails when any generated output
+(resolved snapshots, docs, pin tables, detection wiring, the editor bundle) is
+missing, stale or unexpected. So after editing a board: `resolve` it, run
+`emit-wiring`, `emit-pintable` and `build/bundle.js`, then `check` and `npm test`,
+and commit the generated files together with the source.
 
 Boards use `devices.<id>.choices` for replaceable parts and `revisions[]` for
 known product revisions. Runtime-selected slots are expanded as additional
@@ -44,6 +63,61 @@ preserving the declared order within each group. A board qualifies only when a
 `power_hold` device also has a GPIO `dev:<id>.*` role. The generated board IDs
 give the runtime hint pass the same priority rule. Add a new family to the
 manifest; `npm test` checks that each generated array is included by its source.
+
+## Connector types
+
+`connector_types/<id>.json` describes a connector once, and boards and accessories
+refer to it by `type`. `layout` gives the grid (`rows`, `cols`, `pitch_mm`,
+`numbering`, `key`, `view`), `positions` the pins with their `id`, grid cell and
+optional `name` and wire `color`, and `rails` the power rails the connector
+carries. `standards` names the pin assignments a board can pick with
+`standard`: for example the 4-pin port (`hy2_4p`) defines `port_i2c`
+(`scl`, `sda`), `port_uart` (`rx`, `tx`) and `port_io` (`in`, `out`) on
+positions 1 and 2. `extends` inherits another type. `verified.layout` records how
+the layout was confirmed (`datasheet`, `measured`, `generated`); `null` means not
+confirmed. `logical_terminals_<n>` types carry `pitch_mm: null` and no verified
+layout: they only number the terminals of a group whose placement is not
+documented.
+
+## Accessories
+
+`accessories/<id>.json` describes a base, bottom or module that attaches to a
+board: `attaches` names the host connector type and the slot it occupies
+(`stack`, `bottom`, ...), `compatible_with` lists the boards, `host_pins` maps
+the host connector positions to the roles the accessory adds (for example
+`conn:port_b.1` for a port on a base), and `connectors` / `devices` describe what
+the accessory itself exposes. `settings` lists user-selectable options such as DIP
+switches, each with its choices and the pins they reroute. Accessory wiring is
+resolved through the compositions declared in `targets.json` into
+`generated/docs/<board>_composition.md` and the M5Unified pin table; it does not
+take part in board-detection generation.
+
+## Exposed connectors
+
+Boards list the connectors that users can reach (headers, sockets, HAT buses,
+Grove ports, Proto pads, expansion FPC/BTB connectors) in `connectors`, and link
+the official product page and schematic in `spec.links`. GPIOs on those connectors
+carry `conn:<id>.<position>` roles, which keeps them out of `detect_class`
+(`E_DETECT_CLASS_CONNECTOR`).
+
+- Write only values confirmed by the official pin table, PinMap or schematic. Leave
+  out what cannot be confirmed. When official sources disagree, state in `note`
+  which source was followed.
+- `port_a` to `port_e` (and `port_b2` / `port_c2`) are the M5Unified pin-table
+  contract: renaming or adding them changes the generated pin table. A physical
+  port that has no pin-table entry uses another name (for example `grove_c`), and
+  ports on a base or sub-board belong to the accessory definition, not the core
+  board. If the contract order differs from the physical wire colors, say so in
+  `note`.
+- When the physical placement or pitch of a terminal group is not documented, use a
+  logically numbered connector type with `pitch_mm: null` and no `verified.layout`.
+- One position that reaches several GPIOs is listed in `multi_gpio`.
+- Separate sockets that form one physical set (for example the two bottom headers of
+  an Atom) share an optional `group`. Each socket keeps its own position numbering
+  and first pin; `group` only lets tools show them together.
+- USB connectors, battery connectors, antennas, test pads and terminals that are not
+  directly connected to a GPIO (isolated inputs, relay contacts, CAN/RS485 terminal
+  blocks) are not cataloged as connectors.
 
 ## Board-detection operation lists
 
@@ -83,10 +157,20 @@ data lines share the flash-only pads represented by the chip's reserved GPIOs.
   PaperS3 drives its power-off request line low before setting it to output,
   and the detection transaction records the parallel-EPD pins as well.
 
-The editor includes all catalog boards, parts, and chip data. It can also open or accept
-dragged board JSON files, keeps best-effort drafts in `localStorage`, and
-downloads canonical formatted JSON. Selecting a revision shows the resolved
-board read-only; clear the revision selection to resume editing the base board.
+## Editor
+
+`dist/board_spec_editor.html` is a single file with all catalog boards, parts,
+chip data, connector types and accessories bundled in; open it with `file://`.
+The left navigation lists the catalog pages of the selected board (board, GPIO,
+connectors, one page per connector, owners, revisions) and a validation page with
+the current error count. A connector page shows the connector as a table in its
+physical layout (terminal, wire color, endpoint, function); connector edits can be
+undone. The editor can also open or accept dragged
+board JSON files, keeps best-effort drafts in `localStorage`, and exports
+canonical formatted JSON. Selecting a revision shows the resolved board read-only;
+clear the revision selection to resume editing the base board. Exporting does not
+touch the repository: replace `boards/<id>.json`, run `node cli/spec.js check`,
+then review and commit.
 
 ## Pin detection classes (`detect_class`)
 
