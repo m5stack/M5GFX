@@ -3,12 +3,19 @@
 This dependency-free prototype keeps board wiring, revision choices, and part
 facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 
-- `boards/`, `parts/`, `chips/`, `schema/`: source data and its declaration
+- `boards/`, `parts/`, `chips/`: source data (boards, replaceable parts, SoC pin facts)
+- `accessories/`: bases, bottoms and modules that attach to a board (see "Accessories")
+- `connector_types/`: physical and logical connector layouts (see "Connector types")
+- `schema/`: JSON schemas for boards, accessories, connector types and `detector_order.json`
 - `targets.json`: generator-specific option-bit to board-choice mappings
+- `detector_order.json`: which catalog boards each package's detector families cover
 - `lib/`, `cli/`: browser-safe model logic and the Node command wrapper
 - `generated/resolved/`: fully resolved revision/runtime combinations
+- `generated/docs/`: revision and composition tables rendered from the catalog
+- `generated/m5unified_pin_table/`: the M5Unified external pin tables, per SoC
 - `editor/`, `build/`: editor sources and the dependency-free bundler
 - `dist/board_spec_editor.html`: standalone editor; open it directly with `file://`
+- `test/`: Node tests and the C++ host tests that compile the generated detection data
 
 ```sh
 node cli/spec.js validate boards/m5stack_core2.json
