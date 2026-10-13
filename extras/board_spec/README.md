@@ -157,10 +157,20 @@ data lines share the flash-only pads represented by the chip's reserved GPIOs.
   PaperS3 drives its power-off request line low before setting it to output,
   and the detection transaction records the parallel-EPD pins as well.
 
-The editor includes all catalog boards, parts, and chip data. It can also open or accept
-dragged board JSON files, keeps best-effort drafts in `localStorage`, and
-downloads canonical formatted JSON. Selecting a revision shows the resolved
-board read-only; clear the revision selection to resume editing the base board.
+## Editor
+
+`dist/board_spec_editor.html` is a single file with all catalog boards, parts,
+chip data, connector types and accessories bundled in; open it with `file://`.
+The left navigation lists the catalog pages of the selected board (board, GPIO,
+connectors, one page per connector, owners, revisions) and a validation page with
+the current error count. A connector page shows the connector as a table in its
+physical layout (terminal, wire color, endpoint, function); connector edits can be
+undone. The editor can also open or accept dragged
+board JSON files, keeps best-effort drafts in `localStorage`, and exports
+canonical formatted JSON. Selecting a revision shows the resolved board read-only;
+clear the revision selection to resume editing the base board. Exporting does not
+touch the repository: replace `boards/<id>.json`, run `node cli/spec.js check`,
+then review and commit.
 
 ## Pin detection classes (`detect_class`)
 
