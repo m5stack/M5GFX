@@ -1764,7 +1764,8 @@ namespace m5gfx
             );
             /// SPIバスのプルアップが効いていない場合はVBUS 5V出力を有効化する。
             /// (USBホストモジュール等、5Vが出ていないと信号線の電気を吸い込む組合せがあるため)
-            uint8_t reg0x02 = (result == 0) ? 0b00000111 : 0b00000101;
+            /// BUS_OUT_EN (P0 bit1) is set last, after a precharge (below); BOOST_EN goes on here.
+            uint8_t reg0x02 = 0b00000101;
             uint8_t reg0x03 = (result == 0) ? 0b10000011 : 0b00000011;
             m5gfx::i2c::bitOn(probe_i2c_port, aw9523_i2c_addr, 0x02, reg0x02); //port0 output ctrl
             m5gfx::i2c::bitOn(probe_i2c_port, aw9523_i2c_addr, 0x03, reg0x03); //port1 output ctrl
@@ -1776,6 +1777,69 @@ namespace m5gfx
             // A DCDC dip below 85% (inrush on a weak USB supply) makes the AXP2101 power itself off,
             // and it stays off; let the SoC brown out and restart instead. OVP (bit 5) stays enabled.
             m5gfx::i2c::bitOff(probe_i2c_port, axp_i2c_addr, 0x23, 0x1F); // DCDC1-5 UVP power-off disable
+            if (result == 0)
+            {
+              // Enabling BUS_OUT_EN into an empty BUS_OUT can pull the AXP2101 DCDC under its
+              // threshold on a weak USB supply and power the board off. Precharge it with pulses
+              // of growing on-time first: the same sequence as M5Unified's setExtOutput(), including
+              // its 100 kHz bus, since the on-time is one register write plus i * 16 us. Failing to
+              // enable BUS_OUT_EN does not fail detection; M5Unified's setExtOutput() enables it
+              // later with the same precharge. The final on write is verified: a precharged BUS_OUT
+              // left with BUS_OUT_EN off latches to VBUS and blocks later enables.
+              const char* failed = [&]() -> const char*
+              {
+                constexpr uint8_t port0_reg = 0x02;
+                constexpr uint8_t bus_en = 0x02;
+                constexpr uint32_t freq = 100000;
+                const auto port0 = lgfx::i2c::readRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, freq);
+                if (!port0.has_value()) { return "read failed"; }
+                if (port0.value() & bus_en) { return nullptr; }
+                const uint8_t p0_off = port0.value();
+                enum class off_state_t { unknown, off, on };
+                const auto confirm_off = [&]()
+                {
+                  bool read_ok = false;
+                  for (int retry = 0; retry < 3; ++retry)
+                  {
+                    lgfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, p0_off, 0, freq);
+                    const auto read = lgfx::i2c::readRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, freq);
+                    read_ok = read.has_value();
+                    if (read_ok && !(read.value() & bus_en)) { return off_state_t::off; }
+                  }
+                  return read_ok ? off_state_t::on : off_state_t::unknown;
+                };
+                for (uint32_t i = 0; i < 8; ++i)
+                {
+                  if (!lgfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, p0_off | bus_en, 0, freq).has_value())
+                  {
+                    const auto state = confirm_off();
+                    if (state == off_state_t::on) { break; }
+                    return state == off_state_t::off ? "precharge write failed" : "precharge read failed";
+                  }
+                  lgfx::delayMicroseconds(i * 16);
+                  if (!lgfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, p0_off, 0, freq).has_value())
+                  {
+                    const auto state = confirm_off();
+                    if (state == off_state_t::unknown) { return "precharge read failed"; }
+                    if (state == off_state_t::on) { break; }
+                  }
+                  lgfx::delayMicroseconds(1000);
+                }
+                for (int retry = 0; retry < 3; ++retry)
+                {
+                  if (lgfx::i2c::writeRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, p0_off | bus_en, 0, freq).has_value()
+                   && lgfx::i2c::readRegister8(probe_i2c_port, aw9523_i2c_addr, port0_reg, freq).value_or(0) == (p0_off | bus_en))
+                  {
+                    return nullptr;
+                  }
+                }
+                return "final write failed";
+              }();
+              if (failed != nullptr)
+              {
+                ESP_LOGW(LIBRARY_NAME, "[Autodetect] CoreS3 BUS_OUT_EN not enabled: %s", failed);
+              }
+            }
             m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x90, 0xBF); // LDOS ON/OFF control 0
             m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x94, 33 - 5); // ALDO3 set to 3.3v // for GC0308 Camera
             m5gfx::i2c::writeRegister8(probe_i2c_port, axp_i2c_addr, 0x95, 33 - 5); // ALDO4 set to 3.3v // for TF card slot
