@@ -18,11 +18,23 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 - `test/`: Node tests and the C++ host tests that compile the generated detection data
 
 ```sh
-node cli/spec.js validate boards/m5stack_core2.json
-node cli/spec.js resolve boards/m5stack_core2.json
-node build/bundle.js
-node cli/spec.js check
+node cli/spec.js validate boards/m5stack_core2.json      # schema and catalog rules (all boards when no file is given)
+node cli/spec.js format boards/m5stack_core2.json --write # canonical formatting (without --write: report only)
+node cli/spec.js resolve boards/m5stack_core2.json       # generated/resolved/ and generated/docs/ for one board
+node cli/spec.js emit-wiring                             # src/board_detect/m5/generated/ (detection wiring, specs, detector order)
+node cli/spec.js emit-pintable                           # generated/m5unified_pin_table/<soc>.{json,inl}
+node cli/spec.js compare-pintable --m5unified <path>     # compile the generated tables against M5Unified's src/M5Unified.inl
+node build/bundle.js                                     # dist/board_spec_editor.html
+node cli/spec.js check                                   # everything below; CI runs this
+npm test                                                 # test/*.test.js (the C++ host tests are skipped without a compiler)
 ```
+
+`check` validates the connector types, parts, accessories and every board, requires
+every board file to be in canonical format, and fails when any generated output
+(resolved snapshots, docs, pin tables, detection wiring, the editor bundle) is
+missing, stale or unexpected. So after editing a board: `resolve` it, run
+`emit-wiring`, `emit-pintable` and `build/bundle.js`, then `check` and `npm test`,
+and commit the generated files together with the source.
 
 Boards use `devices.<id>.choices` for replaceable parts and `revisions[]` for
 known product revisions. Runtime-selected slots are expanded as additional
