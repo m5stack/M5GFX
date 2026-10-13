@@ -45,6 +45,33 @@ preserving the declared order within each group. A board qualifies only when a
 give the runtime hint pass the same priority rule. Add a new family to the
 manifest; `npm test` checks that each generated array is included by its source.
 
+## Exposed connectors
+
+Boards list the connectors that users can reach (headers, sockets, HAT buses,
+Grove ports, Proto pads, expansion FPC/BTB connectors) in `connectors`, and link
+the official product page and schematic in `spec.links`. GPIOs on those connectors
+carry `conn:<id>.<position>` roles, which keeps them out of `detect_class`
+(`E_DETECT_CLASS_CONNECTOR`).
+
+- Write only values confirmed by the official pin table, PinMap or schematic. Leave
+  out what cannot be confirmed. When official sources disagree, state in `note`
+  which source was followed.
+- `port_a` to `port_e` (and `port_b2` / `port_c2`) are the M5Unified pin-table
+  contract: renaming or adding them changes the generated pin table. A physical
+  port that has no pin-table entry uses another name (for example `grove_c`), and
+  ports on a base or sub-board belong to the accessory definition, not the core
+  board. If the contract order differs from the physical wire colors, say so in
+  `note`.
+- When the physical placement or pitch of a terminal group is not documented, use a
+  logically numbered connector type with `pitch_mm: null` and no `verified.layout`.
+- One position that reaches several GPIOs is listed in `multi_gpio`.
+- Separate sockets that form one physical set (for example the two bottom headers of
+  an Atom) share an optional `group`. Each socket keeps its own position numbering
+  and first pin; `group` only lets tools show them together.
+- USB connectors, battery connectors, antennas, test pads and terminals that are not
+  directly connected to a GPIO (isolated inputs, relay contacts, CAN/RS485 terminal
+  blocks) are not cataloged as connectors.
+
 ## Board-detection operation lists
 
 `src/board_detect/ops.hpp` defines a typed source IR for ordered I2C, GPIO, and
