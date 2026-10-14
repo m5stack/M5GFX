@@ -45,12 +45,21 @@ namespace m5
                             const spi_bus_desc_t& bus_desc, display_parts_owner_t* out)
   {
     out->bus.reset(make_spi_bus(bus_desc));
+    // Same LCD reset bit as the detector's AXP2101 variant (reset2101 / release2101).
+    const std::uint8_t rst_reg = (result.option & generated_options::core2::new_pmic) ? 0x90 : 0x96;
     if (result.option & lcd_e_option)
     {
-      out->panel.reset(make_panel<Panel_M5StackCore2E>(panel_core, out->bus.get()));
-      _set_ili9342e_read(static_cast<lgfx::Panel_ILI9342*>(out->panel.get()), bus_desc.freq_read);
+      auto panel = static_cast<Panel_M5StackCore2E*>(make_panel<Panel_M5StackCore2E>(panel_core, out->bus.get()));
+      panel->setResetReg(rst_reg);
+      out->panel.reset(panel);
+      _set_ili9342e_read(panel, bus_desc.freq_read);
     }
-    else { out->panel.reset(make_panel<Panel_M5StackCore2>(panel_core, out->bus.get())); }
+    else
+    {
+      auto panel = static_cast<Panel_M5StackCore2*>(make_panel<Panel_M5StackCore2>(panel_core, out->bus.get()));
+      panel->setResetReg(rst_reg);
+      out->panel.reset(panel);
+    }
   }
 
   construct_status_t construct_core2(const board_result_t& result, display_parts_t* parts)
