@@ -15,7 +15,9 @@ test("fixed acceptance bypasses NVS and detection and retries clean startup afte
   const finish = body(main, "static board_detect::detect_outcome_t finish_detection_setup(");
   const find = body(registry, "const board_entry_t* find_board(");
   const start = main.indexOf("    _detect_started = true;", main.indexOf("bool M5GFX::init_impl("));
-  const prefix = main.slice(start, main.indexOf("    static constexpr char NVS_KEY", start));
+  const end = main.indexOf("\n#if defined (M5GFX_HAS_BOARD_DETECT)\n    static constexpr char NVS_KEY", start);
+  assert.ok(end > start, "fixed startup prefix ends before the guarded NVS path");
+  const prefix = main.slice(start, end);
   const getterSource = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
   const fixedGetter = body(getterSource, "board_t getFixedBoard(");
   await compileRun(`
@@ -27,6 +29,7 @@ test("fixed acceptance bypasses NVS and detection and retries clean startup afte
 #include <vector>
 #define CONFIG_IDF_TARGET 1
 #define CONFIG_IDF_TARGET_ESP32S3 1
+#define M5GFX_HAS_BOARD_DETECT
 #define ESP_LOGW(...) (++warnings)
 #define ESP_LOGI(...) ((void)0)
 using namespace m5gfx;
