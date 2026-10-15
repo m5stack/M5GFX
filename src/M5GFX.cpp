@@ -37,7 +37,9 @@
 
 #include "board_detect/m5/setup_sentinels.hpp"
 
+#undef M5GFX_HAS_BOARD_DETECT
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32H2)
+#define M5GFX_HAS_BOARD_DETECT
 #include "board_detect/board_detect.inl"
 #include "board_detect/detect_session.hpp"
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
@@ -110,6 +112,19 @@ namespace m5gfx
   M5GFX::M5GFX(void) : LGFX_Device()
   {
     if (_instance == nullptr) _instance = this;
+  }
+
+  void M5GFX::setDetectConfig(const detect_config_t& config)
+  {
+    const bool changed = _detect_config.fallback_board != config.fallback_board
+                      || _detect_config.fixed_board != config.fixed_board;
+    _detect_config = config;
+#if defined (ESP_PLATFORM)
+    if (_detect_started && changed)
+    { ESP_LOGW(LIBRARY_NAME, "[Autodetect] configuration stored after init; applies to the next detection"); }
+#else
+    (void)changed;
+#endif
   }
 
 #if defined ( ESP_PLATFORM )
@@ -780,7 +795,7 @@ namespace m5gfx
 #include "board_detect/m5/esp32p4_setup.inl"
 #endif
 
-#if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C5) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32H2)
+#if defined (M5GFX_HAS_BOARD_DETECT)
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static bool conditional_detection_pins_unavailable()
   {
@@ -1191,19 +1206,6 @@ namespace m5gfx
   }
 #endif
 
-  void M5GFX::setDetectConfig(const detect_config_t& config)
-  {
-    const bool changed = _detect_config.fallback_board != config.fallback_board
-                      || _detect_config.fixed_board != config.fixed_board;
-    _detect_config = config;
-#if defined (ESP_PLATFORM)
-    if (_detect_started && changed)
-    { ESP_LOGW(LIBRARY_NAME, "[Autodetect] configuration stored after init; applies to the next detection"); }
-#else
-    (void)changed;
-#endif
-  }
-
   void M5GFX::_set_backlight(lgfx::ILight* bl)
   {
 //  if (_light_last) { delete _light_last; }
@@ -1236,26 +1238,29 @@ namespace m5gfx
     _fixed_board = board_t::board_unknown;
     if (_detect_config.fixed_board != board_t::board_unknown)
     {
+#if defined (M5GFX_HAS_BOARD_DETECT)
       const auto* entry = select_fixed_board(_detect_config.fixed_board);
-      if (entry == nullptr)
+      if (entry != nullptr)
       {
-        ESP_LOGW(LIBRARY_NAME, "Fixed board:%u is not supported by this chip",
-                 static_cast<unsigned>(_detect_config.fixed_board));
-        return false;
+        // Acceptance is independent of display construction; a failed init may retry.
+        _fixed_board = _detect_config.fixed_board;
+        const auto outcome = run_fixed_detection_session(*entry, use_reset,
+          [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
+          {
+            return !reject_detected_setup(setup_board)
+                && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
+          });
+        if (!outcome.setup_succeeded) { return false; }
+        _board = _fixed_board;
+        return _finish_detected_init(use_clear);
       }
-      // Acceptance is independent of display construction; a failed init may retry.
-      _fixed_board = _detect_config.fixed_board;
-      const auto outcome = run_fixed_detection_session(*entry, use_reset,
-        [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
-        {
-          return !reject_detected_setup(setup_board)
-              && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
-        });
-      if (!outcome.setup_succeeded) { return false; }
-      _board = _fixed_board;
-      return _finish_detected_init(use_clear);
+#endif
+      ESP_LOGW(LIBRARY_NAME, "Fixed board:%u is not supported by this chip",
+               static_cast<unsigned>(_detect_config.fixed_board));
+      return false;
     }
 
+#if defined (M5GFX_HAS_BOARD_DETECT)
     static constexpr char NVS_KEY[] = "AUTODETECT";
     std::uint32_t nvs_board = 0;
     std::uint32_t nvs_handle = 0;
@@ -1359,6 +1364,10 @@ namespace m5gfx
       }
     }
 
+#else
+    // Unsupported chips retain the legacy unknown-board result; build hints are ignored.
+    (void)use_reset;
+#endif
     return _finish_detected_init(use_clear);
   }
 
@@ -1397,6 +1406,7 @@ namespace m5gfx
                             bool* no_signature, board_t* candidate_board)
   {
     panel(nullptr);
+#if defined (M5GFX_HAS_BOARD_DETECT)
     const auto package = select_detection_package(true);
     board_detect::detect_request_t request;
     request.hint = static_cast<std::uint32_t>(board) <= UINT16_MAX
@@ -1424,6 +1434,16 @@ namespace m5gfx
     panel(_panel_last.get());
     return outcome.setup_succeeded ? static_cast<board_t>(outcome.result.def->id)
                                    : board_t::board_unknown;
+#else
+    (void)use_reset;
+    (void)board;
+    (void)final_attempt;
+    (void)transient_fallback;
+    (void)no_signature;
+    (void)candidate_board;
+    panel(_panel_last.get());
+    return board_t::board_unknown;
+#endif
   }
 
 #else
@@ -1431,9 +1451,11 @@ namespace m5gfx
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
   {
     _detect_started = true;
-    board_t b = board_t::board_unknown;
+    // SDL has no detection pass; a fixed board overrides its build-time model.
+    _fixed_board = _detect_config.fixed_board;
+    board_t b = _fixed_board;
 #if defined (M5GFX_BOARD)
-    b = M5GFX_BOARD;
+    if (b == board_t::board_unknown) { b = M5GFX_BOARD; }
 #endif
     _board = autodetect(use_reset, b);
     return LGFX_Device::init_impl(use_reset, use_clear);

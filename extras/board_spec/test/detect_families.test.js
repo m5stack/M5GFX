@@ -84,6 +84,7 @@ test("production SPI and Paper hint restrictions recover a different member on a
  const main=await fs.readFile(path.join(src,"../M5GFX.cpp"),"utf8");
  const compat=body(main,"board_t M5GFX::autodetect(").replaceAll("board_t::board_unknown","board_id_unknown");
  await compileRun(common+`
+#define M5GFX_HAS_BOARD_DETECT
 struct member_t {const board_desc_t* desc;};
 namespace wiring {namespace papers3 {constexpr int internal_i2c_sda=0,internal_i2c_scl=1;}}
 namespace pmic_ops {constexpr int pm1_i2c_addr=0x6e,pm1_i2c_freq=100000,pm1_device_id=0x2050;}

@@ -22,6 +22,7 @@ test("production attempt yields before construction and preserves adoption and r
 #include <cassert>
 #include <initializer_list>
 #define CONFIG_IDF_TARGET_ESP32C6 1
+#define M5GFX_HAS_BOARD_DETECT
 #define ESP_LOGW(...) ((void)0)
 #define ESP_LOGI(...) ((void)0)
 using namespace m5gfx;
