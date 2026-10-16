@@ -661,7 +661,7 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   const selection = /bool board_detected = \(board != board_t::board_unknown\);([\s\S]*?)_board = board;/.exec(source)?.[1];
   assert.ok(selection);
   const explicit = selection.indexOf("board = cfg.fallback_board;");
-  const candidate = selection.indexOf("board = Display.getBoardCandidate();");
+  const candidate = selection.indexOf("board = Display.getCandidateBoard();");
   const build = selection.indexOf("board = _default_fallback_board();");
   assert.ok(explicit >= 0 && explicit < candidate && candidate < build);
   assert.match(selection, /if \(!board_detected\)/);

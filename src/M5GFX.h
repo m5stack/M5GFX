@@ -59,9 +59,19 @@ namespace m5gfx
 {
   using namespace lgfx;
 
+  /// Board detection settings. Pass them to M5GFX::setDetectConfig() before the
+  /// first init(); once a board is set up, init() returns early and does not use them.
   struct detect_config_t
   {
+    /// Used when detection identifies the family but not the member. If this board
+    /// is a possible member it is set up; otherwise detection fails and the member
+    /// is reported by getCandidateBoard(). Not used when the board is confirmed or
+    /// nothing is detected.
     board_t fallback_board = board_t::board_unknown;
+    /// Skips detection and sets up this board. init() fails if the board is not
+    /// supported on this chip (getFixedBoard() stays unknown) or its display setup
+    /// fails (getFixedBoard() still reports it). Never saved to NVS.
+    /// On SDL it takes precedence over M5GFX_BOARD.
     board_t fixed_board = board_t::board_unknown;
   };
 //----------------------------------------------------------------------------
@@ -220,9 +230,15 @@ namespace m5gfx
     using LGFXBase::drawBitmap;
 
     static M5GFX* getInstance(void) { return _instance; }
-    board_t getBoardCandidate(void) const { return _board_candidate; }
+    /// Weak guess from the last init() when no board was set up; board_unknown otherwise.
+    /// The guessed board is not set up.
+    board_t getCandidateBoard(void) const { return _board_candidate; }
+    /// Board accepted from detect_config_t::fixed_board by the last init(), even if
+    /// its display setup failed; board_unknown otherwise.
     board_t getFixedBoard(void) const { return _fixed_board; }
+    /// Stores the settings for the next detection. See detect_config_t.
     void setDetectConfig(const detect_config_t& config);
+    /// Returns the stored settings, as requested.
     const detect_config_t& getDetectConfig(void) const { return _detect_config; }
 
     void progressBar(int x, int y, int w, int h, uint8_t val);

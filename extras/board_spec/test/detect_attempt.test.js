@@ -16,7 +16,7 @@ test("production attempt yields before construction and preserves adoption and r
   const compat = body(main, "board_t M5GFX::autodetect(");
   const projection = main.slice(main.indexOf("    const auto board = outcome.setup_succeeded"), main.indexOf("#if defined ( ARDUINO_M5STACK_ATOM )", main.indexOf("    const auto board = outcome.setup_succeeded")));
   const header = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
-  const candidateGetter = body(header, "board_t getBoardCandidate(");
+  const candidateGetter = body(header, "board_t getCandidateBoard(");
   await compileRun(`
 #include "board_detect/detect_session.hpp"
 #include <cassert>
@@ -70,7 +70,7 @@ struct holder_t {int* get() {return nullptr;}};
 struct M5GFX {
  board_t _board=board_t::board_unknown,_board_candidate=board_t::board_unknown;
  board_t getBoard() const {return _board;}
- board_t getBoardCandidate() const ${candidateGetter}
+ board_t getCandidateBoard() const ${candidateGetter}
  void project(const board_detect::detect_outcome_t& outcome) { ${projection} }
  struct {board_t fallback_board=board_t::board_unknown;} _detect_config;
  holder_t _panel_last;
@@ -97,7 +97,7 @@ int main() {
   const bool success=failure==0 && !yields;
   M5GFX standalone;standalone.project(out);
   assert(standalone.getBoard()==(success?board_t::member:board_t::board_unknown));
-  assert(standalone.getBoardCandidate()==(provisional&&!success?board_t::member:board_t::board_unknown));
+  assert(standalone.getCandidateBoard()==(provisional&&!success?board_t::member:board_t::board_unknown));
   assert(out.setup_succeeded==success);
   assert(out.verdict==(provisional ? verdict_t::candidate : verdict_t::confirmed));
   assert(out.candidate_kind==(provisional ? candidate_kind_t::provisional : candidate_kind_t::none));
@@ -133,7 +133,7 @@ int main() {
  assert(yielded.attempts==5&&!yielded.setup_succeeded&&yielded.result.candidate==&preferred_desc.def);
  assert(yielded.candidate_kind==candidate_kind_t::provisional&&yielded.verdict==verdict_t::candidate);
  M5GFX projected;projected.project(yielded);
- assert(projected.getBoard()==board_t::board_unknown&&projected.getBoardCandidate()==static_cast<board_t>(2));
+ assert(projected.getBoard()==board_t::board_unknown&&projected.getCandidateBoard()==static_cast<board_t>(2));
  assert(construct_count==0&&adopt_count==0&&rollback_count==5&&commit_count==0);
  assert(!should_persist_detection(yielded,0));
  refined_member=nullptr;

@@ -129,7 +129,7 @@ namespace m5gfx
 
 #if defined ( ESP_PLATFORM )
 
-  // 判別 transaction の候補機種 I2C プローブはソフトウェアポートを使う。
+  // Candidate I2C probes during detection use a software port.
   static constexpr int_fast16_t probe_i2c_port = -1;
 
   static constexpr std::uint32_t m5pm1_i2c_freq = 100000;
