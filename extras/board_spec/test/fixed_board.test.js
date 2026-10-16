@@ -256,7 +256,7 @@ enum class board_t{board_unknown=0,fixed=1,fallback=2,candidate=3,default_board=
 int warnings;void Log(int,const char*,unsigned,unsigned){++warnings;}
 struct display_t {
  board_t fixed,adopted,candidate;
- board_t getFixedBoard(){return fixed;}board_t getBoard(){return adopted;}board_t getBoardCandidate(){return candidate;}
+ board_t getFixedBoard(){return fixed;}board_t getBoard(){return adopted;}board_t getCandidateBoard(){return candidate;}
 };
 struct unified_t {
  display_t Display;struct {board_t fallback_board;} cfg;
