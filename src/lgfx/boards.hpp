@@ -30,9 +30,9 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5PaperS3 = 19
     , board_M5CoreMP135 = 20
     , board_M5StamPLC = 21
-    // The product is named StamPLC. The old spelling is kept as a plain alias for now;
-    // use board_M5StamPLC in new code. ( a later update marks the old one deprecated )
-    , board_M5StampPLC = board_M5StamPLC
+    // The product is named StamPLC. The old spelling stays as a deprecated alias
+    // with the same value, so a board identity stored in NVS still resolves.
+    , board_M5StampPLC __attribute__ ((deprecated("Use board_M5StamPLC"))) = board_M5StamPLC
     , board_M5Tab5 = 22
     , board_ArduinoNessoN1 = 23
     , board_M5CardputerADV = 24
