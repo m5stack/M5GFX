@@ -8,6 +8,7 @@ if [ -n "${CI:-}" ] && [ "${M5GFX_UPDATE_SNAPSHOTS+x}" = x ]; then
   exit 1
 fi
 count=0
+failed=0
 for source in "$root"/test/board_detect/*.cpp; do
   name=$(basename "$source" .cpp)
   "${CXX:-c++}" -std=c++11 -O2 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pedantic \
@@ -15,9 +16,17 @@ for source in "$root"/test/board_detect/*.cpp; do
     '-DM5GFX_BOARD_DETECT_HOST_TOUCH="board_detect/m5/atom_touch.inl"' \
     -I"$root/test/board_detect/stubs" -I"$root/src" \
     "$source" -o "$out/$name"
-  (cd "$root"
-   "$out/$name")
-  echo "$name: passed"
-  count=$((count+1))
+  if (cd "$root"
+      "$out/$name"); then
+    echo "$name: passed"
+    count=$((count+1))
+  else
+    echo "$name: failed" >&2
+    failed=$((failed+1))
+  fi
 done
 echo "C++ test programs: $count passed"
+if [ "$failed" -ne 0 ]; then
+  echo "C++ test programs: $failed failed" >&2
+  exit 1
+fi

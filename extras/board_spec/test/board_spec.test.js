@@ -596,7 +596,9 @@ test("PSRAM may share connector roles but rejects another device signal", () => 
 test("generated ESP32 wiring preserves the replaced board values", async () => {
   const source = await fs.readFile(
     path.join(root, "../../src/board_detect/m5/generated/esp32_d0wdq6_wiring.hpp"), "utf8");
-  assert.deepEqual(parseGeneratedWiring(source), legacyEsp32Wiring);
+  assert.deepEqual(parseGeneratedWiring(source), {
+    ...legacyEsp32Wiring, atommatrix: {}, atomu: {}, atomvoice: {},
+  });
 });
 
 test("S3 generated detector order includes DualKey without module-only candidates", async () => {

@@ -43,12 +43,12 @@
       },
       "m5atom_psram": {},
       "m5atomlite": {
-        "wiring_fields": [], "probe_pins": [12, 18, 25], "wiring_output": "esp32_d0wdq6_wiring.hpp"
+        "wiring_fields": [], "probe_pins": [2, 12, 13, 18, 23, 27, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp"
       },
-      "m5atomu": {},
+      "m5atomu": { "wiring_fields": [], "probe_pins": [2, 12, 13, 18, 23, 27, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp" },
       "m5stamppico": {},
-      "m5atommatrix": {},
-      "m5atomvoice": {},
+      "m5atommatrix": { "wiring_fields": [], "probe_pins": [2, 12, 13, 18, 21, 23, 25, 27, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp" },
+      "m5atomvoice": { "wiring_fields": [], "probe_pins": [2, 18, 23, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp" },
       "m5timercam": {
         "wiring_fields": ["i2c", "power"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp"
       },

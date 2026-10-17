@@ -9,14 +9,15 @@ CXX=clang++ sh test/board_detect/run.sh
 
 The runner compiles every test program, runs it from the repository root, reports
 its result, and removes the temporary executables. Missing compilers and failed
-assertions fail the run. Node.js, ESP-IDF, SDL2, and connected devices are not
+assertions fail the run; remaining programs still run to list all family pin
+mismatches. Node.js, ESP-IDF, SDL2, and connected devices are not
 required. `BoardDetect.yml` runs the same command independently of catalog CI.
 
 ## Coverage
 
 | Test | Behavior protected |
 | --- | --- |
-| `pin_coverage_*.cpp` | Every generated detector family list across all eight chip catalogs, real GPIO/pull/SPI probes, hardware-I2C pad events, and every member hint; all observed GPIO pads must belong to the transaction snapshot, including S3 conditional pads |
+| `pin_coverage_*.cpp` | Every generated detector family list across all eight chip catalogs; ordered member IDs must match the catalog. Real GPIO/pull/SPI probes, hardware-I2C pad events, and every member hint; signature/confirm operations must belong to the transaction snapshot (including S3 conditional pads) and the family's catalog-derived pin union. prepare/refine are outside this check. Atom touch/LED stubs record pads from the production constants. |
 | `airq_generated.cpp` | Physical pull combinations independently constrain the generated AirQ detect-class gate |
 | `c6_display.cpp` | UnitC6L bus/ID/hint matrix, weak evidence, persistence, NessoN1 ID order and short circuit |
 | `s3_families.cpp` | PM1 pre-power subdivision and PaperMono-only refinement; Cardputer/ADV/VAMeter evidence and preference table; Paper retry; CoreS3/SE/StackChan camera/release/firmware decisions; fixed CoreS3 startup and actual LCD read pins; scoped I2C closure |

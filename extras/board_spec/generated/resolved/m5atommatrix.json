@@ -17,11 +17,23 @@
     }
   },
   "pins": {
+    "2": {
+      "roles": [],
+      "note": "Atom family exclusion gate: StampPico holds G2 low."
+    },
     "12": {
       "roles": [
         "dev:ir.pwm"
       ],
       "note": "IR transmitter GPIO from the official pin map."
+    },
+    "13": {
+      "roles": [],
+      "note": "T4=G13 for Atom touch measurement."
+    },
+    "18": {
+      "roles": [],
+      "note": "Unconnected GPIO sampled by the Atom family exclusion gate."
     },
     "19": {
       "roles": [
@@ -96,6 +108,9 @@
       "verified": {
         "roles": "datasheet"
       }
+    },
+    "34": {
+      "roles": []
     }
   },
   "buses": {

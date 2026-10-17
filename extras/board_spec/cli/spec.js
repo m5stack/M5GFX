@@ -15,6 +15,7 @@ import { emitPinTable, PIN_NAMES, PIN_TABLE_TARGETS, renderPinTableInl, renderPi
 import { emitM5GFXWiring, m5gfxBoardMapping, renderM5GFXWiringHeader, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
 import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { renderDetectorOrderHeaders } from "../lib/emit/m5gfx_detector_order.js";
+import { renderDetectorProbePins } from "../lib/emit/m5gfx_detector_probe_pins.js";
 import { validateSchema } from "../lib/schema.js";
 import { assertBoard, assertChip, assertSchema, parseJson } from "../lib/model.js";
 import { resolveAll, resolveBoard } from "../lib/resolve.js";
@@ -201,6 +202,21 @@ async function wiringOutputs(boards, connectorTypes, contexts, targets) {
   return outputs;
 }
 
+function detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder) {
+  const target = targets.m5gfx_board_desc ?? {};
+  const entries = boards.map((board) => {
+    const ctx = contexts.get(board.id);
+    const resolved = resolveBoard(board, {}, connectorTypes, { chip: ctx.chip, parts: ctx.parts });
+    // Without generated wiring there are no descriptor fields, but declared
+    // probe_pins and catalog detect_class still belong to this board.
+    const emitted = emitM5GFXWiring(resolved, ctx.parts, target) ?? {
+      mapping: { boardId: board.id, fields: [], probePins: target.boards?.[board.id]?.probe_pins ?? [] },
+    };
+    return { board, chip: ctx.chip, emitted };
+  });
+  return renderDetectorProbePins(entries, detectorOrder);
+}
+
 function specsOutputs(boards, connectorTypes, contexts, targets) {
   const outputs = new Map();
   const target = targets.m5gfx_board_desc ?? {};
@@ -241,6 +257,10 @@ async function writeWiringOutput() {
   for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
     await fs.writeFile(safeOutputPath(directory, filename), output);
   }
+  const hostDirectory = path.resolve(root, "../../test/board_detect/generated");
+  await fs.mkdir(hostDirectory, { recursive: true });
+  await fs.writeFile(path.join(hostDirectory, "detector_probe_pins.hpp"),
+    detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder));
   const count = Object.values(targets.m5gfx_board_desc?.boards ?? {}).filter((entry) => entry.wiring_output).length;
   console.log(`generated M5GFX wiring for ${count} board(s)`);
 }
@@ -393,6 +413,8 @@ async function check() {
   for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
     await assertGeneratedFile(path.join(wiringDirectory, filename), output);
   }
+  await assertGeneratedFile(path.resolve(root, "../../test/board_detect/generated/detector_probe_pins.hpp"),
+    detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder));
 
   const distFilename = path.join(root, "dist/board_spec_editor.html");
   let dist;

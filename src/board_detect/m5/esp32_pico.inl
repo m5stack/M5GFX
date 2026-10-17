@@ -142,6 +142,7 @@ static const spi_id_member_t stickcplus2_member_descs[] = {
 static const spi_id_detector_t stickcplus2_detector(
   stickcplus2_members, stickcplus2_member_descs, 1);
 
+#include "atom_touch_pins.inl"
 #if defined (M5GFX_BOARD_DETECT_HOST_TOUCH)
 #include M5GFX_BOARD_DETECT_HOST_TOUCH
 #else
@@ -177,7 +178,7 @@ private:
     const auto g18 = probe_pin_pulls(ctx, 1ULL << 18);
     if (g18.pulldown_high || g18.pullup_high != (1ULL << 18)) { return false; }
     const auto read_g34 = [](lgfx::pin_mode_t mode) {
-      lgfx::pinMode(23, mode); // G23 is exposed: internal pull only, never drive it.
+      lgfx::pinMode(23, mode); // G23 is exposed on Lite/Matrix: internal pull only, never drive it.
       esp_rom_delay_us(5);
       return lgfx::gpio_in(34);
     };
@@ -190,7 +191,7 @@ private:
 
     if (down)
     {
-      result->assign(&desc_atomvoice); // Microphone DATA remains high with G23 low.
+      result->assign(&desc_atomvoice); // Microphone DATA remains high with G23 pulled down.
       if (!(up1 && down2 && up2)) { result->provisional = true; }
       return true;
     }

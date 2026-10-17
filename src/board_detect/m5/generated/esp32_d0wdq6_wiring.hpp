@@ -155,6 +155,15 @@ namespace stickcplus2 {
 namespace atomlite {
 } // namespace atomlite
 
+namespace atomu {
+} // namespace atomu
+
+namespace atommatrix {
+} // namespace atommatrix
+
+namespace atomvoice {
+} // namespace atomvoice
+
 namespace timercam {
   constexpr std::int8_t internal_i2c_sda = 12;
   constexpr std::int8_t internal_i2c_scl = 14;

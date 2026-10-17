@@ -42,6 +42,13 @@ export function validateTarget(board, target = {}) {
     if (Object.hasOwn(boardTarget, field)) issue("E_TGT_DERIVED_FIELD", `${boardPath}/${field}`, `${field} is derived from the board catalog and cpp_namespace`);
   }
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(board.name)) issue("E_TGT_BOARD_NAME", "/name", "name must form a board_ C++ identifier");
+  // Without wiring_output these declared pins never enter the transaction snapshot.
+  const hasDetectionPins = (boardTarget.probe_pins?.length ?? 0) > 0
+    || Object.values(board.pins ?? {}).some((pin) => pin.detect_class !== undefined);
+  if (hasDetectionPins && !boardTarget.wiring_output) {
+    issue("E_TGT_DETECTION_WIRING", `${boardPath}/wiring_output`,
+          "probe_pins and detect_class require wiring_output to reach the detection snapshot");
+  }
   const overriddenNamespace = boardTarget.cpp_namespace !== undefined;
   if (overriddenNamespace && boardTarget.cpp_namespace === derivedCppNamespace(board)) {
     issue("E_TGT_REDUNDANT_NAMESPACE", `${boardPath}/cpp_namespace`, "cpp_namespace must only override a different derived namespace");

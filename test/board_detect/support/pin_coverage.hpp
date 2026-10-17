@@ -4,6 +4,7 @@
 #include <cassert>
 #include <initializer_list>
 #include <set>
+#include <map>
 #include "board_detect/board_detect.inl"
 namespace host_touch {
 static std::uint16_t t4 = 100, t7 = 25;
@@ -14,7 +15,28 @@ static unsigned scans, clears;
 #include "display_backend.hpp"
 using namespace m5gfx::board_detect;
 using namespace m5gfx::board_detect::m5;
-static unsigned cases, families;
+#include "../generated/detector_probe_pins.hpp"
+static unsigned cases, families, member_mismatches;
+static std::map<const board_detector_t*, std::set<int>> unexpected_family_pins;
+static const expected_detector_pins_t& expected_pins(const board_detector_t& detector) {
+  for (const auto& expected : expected_detector_pins)
+    if (expected.detector == &detector) return expected;
+  std::fprintf(stderr, "%s: missing generated family pin expectation\n", detector.members[0]->name);
+  std::abort();
+}
+// Compare the ordered C++ membership with the catalog before exercising pins.
+static void check_members(const board_detector_t& detector) {
+  const auto& expected = expected_pins(detector);
+  std::vector<board_id_t> actual;
+  for (auto member = detector.members; *member; ++member) actual.push_back((*member)->id);
+  if (actual == expected.members) return;
+  ++member_mismatches;
+  std::fprintf(stderr, "Family member mismatch (%s): actual:", expected.name);
+  for (auto id : actual) std::fprintf(stderr, " %u", unsigned(id));
+  std::fprintf(stderr, "; expected:");
+  for (auto id : expected.members) std::fprintf(stderr, " %u", unsigned(id));
+  std::fprintf(stderr, "\n");
+}
 struct confirmation_count_t {
   const board_detector_t* detector;
   unsigned calls, completed;
@@ -29,6 +51,7 @@ static void record_confirmation(const board_detector_t& detector, bool completed
   confirmations.push_back({&detector, 1, unsigned(completed)});
 }
 static void check_events(const std::set<int>& captured, const board_detector_t& detector) {
+  const auto& expected = expected_pins(detector);
   for (const auto& event : host_hardware::events) {
     // Delays and I2C-port release events do not name GPIO pads. Snapshot and
     // restore events do; checking them as well also checks the test setup.
@@ -38,6 +61,11 @@ static void check_events(const std::set<int>& captured, const board_detector_t& 
                    detector.members[0]->name, event.pin, event.kind);
       std::abort();
     }
+    // Probe operations, rather than transaction-wide snapshot/restore events,
+    // must belong to this family's own catalog-derived union.
+    if ((event.kind == 0 || event.kind == 2 || event.kind == 4 || event.kind == 7)
+     && !expected.pins.count(event.pin))
+      unexpected_family_pins[&detector].insert(event.pin);
   }
 }
 // These families read eFuse/package facts and only nominate a weak candidate;
@@ -51,6 +79,7 @@ static void cover(const board_detector_t* const* detectors) {
   for (auto entry = detectors; *entry; ++entry) {
     const auto& detector = **entry;
     ++families;
+    check_members(detector);
     std::size_t touched = 0;
     // No fixed hint, then every member hint, exercises shared SPI-ID families.
     for (unsigned member = 0; ; ++member) {
@@ -120,6 +149,19 @@ int main() {
   for (const auto& count : confirmations)
     std::printf("confirm completion (%s): %u/%u\n", count.detector->members[0]->name,
                 count.completed, count.calls);
+  for (const auto& mismatch : unexpected_family_pins) {
+    const auto& expected = expected_pins(*mismatch.first);
+    std::fprintf(stderr, "Family pin mismatch (%s): observed outside family:", expected.name);
+    for (int pin : mismatch.second) std::fprintf(stderr, " %d", pin);
+    std::fprintf(stderr, "; expected:");
+    for (int pin : expected.pins) std::fprintf(stderr, " %d", pin);
+    std::fprintf(stderr, "\n");
+  }
   std::printf("GPIO snapshot coverage (%s): %u families, %u cases passed\n",
               CONFIG_IDF_TARGET, families, cases);
+  std::printf("Family catalog pin coverage (%s): %u families, %zu mismatched\n",
+              CONFIG_IDF_TARGET, families, unexpected_family_pins.size());
+  std::printf("Family catalog member coverage (%s): %u families, %u mismatched\n",
+              CONFIG_IDF_TARGET, families, member_mismatches);
+  return unexpected_family_pins.empty() && member_mismatches == 0 ? 0 : 1;
 }
