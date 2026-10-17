@@ -1,0 +1,118 @@
+132 M5TimerCam 0
+power 33 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 12 14 1 hold [] ops [] options[]
+entry construct_displayless board_M5TimerCam 0 0
+9 M5Station 0
+power -1 1 0 0 0 0 0
+reset 1 15 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 18 23 -1 19 5 15 -1
+i2c 21 22 1 hold [5,] ops [5,] options[]
+entry construct_station <descriptor> 0 0
+2 M5StackCore2 0
+power -1 1 400000 5 20 0 0
+device 400000 0 52 0 1 0
+variant 52 3 3 255 18 4 150 2 0 0 0 [6:0,149,132,141;6:0,40,240,240;6:0,18,4,4;6:0,146,0,7;6:0,150,2,2;6:0,148,2,2;][6:0,150,0,2;6:0,148,0,2;][6:0,150,2,2;6:0,148,2,2;] restore[]
+variant 52 3 74 255 144 8 144 2 1 0 0 [6:0,35,0,31;6:0,144,8,8;6:0,128,5,5;4:0,130,18,255;4:0,132,106,255;6:0,144,2,2;][6:0,144,0,2;][6:0,144,2,2;] restore[]
+reset 2 -1 1 10 0 0
+sd 18 23 38 4 5
+display 18 23 38 15 5 -1 -1
+i2c 21 22 1 hold [4,5,] ops [4,5,] options[new_pmic,lcd_e,]
+entry construct_core2 <descriptor> 0 1
+8 M5Tough 0
+power -1 1 400000 5 20 0 0
+device 400000 0 52 0 1 0
+variant 52 3 3 255 18 4 150 2 0 0 0 [6:0,149,132,141;6:0,40,240,240;6:0,18,4,4;6:0,146,0,7;6:0,150,2,2;6:0,148,2,2;][6:0,150,0,2;6:0,148,0,2;][6:0,150,2,2;6:0,148,2,2;] restore[]
+variant 52 3 74 255 144 8 144 2 1 0 0 [6:0,35,0,31;6:0,144,8,8;6:0,128,5,5;4:0,130,18,255;4:0,132,106,255;6:0,144,2,2;][6:0,144,0,2;][6:0,144,2,2;] restore[]
+reset 2 -1 1 10 0 0
+sd 18 23 38 4 5
+display 18 23 38 15 5 -1 -1
+i2c 21 22 1 hold [4,5,] ops [4,5,] options[reserved,lcd_e,]
+entry construct_tough <descriptor> 0 1
+1 M5Stack 0
+power -1 1 0 0 0 0 0
+reset 3 33 2 10 0 1
+sd 18 23 19 4 14
+display 18 23 19 27 14 33 -1
+i2c -1 -1 -1 hold [4,14,] ops [4,14,] options[ips,]
+entry construct_stack <descriptor> 0 0
+7 M5Paper 0
+power 2 1 0 0 0 0 0
+reset 1 23 2 10 1 0
+sd 14 12 13 4 15
+display 14 12 13 -1 15 23 27
+i2c -1 -1 -1 hold [4,15,] ops [4,15,] options[]
+entry construct_paper <descriptor> 0 0
+4 M5StickCPlus 0
+power -1 1 0 0 0 0 0
+reset 1 18 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 13 15 14 23 5 18 -1
+i2c 21 22 1 hold [5,] ops [5,] options[]
+entry construct_stickcplus M5StickCPlus 0 0
+3 M5StickC 0
+power -1 1 0 0 0 0 0
+reset 1 18 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 13 15 14 23 5 18 -1
+i2c 21 22 1 hold [5,] ops [5,] options[]
+entry construct_stickc M5StickC 0 0
+6 M5StackCoreInk 0
+power 12 1 0 0 0 0 0
+reset 1 0 2 10 1 0
+sd -1 -1 -1 -1 -1
+display 18 23 34 15 9 0 4
+i2c -1 -1 -1 hold [9,] ops [9,] options[m09,]
+entry construct_coreink M5StackCoreInk 0 1
+5 M5StickCPlus2 0
+power 4 1 0 0 0 0 0
+reset 1 12 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 13 15 -1 14 5 12 -1
+i2c -1 -1 -1 hold [5,] ops [5,] options[]
+entry construct_stickcplus2 M5StickCPlus2 0 0
+129 M5AtomPsram 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_atompsram  0 0
+142 M5AtomVoice 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomVoice 0 0
+141 M5AtomMatrix 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomMatrix 0 0
+128 M5AtomLite 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomLite 0 0
+130 M5AtomU 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomU 0 0
+133 M5StampPico 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5StampPico 0 0

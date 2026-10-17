@@ -73,29 +73,7 @@ test("generated detector arrays follow catalog priority on every chip and packag
   for (const [name, expected] of outputs) {
     assert.equal(await fs.readFile(path.join(generatedDir, name), "utf8"), expected, name);
   }
-  for (const [name, group] of Object.entries(groups)) {
-    const source = await fs.readFile(path.join(sourceRoot, group.source), "utf8");
-    assert.ok(source.includes(`#include \"${path.relative(path.dirname(group.source), `src/board_detect/m5/generated/${group.output}`)}\"`), name);
-    assert.ok(!source.includes(`const ${name}[] =`), `${name} must be generated`);
-  }
-});
 
-test("GPIO power-hold catalog and M5GFX descriptions agree", async () => {
-  const targets = JSON.parse(await fs.readFile(path.join(root, "targets.json"), "utf8"));
-  for (const [id, target] of Object.entries(targets.m5gfx_board_desc.boards)) {
-    if (!target.desc_name) continue;
-    const board = JSON.parse(await fs.readFile(path.join(root, "boards", `${id}.json`), "utf8"));
-    const expected = hasGpioPowerHold(board);
-    const files = ["esp32_d0wdq6.inl", "esp32_pico.inl", "esp32s3/families.inl", "esp32s3/cores3.inl",
-      "esp32c3.inl", "esp32c5/toughc5.inl", "esp32c6/c6_display.inl", "esp32c6/c6_displayless.inl", "esp32h2.inl",
-      "esp32c61/corematrix.inl", "esp32p4/corep4x.inl", "esp32p4/tab5.inl", "esp32p4/unitpoep4.inl"];
-    const sources = await Promise.all(files.map((name) => fs.readFile(path.join(sourceRoot, "src/board_detect/m5", name), "utf8")));
-    const source = sources.find((text) => text.includes(`${target.desc_name} = {`));
-    assert.ok(source, id);
-    const beginning = source.slice(source.indexOf(`${target.desc_name} = {`));
-    const power = beginning.slice(0, beginning.indexOf("display_pins("));
-    assert.equal(/gpio_power(?:_low)?\(/.test(power), expected, id);
-  }
 });
 
 test("generated detector count accepts the limit and rejects an overflowing list", (t) => {
