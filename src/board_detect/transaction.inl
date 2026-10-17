@@ -35,9 +35,7 @@
     }
     // LP-I2C routing can survive a system reset and make ordinary GPIO reads
     // observe a controller-held line instead of the pad.  Reclaim every pin
-    // only after the complete snapshot succeeds.  Like the legacy soft-I2C
-    // probe, rollback restores normal GPIO state but deliberately does not
-    // return pads to stale low-power ownership.
+    // only after the complete snapshot succeeds.
     for (std::size_t index = 0; index < count_; ++index)
     {
       lgfx::gpio::release_lp_pad(saved_[index].getPin());

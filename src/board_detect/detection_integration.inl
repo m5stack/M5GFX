@@ -1,3 +1,9 @@
+  // run_detection_attempt: detection_transaction_t -> detect_board -> prepare
+  // -> finalize_prepared_result -> finish_detection_setup.
+  // detection_gpio_snapshot_t::capture reclaims GPIO before probing.
+  // detect_board owns family order/stops; run_detection_session owns retries/candidates.
+  // finalize_prepared_result classifies identity; finish_detection_setup sets setup_succeeded.
+  // should_persist_detection gates the NVS write in M5GFX.cpp.
   template <class SetupDetected>
   static board_detect::detect_outcome_t finish_detection_setup(
     board_detect::board_result_t& result, board_detect::detect_outcome_t outcome,
@@ -92,6 +98,7 @@
     auto result = board_detect::detect_board(
       detectors, request.hint, probe);
     outcome.result = result;
+    // No confirm() was entered in this attempt; a weak candidate may still exist.
     if (!probe.confirm_attempted) { outcome.reason = board_detect::fail_reason_t::no_signature; }
     if (result.candidate != nullptr)
     { outcome.verdict = board_detect::verdict_t::candidate; outcome.candidate_kind = board_detect::candidate_kind_t::weak; }

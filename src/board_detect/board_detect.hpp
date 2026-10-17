@@ -108,6 +108,10 @@ namespace board_detect
     std::uint8_t i2c_count_ = 0;
   };
 
+  // Capture releases LP pad ownership after saving GPIO state.
+  // Rollback restores GPIO and releases journaled buses, but deliberately leaves
+  // LP ownership released: stale LP routing would hide the pad behind a controller-held line.
+  // PMIC register writes are not restored.
   class detection_transaction_t
   {
   public:
@@ -433,7 +437,7 @@ namespace board_detect
     // The hint moves its detector family forward. Candidate selection within
     // that family is detector-specific: the S3 SPI-ID family probes only the
     // hinted member, while legacy families retain their established ordering.
-    // A family containing only fallback definitions is never moved forward.
+    // A family whose members are all candidate-only is never moved forward.
     // hint and final_attempt are inherited by prepare/refine.
     i2c_scan_cache_t i2c_cache;
     detector_workspace_t detector_workspace;
@@ -471,8 +475,6 @@ namespace board_detect
     // moved to SPI mode is never moved back to native mode. The surrounding
     // detection transaction restores GPIO state if a successful result is
     // excluded or its prepare/construction/setup subsequently fails.
-    // Rollback releases buses and restores GPIO state only; PMIC registers
-    // written before a failed confirmation are not restored.
     const board_def_t* const* members;
   };
 

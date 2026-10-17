@@ -926,6 +926,7 @@ namespace m5gfx
                  ? static_cast<board_detect::board_id_t>(nvs_board) : board_detect::board_id_unknown;
     request.preferred = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
     request.allow_reset = use_reset;
+    // Failures other than no_signature retry up to max_attempts.
     request.max_attempts = 5;
     auto package = select_detection_package();
     request.conditional_pins_unavailable = package.conditional_pins_unavailable;

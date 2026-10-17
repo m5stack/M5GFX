@@ -7,7 +7,8 @@ namespace m5gfx
 {
 namespace board_detect
 {
-  // Classify after preparation: refinement may retain an unresolved member.
+  // Classify identification even after preparation fails; unresolved members stay provisional.
+  // This classification does not imply setup succeeded.
   inline bool finalize_prepared_result(detect_outcome_t& outcome, board_id_t preferred)
   {
     outcome.verdict = outcome.result.provisional ? verdict_t::candidate : verdict_t::confirmed;
@@ -22,6 +23,8 @@ namespace board_detect
     return true;
   }
 
+  // Persist only a confirmed board with successful setup and an ID different from
+  // the NVS value, or the build-time board when NVS has no saved value.
   inline bool should_persist_detection(const detect_outcome_t& outcome, std::uint32_t previous)
   {
     return outcome.verdict == verdict_t::confirmed && outcome.setup_succeeded
@@ -66,6 +69,7 @@ namespace board_detect
       // power preparation succeeds and apply the observed member preference.
       if (final_attempt && outcome.reason == fail_reason_t::family_unresolved
        && outcome.candidate_kind == candidate_kind_t::provisional) { return outcome; }
+      // This reason ends the session without another attempt.
       if (outcome.reason == fail_reason_t::no_signature) { return outcome; }
     }
     return outcome;

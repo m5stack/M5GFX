@@ -1180,7 +1180,7 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
 
   const picoOrder = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32_pico_detector_order.hpp"), "utf8");
 
-  assert.match(picoOrder,
+  assert.match(picoOrder.replace(/\/\/[^\n]*/g, ""),
     /esp32_picov3_detectors\[] = \{\s*&stickcplus2_detector,\s*nullptr/);
 
   assert.equal(specs.m5stickc.probes.st7735s, undefined);
@@ -2364,7 +2364,7 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
 
   const detectorOrder = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_detector_order.hpp"), "utf8");
 
-  assert.match(detectorOrder, /esp32s3_detectors_qfn56\[\][\s\S]*?&dial_detector,\s*&paper_family_detector,\s*&cores3_family_detector,\s*&spi_id_detector/);
+  assert.match(detectorOrder.replace(/\/\/[^\n]*/g, ""), /esp32s3_detectors_qfn56\[\][\s\S]*?&dial_detector,\s*&paper_family_detector,\s*&cores3_family_detector,\s*&spi_id_detector/);
   // Construction settings await host coverage; preserve these legacy checks.
   const setup = await fs.readFile(esp32s3SetupPath, "utf8");
   assert.match(setup, /panel_papers3 =[\s\S]*?with_memory\(specs::papers3::panel_ed047tc1::memory_width[\s\S]*?with_bus_shared\(false\);/);
