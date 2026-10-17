@@ -25,7 +25,7 @@ M5Unified checks are outside the completed host migration scope.
 | `detect_family_members.test.js:87` — production Cardputer subdivision reads independent ICs and requires four released floating pins | [s3_families.cpp:148](s3_families.cpp#L148) |  |
 | `detect_family_members.test.js:128` — production CoreS3 confirm transports measured release band to refinement | [s3_families.cpp:416](s3_families.cpp#L416) |  |
 | `detect_package_candidates.test.js:10` — package-only Stamp candidates stop probing, never prepare or persist, and preserve prior weak evidence | [package_module.cpp:31](package_module.cpp#L31), [package_c5.cpp:1](package_c5.cpp#L1) |  |
-| `detect_package_candidates.test.js:92` — P4 generated families leave absent evidence unknown and retain a Tab5 weak candidate | [package_p4.cpp:12](package_p4.cpp#L12) |  |
+| `detect_package_candidates.test.js:92` — P4 generated families leave absent evidence unknown and retain a Tab5 weak candidate | [package_p4.cpp:37](package_p4.cpp#L37) |  |
 | `detect_package_candidates.test.js:118` — Unified defaults preserve build selections and supported package defaults only | Retained: M5Unified migration candidate |  |
 | `detect_session.test.js:10` — detection session enforces provisional preference, stable hints, candidates and confirmed-only persistence | [detect_session_host.cpp:8](detect_session_host.cpp#L8) |  |
 | `detect_attempt.test.js:12` — production attempt yields before construction and preserves adoption and rollback semantics | [integration.cpp:132](integration.cpp#L132) | Deferred public-class portion remains in the original JS test. |

@@ -26,7 +26,7 @@ required. `BoardDetect.yml` runs the same command independently of catalog CI.
 | `integration_s3.cpp` | S3 runner conditional GPIO capture and probe flag propagation, plus fixed-start OPI ownership refusal |
 | `spi_preamble.cpp` | Real soft-SPI zero command, clock count and delay before asserting CS, followed by the actual ID read |
 | `package_module.cpp`, `package_c5.cpp` | Actual C5/C6 eFuse-only candidates, generated protection edges, previous weak evidence, no GPIO/prepare/construct/persist |
-| `package_p4.cpp` | Actual P4 detector list, absent evidence, Tab5/Tab5X revision candidates and retry policy |
+| `package_p4.cpp` | Actual P4 detector list, absent evidence, Tab5/Tab5X revision candidates and retry policy; fixed StampP4 displayless acceptance and detector exclusion |
 | `description_*.cpp`, chip tests, `fixtures/` | Complete production descriptors, PMIC device/operation lists, register masks, GPIO scopes, board registrations, constructor identity, GPIO power-hold agreement with generated catalog output |
 | `construction_esp32.cpp` | Complete production setup helpers and constructors; fixed Tough PMIC backlight, panel variant/reset register, touch identity, bus frequencies and display-part ownership |
 | `ops_host.cpp` | Typed operation validation/execution, retry, dedicated-release summaries and I2C bus recovery policy |
@@ -34,7 +34,7 @@ required. `BoardDetect.yml` runs the same command independently of catalog CI.
 
 [MIGRATION.md](MIGRATION.md) maps original test names to the C++ checks and lists
 removed source-text assertions. The fixtures record the complete semantic fields
-of 60 descriptions; pointers are represented by constructor names or callback
+of 61 descriptions; pointers are represented by constructor names or callback
 presence, rather than unstable addresses. Catalog tests also compare fixture
 internal-I2C usage with `targets.json` metadata. Fixed callback identities are also
 checked in the ESP32 and S3 tests.

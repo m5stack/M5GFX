@@ -18,6 +18,13 @@ namespace m5
 #include "esp32p4/tab5.inl"
 #include "esp32p4/unitpoep4.inl"
 
+// No detector: selectable only through fixed_board.
+static constexpr board_desc_t desc_stampp4 = {
+  { static_cast<board_id_t>(lgfx::board_M5StampP4), "M5StampP4", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), no_pins(),
+};
+
 // Module revision alone supplies no board evidence; leave defaults to M5Unified.
 #include "generated/esp32p4_detector_order.hpp"
 static const board_entry_t esp32p4_boards[] = {
@@ -25,6 +32,7 @@ static const board_entry_t esp32p4_boards[] = {
   { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr },
   { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr },
   { &desc_unitpoep4, construct_displayless, "board_M5UnitPoEP4", nullptr },
+  { &desc_stampp4, construct_displayless, "board_M5StampP4", nullptr },
 };
 success_log_t success_log(const board_result_t& result) { return success_log(esp32p4_boards, result); }
 }

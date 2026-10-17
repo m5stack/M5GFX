@@ -35,3 +35,10 @@ sd -1 -1 -1 -1 -1
 display -1 -1 -1 -1 -1 -1 -1
 i2c -1 -1 -1 hold [] ops [31,52,] options[]
 entry construct_displayless board_M5UnitPoEP4 0 0
+150 M5StampP4 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5StampP4 0 0

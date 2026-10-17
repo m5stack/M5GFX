@@ -7,6 +7,31 @@
 #include "board_detect/m5/esp32p4.inl"
 #include "support/display_backend.hpp"
 #include "support/snapshot.hpp"
+namespace lgfx {
+struct IBus;
+struct Panel_Device;
+struct ILight;
+struct ITouch;
+}
+namespace m5gfx {
+namespace board_detect {
+namespace m5 {
+#include "board_detect/m5/display_parts.inl"
+construct_status_t setup_detected_board(const board_result_t &result, display_parts_t *parts) {
+  return setup_board(esp32p4_boards, result, parts);
+}
+void destroy_display_parts(display_parts_t *parts) {
+  assert(!parts->bus && !parts->panel && !parts->light && !parts->touch);
+}
+}
+}
+static unsigned get_pkg_ver() { return 0; }
+static const char LIBRARY_NAME[] = "host";
+static const int probe_i2c_port = -1;
+using lgfx::board_t;
+#include "board_detect/detection_package.inl"
+#include "board_detect/detection_integration.inl"
+}
 using namespace m5gfx::board_detect;
 using namespace m5gfx::board_detect::m5;
 int main() {
@@ -50,5 +75,22 @@ int main() {
       assert(out.attempts == (weak ? 5 : 1));
       ++cases;
     }
+  // fixed_board dispatch selects this entry before entering the fixed runner.
+  host_hardware::reset();
+  const auto *fixed = m5gfx::select_fixed_board(lgfx::board_M5StampP4);
+  assert(fixed && fixed->desc == &desc_stampp4 && fixed->construct == construct_displayless);
+  unsigned adoptions = 0;
+  const auto out = m5gfx::run_fixed_detection_session(*fixed, false,
+      [&](display_parts_t &parts, lgfx::board_t board) {
+        ++adoptions;
+        assert(board == lgfx::board_M5StampP4);
+        assert(!parts.bus && !parts.panel && !parts.light && !parts.touch);
+        return true;
+      });
+  assert(out.setup_succeeded && out.attempts == 1 && out.verdict == verdict_t::confirmed &&
+         out.result.desc == &desc_stampp4 && adoptions == 1);
+  assert(host_hardware::events.empty() && host_hardware::ports.empty());
+  for (auto detector = esp32p4_detectors; *detector; ++detector) assert(!(*detector)->has_member(desc_stampp4.def.id));
+  ++cases;
   std::printf("P4 packages: %u cases passed\n", cases);
 }
