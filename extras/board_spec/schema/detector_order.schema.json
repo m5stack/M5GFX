@@ -26,7 +26,7 @@
           "properties": {
             "after": { "type": "string" },
             "before": { "type": "string" },
-            "reason": { "type": "string", "pattern": "\\S" }
+            "reason": { "type": "string", "pattern": "^(?![\\s\\S]*(?:\\\\|\\?\\?/))[\\s\\S]*\\S[\\s\\S]*$" }
           }
         }
       }

@@ -1,6 +1,7 @@
 // Host hardware boundary. Production descriptions and detector types are included unchanged.
 #pragma once
 #include <cstdlib>
+#include <cassert>
 #include <cstdint>
 #include <cstddef>
 #include <functional>
@@ -171,6 +172,7 @@ inline void gpio_hi(int pin) {
   }
 }
 inline bool gpio_in(int pin) {
+  assert(pin >= 0);
   auto &p = host_hardware::gpio[pin];
   bool high = host_hardware::input ? host_hardware::input(pin, p.mode, p.high) : p.high;
   host_hardware::events.push_back({2, pin, unsigned(high)});
@@ -207,6 +209,8 @@ inline bool isInitialized(int port) { return host_hardware::ports.count(port) !=
 inline response_t init(int port, int sda, int scl) {
   if (!host_hardware::i2c_open_ok)
     return {false, 0};
+  host_hardware::events.push_back({7, sda, 0});
+  host_hardware::events.push_back({7, scl, 0});
   host_hardware::ports[port] = {sda, scl};
   return {true, 0};
 }

@@ -36,7 +36,7 @@
     "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/families.inl", "output": "esp32s3_detector_order.hpp",
     "constraints": [
       { "after": "airq_detector", "before": "pm1_ext_family_detector", "reason": "AirQ RST G2 and DC G3 overlap ChainCaptain and PaperColor internal I2C SCL and SDA" },
-      { "after": "spi_id_detector", "before": "cores3_family_detector", "reason": "AtomS3 MOSI G21 overlaps CoreS3 touch INT; remove after hardware validation rules out output contention" },
+      { "after": "spi_id_detector", "before": "cores3_family_detector", "reason": "AtomS3 MOSI G21 overlaps CoreS3 touch INT; probe CoreS3 first to avoid output contention" },
       {"before": "dial_detector", "after": "capsule_detector", "reason": "Capsule SDA G8 is Dial LCD reset; probe Dial before toggling G8"},
       {"before": "spi_id_detector", "after": "capsule_detector", "reason": "Capsule SDA G8 is DinMeter LCD reset; probe DinMeter before toggling G8"},
       {"before": "cores3_family_detector", "after": "dualkey_detector", "reason": "Probe displayed QFN56 boards before DualKey NC pins"},

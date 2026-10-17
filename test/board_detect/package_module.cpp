@@ -11,7 +11,7 @@
 #include "support/snapshot.hpp"
 using namespace m5gfx::board_detect;
 using namespace m5gfx::board_detect::m5;
-static const board_def_t earlier = {65533, "earlier candidate", def_flag_fallback};
+static const board_def_t earlier = {65533, "earlier candidate", def_flag_candidate_only};
 struct spy_t : board_detector_t {
   mutable unsigned calls = 0;
   bool seed;

@@ -6,7 +6,7 @@ namespace atom_touch
 
   static bool measure(std::uint16_t* t4, std::uint16_t* t7)
   {
-    constexpr int channels[] = { 4, 7 }; // T4=G13, T7=G27
+    constexpr int channels[] = { t4_pad.channel, t7_pad.channel };
     const auto state0 = reg(RTC_CNTL_STATE0_REG);
     const auto ctrl1 = reg(SENS_SAR_TOUCH_CTRL1_REG);
     const auto ctrl2 = reg(SENS_SAR_TOUCH_CTRL2_REG);
@@ -40,7 +40,7 @@ namespace atom_touch
     for (int i = 0; i < 2; ++i)
     { reg(RTC_IO_TOUCH_PAD0_REG + channels[i] * 4) = (pads[i] & ~clear) | set; }
     reg(SENS_SAR_TOUCH_ENABLE_REG) = (enable & ~(SENS_TOUCH_PAD_WORKEN << SENS_TOUCH_PAD_WORKEN_S))
-                                   | (((1u << 4) | (1u << 7)) << SENS_TOUCH_PAD_WORKEN_S);
+                                   | (((1u << t4_pad.channel) | (1u << t7_pad.channel)) << SENS_TOUCH_PAD_WORKEN_S);
 
     reg(SENS_SAR_TOUCH_CTRL2_REG) = reg(SENS_SAR_TOUCH_CTRL2_REG) & ~SENS_TOUCH_START_EN;
     reg(SENS_SAR_TOUCH_CTRL2_REG) = reg(SENS_SAR_TOUCH_CTRL2_REG) | SENS_TOUCH_START_EN;
@@ -83,19 +83,19 @@ namespace atom_touch
     for (int bit = 0; bit < 25 * 24; ++bit)
     {
       auto at = cycles();
-      GPIO.out_w1ts = 1u << 27;
+      GPIO.out_w1ts = 1u << led_gpio;
       while (cycles() - at < high) {}
       at = cycles();
-      GPIO.out_w1tc = 1u << 27;
+      GPIO.out_w1tc = 1u << led_gpio;
       while (cycles() - at < low) {}
     }
   }
 
   static void clear_led()
   {
-    gpio_set_pull_mode(GPIO_NUM_27, GPIO_FLOATING);
-    GPIO.out_w1tc = 1u << 27; // Set low before enabling output: no high spike on DIN.
-    gpio_set_direction(GPIO_NUM_27, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(static_cast<gpio_num_t>(led_gpio), GPIO_FLOATING);
+    GPIO.out_w1tc = 1u << led_gpio; // Set low before enabling output: no high spike on DIN.
+    gpio_set_direction(static_cast<gpio_num_t>(led_gpio), GPIO_MODE_OUTPUT);
     rtc_cpu_freq_config_t cpu_freq;
     rtc_clk_cpu_freq_get_config(&cpu_freq); // Same cross-IDF API as lgfx::getApbFrequency.
     const auto mhz = cpu_freq.freq_mhz;

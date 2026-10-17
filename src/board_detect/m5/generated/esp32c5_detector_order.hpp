@@ -2,8 +2,8 @@
 #pragma once
 
 static const board_detector_t* const esp32c5_detectors[] = {
-  &stampc5_detector,
-  &toughc5_detector,
+  &stampc5_detector, // board_M5StampC5
+  &toughc5_detector, // board_M5ToughC5
   nullptr,
 };
 static_assert(sizeof(esp32c5_detectors) / sizeof(esp32c5_detectors[0]) - 1 <= max_detector_families,

@@ -51,6 +51,7 @@
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
     const auto pkg = m5gfx::get_pkg_ver();
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg);
+    // Package version: 1 = QFN32 (ESP32-C6FH4/FH8), 0 = QFN40.
     if (pkg == 1) { package.detectors = board_detect::m5::esp32c6_detectors_qfn32; }
     else if (pkg == 0)
     {

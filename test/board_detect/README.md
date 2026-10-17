@@ -9,13 +9,16 @@ CXX=clang++ sh test/board_detect/run.sh
 
 The runner compiles every test program, runs it from the repository root, reports
 its result, and removes the temporary executables. Missing compilers and failed
-assertions fail the run. Node.js, ESP-IDF, SDL2, and connected devices are not
+assertions fail the run; remaining programs still run to list all family pin
+mismatches. Node.js, ESP-IDF, SDL2, and connected devices are not
 required. `BoardDetect.yml` runs the same command independently of catalog CI.
 
 ## Coverage
 
 | Test | Behavior protected |
 | --- | --- |
+| `pin_coverage_*.cpp` | Every generated detector family list across all eight chip catalogs; ordered member IDs must match the catalog. Real GPIO/pull/SPI probes, hardware-I2C pad events, and every member hint; signature/confirm operations must belong to the transaction snapshot (including S3 conditional pads) and the family's catalog-derived pin union. prepare/refine are outside this check. Atom touch/LED stubs record pads from the production constants. |
+| `airq_generated.cpp` | Physical pull combinations independently constrain the generated AirQ detect-class gate |
 | `c6_display.cpp` | UnitC6L bus/ID/hint matrix, weak evidence, persistence, NessoN1 ID order and short circuit |
 | `s3_families.cpp` | PM1 pre-power subdivision and PaperMono-only refinement; Cardputer/ADV/VAMeter evidence and preference table; Paper retry; CoreS3/SE/StackChan camera/release/firmware decisions; fixed CoreS3 startup and actual LCD read pins; scoped I2C closure |
 | `esp32_families.cpp` | AXP pre-power table and Station exclusion; Core2/Tough refinement and read-only observation; Atom touch evidence and one measurement per boot; Stack physical gates and LCD confirmation; fixed Core2/Tough startup; actual shared StickC ID read and scoped I2C closure |
@@ -124,3 +127,32 @@ assertions are independent of the fixture update option.
   ToughC5 LP-I2C, the <=32-pin hold branch, or ESP-IDF 4.4 branches.
 - Stub `pin_backup_t` and I2C response types can drift from the real HAL;
   firmware compilation remains necessary to detect API changes.
+
+The pin-coverage tests call each family's signature and confirmation separately
+even when the signature rejects. Early returns inside confirmation still need
+success scenarios: the S3 test supplies real SPI ID bits and checks the later
+Cardputer sense reads, both I2C buses and both SDA recovery clock sequences.
+They use the production probe implementations, not the response-level probe doubles. Snapshot
+membership comes from capture events, while GPIO mode/read/output, restore and
+hardware-I2C pad selection are observed through the HAL. Low/high, floating and
+mixed GPIO responses, I2C response bytes and every member hint exercise different
+paths; this is a snapshot containment check, not exhaustive hardware simulation.
+Peripheral-specific touch/LED transport remains a host boundary, as in the
+family truth tables. S3 conditional-pad exclusion is checked separately by
+`integration_s3.cpp`, `spi_variants.cpp` and `pull_release_opi.cpp`.
+
+The S3 dedicated GPIO release probe is an empty implementation on the host.
+Direct register writes do not emit GPIO events; current uses are covered by
+preceding `pinMode` operations, not by observing the register writes themselves.
+
+Each family reports successful `confirm()` returns over calls as a conservative
+lower bound on reaching its end. A zero does not prove the absence of later
+GPIO paths; generic response patterns cannot reproduce every peripheral ID.
+The explicit Cardputer scenarios also assert the events after its SPI-ID gate,
+including the conflicting-variant path that intentionally returns false.
+
+Each family must emit at least one GPIO mode/read/output or I2C-pad-selection
+event over its cases. Snapshot capture/restore and delay events do not count.
+The only GPIO-free families allowed are StampC5 and StampC6: they inspect eFuse
+package facts, nominate a weak candidate, and never enter GPIO confirmation.
+Per-family event totals are printed so empty coverage cannot silently pass.

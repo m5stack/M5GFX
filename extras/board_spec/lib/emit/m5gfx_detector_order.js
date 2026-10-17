@@ -26,18 +26,25 @@ export function detectorPriority(boards, groups) {
         if (!board || board.chip !== group.chip) throw new Error(`${name}: invalid member ${id}`);
         return board;
       });
-      return { detector, hold: sources.some(hasGpioPowerHold), index, id: sources[0].legacy_board_id };
+      return { detector, hold: sources.some(hasGpioPowerHold), index, id: sources[0].legacy_board_id,
+        boardNames: sources.map((board) => `board_${board.name}`).join(", ") };
     });
     const byDetector = new Map(families.map((family) => [family.detector, family]));
     const edges = [];
     for (const constraint of group.constraints ?? []) {
       const { before, after, reason } = constraint;
+      // C++ splices lines before removing comments, including legacy trigraphs.
+      if (typeof reason === "string" && /\\|\?\?\//.test(reason)) {
+        const error = new Error(`E_DETECTOR_ORDER_REASON: ${name}: reason must not contain backslashes or ??/`);
+        error.code = "E_DETECTOR_ORDER_REASON";
+        throw error;
+      }
       if (!byDetector.has(before) || !byDetector.has(after) || before === after ||
           typeof reason !== "string" || !reason.trim() ||
           edges.some((edge) => edge.before === before && edge.after === after)) {
         throw new Error(`${name}: invalid detector-order constraint ${before} -> ${after}`);
       }
-      edges.push({ before, after });
+      edges.push({ before, after, reason });
     }
     const pending = new Set(families.map((family) => family.detector));
     const ordered = [];
@@ -53,7 +60,12 @@ export function detectorPriority(boards, groups) {
       output: group.output,
       ordered,
       holdCount: families.filter((family) => family.hold).length,
-      edges: edges.map(({ before, after }) => ({ before: byDetector.get(before).id, after: byDetector.get(after).id })),
+      familyNames: new Map(families.map((family) => [family.detector, family.boardNames])),
+      edges: edges.map(({ before, after, reason }) => ({
+        before: byDetector.get(before).id, after: byDetector.get(after).id,
+        beforeDetector: before, afterDetector: after, reason,
+        beforeBoards: byDetector.get(before).boardNames, afterBoards: byDetector.get(after).boardNames,
+      })),
     });
   }
   return result;
@@ -61,32 +73,37 @@ export function detectorPriority(boards, groups) {
 
 export function renderDetectorOrderHeaders(boards, groups) {
   const outputs = new Map();
+  const oneLine = (text) => text.replace(/[\r\n\u2028\u2029]+/g, " ");
   const allEdges = [];
   let maxFamilies = 0;
   for (const [name, group] of detectorPriority(boards, groups)) {
-    allEdges.push(...group.edges);
+    allEdges.push(...group.edges.map((edge) => {
+      const { beforeDetector, afterDetector, beforeBoards, afterBoards, reason } = edge;
+      return { ...edge, comment: oneLine(`${beforeDetector} (${beforeBoards}) before ${afterDetector} (${afterBoards}): ${reason}`) };
+    }));
     maxFamilies = Math.max(maxFamilies, group.ordered.length);
     const array = `static const board_detector_t* const ${name}[] = {\n`
-      + group.ordered.map((detector) => `  &${detector},`).join("\n")
+      + group.ordered.map((detector) => `  &${detector}, // ${oneLine(group.familyNames.get(detector))}`).join("\n")
       + "\n  nullptr,\n};\n"
       + `static_assert(sizeof(${name}) / sizeof(${name}[0]) - 1 <= max_detector_families,\n`
       + `              "${name} exceeds the detection session family limit");\n`;
     outputs.set(group.output, (outputs.get(group.output) ?? "// Generated from detector_order.json and board catalog.\n#pragma once\n\n") + array + "\n");
   }
-  const ids = boards.filter(hasGpioPowerHold).map((board) => board.legacy_board_id).sort((a, b) => a - b);
+  const holdBoards = boards.filter(hasGpioPowerHold).sort((a, b) => a.legacy_board_id - b.legacy_board_id);
   outputs.set("gpio_power_hold_board_ids.hpp",
     "// Generated from GPIO power-hold devices and pin roles in the board catalog.\n#pragma once\n\n"
     + "namespace m5gfx { namespace board_detect {\n"
     + "static constexpr board_id_t gpio_power_hold_board_ids[] = {\n"
-    + ids.map((id) => `  ${id},`).join("\n") + "\n};\n"
+    + holdBoards.map((board) => `  ${board.legacy_board_id}, // ${oneLine(`board_${board.name}`)}`).join("\n") + "\n};\n"
     + "} } // namespace m5gfx::board_detect\n");
   outputs.set("detector_order_constraints.hpp",
     "// Generated from detector_order.json and board catalog.\n#pragma once\n\n"
     + "namespace m5gfx { namespace board_detect {\n"
     + `static constexpr unsigned max_detector_families = ${maxFamilies};\n`
     + "struct detector_order_edge_t { board_id_t before; board_id_t after; };\n"
+    + "// Each representative board ID orders the entire family, including all listed members.\n"
     + "static constexpr detector_order_edge_t detector_order_edges[] = {\n"
-    + allEdges.map(({ before, after }) => `  { ${before}, ${after} },`).join("\n") + "\n};\n"
+    + allEdges.map(({ before, after, comment }) => `  { ${before}, ${after} }, // ${comment}`).join("\n") + "\n};\n"
     + "} } // namespace m5gfx::board_detect\n");
   return outputs;
 }

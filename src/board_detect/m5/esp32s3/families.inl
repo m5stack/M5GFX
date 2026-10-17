@@ -87,7 +87,7 @@ namespace m5
     no_options(), no_pins(),
   };
   static constexpr board_desc_t desc_atoms3rext = {
-    { id(lgfx::board_M5AtomS3RExt), "M5AtomS3RExt", def_flag_fallback },
+    { id(lgfx::board_M5AtomS3RExt), "M5AtomS3RExt", def_flag_candidate_only },
     no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
     internal_i2c(wiring::atoms3rext::internal_i2c_sda,
                  wiring::atoms3rext::internal_i2c_scl,
@@ -999,11 +999,7 @@ namespace m5
 
   static bool airq_signature(probe_ctx_t& ctx)
   {
-    const detect_class_expected_t expected = {
-      wiring::airq::detect_class_mask, wiring::airq::detect_class_up,
-      wiring::airq::detect_class_down, wiring::airq::detect_class_floating,
-      wiring::airq::detect_class_fixed,
-    };
+    constexpr detect_class_expected_t expected = wiring::airq::detect_class_expected;
     return match_detect_class(expected, probe_pin_pulls(ctx, expected.mask));
   }
 

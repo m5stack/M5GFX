@@ -13,9 +13,9 @@ namespace board_detect
 
   enum board_def_flag_t : std::uint8_t
   {
-    // A board with no positive signature. Such members cannot promote their
-    // detector through an NVS hint; a detector may expose them as candidates.
-    def_flag_fallback = 1 << 0,
+    // No positive signature; returned only as a weak candidate.
+    // An NVS hint cannot promote a family containing only these members.
+    def_flag_candidate_only = 1 << 0,
   };
 
   struct board_def_t
@@ -76,7 +76,9 @@ namespace board_detect
     std::uint32_t prepared = 0;
     // Family evidence permits setup, but its member is not confirmed.
     bool provisional = false;
-    // A weak, displayless suggestion returned only when no board is confirmed.
+    // Copied from probe_ctx_t::candidate when a scan ends without a match.
+    // Provisional members are also retained; the session carries the strongest
+    // candidate across attempts, replacing a weak candidate with a provisional one.
     const board_def_t* candidate = nullptr;
     detect_status_t status = detect_status_t::no_match;
     // Optional read-only member refinement after power preparation.

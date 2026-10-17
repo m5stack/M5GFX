@@ -46,8 +46,8 @@ int main() {
       host_hardware::wire = [](int, int, std::uint8_t *, std::size_t, bool) { return false; };
       host_probes::pulls = [](std::uint64_t mask, std::uint32_t) {
         pin_pull_result_t p;
-        p.pulldown_high = wiring::tab5::detect_class_up;
-        p.pullup_high = wiring::tab5::detect_class_up | wiring::tab5::detect_class_floating;
+        p.pulldown_high = wiring::tab5::detect_class_expected.up;
+        p.pullup_high = wiring::tab5::detect_class_expected.up | wiring::tab5::detect_class_expected.floating;
         p.pulldown_high &= mask;
         p.pullup_high &= mask;
         return p;

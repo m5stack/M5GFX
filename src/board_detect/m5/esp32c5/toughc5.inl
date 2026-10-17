@@ -36,7 +36,7 @@
   };
 
   static constexpr board_desc_t desc_stampc5 = {
-    { static_cast<board_id_t>(lgfx::board_M5StampC5), "M5StampC5", def_flag_fallback },
+    { static_cast<board_id_t>(lgfx::board_M5StampC5), "M5StampC5", def_flag_candidate_only },
     no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
     no_internal_i2c(), no_options(), no_pins(),
   };

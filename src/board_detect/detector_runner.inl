@@ -22,12 +22,12 @@
       return false;
     }
 
-    bool fallback_only(const board_detector_t* detector)
+    bool candidate_only(const board_detector_t* detector)
     {
       if (detector->members == nullptr || detector->members[0] == nullptr) { return false; }
       for (auto p = detector->members; *p != nullptr; ++p)
       {
-        if (!((*p)->flags & def_flag_fallback)) { return false; }
+        if (!((*p)->flags & def_flag_candidate_only)) { return false; }
       }
       return true;
     }
@@ -50,10 +50,10 @@
       }
       const char* family = (detector->members && detector->members[0])
                          ? detector->members[0]->name : "empty";
-      const bool signature = detector->signature(ctx);
+      const bool enter_confirm = detector->signature(ctx);
       ESP_LOGD(tag, "stage=1 family=%s detector=%p match=%d", family,
-               static_cast<const void*>(detector), signature);
-      if (!signature)
+               static_cast<const void*>(detector), enter_confirm);
+      if (!enter_confirm)
       {
         ctx.transaction->rollback();
         return false;
@@ -61,45 +61,45 @@
 
       ctx.confirm_attempted = true;
 
-      board_result_t candidate;
-      const bool confirmed = detector->confirm(ctx, &candidate);
+      board_result_t family_result;
+      const bool confirmed = detector->confirm(ctx, &family_result);
       ESP_LOGD(tag, "stage=2 family=%s detector=%p match=%d board=%u name=%s", family,
                static_cast<const void*>(detector), confirmed,
-               static_cast<unsigned>(candidate.def ? candidate.def->id : board_id_unknown),
-               candidate.def ? candidate.def->name : "invalid");
+               static_cast<unsigned>(family_result.def ? family_result.def->id : board_id_unknown),
+               family_result.def ? family_result.def->name : "invalid");
       if (!confirmed)
       {
         ctx.transaction->rollback();
         return false;
       }
 
-      if (candidate.desc == nullptr || candidate.def == nullptr
-       || candidate.def != &candidate.desc->def
-       || candidate.def->id == board_id_unknown)
+      if (family_result.desc == nullptr || family_result.def == nullptr
+       || family_result.def != &family_result.desc->def
+       || family_result.def->id == board_id_unknown)
       {
         ESP_LOGW(tag, "detector=%p returned a match without a consistent board description",
                  static_cast<const void*>(detector));
         ctx.transaction->rollback();
         return false;
       }
-      candidate.status = enabled(ctx, candidate.def->id)
+      family_result.status = enabled(ctx, family_result.def->id)
                        ? detect_status_t::matched
                        : detect_status_t::excluded;
-      const auto& desc = *candidate.desc;
+      const auto& desc = *family_result.desc;
       char option_text[80] = {};
       std::uint32_t named_bits = 0;
       if (desc.option_names.data != nullptr)
       {
         for (std::uint_fast8_t bit = 0; bit < 32 && bit < desc.option_names.size; ++bit)
         {
-          if (!(candidate.option & (std::uint32_t(1) << bit))) { continue; }
+          if (!(family_result.option & (std::uint32_t(1) << bit))) { continue; }
           const auto used = std::strlen(option_text);
           std::snprintf(option_text + used, sizeof(option_text) - used, "%s%s",
                         used ? "," : "", desc.option_names.data[bit]);
           named_bits |= std::uint32_t(1) << bit;
         }
       }
-      const auto unnamed = candidate.option & ~named_bits;
+      const auto unnamed = family_result.option & ~named_bits;
       if (unnamed)
       {
         const auto used = std::strlen(option_text);
@@ -109,12 +109,12 @@
       }
       if (option_text[0] == '\0') { std::snprintf(option_text, sizeof(option_text), "none"); }
       ESP_LOGD(tag, "detected board=%u name=%s opt=0x%08x",
-               static_cast<unsigned>(candidate.def->id), candidate.def->name,
-               static_cast<unsigned>(candidate.option));
+               static_cast<unsigned>(family_result.def->id), family_result.def->name,
+               static_cast<unsigned>(family_result.option));
       ESP_LOGD(tag, "detected option names board=%u opt=0x%08x(%s)",
-               static_cast<unsigned>(candidate.def->id),
-               static_cast<unsigned>(candidate.option), option_text);
-      *result = candidate;
+               static_cast<unsigned>(family_result.def->id),
+               static_cast<unsigned>(family_result.option), option_text);
+      *result = family_result;
       return true;
     }
   }
@@ -136,10 +136,10 @@
         if ((*p)->has_member(hint))
         {
           hint_found = true;
-          if (!fallback_only(*p)) { hinted = *p; }
+          if (!candidate_only(*p)) { hinted = *p; }
           else
           {
-            ESP_LOGD(tag, "hint=%u belongs to a fallback-only detector",
+            ESP_LOGD(tag, "hint=%u belongs to a candidate-only detector",
                      static_cast<unsigned>(hint));
           }
           break;
@@ -160,6 +160,8 @@
     {
       unsigned chosen = count;
       unsigned best = 4;
+      // Among constraint-ready families: power hold + hint, power hold, hint, others.
+      // Equal ranks retain their order in list.
       for (unsigned i = 0; i < count; ++i)
       {
         if (tried[i]) { continue; }
@@ -181,6 +183,8 @@
       }
       if (chosen == count) { break; } // Generated constraints must be acyclic.
       tried[chosen] = true;
+      // A consistent result (matched or excluded) returns; family_identified alone stops later families.
+      // These decisions affect this scan only; retries and persistence are separate.
       if (run_detector(list[chosen], ctx, &result)) { return result; }
       if (ctx.family_identified) { break; }
       if (list[chosen] == hinted)
