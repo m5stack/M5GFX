@@ -626,12 +626,77 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   assert.match(defaults, /get_pkg_ver\(\) == 1\) \{ return board_t::board_M5StampS3Mini; \}/);
 });
 
-test("all 87 revision and runtime combinations match snapshots", async () => {
+test("all 87 revision and runtime combinations validate in memory", () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
   assert.equal(outputs.length, 87);
+  assert.equal(new Set(outputs.map((output) => output.filename)).size, 87);
   for (const output of outputs) {
-    const snapshot = await fs.readFile(path.join(root, "generated/resolved", output.filename), "utf8");
-    assert.equal(snapshot, formatBoard(output.board), output.filename);
+    const issues = validateBoard(output.board, {
+      ...context, chip: chips[output.board.chip], resolved: true,
+      accessories, composition: compositionTarget.compositions?.[output.board.id]?.default,
+      allow_origins: compositionTarget.allow_origins, pinTableTarget: compositionTarget,
+    });
+    assert.deepEqual(issues.filter((issue) => issue.severity !== "warning"), [], output.filename);
+  }
+});
+
+test("resolved chip and PSRAM facts preserve environment-selection inputs", () => {
+  const facts = [
+    ["m5atoms3", "esp32s3", 0, undefined],
+    ["m5stack_core2", "esp32_d0wdq6", 8, "quad"],
+    ["m5stack_cores3", "esp32s3", 8, "quad"],
+    ["m5atoms3r", "esp32s3", 8, "opi"],
+    ["m5stack_tab5", "esp32p4", 32, "opi"],
+  ];
+  for (const [id, chip, mb, mode] of facts) {
+    for (const output of resolveCatalog(catalogBoards.find((item) => item.id === id))) {
+      assert.equal(output.board.chip, chip, output.filename);
+      assert.equal(output.board.spec.storage.psram_mb, mb, output.filename);
+      assert.equal(output.board.spec.storage.psram_mode, mode, output.filename);
+    }
+  }
+});
+
+test("resolve prints one JSON array with combination names without writing generated files", async () => {
+  const docs = path.join(root, "generated/docs");
+  const names = await fs.readdir(docs);
+  const mtimes = await Promise.all(names.map(async (name) => (await fs.stat(path.join(docs, name))).mtimeMs));
+  const cached = await fs.readdir(path.join(root, "generated/resolved")).catch((error) => {
+    if (error.code !== "ENOENT") throw error;
+    return null;
+  });
+  for (const source of [board, catalogBoards.find((item) => item.id === "m5atomu")]) {
+    const result = spawnSync(process.execPath, ["cli/spec.js", "resolve", `boards/${source.id}.json`], { cwd: root, encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.deepEqual(JSON.parse(result.stdout), resolveCatalog(source).map((output) => ({
+      combination: output.filename.slice(0, -".json".length), board: JSON.parse(formatBoard(output.board)),
+    })));
+  }
+  assert.deepEqual(await Promise.all(names.map(async (name) => (await fs.stat(path.join(docs, name))).mtimeMs)), mtimes);
+  assert.deepEqual(await fs.readdir(path.join(root, "generated/resolved")).catch((error) => {
+    if (error.code !== "ENOENT") throw error;
+    return null;
+  }), cached);
+});
+
+test("resolve --out writes only the requested directory and rejects incomplete options", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-resolved-"));
+  try {
+    const destination = path.join(directory, "exports");
+    const result = spawnSync(process.execPath, ["cli/spec.js", "resolve", "boards/m5stack_core2.json", "--out", destination], { cwd: root, encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    const outputs = resolveCatalog(board);
+    assert.deepEqual((await fs.readdir(destination)).sort(), outputs.map((output) => output.filename).sort());
+    for (const output of outputs) assert.equal(await fs.readFile(path.join(destination, output.filename), "utf8"), formatBoard(output.board));
+    for (const args of [[], ["boards/m5stack_core2.json", "--out"], ["boards/m5stack_core2.json", "--out", destination, "extra"], ["boards/m5stack_core2.json", "--unknown", destination]]) {
+      const invalid = spawnSync(process.execPath, ["cli/spec.js", "resolve", ...args], { cwd: root, encoding: "utf8" });
+      assert.equal(invalid.status, 1);
+      assert.match(invalid.stderr, /optional --out <dir>/);
+      assert.equal(invalid.stdout, "");
+    }
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
   }
 });
 
@@ -1552,7 +1617,7 @@ test("generated device fields follow kind rather than device ID", () => {
   assert.equal(isGeneratedField(renamed, "/devices/status_light", "signals"), true);
 });
 
-test("Core2 revisions match all four snapshots and confirmed PMIC endpoints", async () => {
+test("Core2 resolves all four revisions and confirmed PMIC endpoints", () => {
   const outputs = resolveCatalog(board);
   assert.deepEqual(outputs.map((output) => output.filename), [
     "m5stack_core2@v1_0.json",
@@ -1560,10 +1625,6 @@ test("Core2 revisions match all four snapshots and confirmed PMIC endpoints", as
     "m5stack_core2@v1_2.json",
     "m5stack_core2@v1_3.json",
   ]);
-  for (const output of outputs) {
-    const snapshot = await fs.readFile(path.join(root, "generated/resolved", output.filename), "utf8");
-    assert.equal(snapshot, formatBoard(output.board));
-  }
   assert.equal(outputs[0].board.devices.lcd.signals.rst, "pin:pmic.gpio3");
   assert.equal(outputs[0].board.devices.speaker.enable, "pin:pmic.gpio2");
   assert.equal(outputs[1].board.devices.lcd.signals.rst, "pin:pmic.aldo2");

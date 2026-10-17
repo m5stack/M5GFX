@@ -10,7 +10,6 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 - `targets.json`: generator-specific option-bit to board-choice mappings
 - `detector_order.json`: which catalog boards each package's detector families cover
 - `lib/`, `cli/`: browser-safe model logic and the Node command wrapper
-- `generated/resolved/`: fully resolved revision/runtime combinations
 - `generated/docs/`: revision and composition tables rendered from the catalog
 - `generated/m5unified_pin_table/`: the M5Unified external pin tables, per SoC
 - `editor/`, `build/`: editor sources and the dependency-free bundler
@@ -20,7 +19,9 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 ```sh
 node cli/spec.js validate boards/m5stack_core2.json      # schema and catalog rules (all boards when no file is given)
 node cli/spec.js format boards/m5stack_core2.json --write # canonical formatting (without --write: report only)
-node cli/spec.js resolve boards/m5stack_core2.json       # generated/resolved/ and generated/docs/ for one board
+node cli/spec.js resolve boards/m5stack_core2.json       # inspect all revision/runtime combinations as JSON on stdout
+node cli/spec.js resolve boards/m5stack_core2.json --out /tmp/resolved     # optional local JSON files
+node cli/spec.js emit-docs                              # generated/docs/ (all boards, or pass board files)
 node cli/spec.js emit-wiring                             # src/board_detect/m5/generated/ (detection wiring, specs, detector order)
 node cli/spec.js emit-pintable                           # generated/m5unified_pin_table/<soc>.{json,inl}
 node cli/spec.js compare-pintable --m5unified <path>     # compile the generated tables against M5Unified's src/M5Unified.inl
@@ -31,10 +32,16 @@ npm test                                                 # test/*.test.js (the C
 
 `check` validates the connector types, parts, accessories and every board, requires
 every board file to be in canonical format, and fails when any generated output
-(resolved snapshots, docs, pin tables, detection wiring, the editor bundle) is
-missing, stale or unexpected. So after editing a board: `resolve` it, run
-`emit-wiring`, `emit-pintable` and `build/bundle.js`, then `check` and `npm test`,
-and commit the generated files together with the source.
+(docs, pin tables, detection wiring, the editor bundle) is missing, stale or
+unexpected. Every revision/runtime combination is expanded and validated in
+memory; resolved exports are not build inputs or freshness-check fixtures.
+After editing a board, run `emit-docs`, `emit-wiring`, `emit-pintable` and
+`build/bundle.js`, then `check` and `npm test`, and commit those generated files
+with the source. Do not commit resolved exports.
+
+Inspect resolved boards with `resolve` (one JSON array of `{combination, board}`
+entries on stdout), or select a revision in the editor's read-only view.
+The `--out` directory is arbitrary; its exports are not read by any tool.
 
 Boards use `devices.<id>.choices` for replaceable parts and `revisions[]` for
 known product revisions. Runtime-selected slots are expanded as additional
@@ -242,7 +249,7 @@ Measure each of these states on real hardware before writing a value.
 
 1. Set `pins.<gpio>.detect_class` in the board JSON. Validation (`node cli/spec.js
    validate`, also shown in the editor) rejects it on pins without internal pulls.
-2. Regenerate from `extras/board_spec`: `node cli/spec.js resolve boards/<board>.json`,
+2. Regenerate from `extras/board_spec`: `node cli/spec.js emit-docs boards/<board>.json`,
    `node cli/spec.js emit-wiring`, and `node build/bundle.js`; then run
    `node cli/spec.js check` and `npm test`. Commit the generated files; do not edit them
    by hand.

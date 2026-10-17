@@ -300,7 +300,7 @@ async function formatFiles(files, write) {
   }
 }
 
-async function resolveFile(filename) {
+async function loadValidatedBoard(filename) {
   const schema = await loadSchema();
   const connectorTypes = await loadConnectorTypes();
   const parts = await loadParts();
@@ -313,23 +313,41 @@ async function resolveFile(filename) {
     printErrors(filename, errors);
     throw new Error(`${failureCount(errors)} validation error(s)`);
   }
-  const outputDir = path.join(root, "generated/resolved");
+  return { board, ctx };
+}
+
+async function resolveFile(filename, outputDir) {
+  const { board, ctx } = await loadValidatedBoard(filename);
+  const outputs = resolveAll(board, ctx.connectorTypes, resolveCatalogs(ctx));
+  // Resolved boards are inspection views, not build inputs. Only --out writes
+  // local exports; stdout preserves combination names for programmatic users.
+  if (!outputDir) {
+    const views = outputs.map((output) => ({
+      combination: output.filename.slice(0, -".json".length),
+      board: JSON.parse(formatBoard(output.board)),
+    }));
+    process.stdout.write(`${JSON.stringify(views, null, 2)}\n`);
+    return;
+  }
   await fs.mkdir(outputDir, { recursive: true });
-  const outputs = resolveAll(board, connectorTypes, resolveCatalogs(ctx));
   for (const output of outputs) await fs.writeFile(safeOutputPath(outputDir, output.filename), formatBoard(output.board));
-  const revisionDoc = renderRevisionDoc(board, ctx.target);
-  if (revisionDoc) {
-    const docsDir = path.join(root, "generated/docs");
-    await fs.mkdir(docsDir, { recursive: true });
-    await fs.writeFile(safeOutputPath(docsDir, `${board.id}_revisions.md`), revisionDoc);
-  }
-  const compositionDoc = renderCompositionDoc(board, ctx.composition, accessories);
-  if (compositionDoc) {
-    const docsDir = path.join(root, "generated/docs");
-    await fs.mkdir(docsDir, { recursive: true });
-    await fs.writeFile(safeOutputPath(docsDir, `${board.id}_composition.md`), compositionDoc);
-  }
   console.log(`resolved ${outputs.length} combination(s)`);
+}
+
+async function writeDocs(files) {
+  for (const filename of files) {
+    const { board, ctx } = await loadValidatedBoard(filename);
+    const docs = [
+      [`${board.id}_revisions.md`, renderRevisionDoc(board, ctx.target)],
+      [`${board.id}_composition.md`, renderCompositionDoc(board, ctx.composition, ctx.accessories)],
+    ];
+    for (const [name, text] of docs) if (text) {
+      const directory = path.join(root, "generated/docs");
+      await fs.mkdir(directory, { recursive: true });
+      await fs.writeFile(safeOutputPath(directory, name), text);
+    }
+  }
+  console.log(`generated docs for ${files.length} board(s)`);
 }
 
 async function check() {
@@ -356,17 +374,14 @@ async function check() {
     throw new Error(`${failureCount(errors)} validation error(s)`);
   }
 
+  // validateResolvedVariants above checks every expansion in memory; there is
+  // no resolved-file cache to maintain or compare with the source catalog.
+  let combinations = 0;
   for (let index = 0; index < boards.length; index += 1) {
     const source = await fs.readFile(files[index], "utf8");
     if (source !== formatBoard(boards[index])) throw new Error(`${path.relative(root, files[index])} is not formatted`);
     const ctx = contexts.get(boards[index].id);
-    for (const output of resolveAll(boards[index], connectorTypes, resolveCatalogs(ctx))) {
-      const filename = path.join(root, "generated/resolved", output.filename);
-      let actual;
-      try { actual = await fs.readFile(filename, "utf8"); }
-      catch { throw new Error(`missing resolved snapshot: ${path.relative(root, filename)}`); }
-      if (actual !== formatBoard(output.board)) throw new Error(`stale resolved snapshot: ${path.relative(root, filename)}`);
-    }
+    combinations += resolveAll(boards[index], connectorTypes, resolveCatalogs(ctx)).length;
     const revisionDoc = renderRevisionDoc(boards[index], ctx.target);
     if (revisionDoc) {
       const filename = path.join(root, "generated/docs", `${boards[index].id}_revisions.md`);
@@ -384,10 +399,6 @@ async function check() {
       if (actual !== compositionDoc) throw new Error(`stale composition doc: ${path.relative(root, filename)}`);
     }
   }
-  const expectedSnapshots = new Set(boards.flatMap((board) => resolveAll(board, connectorTypes, resolveCatalogs(contexts.get(board.id))).map((output) => output.filename)));
-  const actualSnapshots = (await fs.readdir(path.join(root, "generated/resolved"))).filter((name) => name.endsWith(".json"));
-  const unexpected = actualSnapshots.filter((name) => !expectedSnapshots.has(name));
-  if (unexpected.length) throw new Error(`unexpected resolved snapshot(s): ${unexpected.join(", ")}`);
   const expectedDocs = new Set([
     ...boards.filter((board) => board.revisions?.length).map((board) => `${board.id}_revisions.md`),
     ...boards.filter((board) => contexts.get(board.id).composition).map((board) => `${board.id}_composition.md`),
@@ -421,7 +432,7 @@ async function check() {
   try { dist = await fs.readFile(distFilename, "utf8"); }
   catch { throw new Error(`missing editor bundle: ${path.relative(root, distFilename)}`); }
   if (dist !== await renderBundle()) throw new Error(`stale editor bundle: ${path.relative(root, distFilename)}`);
-  console.log(`check passed: ${boards.length} board(s), ${boards.reduce((sum, board) => sum + resolveAll(board, connectorTypes, resolveCatalogs(contexts.get(board.id))).length, 0)} resolved snapshot(s)`);
+  console.log(`check passed: ${boards.length} board(s), ${combinations} resolved combination(s)`);
 }
 
 const PIN_TABLE_START = "static constexpr const uint8_t _pin_table_i2c_ex_in[][5] = {";
@@ -553,9 +564,13 @@ async function main() {
     return formatFiles(files, write);
   }
   if (command === "resolve") {
-    if (args.length !== 1) throw new Error("resolve requires exactly one board file");
-    return resolveFile(path.resolve(args[0]));
+    if ((args.length !== 1 && args.length !== 3) || args[0]?.startsWith("--")
+     || (args.length === 3 && (args[1] !== "--out" || args[2].startsWith("--")))) {
+      throw new Error("resolve requires one board file and optional --out <dir>");
+    }
+    return resolveFile(path.resolve(args[0]), args.length === 3 ? path.resolve(args[2]) : undefined);
   }
+  if (command === "emit-docs") return writeDocs(args.length ? args.map((file) => path.resolve(file)) : await boardFiles());
   if (command === "emit-pintable") return writePinTableOutputs();
   if (command === "emit-wiring") return writeWiringOutput();
   if (command === "compare-pintable") {
@@ -563,7 +578,7 @@ async function main() {
     return comparePinTable(path.resolve(args[1]));
   }
   if (command === "check") return check();
-  throw new Error("usage: spec.js validate <file...> | format <file...> [--write] | resolve <file> | emit-pintable | emit-wiring | compare-pintable --m5unified <path> | check");
+  throw new Error("usage: spec.js validate <file...> | format <file...> [--write] | resolve <file> [--out <dir>] | emit-docs [file...] | emit-pintable | emit-wiring | compare-pintable --m5unified <path> | check");
 }
 
 main().catch((failure) => {
