@@ -17,6 +17,14 @@ export function targetBoard(target, boardId) {
   return target.boards?.[boardId] ?? null;
 }
 
+function derivedCppNamespace(board) {
+  return board.id.replace(/^m5(?:stack_)?/, "").replaceAll("_", "");
+}
+
+export function targetCppNamespace(board, target) {
+  return targetBoard(target, board.id)?.cpp_namespace ?? derivedCppNamespace(board);
+}
+
 export function targetOptions(target, boardId) {
   return targetBoard(target, boardId)?.options ?? [];
 }
@@ -30,18 +38,22 @@ export function validateTarget(board, target = {}) {
     issue("E_TGT_BOARD_MISSING", boardPath, "board has no target metadata");
     return issues;
   }
-  if (boardTarget.chip !== board.chip) issue("E_TGT_CHIP", `${boardPath}/chip`, `${boardTarget.chip} does not match ${board.chip}`);
-  if (boardTarget.legacy_board_id !== board.legacy_board_id) issue("E_TGT_LEGACY_ID", `${boardPath}/legacy_board_id`, `${boardTarget.legacy_board_id} does not match ${board.legacy_board_id}`);
-  if (typeof boardTarget.board_enum !== "string" || !/^board_[A-Za-z][A-Za-z0-9_]*$/.test(boardTarget.board_enum)) {
-    issue("E_TGT_BOARD_ENUM", `${boardPath}/board_enum`, "board_enum must be a board_ C++ identifier");
-  } else if (board.name !== boardTarget.board_enum.slice("board_".length)) {
-    issue("E_TGT_BOARD_NAME", "/name", `name must match ${boardTarget.board_enum} without the board_ prefix`);
+  for (const field of ["chip", "legacy_board_id", "board_enum", "desc_name"]) {
+    if (Object.hasOwn(boardTarget, field)) issue("E_TGT_DERIVED_FIELD", `${boardPath}/${field}`, `${field} is derived from the board catalog and cpp_namespace`);
   }
-  for (const field of ["cpp_namespace", "desc_name"]) if (boardTarget[field] !== undefined) {
-    if (!CPP_IDENTIFIER.test(boardTarget[field])) {
-      issue("E_TGT_CPP_IDENTIFIER", `${boardPath}/${field}`, `${field} must be a C++ identifier`);
-    } else if (CPP_KEYWORDS.has(boardTarget[field])) {
-      issue("E_TGT_CPP_KEYWORD", `${boardPath}/${field}`, `${field} must not be a C++ keyword`);
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(board.name)) issue("E_TGT_BOARD_NAME", "/name", "name must form a board_ C++ identifier");
+  const overriddenNamespace = boardTarget.cpp_namespace !== undefined;
+  if (overriddenNamespace && boardTarget.cpp_namespace === derivedCppNamespace(board)) {
+    issue("E_TGT_REDUNDANT_NAMESPACE", `${boardPath}/cpp_namespace`, "cpp_namespace must only override a different derived namespace");
+  }
+  if (overriddenNamespace || boardTarget.wiring_output) {
+    const value = targetCppNamespace(board, target);
+    const path = overriddenNamespace ? `${boardPath}/cpp_namespace` : boardPath;
+    const origin = overriddenNamespace ? "cpp_namespace" : "namespace derived from id";
+    if (!CPP_IDENTIFIER.test(value)) {
+      issue("E_TGT_CPP_IDENTIFIER", path, `${origin} must be a C++ identifier`);
+    } else if (CPP_KEYWORDS.has(value)) {
+      issue("E_TGT_CPP_KEYWORD", path, `${origin} must not be a C++ keyword`);
     }
   }
   if (!Array.isArray(boardTarget.wiring_fields ?? [])) issue("E_TGT_WIRING_FIELD", `${boardPath}/wiring_fields`, "wiring_fields must be an array");
@@ -66,9 +78,6 @@ export function validateTarget(board, target = {}) {
   }
   if (boardTarget.desc_internal_i2c && !(boardTarget.wiring_fields ?? []).includes("i2c")) {
     issue("E_TGT_DESC_INTERNAL_I2C", `${boardPath}/desc_internal_i2c`, "desc_internal_i2c requires the i2c wiring field");
-  }
-  if (boardTarget.wiring_output && (!boardTarget.cpp_namespace || !boardTarget.desc_name)) {
-    issue("E_TGT_GENERATION_FIELDS", boardPath, "generated wiring requires cpp_namespace and desc_name");
   }
   if (boardTarget.cardputer_subdivision !== undefined) {
     const subdivision = boardTarget.cardputer_subdivision;
@@ -167,7 +176,7 @@ export function validateTargets(boards, target = {}) {
     const path = `/targets/boards/${id}`;
     if (!catalog.has(id)) issues.push({ id: "E_TGT_BOARD_UNKNOWN", path, message: `${id} is not in the board catalog` });
     for (const [field, seen] of [["board_enum", enums], ["cpp_namespace", namespaces]]) {
-      const value = entry[field];
+      const value = field === "board_enum" ? catalog.get(id)?.name : catalog.has(id) ? targetCppNamespace(catalog.get(id), target) : entry[field];
       if (!value) continue;
       if (seen.has(value)) issues.push({ id: field === "board_enum" ? "E_TGT_BOARD_ENUM_DUP" : "E_TGT_NAMESPACE_DUP", path: `${path}/${field}`, message: `${value} is also used by ${seen.get(value)}` });
       else seen.set(value, id);
@@ -176,9 +185,9 @@ export function validateTargets(boards, target = {}) {
       const value = entry[field];
       if (!value) continue;
       const prior = outputs.get(value);
-      if (prior && (prior.field !== field || prior.chip !== entry.chip)) {
+      if (prior && (prior.field !== field || prior.chip !== catalog.get(id)?.chip)) {
         issues.push({ id: "E_TGT_OUTPUT_COLLISION", path: `${path}/${field}`, message: `${value} is also ${prior.field} for ${prior.id} (${prior.chip})` });
-      } else if (!prior) outputs.set(value, { field, id, chip: entry.chip });
+      } else if (!prior) outputs.set(value, { field, id, chip: catalog.get(id)?.chip });
     }
     for (const pin of entry.probe_pins ?? []) {
       if (!Number.isInteger(pin) || !catalog.get(id)?.pins?.[pin]) {
@@ -220,4 +229,54 @@ export function renderRevisionDoc(board, target = {}) {
     lines.push(`| ${revision.name} | ${choices} | ${options} | ${revision.note ?? ""} |`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+// Parse the constrained board-ID enum, rejecting syntax that would require a
+// C++ preprocessor or expression evaluator to establish the canonical values.
+export function validateBoardEnums(boards, source) {
+  const text = source.replace(/\\\r?\n/g, "").replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  const enums = [...text.matchAll(/\benum\s+board_t\s*\{([^{}]*)\}/g)];
+  const invalid = (message) => [{ id: "E_TGT_BOARD_ENUM_SYNTAX", path: "/src/lgfx/boards.hpp", message }];
+  if (enums.length !== 1) return invalid("expected exactly one enum board_t body");
+  const body = enums[0][1];
+  if (/^\s*#/m.test(body)) return invalid("preprocessor directives inside board_t are unsupported");
+  // A conventional outer include guard is allowed; conditional board_t
+  // declarations and conditional alternatives of that guard are not.
+  const prefix = text.slice(0, enums[0].index);
+  const guard = /^\s*#ifndef\s+(\w+)\s*\n\s*#define\s+\1\b/.exec(prefix)?.[1];
+  let guardDefined = false;
+  for (const match of text.matchAll(/^\s*#\s*(define|undef|include|include_next|import)\b([^\n]*)/gm)) {
+    const [, directive, expression] = match;
+    if (directive === "define" && guard && !guardDefined
+     && expression.trim() === guard && match.index < enums[0].index) {
+      guardDefined = true;
+    } else return invalid(`only the outer include guard may define a macro; #${directive} is unsupported`);
+  }
+  const conditions = [];
+  for (const match of prefix.matchAll(/^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b([^\n]*)/gm)) {
+    const [, directive, expression] = match;
+    if (["if", "ifdef", "ifndef"].includes(directive)) {
+      conditions.push(directive === "ifndef" && conditions.length === 0 && expression.trim() === guard);
+    } else if (directive === "endif") conditions.pop();
+    else if (conditions.length) conditions[conditions.length - 1] = false;
+  }
+  if (conditions.some((allowed) => !allowed)) return invalid("conditional board_t declarations are unsupported");
+  const values = new Map();
+  for (const entry of body.split(",").map((item) => item.trim()).filter(Boolean)) {
+    const match = /^(board_[A-Za-z0-9_]+)(?:\s+__attribute__\s*\(\([\s\S]*?\)\))?\s*(?:=\s*([\s\S]+))?$/.exec(entry);
+    if (!match) return invalid(`unsupported board_t declaration: ${entry}`);
+    const [, name, value] = match;
+    if (values.has(name)) return invalid(`duplicate board_t declaration: ${name}`);
+    if (/^0[0-9]+$/.test(value ?? "")) return invalid(`octal board_t value is unsupported: ${name} = ${value}`);
+    values.set(name, value);
+  }
+  return boards.flatMap((board) => {
+    const name = `board_${board.name}`;
+    const literal = values.get(name);
+    const explicitInteger = /^(?:0|[1-9][0-9]*|0[xX][0-9a-fA-F]+)$/.test(literal ?? "");
+    return explicitInteger && Number(literal) === board.legacy_board_id ? [] : [{
+      id: "E_TGT_BOARD_ID", path: `/boards/${board.id}/legacy_board_id`,
+      message: `${name} in src/lgfx/boards.hpp must equal ${board.legacy_board_id} (found ${literal ?? "no explicit value"})`,
+    }];
+  });
 }

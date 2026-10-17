@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include "../../detect_class.hpp"
+
 namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {
 
 namespace cores3 {
@@ -215,11 +217,7 @@ namespace dinmeter {
 } // namespace dinmeter
 
 namespace airq {
-  constexpr std::uint64_t detect_class_mask = 0x4ULL;
-  constexpr std::uint64_t detect_class_up = 0x0ULL;
-  constexpr std::uint64_t detect_class_down = 0x0ULL;
-  constexpr std::uint64_t detect_class_floating = 0x4ULL;
-  constexpr std::uint64_t detect_class_fixed = 0x0ULL;
+  constexpr detect_class_expected_t detect_class_expected = { 0x4ULL, 0x0ULL, 0x0ULL, 0x4ULL, 0x0ULL };
   constexpr std::int8_t display_sclk = 5;
   constexpr std::int8_t display_mosi = 6;
   constexpr std::int8_t display_miso = -1;

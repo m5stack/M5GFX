@@ -999,11 +999,7 @@ namespace m5
 
   static bool airq_signature(probe_ctx_t& ctx)
   {
-    const detect_class_expected_t expected = {
-      wiring::airq::detect_class_mask, wiring::airq::detect_class_up,
-      wiring::airq::detect_class_down, wiring::airq::detect_class_floating,
-      wiring::airq::detect_class_fixed,
-    };
+    constexpr detect_class_expected_t expected = wiring::airq::detect_class_expected;
     return match_detect_class(expected, probe_pin_pulls(ctx, expected.mask));
   }
 

@@ -102,7 +102,7 @@ export function renderPinTableJson(entries) {
   return `${JSON.stringify(Object.fromEntries(entries.map(({ board, emitted }) => [board.id, emitted.values])), null, 2)}\n`;
 }
 
-export function renderPinTableInl(entries, targetId = "esp32", boardTarget = {}) {
+export function renderPinTableInl(entries, targetId = "esp32") {
   const target = PIN_TABLE_TARGETS[targetId];
   if (!target) throw new Error(`unknown pin-table target ${targetId}`);
   const lines = [
@@ -120,8 +120,7 @@ export function renderPinTableInl(entries, targetId = "esp32", boardTarget = {})
         .filter((name) => emitted.overrides[name])
         .map((name) => `${name}: ${emitted.overrides[name].reason}`);
       const suffix = comments.length ? ` // override: ${comments.join("; ")}` : "";
-      const boardEnum = boardTarget.boards?.[board.id]?.board_enum;
-      if (!boardEnum) throw new Error(`missing board enum for ${board.id}`);
+      const boardEnum = `board_${board.name}`;
       lines.push(`{ board_t::${boardEnum}, ${values.join(", ")} },${suffix}`);
     }
     lines.push(`{ board_t::board_unknown, ${unknown.join(", ")} },`);

@@ -40,11 +40,7 @@ public:
   tab5_family_detector_t() : board_detector_t(members_) {}
   bool signature(probe_ctx_t& ctx) const override
   {
-    const detect_class_expected_t expected = {
-      wiring::tab5::detect_class_mask, wiring::tab5::detect_class_up,
-      wiring::tab5::detect_class_down, wiring::tab5::detect_class_floating,
-      wiring::tab5::detect_class_fixed,
-    };
+    constexpr detect_class_expected_t expected = wiring::tab5::detect_class_expected;
     const bool bus_present = probe_i2c_bus_present(ctx, tab5_detail::sda, tab5_detail::scl);
     // Backlight wiring only suggests a recovery candidate; it must not gate
     // PI4IO confirmation, which remains valid with the wireless supply off.

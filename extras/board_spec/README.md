@@ -51,6 +51,21 @@ SD wiring uses card terminal names (`clk`, `cmd`, `d0` through `d3`). The
 `sd_slot` part defines their SPI aliases, and resolved boards report usable
 `spi`, `sdio1`, and `sdio4` modes in `devices.sd.derived`.
 
+M5GFX target metadata derives `chip` and `legacy_board_id` from the board
+catalog and `board_enum` as `board_<name>`. The unused `desc_name` adapter
+field is removed; descriptor names remain a handwritten C++ convention. The namespace removes the leading `m5stack_` or `m5`
+and all underscores from the catalog ID; the overrides are
+`m5cardputer_adv` with `cpp_namespace: "cardputer_adv"` and
+`arduino_nesso_n1` with `cpp_namespace: "nesson1"`. These derived fields must
+not be repeated in `targets.json`. `node cli/spec.js check` also verifies every
+catalog ID against its explicit integer assignment in `src/lgfx/boards.hpp`,
+as do `emit-wiring`, `emit-pintable` and `compare-pintable`. The checker accepts
+a single `board_t` enum with unconditional declarations and decimal or hex
+integer canonical values; octal values, duplicate declarations and conditional
+enum declarations are rejected. The outer header include guard is allowed;
+other macro definitions, undefinitions and included headers are rejected.
+A namespace override identical to the derived value is rejected as redundant.
+
 M5GFX board-detection wiring is generated from the base board only. Accessory
 and composition wiring does not participate in board descriptor generation.
 Generated headers represent unspecified values with target-specific unknown or
@@ -261,3 +276,9 @@ used as board-wide gates.
   externally held-high pin low. On a board that M5GFX does not detect (Capsule has no
   display), autodetect repeats the whole list on each retry, so a faint buzzer click
   remains once per attempt.
+
+Board-wide `detect_class` facts generate a `constexpr detect_class_expected_t
+detect_class_expected` in the board's wiring namespace. Detectors copy this
+value into a function-local `constexpr` before matching physical samples.
+Revision-choice classes remain local evidence rather than board-wide gates.
+Descriptors and probe procedures remain handwritten C++.

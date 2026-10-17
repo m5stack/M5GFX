@@ -28,7 +28,7 @@ import { validateOwners } from "../lib/owners.js";
 import { validatePartCatalog, validateParts } from "../lib/parts.js";
 import { resolveAll, resolveBoard, resolvedFilename } from "../lib/resolve.js";
 import { validateSchema } from "../lib/schema.js";
-import { validateTarget, validateTargets } from "../lib/targets.js";
+import { validateTarget, validateTargets, validateBoardEnums } from "../lib/targets.js";
 import { validateBoard, validateCatalog, validateFormat, validateResolvedVariants } from "../lib/validate.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -149,7 +149,7 @@ test("board aliases validate, format after name, and never affect generated outp
   const specBoard = catalogBoards.find((item) => item.id === "m5stack_tab5");
   const specWithAliases = clone(specBoard);
   specWithAliases.aliases = ["Large P4 display"];
-  const mapping = m5gfxBoardMapping(target, specBoard.id);
+  const mapping = m5gfxBoardMapping(target, specBoard);
   assert.equal(
     renderM5GFXSpecsHeader(emitM5GFXSpecs(specWithAliases, resolveCatalog(specWithAliases).map((item) => item.board), parts, mapping)),
     renderM5GFXSpecsHeader(emitM5GFXSpecs(specBoard, resolveCatalog(specBoard).map((item) => item.board), parts, mapping)),
@@ -946,7 +946,7 @@ const esp32s3SetupPath = path.join(root, "../../src/board_detect/m5/esp32s3/fami
 test("AtomS3 generated panel construction matches every legacy field", async () => {
   const source = catalogBoards.find((item) => item.id === "m5atoms3");
   const variants = resolveCatalog(source).map((item) => item.board);
-  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source.id));
+  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source));
   assert.deepEqual(emitted.bus, { host: 2, hostSymbol: "SPI3_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
   assert.deepEqual(emitted.panels.st7735s, { width: 128, height: 128, memoryWidth: 132, memoryHeight: 132, offsetX: 2, offsetY: 1, rotationOffset: 2, invert: true, readable: true });
   assert.deepEqual(emitted.panels.gc9107, { width: 128, height: 128, memoryWidth: 128, memoryHeight: 160, offsetX: 0, offsetY: 32, rotationOffset: 0, invert: false, readable: false });
@@ -963,7 +963,7 @@ test("AtomS3 generated panel construction matches every legacy field", async () 
 test("AtomS3R generated specs preserve the legacy setup", async () => {
   const source = catalogBoards.find((item) => item.id === "m5atoms3r");
   const variants = resolveCatalog(source).map((item) => item.board);
-  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source.id));
+  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source));
   const wiring = emitM5GFXWiring(variants[0], parts, target);
   const pinTable = emitPinTable(variants[0], {});
   assert.deepEqual(emitted.bus, { host: 2, hostSymbol: "SPI3_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
@@ -998,7 +998,7 @@ test("AtomS3R generated specs preserve the legacy setup", async () => {
 test("StickS3 generated display, backlight, and PMIC specs match the legacy setup", () => {
   const source = catalogBoards.find((item) => item.id === "m5sticks3");
   const variants = resolveCatalog(source).map((item) => item.board);
-  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source.id));
+  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source));
   assert.deepEqual(emitted.bus, { host: 2, hostSymbol: "SPI3_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
   assert.deepEqual(emitted.panels.st7789v2, { width: 135, height: 240, memoryWidth: null, memoryHeight: null, offsetX: 52, offsetY: 40, rotationOffset: 0, invert: true, readable: true });
   assert.deepEqual(emitted.backlight, { freq: 256, channel: 7, invert: false, offset: 16 });
@@ -1014,9 +1014,9 @@ test("ChainCaptain and PaperColor generated setup preserves legacy fields", asyn
   const chainResolved = resolveCatalog(chain)[0].board;
   const paperResolved = resolveCatalog(paper)[0].board;
   const chainSpecs = emitM5GFXSpecs(chain, [chainResolved], parts,
-    m5gfxBoardMapping(target, chain.id));
+    m5gfxBoardMapping(target, chain));
   const paperSpecs = emitM5GFXSpecs(paper, [paperResolved], parts,
-    m5gfxBoardMapping(target, paper.id));
+    m5gfxBoardMapping(target, paper));
   const chainWiring = emitM5GFXWiring(chainResolved, parts, target);
   const paperWiring = emitM5GFXWiring(paperResolved, parts, target);
   assert.deepEqual(chainSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST",
@@ -1044,14 +1044,14 @@ test("ChainCaptain and PaperColor generated setup preserves legacy fields", asyn
 
 test("Dial and DinMeter generated specs preserve the legacy setup", async () => {
   const dial = catalogBoards.find((item) => item.id === "m5dial");
-  const dialSpecs = emitM5GFXSpecs(dial, resolveCatalog(dial).map((item) => item.board), parts, m5gfxBoardMapping(target, dial.id));
+  const dialSpecs = emitM5GFXSpecs(dial, resolveCatalog(dial).map((item) => item.board), parts, m5gfxBoardMapping(target, dial));
   assert.deepEqual(dialSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST", freqWrite: 80000000, freqRead: 16000000, threeWire: true });
   assert.deepEqual(dialSpecs.panels.gc9a01, { width: 240, height: 240, memoryWidth: null, memoryHeight: null, offsetX: null, offsetY: null, rotationOffset: null, invert: true, readable: false });
   assert.deepEqual(dialSpecs.probes.gc9a01, { cmd: 4, mask: 0xFFFFFF, values: [0x019A00] });
   assert.deepEqual(dialSpecs.touch, { i2cAddr: 0x38, i2cFreq: 400000, xMin: 0, xMax: 239, yMin: 0, yMax: 239, rotationOffset: 0 });
 
   const dinmeter = catalogBoards.find((item) => item.id === "m5dinmeter");
-  const dinmeterSpecs = emitM5GFXSpecs(dinmeter, resolveCatalog(dinmeter).map((item) => item.board), parts, m5gfxBoardMapping(target, dinmeter.id));
+  const dinmeterSpecs = emitM5GFXSpecs(dinmeter, resolveCatalog(dinmeter).map((item) => item.board), parts, m5gfxBoardMapping(target, dinmeter));
   assert.deepEqual(dinmeterSpecs.bus, { host: 1, hostSymbol: "SPI2_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
   assert.deepEqual(dinmeterSpecs.panels.st7789v2, { width: 135, height: 240, memoryWidth: null, memoryHeight: null, offsetX: 52, offsetY: 40, rotationOffset: 3, invert: true, readable: true });
   assert.deepEqual(dinmeterSpecs.probes.st7789v2, { cmd: 4, mask: 0xFB, values: [0x81] });
@@ -1071,7 +1071,7 @@ test("Dial and DinMeter generated specs preserve the legacy setup", async () => 
 test("StamPLC generated specs preserve the legacy setup", async () => {
   const source = catalogBoards.find((item) => item.id === "m5stamplc");
   const resolved = resolveCatalog(source)[0].board;
-  const emitted = emitM5GFXSpecs(source, [resolved], parts, m5gfxBoardMapping(target, source.id));
+  const emitted = emitM5GFXSpecs(source, [resolved], parts, m5gfxBoardMapping(target, source));
   const wiring = emitM5GFXWiring(resolved, parts, target);
   const pinTable = emitPinTable(resolved, {});
   assert.deepEqual(emitted.bus, { host: 1, hostSymbol: "SPI2_HOST", freqWrite: 40000000, freqRead: 16000000, threeWire: true });
@@ -1104,7 +1104,7 @@ test("StamPLC generated specs preserve the legacy setup", async () => {
 test("AirQ generated specs preserve the legacy setup", async () => {
   const source = catalogBoards.find((item) => item.id === "m5airq");
   const variants = resolveCatalog(source).map((item) => item.board);
-  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source.id));
+  const emitted = emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source));
   const wiring = emitM5GFXWiring(variants[0], parts, target);
   const pinTable = emitPinTable(variants[0], {});
 
@@ -1161,7 +1161,7 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
     "m5stickc", "m5stickcplus", "m5stack_coreink", "m5stickcplus2",
   ].map((boardId) => [boardId, emitM5GFXSpecs(
     byId[boardId], resolveCatalog(byId[boardId]).map((item) => item.board),
-    parts, m5gfxBoardMapping(target, boardId))]));
+    parts, m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === boardId)))]));
 
   assert.deepEqual(specs.m5stickc.bus, {
     host: 1, hostSymbol: "SPI2_HOST", freqWrite: 27000000,
@@ -1195,10 +1195,10 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   const nessoResolved = resolveCatalog(byId.arduino_nesso_n1)[0].board;
   const unitSpecs = emitM5GFXSpecs(
     byId.m5unit_c6l, [unitResolved], parts,
-    m5gfxBoardMapping(target, "m5unit_c6l"));
+    m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === "m5unit_c6l")));
   const nessoSpecs = emitM5GFXSpecs(
     byId.arduino_nesso_n1, [nessoResolved], parts,
-    m5gfxBoardMapping(target, "arduino_nesso_n1"));
+    m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === "arduino_nesso_n1")));
   const entries = [
     { board: byId.m5unit_c6l, chip: chipC6, emitted: emitM5GFXWiring(unitResolved, parts, target) },
     { board: byId.arduino_nesso_n1, chip: chipC6, emitted: emitM5GFXWiring(nessoResolved, parts, target) },
@@ -1290,7 +1290,7 @@ test("Cardputer family generated specs and wiring preserve the legacy setup", as
   for (const [id, expected] of Object.entries(fixtures)) {
     const source = catalogBoards.find((item) => item.id === id);
     const resolved = resolveCatalog(source)[0].board;
-    const mapping = m5gfxBoardMapping(target, id);
+    const mapping = m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id));
     const specs = emitM5GFXSpecs(source, [resolved], parts, mapping);
     const wiring = emitM5GFXWiring(resolved, parts, target);
     const pinTable = emitPinTable(resolved, {});
@@ -1341,7 +1341,7 @@ test("StickS3 PMIC specs reject unspecified generated values", () => {
   const source = clone(catalogBoards.find((item) => item.id === "m5sticks3"));
   const variants = resolveCatalog(source).map((item) => item.board);
   delete source.buses.internal_i2c.freq;
-  assert.throws(() => emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source.id)), /internal_i2c\.freq must be an integer/);
+  assert.throws(() => emitM5GFXSpecs(source, variants, parts, m5gfxBoardMapping(target, source)), /internal_i2c\.freq must be an integer/);
 });
 
 test("M5GFX specs preserve an unspecified controller memory dimension", () => {
@@ -1357,7 +1357,7 @@ test("M5GFX specs preserve an unspecified controller memory dimension", () => {
   delete gc9107.devices.lcd.spec.rotation_offset;
   delete gc9107.devices.lcd.spec.invert;
   delete gc9107.devices.lcd.spec.readable;
-  const emitted = emitM5GFXSpecs(source, withoutPanelDefaults, withoutMemoryDefaults, m5gfxBoardMapping(target, source.id));
+  const emitted = emitM5GFXSpecs(source, withoutPanelDefaults, withoutMemoryDefaults, m5gfxBoardMapping(target, source));
   assert.equal(emitted.panels.gc9107.memoryWidth, null);
   assert.equal(emitted.panels.gc9107.memoryHeight, null);
   assert.deepEqual(emitted.panels.gc9107, { width: 128, height: 128, memoryWidth: null, memoryHeight: null, offsetX: null, offsetY: null, rotationOffset: null, invert: null, readable: null });
@@ -1408,7 +1408,7 @@ test("variant validation reports wiring assignment failures as diagnostics", () 
 });
 
 test("M5GFX wiring catalog requires every mapped board exactly once", () => {
-  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, id)).filter(Boolean);
+  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id))).filter(Boolean);
   assert.throws(() => selectM5GFXWiringBoards(catalogBoards.filter((item) => item.id !== "m5paper"), mappings), /m5paper.*found 0/);
   const paper = catalogBoards.find((item) => item.id === "m5paper");
   assert.throws(() => selectM5GFXWiringBoards([...catalogBoards, clone(paper)], mappings), /m5paper.*found 2/);
@@ -1448,7 +1448,7 @@ test("M5GFX generated I2C host is an integer in the supported range", () => {
 });
 
 test("M5GFX generated namespaces contain only fields consumed by their descriptor", () => {
-  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, id)).filter(Boolean);
+  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id))).filter(Boolean);
   const entries = selectM5GFXWiringBoards(catalogBoards, mappings).map((source) => ({
     board: source,
     chip: chips[source.chip],
@@ -1784,14 +1784,14 @@ test("three runtime choices may share one slot when they select different choice
 
 test("target generation controls reject mismatches and unsafe values", () => {
   const malformed = clone(target);
-  malformed.boards.m5sticks3.board_enum = malformed.boards.m5atoms3.board_enum;
+  malformed.boards.m5sticks3.board_enum = "board_M5AtomS3";
   malformed.boards.m5sticks3.chip = "esp32_d0wdq6";
   malformed.boards.m5sticks3.cpp_namespace = "bad::namespace";
   malformed.boards.m5sticks3.wiring_fields.push("unknown");
   malformed.boards.m5sticks3.wiring_output = "../escape.hpp";
   malformed.boards.m5sticks3.reset = "display_rts";
   const ids = new Set(validateTargets(catalogBoards, malformed).map((item) => item.id));
-  for (const id of ["E_TGT_BOARD_ENUM_DUP", "E_TGT_CHIP", "E_TGT_CPP_IDENTIFIER", "E_TGT_WIRING_FIELD", "E_TGT_OUTPUT", "E_TGT_RESET"]) assert.ok(ids.has(id), id);
+  for (const id of ["E_TGT_DERIVED_FIELD", "E_TGT_CPP_IDENTIFIER", "E_TGT_WIRING_FIELD", "E_TGT_OUTPUT", "E_TGT_RESET"]) assert.ok(ids.has(id), id);
   assert.match(cliSource, /validateGenerationInputs\([\s\S]*?await fs\.mkdir/);
   assert.match(cliSource, /fs\.writeFile\(safeOutputPath/);
 });
@@ -1874,7 +1874,7 @@ test("M5GFX sentinel fields require a C++ type that preserves the sentinel", () 
 
   const dial = catalogBoards.find((item) => item.id === "m5dial");
   assert.throws(() => emitM5GFXSpecs(dial, resolveCatalog(dial).map((item) => item.board), malformed,
-    m5gfxBoardMapping(target, dial.id)), /cannot represent the -32768 sentinel/);
+    m5gfxBoardMapping(target, dial)), /cannot represent the -32768 sentinel/);
 });
 
 test("partless backlight specs use kind-wide types, ranges, and defaults", () => {
@@ -1890,7 +1890,7 @@ test("partless backlight specs use kind-wide types, ranges, and defaults", () =>
   delete defaults.devices.backlight.spec.offset;
   assert.equal(validateBoard(defaults, { ...context, chip: chipS3 }).some((item) => item.severity !== "warning"), false);
   const emitted = emitM5GFXSpecs(defaults, resolveCatalog(defaults).map((item) => item.board), parts,
-    m5gfxBoardMapping(target, defaults.id));
+    m5gfxBoardMapping(target, defaults));
   assert.equal(emitted.backlight.invert, false);
   assert.equal(emitted.backlight.offset, 0);
 });
@@ -2234,7 +2234,7 @@ test("composition validation reports C3 contract errors", () => {
 test("CoreP4X generated DSI setup preserves the legacy fields", async () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_corep4x");
   const resolved = resolveCatalog(source)[0].board;
-  const specs = emitM5GFXSpecs(source, [resolved], parts, m5gfxBoardMapping(target, source.id));
+  const specs = emitM5GFXSpecs(source, [resolved], parts, m5gfxBoardMapping(target, source));
   const wiring = emitM5GFXWiring(resolved, parts, target);
   assert.deepEqual(specs.bus, { kind: "dsi", busId: 0, laneNum: 2, laneMbps: 600, ldoChanId: 3, ldoVoltageMv: 2500 });
   assert.equal(specs.panels.st7102.dpi_freq_mhz, 24);
@@ -2248,7 +2248,7 @@ test("CoreP4X generated DSI setup preserves the legacy fields", async () => {
 test("Tab5 touch identities select the three DSI panels", async () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_tab5");
   const resolved = resolveCatalog(source).map((item) => item.board);
-  const specs = emitM5GFXSpecs(source, resolved, parts, m5gfxBoardMapping(target, source.id));
+  const specs = emitM5GFXSpecs(source, resolved, parts, m5gfxBoardMapping(target, source));
   const wiring = emitM5GFXWiring(resolved[0], parts, target);
   assert.deepEqual(specs.bus, { kind: "dsi", busId: 0, laneNum: 2, laneMbps: 1040, ldoChanId: 3, ldoVoltageMv: 2500 });
   // The catalog has one board-level DSI bus, but legacy ST7121 hardware alone
@@ -2296,7 +2296,7 @@ test("every descriptor operation GPIO is inside its execution and rollback scope
 test("CoreMatrix generated I2C setup preserves the legacy fields", async () => {
   const source = catalogBoards.find((item) => item.id === "m5stack_corematrix");
   const resolved = resolveCatalog(source)[0].board;
-  const specs = emitM5GFXSpecs(source, [resolved], parts, m5gfxBoardMapping(target, source.id));
+  const specs = emitM5GFXSpecs(source, [resolved], parts, m5gfxBoardMapping(target, source));
   const wiring = emitM5GFXWiring(resolved, parts, target);
   // Legacy source: M5GFX.cpp's ESP32-C61 branch declares i2c_freq = 400000
   // and assigns it to both Bus_I2C freq_write and freq_read. Its one-shot
@@ -2318,8 +2318,8 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
   const paperdiy = catalogBoards.find((item) => item.id === "m5paperdiy");
   const s3Resolved = resolveCatalog(papers3)[0].board;
   const diyResolved = resolveCatalog(paperdiy)[0].board;
-  const s3Specs = emitM5GFXSpecs(papers3, [s3Resolved], parts, m5gfxBoardMapping(target, papers3.id));
-  const diySpecs = emitM5GFXSpecs(paperdiy, [diyResolved], parts, m5gfxBoardMapping(target, paperdiy.id));
+  const s3Specs = emitM5GFXSpecs(papers3, [s3Resolved], parts, m5gfxBoardMapping(target, papers3));
+  const diySpecs = emitM5GFXSpecs(paperdiy, [diyResolved], parts, m5gfxBoardMapping(target, paperdiy));
   const s3Wiring = emitM5GFXWiring(s3Resolved, parts, target);
   const diyWiring = emitM5GFXWiring(diyResolved, parts, target);
   const epdPins = { data0: 6, data1: 14, data2: 7, data3: 12, data4: 9, data5: 11, data6: 8, data7: 10,
@@ -2379,7 +2379,7 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
     .map((id) => catalogBoards.find((item) => item.id === id));
   assert.ok(members.every(Boolean));
   const emitted = members.map((item) => wiringAssignments(resolveCatalog(item)[0].board,
-    parts, m5gfxBoardMapping(target, item.id)));
+    parts, m5gfxBoardMapping(target, item)));
   const shared = Object.fromEntries(Object.entries(emitted[0]).filter(([name]) => !name.startsWith("camera_")));
   assert.deepEqual(emitted[1], shared);
   assert.deepEqual(emitted[2], shared);
@@ -2416,10 +2416,7 @@ test("detect classes include only explicit pins and retain 64-bit GPIO masks", (
   const resolved = resolveCatalog(source)[0].board;
   const emitted = emitM5GFXWiring(resolved, parts, target);
   const header = renderM5GFXWiringHeader([{ board: source, chip: chips[source.chip], emitted }]);
-  assert.match(header, /detect_class_mask = 0x1800000000004ULL;/);
-  assert.match(header, /detect_class_up = 0x800000000000ULL;/);
-  assert.match(header, /detect_class_down = 0x1000000000000ULL;/);
-  assert.match(header, /detect_class_floating = 0x4ULL;/);
+  assert.match(header, /detect_class_expected = \{ 0x1800000000004ULL, 0x800000000000ULL, 0x1000000000000ULL, 0x4ULL, 0x0ULL \};/);
   delete source.pins["2"].detect_class;
   delete source.pins["47"];
   delete source.pins["48"];
@@ -2892,7 +2889,67 @@ test("descriptor fixtures agree with target internal-I2C metadata", async () => 
   }
   for (const [name, mapping] of Object.entries(target.boards)) {
     if (!mapping.wiring_output) continue;
-    assert.ok(observed.has(mapping.legacy_board_id), `${name} descriptor fixture`);
-    assert.equal(observed.get(mapping.legacy_board_id), mapping.desc_internal_i2c ?? false, name);
+    const id = catalogBoards.find((board) => board.id === name).legacy_board_id;
+    assert.ok(observed.has(id), `${name} descriptor fixture`);
+    assert.equal(observed.get(id), mapping.desc_internal_i2c ?? false, name);
+  }
+});
+
+test("catalog board IDs match explicit C++ enum values", async () => {
+  const source = await fs.readFile(path.join(root, "../../src/lgfx/boards.hpp"), "utf8");
+  assert.deepEqual(validateBoardEnums(catalogBoards, source), []);
+  const changed = source.replace("board_M5AirQ = 15", "board_M5AirQ = 999");
+  assert.equal(validateBoardEnums(catalogBoards, changed)[0].id, "E_TGT_BOARD_ID");
+  assert.equal(validateBoardEnums(catalogBoards, source.replace("board_M5AirQ = 15", "board_M5AirQ"))[0].id, "E_TGT_BOARD_ID");
+});
+
+test("board enum validation rejects ambiguous or conditional C++ definitions", async () => {
+  const source = await fs.readFile(path.join(root, "../../src/lgfx/boards.hpp"), "utf8");
+  const rejected = [
+    source.replace("board_M5AirQ = 15", "board_M5AirQ = 015"),
+    source.replace("board_M5AirQ = 15", "board_M5AirQ = 16") + "\n#if 0\nenum obsolete { board_M5AirQ = 15, };\n#endif\n",
+    source.replace("board_M5AirQ = 15", "board_M5AirQ = 16, board_M5AirQ = 15"),
+    source.replace("    , board_M5AirQ = 15", "#if 0\n    , board_M5AirQ = 15\n#endif"),
+    source.replace("    enum board_t", "#if 0\n    enum board_t").replace("    };", "    };\n#endif"),
+  ];
+  for (const value of rejected) assert.notDeepEqual(validateBoardEnums(catalogBoards, value), []);
+  // Unrelated enums cannot supply or override a canonical board_t value.
+  assert.deepEqual(validateBoardEnums(catalogBoards, source + "\nenum other { board_M5AirQ = 999, };"), []);
+  assert.deepEqual(validateBoardEnums(catalogBoards, source.replace("board_M5AirQ = 15", "board_M5AirQ = 0xF")), []);
+});
+
+test("board enum validation rejects macros and external definitions", async () => {
+  const source = await fs.readFile(path.join(root, "../../src/lgfx/boards.hpp"), "utf8");
+  const macro = source.replace("    enum board_t", "#define board_M5AirQ board_M5AirQ = 16, board_AirQ_original\n    enum board_t")
+    .replace("    };", "    };\n#undef board_M5AirQ");
+  for (const altered of [macro, macro.replace("#define board_M5AirQ", "#de\\\nfine board_M5AirQ").replace("#undef board_M5AirQ", ""),
+    "#define unrelated 1\n" + source, source + "\n#undef unrelated",
+    source + '\n#include "board_ids.hpp"', source + "\n#define __LGFX_BOARDS_HPP__"]) {
+    assert.equal(validateBoardEnums(catalogBoards, altered)[0].id, "E_TGT_BOARD_ENUM_SYNTAX");
+  }
+  assert.deepEqual(validateBoardEnums(catalogBoards, source), []);
+});
+
+test("derived board identities reject enum and namespace collisions", () => {
+  const first = { id: "m5foo", name: "Foo", chip: "esp32s3", legacy_board_id: 900 };
+  const namespaceCollision = { ...first, id: "m5stack_foo", name: "Bar", legacy_board_id: 901 };
+  const enumCollision = { ...first, id: "m5bar", legacy_board_id: 902 };
+  for (const [second, expected] of [[namespaceCollision, "E_TGT_NAMESPACE_DUP"], [enumCollision, "E_TGT_BOARD_ENUM_DUP"]]) {
+    const errors = validateTargets([first, second], { boards: { [first.id]: {}, [second.id]: {} } });
+    assert.ok(errors.some((item) => item.id === expected));
+  }
+});
+
+test("namespace overrides must differ and derived diagnostics identify the ID", () => {
+  const source = catalogBoards.find((board) => board.id === "m5airq");
+  const redundant = clone(target);
+  redundant.boards.m5airq.cpp_namespace = "airq";
+  assert.ok(validateTarget(source, redundant).some((item) => item.id === "E_TGT_REDUNDANT_NAMESPACE"
+    && item.path === "/targets/boards/m5airq/cpp_namespace"));
+  for (const [id, expected] of [["m5123", "E_TGT_CPP_IDENTIFIER"], ["m5class", "E_TGT_CPP_KEYWORD"]]) {
+    const derived = { ...source, id };
+    const errors = validateTarget(derived, { boards: { [id]: { wiring_output: "test.hpp" } } });
+    assert.ok(errors.some((item) => item.id === expected && item.path === `/targets/boards/${id}`
+      && item.message.includes("derived from id")));
   }
 });

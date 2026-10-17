@@ -67,11 +67,7 @@ public:
   unitpoep4_detector_t() : board_detector_t(members_) {}
   bool signature(probe_ctx_t& ctx) const override
   {
-    const detect_class_expected_t expected = {
-      wiring::unitpoep4::detect_class_mask, wiring::unitpoep4::detect_class_up,
-      wiring::unitpoep4::detect_class_down, wiring::unitpoep4::detect_class_floating,
-      wiring::unitpoep4::detect_class_fixed,
-    };
+    constexpr detect_class_expected_t expected = wiring::unitpoep4::detect_class_expected;
     // Tab5 SCL G32 stays pulled up even with a unit attached to Port B G52;
     // reject it before G31 can be driven as MDC on the shared internal bus.
     return match_detect_class(expected, probe_pin_pulls(ctx, expected.mask));

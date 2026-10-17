@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include "../../detect_class.hpp"
+
 namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {
 
 namespace corep4x {
@@ -14,19 +16,11 @@ namespace corep4x {
 } // namespace corep4x
 
 namespace unitpoep4 {
-  constexpr std::uint64_t detect_class_mask = 0x10000180000000ULL;
-  constexpr std::uint64_t detect_class_up = 0x10000080000000ULL;
-  constexpr std::uint64_t detect_class_down = 0x0ULL;
-  constexpr std::uint64_t detect_class_floating = 0x100000000ULL;
-  constexpr std::uint64_t detect_class_fixed = 0x0ULL;
+  constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
 } // namespace unitpoep4
 
 namespace tab5 {
-  constexpr std::uint64_t detect_class_mask = 0x400000ULL;
-  constexpr std::uint64_t detect_class_up = 0x0ULL;
-  constexpr std::uint64_t detect_class_down = 0x400000ULL;
-  constexpr std::uint64_t detect_class_floating = 0x0ULL;
-  constexpr std::uint64_t detect_class_fixed = 0x0ULL;
+  constexpr detect_class_expected_t detect_class_expected = { 0x400000ULL, 0x0ULL, 0x400000ULL, 0x0ULL, 0x0ULL };
   constexpr std::int8_t internal_i2c_sda = 31;
   constexpr std::int8_t internal_i2c_scl = 32;
   constexpr std::int8_t internal_i2c_port = 1;
@@ -34,11 +28,7 @@ namespace tab5 {
 } // namespace tab5
 
 namespace tab5x {
-  constexpr std::uint64_t detect_class_mask = 0x400000ULL;
-  constexpr std::uint64_t detect_class_up = 0x0ULL;
-  constexpr std::uint64_t detect_class_down = 0x400000ULL;
-  constexpr std::uint64_t detect_class_floating = 0x0ULL;
-  constexpr std::uint64_t detect_class_fixed = 0x0ULL;
+  constexpr detect_class_expected_t detect_class_expected = { 0x400000ULL, 0x0ULL, 0x400000ULL, 0x0ULL, 0x0ULL };
   constexpr std::int8_t internal_i2c_sda = 31;
   constexpr std::int8_t internal_i2c_scl = 32;
   constexpr std::int8_t internal_i2c_port = 1;

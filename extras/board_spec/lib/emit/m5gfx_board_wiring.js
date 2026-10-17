@@ -1,12 +1,14 @@
-export function m5gfxBoardMapping(target, boardId) {
+import { targetCppNamespace } from "../targets.js";
+
+export function m5gfxBoardMapping(target, board) {
+  const boardId = board.id;
   const source = target.boards?.[boardId];
   if (!source?.wiring_output) return null;
   return {
     boardId,
-    chip: source.chip,
-    cppNamespace: source.cpp_namespace,
-    boardEnum: source.board_enum,
-    descName: source.desc_name,
+    chip: board.chip,
+    cppNamespace: targetCppNamespace(board, target),
+    boardEnum: `board_${board.name}`,
     fields: source.wiring_fields ?? [],
     reset: source.reset,
     wiringOutput: source.wiring_output,
@@ -90,7 +92,7 @@ export function wiringAssignments(board, parts) {
 
 export function emitM5GFXWiring(board, parts, target) {
   requireWiringParts(parts);
-  const mapping = m5gfxBoardMapping(target, board.id);
+  const mapping = m5gfxBoardMapping(target, board);
   if (!mapping) return null;
   return emitM5GFXWiringForMapping(board, parts, mapping);
 }
@@ -264,6 +266,9 @@ export function renderM5GFXWiringHeader(entries) {
     "",
     "namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {",
   ];
+  if (entries.some(({ board }) => detectClassesForBoard(board).length)) {
+    lines.splice(7, 0, '#include "../../detect_class.hpp"', "");
+  }
   for (const entry of entries) {
     const value = entry.emitted;
     const subdivision = cardputerSubdivisionForEntry(entry, entries);
@@ -274,9 +279,8 @@ export function renderM5GFXWiringHeader(entries) {
     if (detectClasses.length) {
       const mask = (pull) => detectClasses.reduce((bits, [gpio, pin]) =>
         pull === undefined || pin.detect_class === pull ? bits | (1n << BigInt(gpio)) : bits, 0n);
-      for (const [name, pull] of [["mask", undefined], ["up", "up"], ["down", "down"], ["floating", "floating"], ["fixed", "fixed"]]) {
-        lines.push(`  constexpr std::uint64_t detect_class_${name} = 0x${mask(pull).toString(16)}ULL;`);
-      }
+      const masks = [undefined, "up", "down", "floating", "fixed"].map((pull) => `0x${mask(pull).toString(16)}ULL`);
+      lines.push(`  constexpr detect_class_expected_t detect_class_expected = { ${masks.join(", ")} };`);
     }
     if (fields.has("display")) for (const [name, pin] of Object.entries(value.display)) lines.push(`  ${constant(`display_${name}`, pin)}`);
     if (fields.has("shared_sd") && value.sharedSd) for (const [name, pin] of Object.entries(value.sharedSd)) lines.push(`  ${constant(`shared_sd_${name}`, pin)}`);
