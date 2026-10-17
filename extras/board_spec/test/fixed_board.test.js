@@ -5,9 +5,13 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { body, compileRun } from "./detect_host_helpers.js";
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../src");
+// Deferred public-API tests retain their existing fixtures until a native class boundary is available.
+async function readMain() {
+  return (await Promise.all(["M5GFX.cpp", "board_detect/detection_package.inl", "board_detect/detection_integration.inl"].map((name) => fs.readFile(path.join(src, name), "utf8")))).join("\n");
+}
 
 test("fixed acceptance bypasses NVS and detection and retries clean startup after failure", async () => {
-  const main = await fs.readFile(path.join(src, "M5GFX.cpp"), "utf8");
+  const main = await readMain();
   const registry = await fs.readFile(path.join(src, "board_detect/m5/board_registry.inl"), "utf8");
   const fixed = body(main, "static board_detect::detect_outcome_t run_fixed_detection(");
   const session = body(main, "static board_detect::detect_outcome_t run_fixed_detection_session(");
@@ -156,77 +160,6 @@ int main() {
 `, "fixed entry and startup");
 });
 
-test("fixed variant callbacks never invoke family identification", async () => {
-  const detector = await fs.readFile(path.join(src, "board_detect/board_detect.inl"), "utf8");
-  const core = await fs.readFile(path.join(src, "board_detect/m5/esp32_d0wdq6.inl"), "utf8");
-  const s3 = await fs.readFile(path.join(src, "board_detect/m5/esp32s3/cores3.inl"), "utf8");
-  const families = await fs.readFile(path.join(src, "board_detect/m5/esp32s3/families.inl"), "utf8");
-  const coreStart = body(core, "bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx)\n    {");
-  assert.doesNotMatch(coreStart, /touch_|try_station|probe_pin_pulls|assign\(/);
-  const s3Start = body(s3, "bool fixed_start(board_result_t& result");
-  assert.doesNotMatch(s3Start, /camera_id|probe_dedicated|firmware_reg|assign\(/);
-  for (const name of ["atoms3", "atoms3r", "airq"]) {
-    const start = body(families, `bool fixed_start_${name}(`);
-    assert.match(start, /fixed_start_spi_variant/);
-    assert.doesNotMatch(start, /camera|signature|detector|refine/);
-  }
-  const spiStart = body(detector, "bool fixed_start_spi_variant(");
-  assert.doesNotMatch(spiStart, /detector|candidate|assign\(/);
-});
-
-test("fixed Core2 and CoreS3 observe only construction variants in startup order", async () => {
-  const core = await fs.readFile(path.join(src,"board_detect/m5/esp32_d0wdq6.inl"),"utf8");
-  const s3 = await fs.readFile(path.join(src,"board_detect/m5/esp32s3/cores3.inl"),"utf8");
-  const coreStart=body(core,"bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx)\n    {");
-  const s3Start=body(s3,"bool fixed_start(board_result_t& result");
-  await compileRun(`
-#include "board_detect/detect_types.hpp"
-#include <cassert>
-#include <cstddef>
-#include <vector>
-#define ESP_LOGW(...) (++warnings)
-using namespace m5gfx::board_detect;
-std::vector<int> sequence;bool pmic_known, new_pmic, lcd_e, powered;int warnings;
-namespace m5gfx {namespace board_detect {
-struct board_desc_t {board_def_t def;struct {int sda,scl;} internal_i2c;struct {std::int8_t dc,sclk,mosi,miso;} display;};
-void board_result_t::assign(const board_desc_t* d){desc=d;def=&d->def;}
-struct detection_transaction_t {void restore_start(const std::int8_t(&)[4]){}};
-struct prepare_ctx_t {detection_transaction_t* transaction;int i2c_port_probe;};
-struct probe_ctx_t:prepare_ctx_t {};
-struct pmic_variant_t {std::uint32_t detected_option;};
-}}
-namespace generated_options {namespace core2 {constexpr unsigned new_pmic=1,lcd_e=2;}}
-constexpr unsigned vbus_5v=4;
-enum class panel_variant_t {unknown,c,e};
-namespace startup_detail {
-struct i2c_scope_t {bool opened=true;int port=0;i2c_scope_t(detection_transaction_t&,int,const decltype(board_desc_t::internal_i2c)&){}};
-bool prepare_power(const board_desc_t&,board_result_t& r,int,bool) {sequence.push_back(2);r.prepared|=prepared_power;return powered;}
-}
-const pmic_variant_t* observe_core_pmic(int){sequence.push_back(1);static pmic_variant_t p;p.detected_option=new_pmic?1:0;return pmic_known?&p:nullptr;}
-bool observe_core_panel(board_result_t&,const prepare_ctx_t&,panel_variant_t& v,std::uint32_t[4]){sequence.push_back(3);v=lcd_e?panel_variant_t::e:panel_variant_t::unknown;return true;}
-void log_panel_variant(panel_variant_t,const std::uint32_t[4]){}
-bool prepare(const board_desc_t&,board_result_t&,const prepare_ctx_t&){sequence.push_back(4);return true;}
-std::uint32_t observe_vbus(probe_ctx_t&){sequence.push_back(1);return vbus_5v;}
-void enable_bus_out(const prepare_ctx_t&){sequence.push_back(3);}
-bool refine_panel(board_result_t& r,const prepare_ctx_t&){sequence.push_back(5);if(lcd_e)r.option|=2;return true;}
-bool fixed_core(board_result_t& result,const prepare_ctx_t& ctx) ${coreStart}
-bool fixed_s3(board_result_t& result,const prepare_ctx_t& ctx) ${s3Start}
-int main(){
- const board_desc_t desc={{1,"fixed",0},{0,1},{2,3,4,5}};detection_transaction_t tx;prepare_ctx_t ctx={&tx,-1};
- board_result_t r;r.assign(&desc);pmic_known=false;powered=true;
- assert(!fixed_core(r,ctx));assert(sequence==std::vector<int>({1}));assert(warnings==1);
- for(bool pmic:{false,true})for(bool panel:{false,true}){
-  sequence.clear();r={};r.assign(&desc);pmic_known=true;new_pmic=pmic;lcd_e=panel;
-  assert(fixed_core(r,ctx));assert(sequence==std::vector<int>({1,2,3,4}));
-  assert(r.option==unsigned((pmic?1:0)|(panel?2:0)));assert(r.def==&desc.def&&!r.provisional&&r.refine==nullptr);
- }
- sequence.clear();r={};r.assign(&desc);lcd_e=true;
- assert(fixed_s3(r,ctx));assert(sequence==std::vector<int>({1,2,3,5,4}));
- assert(r.option==(vbus_5v|2));assert(r.def==&desc.def&&r.refine==nullptr);
-}
-`,"fixed construction variants");
-});
-
 test("M5Unified BOARD_ID guard accepts positive values without M5GFX_BOARD and fixed selection wins", async (t) => {
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
  let header;try{header=await fs.readFile(path.join(unified,"src/M5Unified.hpp"),"utf8");}catch{return t.skip("M5Unified checkout absent");}
@@ -274,85 +207,6 @@ int main(){for(int fixed=0;fixed<2;++fixed)for(int adopted=0;adopted<2;++adopted
 `,"fixed and fallback selection");
 });
 
-test("fixed Tough backlight follows observed PMIC while its panel and touch remain fixed", async () => {
- const setup=await fs.readFile(path.join(src,"board_detect/m5/esp32_d0wdq6_setup.inl"),"utf8");
- const construct=body(setup,"construct_status_t construct_tough(");
- await compileRun(`
-#include "board_detect/detect_types.hpp"
-#include <cassert>
-#include <cstddef>
-#include <memory>
-using namespace m5gfx::board_detect;
-int selected;
-namespace lgfx {struct ILight {virtual ~ILight()=default;};struct Touch_CHSC6540 {}; }
-struct Light_M5StackCore2_AXP2101:lgfx::ILight {Light_M5StackCore2_AXP2101(){selected=1;}};
-struct Light_M5Tough:lgfx::ILight {Light_M5Tough(){selected=2;}};
-struct panel_t {void touch(lgfx::Touch_CHSC6540*){}};
-struct display_parts_t{};
-struct display_parts_owner_t {
- std::unique_ptr<lgfx::ILight> light;
- std::unique_ptr<lgfx::Touch_CHSC6540> touch;
- std::unique_ptr<panel_t> panel;
- bool release_to(display_parts_t*){return true;}
-};
-namespace generated_options {namespace core2 {constexpr unsigned new_pmic=1;}namespace tough {constexpr unsigned lcd_e=2;}}
-constexpr int bus_tough=0,touch_tough=0;
-template<class T>T* make_default_part(){return new T();}
-template<class T>T* make_i2c_touch(int){return new T();}
-void construct_core_panel(const board_result_t&,unsigned,int,display_parts_owner_t* out){out->panel.reset(new panel_t);}
-using construct_status_t=bool;bool construct_status(bool v){return v;}
-construct_status_t construct_tough(const board_result_t& result,display_parts_t* parts) ${construct}
-int main(){for(unsigned option=0;option<2;++option){board_result_t r;r.option=option;display_parts_t p;assert(construct_tough(r,&p));assert(selected==(option?1:2));}}
-`,"Tough PMIC backlight");
-});
-
-test("Paper IT8951 initialization waits for BUSY before sending panel commands", async () => {
- const panel=await fs.readFile(path.join(src,"lgfx/v1/panel/Panel_IT8951.inl"),"utf8");
- const init=body(panel,"bool Panel_IT8951::init(");
- assert.ok(init.indexOf("_wait_busy();")>=0&&init.indexOf("_wait_busy();")<init.indexOf("startWrite();"));
-});
-
-test("fixed SPI variants read only the selected display and keep default on unreadable ID", async () => {
- const source=await fs.readFile(path.join(src,"board_detect/board_detect.inl"),"utf8");
- const observe=body(source,"bool observe_spi_variant(");
- const start=body(source,"bool fixed_start_spi_variant(");
- await compileRun(`
-#include "board_detect/detect_types.hpp"
-#include <cassert>
-#include <cstddef>
-#define ESP_LOGW(...) (++warnings)
-using namespace m5gfx::board_detect;
-int mode,reads,warnings,prepares;
-namespace m5gfx {namespace board_detect {
-struct board_desc_t {board_def_t def;struct {std::int8_t sclk,mosi,miso,dc,cs;} display;};
-void board_result_t::assign(const board_desc_t* d){desc=d;def=&d->def;}
-struct detection_transaction_t {void restore_start(const std::int8_t(&pins)[4]){for(int i=0;i<4;++i)assert(pins[i]>=2&&pins[i]<=5);}};
-struct prepare_ctx_t {detection_transaction_t* transaction;};
-struct probe_ctx_t:prepare_ctx_t {};
-struct spi_id_probe_t {unsigned cmd,dummy_bits,mask;const std::uint32_t* values;unsigned value_count,option_bit;};
-struct spi_id_member_t {const board_desc_t* desc;const spi_id_probe_t* probes;unsigned probe_count;bool three_wire;std::uint8_t slow_retry_half_us;bool legacy_zero_preamble;};
-}}
-bool prepare(const board_desc_t&,board_result_t& r,const prepare_ctx_t&){++prepares;r.prepared=prepared_power|prepared_reset;return true;}
-std::uint32_t soft_spi_read32(probe_ctx_t&,int sclk,int mosi,int miso,int dc,int cs,unsigned,unsigned,unsigned half,bool){
- assert(sclk==2&&mosi==3&&miso==3&&dc==5&&cs==6);assert(half==1||half==5);++reads;
- return mode==0?0xffffffff:mode==1?0x11:mode==3&&reads==1?0xffffffff:0x22;
-}
-bool observe_spi_variant(probe_ctx_t& ctx,const board_desc_t& desc,const spi_id_probe_t* probes,std::size_t probe_count,std::uint32_t* option,bool three_wire,std::uint8_t slow_retry_half_us,bool legacy_zero_preamble) ${observe}
-bool fixed_start_spi_variant(board_result_t& result,const prepare_ctx_t& ctx,const spi_id_member_t& member) ${start}
-int main(){
- const board_desc_t desc={{1,"fixed display",0},{2,3,4,5,6}};
- const std::uint32_t standard[]={0x11},alternate[]={0x22};
- const spi_id_probe_t probes[]={{4,1,0xff,standard,1,0},{4,1,0xff,alternate,1,1}};
- const spi_id_member_t member={&desc,probes,2,true,5,false};detection_transaction_t tx;prepare_ctx_t ctx={&tx};
- for(mode=0;mode<4;++mode){board_result_t r;r.assign(&desc);reads=warnings=prepares=0;
- assert(fixed_start_spi_variant(r,ctx,member));assert(r.def==&desc.def&&r.option==unsigned(mode>=2));
- assert(prepares==1&&reads==(mode==0||mode==3?2:1)&&warnings==(mode==0));
- assert(r.prepared==(prepared_power|prepared_reset)&&!r.provisional&&r.refine==nullptr);
- }
-}
-`,"fixed SPI-only observation");
-});
-
 test("fixed GPIO46 pre-hold follows the existing power pin table", async (t) => {
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
  let header, impl;
@@ -386,22 +240,3 @@ int main(){M5Unified u;assert(u.hold()==${fixed===undefined||fixed===0||(fixed>=
 `,"fixed power hold");
  }
 });
-
-test("fixed Stack startup no longer collects unused IPS options", async () => {
- const declaration=await fs.readFile(path.join(src,"board_detect/board_detect.hpp"),"utf8");
- const implementation=await fs.readFile(path.join(src,"board_detect/board_detect.inl"),"utf8");
- const main=await fs.readFile(path.join(src,"M5GFX.cpp"),"utf8");
- const normal=await fs.readFile(path.join(src,"board_detect/m5/esp32_d0wdq6.inl"),"utf8");
- assert.doesNotMatch(declaration+implementation+main,/collect_reset_option/);
- assert.match(normal,/stack_reset_and_sample_ips/);
- assert.doesNotMatch(body(main,"static board_detect::detect_outcome_t run_fixed_detection("),/stack::ips|stack_reset_and_sample_ips/);
-});
-
- test("StopWatch constructor GPIO is included in its rollback pins",async()=>{
- const desc=await fs.readFile(path.join(src,"board_detect/m5/esp32s3/families.inl"),"utf8");
- const setup=await fs.readFile(path.join(src,"board_detect/m5/esp32s3/families_setup.inl"),"utf8");
- assert.match(desc,/stopwatch_te_pin = GPIO_NUM_38/);
- assert.match(desc,/stopwatch_startup_pins\[\] = \{[\s\S]*?stopwatch_te_pin/);
- assert.match(body(setup,"construct_status_t construct_stopwatch("),/pinMode\(stopwatch_te_pin/);
- assert.match(desc,/desc_stopwatch = \{[\s\S]*?pins\(stopwatch_startup_pins\)/);
- });

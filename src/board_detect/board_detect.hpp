@@ -6,7 +6,11 @@
 #include <cstdint>
 #include <initializer_list>
 
+#if defined (M5GFX_BOARD_DETECT_HOST_HAL)
+#include M5GFX_BOARD_DETECT_HOST_HAL
+#else
 #include "../lgfx/v1/platforms/esp32/common.hpp"
+#endif
 #include "dedicated_release_probe.hpp"
 #include "ops.hpp"
 #include "detect_types.hpp"

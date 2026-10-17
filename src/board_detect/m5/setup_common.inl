@@ -7,13 +7,7 @@ namespace board_detect
 {
 namespace m5
 {
-  struct display_parts_t
-  {
-    lgfx::IBus* bus = nullptr;
-    lgfx::Panel_Device* panel = nullptr;
-    lgfx::ILight* light = nullptr;
-    lgfx::ITouch* touch = nullptr;
-  };
+#include "display_parts.inl"
 
   struct spi_bus_desc_t
   {

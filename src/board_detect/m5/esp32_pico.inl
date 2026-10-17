@@ -142,7 +142,11 @@ static const spi_id_member_t stickcplus2_member_descs[] = {
 static const spi_id_detector_t stickcplus2_detector(
   stickcplus2_members, stickcplus2_member_descs, 1);
 
+#if defined (M5GFX_BOARD_DETECT_HOST_TOUCH)
+#include M5GFX_BOARD_DETECT_HOST_TOUCH
+#else
 #include "atom_touch.inl"
+#endif
 
 class atom_family_detector_t final : public board_detector_t
 {

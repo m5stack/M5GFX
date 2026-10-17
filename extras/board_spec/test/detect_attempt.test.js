@@ -7,10 +7,14 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.resolve(here, "../../../src");
+// Deferred public-API tests retain their existing fixtures until a native class boundary is available.
+async function readMain() {
+  return (await Promise.all(["M5GFX.cpp", "board_detect/detection_package.inl", "board_detect/detection_integration.inl"].map((name) => fs.readFile(path.join(src, name), "utf8")))).join("\n");
+}
 import { body, compileRun } from "./detect_host_helpers.js";
 
 test("production attempt yields before construction and preserves adoption and rollback semantics", async () => {
-  const main = await fs.readFile(path.join(src, "M5GFX.cpp"), "utf8");
+  const main = await readMain();
   const attempt = body(main, "static board_detect::detect_outcome_t run_detection_attempt(");
   const finish = body(main, "static board_detect::detect_outcome_t finish_detection_setup(");
   const compat = body(main, "board_t M5GFX::autodetect(");
@@ -148,7 +152,7 @@ int main() {
 });
 
 test("public config stores the next preference and warns after either successful or failed init", async () => {
- const main=await fs.readFile(path.join(src,"M5GFX.cpp"),"utf8");
+ const main=await readMain();
  const header=await fs.readFile(path.join(src,"M5GFX.h"),"utf8");
  const setter=body(main,"void M5GFX::setDetectConfig(");
  const config=body(header,"struct detect_config_t");
@@ -178,7 +182,7 @@ int main(){M5GFX gfx;detect_config_t cfg;assert(gfx.getDetectConfig().fallback_b
 });
 
 test("production init restores panel according to adoption independently of verdict", async () => {
-  const main = await fs.readFile(path.join(src, "M5GFX.cpp"), "utf8");
+  const main = await readMain();
   const start = main.indexOf("        if (!package.direct_setup ||");
   assert.ok(start >= 0);
   const restore = main.slice(start, main.indexOf("        return result;", start));

@@ -5,12 +5,18 @@ on:
   push:
     paths:
       - 'extras/board_spec/**'
+      - 'test/board_detect/fixtures/**'
       - 'src/board_detect/**'
+      - 'src/M5GFX.cpp'
+      - 'src/M5GFX.h'
       - '.github/workflows/BoardSpec.yml'
   pull_request:
     paths:
       - 'extras/board_spec/**'
+      - 'test/board_detect/fixtures/**'
       - 'src/board_detect/**'
+      - 'src/M5GFX.cpp'
+      - 'src/M5GFX.h'
       - '.github/workflows/BoardSpec.yml'
   workflow_dispatch:
 
@@ -30,7 +36,7 @@ jobs:
 
       - name: Test board specification tools
         working-directory: extras/board_spec
-        run: node --test test/
+        run: npm test
 
       - name: Check catalog and generated sources
         working-directory: extras/board_spec

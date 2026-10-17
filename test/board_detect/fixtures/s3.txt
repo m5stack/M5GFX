@@ -1,0 +1,237 @@
+147 M5DualKey 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5DualKey 0 0
+10 M5StackCoreS3 0
+power -1 1 400000 0 0 0 1
+device 400000 0 88 0 1 0
+device 400000 0 52 0 1 0
+variant 52 3 0 0 0 0 0 0 0 1 0 [6:1,35,0,31;6:0,2,5,5;6:0,3,3,3;4:0,4,24,255;4:0,5,12,255;4:0,17,16,255;4:0,18,255,255;4:0,19,255,255;4:1,144,63,255;4:1,148,28,255;4:1,149,28,255;][][] restore[]
+variant 52 3 0 0 0 0 0 0 0 1 1 [6:1,35,0,31;6:0,2,5,5;6:0,3,131,131;4:0,4,24,255;4:0,5,12,255;4:0,17,16,255;4:0,18,255,255;4:0,19,255,255;4:1,144,63,255;4:1,148,28,255;4:1,149,28,255;][][] restore[]
+reset 0 -1 0 0 0 0
+sd 36 37 35 4 3
+display 36 37 35 35 3 -1 -1
+i2c 12 11 1 hold [4,3,] ops [4,3,] options[vbus_5v,internal_camera_confirmed,lcd_e,]
+entry construct_cores3 board_M5StackCoreS3 0 1
+17 M5StackCoreS3SE 0
+power -1 1 400000 0 0 0 1
+device 400000 0 88 0 1 0
+device 400000 0 52 0 1 0
+variant 52 3 0 0 0 0 0 0 0 1 0 [6:1,35,0,31;6:0,2,5,5;6:0,3,3,3;4:0,4,24,255;4:0,5,12,255;4:0,17,16,255;4:0,18,255,255;4:0,19,255,255;4:1,144,63,255;4:1,148,28,255;4:1,149,28,255;][][] restore[]
+variant 52 3 0 0 0 0 0 0 0 1 1 [6:1,35,0,31;6:0,2,5,5;6:0,3,131,131;4:0,4,24,255;4:0,5,12,255;4:0,17,16,255;4:0,18,255,255;4:0,19,255,255;4:1,144,63,255;4:1,148,28,255;4:1,149,28,255;][][] restore[]
+reset 0 -1 0 0 0 0
+sd 36 37 35 4 3
+display 36 37 35 35 3 -1 -1
+i2c 12 11 1 hold [4,3,] ops [4,3,] options[vbus_5v,internal_camera_confirmed,lcd_e,]
+entry construct_cores3 board_M5StackCoreS3SE 0 1
+27 M5StackChan 0
+power -1 1 400000 0 0 0 1
+device 400000 0 88 0 1 0
+device 400000 0 52 0 1 0
+variant 52 3 0 0 0 0 0 0 0 1 0 [6:1,35,0,31;6:0,2,5,5;6:0,3,3,3;4:0,4,24,255;4:0,5,12,255;4:0,17,16,255;4:0,18,255,255;4:0,19,255,255;4:1,144,63,255;4:1,148,28,255;4:1,149,28,255;][][] restore[]
+variant 52 3 0 0 0 0 0 0 0 1 1 [6:1,35,0,31;6:0,2,5,5;6:0,3,131,131;4:0,4,24,255;4:0,5,12,255;4:0,17,16,255;4:0,18,255,255;4:0,19,255,255;4:1,144,63,255;4:1,148,28,255;4:1,149,28,255;][][] restore[]
+reset 0 -1 0 0 0 0
+sd 36 37 35 4 3
+display 36 37 35 35 3 -1 -1
+i2c 12 11 1 hold [4,3,] ops [4,3,] options[vbus_5v,internal_camera_confirmed,lcd_e,]
+entry construct_cores3 board_M5StackChan 0 1
+11 M5AtomS3 0
+power -1 1 0 0 0 0 0
+reset 1 34 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 17 21 -1 33 15 34 -1
+i2c -1 -1 -1 hold [15,] ops [15,] options[gc9107,]
+entry construct_atoms3 board_M5AtomS3 1 1
+137 M5AtomS3Lite 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomS3Lite 0 0
+138 M5AtomS3U 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomS3U 0 0
+136 M5StampS3 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5StampS3 0 0
+139 M5Capsule 0
+power 46 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 8 10 1 hold [] ops [] options[]
+entry construct_displayless board_M5Capsule 0 0
+146 M5PowerHub 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 45 48 1 hold [] ops [] options[]
+entry construct_displayless board_M5PowerHub 0 0
+18 M5AtomS3R 0
+power -1 1 0 0 0 0 0
+reset 1 48 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 15 21 -1 42 14 48 -1
+i2c -1 -1 -1 hold [14,] ops [14,] options[gc9107,]
+entry construct_atoms3r board_M5AtomS3R 1 1
+144 M5AtomS3RCam 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 45 0 1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomS3RCam 0 0
+143 M5AtomS3RExt 1
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 45 0 1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomS3RExt 0 0
+145 M5AtomVoiceS3R 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 45 0 1 hold [] ops [] options[]
+entry construct_displayless board_M5AtomVoiceS3R 0 0
+149 M5StampS3Bat 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 48 47 1 hold [] ops [] options[]
+entry construct_displayless board_M5StampS3Bat 0 0
+155 M5StampS3Mini 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 38 39 1 hold [] ops [] options[]
+entry construct_displayless board_M5StampS3Mini 0 0
+13 M5DinMeter 0
+power 46 1 0 0 0 0 0
+reset 1 8 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 6 5 -1 4 7 8 -1
+i2c -1 -1 -1 hold [7,] ops [7,] options[]
+entry construct_dinmeter board_M5DinMeter 0 0
+15 M5AirQ 0
+power 46 1 0 0 0 0 0
+reset 1 2 2 10 1 0
+sd -1 -1 -1 -1 -1
+display 5 6 -1 3 4 2 1
+i2c -1 -1 -1 hold [4,] ops [4,] options[m09,]
+entry construct_airq M5AirQ 0 1
+21 M5StamPLC 0
+power -1 1 0 0 0 0 0
+reset 1 3 2 10 2 0
+sd 7 8 9 10 12
+display 7 8 9 6 12 3 -1
+i2c -1 -1 -1 hold [10,12,] ops [10,12,] options[]
+entry construct_stamplc board_M5StamPLC 0 0
+12 M5Dial 0
+power 46 1 0 0 0 0 0
+reset 1 8 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 6 5 -1 4 7 8 -1
+i2c 11 12 1 hold [7,] ops [7,] options[]
+entry construct_dial board_M5Dial 0 0
+14 M5Cardputer 0
+power -1 1 0 0 0 0 0
+reset 1 33 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 36 35 -1 34 37 33 -1
+i2c -1 -1 -1 hold [37,] ops [37,] options[]
+entry construct_cardputer board_M5Cardputer 0 0
+24 M5CardputerADV 0
+power -1 1 0 0 0 0 0
+reset 1 33 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 36 35 -1 34 37 33 -1
+i2c -1 -1 -1 hold [37,] ops [37,] options[]
+entry construct_cardputer_adv board_M5CardputerADV 0 0
+16 M5VAMeter 0
+power -1 1 0 0 0 0 0
+reset 1 33 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 36 35 -1 34 37 33 -1
+i2c -1 -1 -1 hold [37,] ops [37,] options[]
+entry construct_vameter board_M5VAMeter 0 0
+26 M5StickS3 0
+power -1 1 100000 200 200 200 0
+device 100000 0 110 0 1 1
+variant 110 0 0 0 17 4 17 4 0 0 0 [4:0,9,0,255;6:0,22,0,4;6:0,16,4,4;6:0,19,0,4;6:0,17,4,4;][][] restore[9,17,19,16,22,]
+reset 1 21 2 10 2 0
+sd -1 -1 -1 -1 -1
+display 40 39 -1 45 41 21 -1
+i2c 47 48 1 hold [41,] ops [41,] options[]
+entry construct_sticks3 board_M5StickS3 0 0
+30 M5StopWatch 0
+power -1 1 100000 0 0 0 1
+device 100000 0 110 0 1 1
+device 100000 0 79 0 1 1
+variant 110 0 0 0 0 0 0 0 0 0 0 [4:0,9,0,255;4:0,10,0,255;6:0,6,23,23;1:39,0;2:39;7:1,500,1;4:1,35,0,255;6:1,19,0,157;6:1,3,157,157;6:1,5,153,153;0:10;6:1,5,0,24;0:8;6:1,5,24,24;0:2;6:1,20,0,2;6:1,4,2,2;6:1,6,0,2;][][] restore[]
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display 40 41 -1 -1 39 -1 -1
+i2c 47 48 1 hold [39,] ops [39,38,] options[]
+entry construct_stopwatch board_M5StopWatch 0 0
+29 M5PaperMono 0
+power -1 1 100000 0 0 0 1
+device 100000 0 110 0 1 1
+device 100000 0 79 0 1 1
+variant 110 0 0 0 0 0 0 0 0 0 0 [4:0,9,0,255;4:0,10,0,255;6:0,6,23,23;1:16,0;2:16;7:1,500,1;6:1,3,52,52;6:1,4,48,48;6:1,5,4,4;6:1,6,48,48;6:1,19,0,52;6:1,20,0,52;6:1,5,0,48;0:8;6:1,5,48,48;0:2;][][] restore[]
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display 15 14 -1 17 16 -1 18
+i2c 47 48 1 hold [16,] ops [16,] options[]
+entry construct_papermono board_M5PaperMono 0 0
+32 M5ChainCaptain 0
+power -1 1 100000 0 0 0 1
+device 100000 0 110 0 1 1
+device 100000 0 79 0 1 1
+variant 110 0 0 0 0 0 0 0 0 0 0 [][][] restore[]
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display 15 16 -1 46 45 -1 -1
+i2c 3 2 1 hold [45,] ops [45,] options[]
+entry construct_chaincaptain board_M5ChainCaptain 0 0
+28 M5PaperColor 0
+power -1 1 100000 0 0 0 1
+device 100000 0 110 0 1 1
+variant 110 0 0 0 0 0 0 0 0 0 0 [][][] restore[]
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display 15 13 14 43 44 12 11
+i2c 3 2 1 hold [47,44,] ops [47,44,] options[]
+entry construct_papercolor board_M5PaperColor 0 0
+19 M5PaperS3 0
+power 44 0 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 41 42 1 hold [] ops [] options[]
+entry construct_papers3 board_M5PaperS3 0 0
+34 M5PaperDIY 0
+power -1 1 100000 0 0 0 1
+device 100000 0 110 0 1 1
+variant 110 0 0 0 0 0 0 0 0 0 0 [4:0,9,0,255;4:0,10,0,255;6:0,22,0,48;6:0,16,4,4;6:0,19,0,4;6:0,17,4,4;0:10;][][] restore[]
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 41 42 -1 hold [] ops [] options[]
+entry construct_paperdiy board_M5PaperDIY 0 0

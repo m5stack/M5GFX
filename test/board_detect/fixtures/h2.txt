@@ -1,0 +1,7 @@
+151 M5NanoH2 0
+power -1 1 0 0 0 0 0
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c -1 -1 -1 hold [] ops [] options[]
+entry construct_displayless board_M5NanoH2 0 0
