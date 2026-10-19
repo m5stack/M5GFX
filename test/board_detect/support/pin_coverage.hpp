@@ -6,11 +6,7 @@
 #include <set>
 #include <map>
 #include "board_detect/board_detect.inl"
-namespace host_touch {
-static std::uint16_t t4 = 100, t7 = 25;
-static bool available = true;
-static unsigned scans, clears;
-}
+
 #include COVERAGE_BOARD_HEADER
 #include "display_backend.hpp"
 using namespace m5gfx::board_detect;

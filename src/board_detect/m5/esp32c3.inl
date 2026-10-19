@@ -5,8 +5,6 @@
 #include "../board_detect.hpp"
 #include "board_registry.inl"
 #include "generated/esp32c3_wiring.hpp"
-#include <soc/io_mux_reg.h>
-#include <soc/usb_serial_jtag_reg.h>
 
 namespace m5gfx { namespace board_detect { namespace m5 {
 
@@ -25,15 +23,13 @@ namespace c3_detail
 {
   inline bool sof_advances()
   {
-    const auto first = REG_GET_FIELD(USB_SERIAL_JTAG_FRAM_NUM_REG,
-                                     USB_SERIAL_JTAG_SOF_FRAME_INDEX);
+    const auto first = io::usb_serial_jtag_frame();
     // USB SOF is 1 ms apart. Four further samples span at most 4 ms; do not
     // wait for USB enumeration, which starts much later on a cold boot.
     for (int i = 0; i < 4; ++i)
     {
-      lgfx::delayMicroseconds(1000);
-      if (REG_GET_FIELD(USB_SERIAL_JTAG_FRAM_NUM_REG,
-                        USB_SERIAL_JTAG_SOF_FRAME_INDEX) != first) { return true; }
+      io::delay_us(1000);
+      if (io::usb_serial_jtag_frame() != first) { return true; }
     }
     return false;
   }
@@ -42,10 +38,7 @@ namespace c3_detail
   {
     // GPIO20 is UART0 RX. Restore its IO_MUX immediately after the read so
     // the console input keeps its pre-detection configuration.
-    const auto mux = REG_READ(IO_MUX_GPIO20_REG);
-    lgfx::pinMode(20, lgfx::pin_mode_t::input_pulldown);
-    const bool high = lgfx::gpio_in(20);
-    REG_WRITE(IO_MUX_GPIO20_REG, mux);
+    const bool high = io::uart_rx_held_high();
     ctx.transaction->restore_start({ 20 });
     return high;
   }

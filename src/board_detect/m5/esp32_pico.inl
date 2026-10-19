@@ -143,11 +143,7 @@ static const spi_id_detector_t stickcplus2_detector(
   stickcplus2_members, stickcplus2_member_descs, 1);
 
 #include "atom_touch_pins.inl"
-#if defined (M5GFX_BOARD_DETECT_HOST_TOUCH)
-#include M5GFX_BOARD_DETECT_HOST_TOUCH
-#else
 #include "atom_touch.inl"
-#endif
 
 class atom_family_detector_t final : public board_detector_t
 {
@@ -169,24 +165,24 @@ private:
   {
     if (result == nullptr) { return false; }
     // StampPico holds G2 low; exclude it before probing the Atom family.
-    lgfx::pinMode(2, lgfx::pin_mode_t::input_pullup);
-    esp_rom_delay_us(5);
-    const bool atom_g2 = lgfx::gpio_in(2);
+    io::pin_mode(2, io::pin_mode_t::input_pullup);
+    io::delay_rom_us(5);
+    const bool atom_g2 = io::pin_read(2);
     ctx.transaction->restore_start({ 2 });
     if (!atom_g2) { return false; }
     // StickC LCD reset is pulled high; Atom leaves G18 unconnected.
     const auto g18 = probe_pin_pulls(ctx, 1ULL << 18);
     if (g18.pulldown_high || g18.pullup_high != (1ULL << 18)) { return false; }
-    const auto read_g34 = [](lgfx::pin_mode_t mode) {
-      lgfx::pinMode(23, mode); // G23 is exposed on Lite/Matrix: internal pull only, never drive it.
-      esp_rom_delay_us(5);
-      return lgfx::gpio_in(34);
+    const auto read_g34 = [](io::pin_mode_t mode) {
+      io::pin_mode(23, mode); // G23 is exposed on Lite/Matrix: internal pull only, never drive it.
+      io::delay_rom_us(5);
+      return io::pin_read(34);
     };
-    lgfx::pinMode(34, lgfx::pin_mode_t::input);
-    const bool down = read_g34(lgfx::pin_mode_t::input_pulldown);
-    const bool up1 = read_g34(lgfx::pin_mode_t::input_pullup);
-    const bool down2 = read_g34(lgfx::pin_mode_t::input_pulldown);
-    const bool up2 = read_g34(lgfx::pin_mode_t::input_pullup);
+    io::pin_mode(34, io::pin_mode_t::input);
+    const bool down = read_g34(io::pin_mode_t::input_pulldown);
+    const bool up1 = read_g34(io::pin_mode_t::input_pullup);
+    const bool down2 = read_g34(io::pin_mode_t::input_pulldown);
+    const bool up2 = read_g34(io::pin_mode_t::input_pullup);
     ctx.transaction->restore_start({ 23, 34 });
 
     if (down)
@@ -220,10 +216,10 @@ private:
     if (ratio100 < matrix_limit * reference)
     {
       result->assign(&desc_atommatrix);
-      lgfx::pinMode(21, lgfx::pin_mode_t::input_pulldown);
-      lgfx::pinMode(25, lgfx::pin_mode_t::input_pulldown);
-      esp_rom_delay_us(10);
-      const bool matrix_pulls = lgfx::gpio_in(21) && lgfx::gpio_in(25);
+      io::pin_mode(21, io::pin_mode_t::input_pulldown);
+      io::pin_mode(25, io::pin_mode_t::input_pulldown);
+      io::delay_rom_us(10);
+      const bool matrix_pulls = io::pin_read(21) && io::pin_read(25);
       ctx.transaction->restore_start({ 21, 25 });
       if (!linked || !matrix_pulls) { result->provisional = true; }
     }

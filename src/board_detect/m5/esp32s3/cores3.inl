@@ -151,44 +151,46 @@
       constexpr std::uint8_t port0_reg = 0x02;
       constexpr std::uint8_t bus_en = 0x02;
       constexpr std::uint32_t freq = 100000;
-      const auto port0 = lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq);
-      if (!port0.has_value()) { return "read failed"; }
-      if (port0.value() & bus_en) { return nullptr; }
-      const std::uint8_t off_value = port0.value();
+      std::uint8_t port0 = 0;
+      if (!io::i2c_read_reg8(port, aw_addr, port0_reg, &port0, freq)) { return "read failed"; }
+      if (port0 & bus_en) { return nullptr; }
+      const std::uint8_t off_value = port0;
       enum class off_state_t { unknown, off, on };
       const auto confirm_off = [&]()
       {
         bool read_ok = false;
         for (int retry = 0; retry < 3; ++retry)
         {
-          lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value, 0, freq);
-          const auto read = lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq);
-          read_ok = read.has_value();
-          if (read_ok && !(read.value() & bus_en)) { return off_state_t::off; }
+          io::i2c_write_reg8(port, aw_addr, port0_reg, off_value, freq);
+          std::uint8_t read = 0;
+          read_ok = io::i2c_read_reg8(port, aw_addr, port0_reg, &read, freq);
+          if (read_ok && !(read & bus_en)) { return off_state_t::off; }
         }
         return read_ok ? off_state_t::on : off_state_t::unknown;
       };
       for (std::uint32_t i = 0; i < 8; ++i)
       {
-        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value | bus_en, 0, freq).has_value())
+        if (!io::i2c_write_reg8(port, aw_addr, port0_reg, off_value | bus_en, freq))
         {
           const auto state = confirm_off();
           if (state == off_state_t::on) { break; }
           return state == off_state_t::off ? "precharge write failed" : "precharge read failed";
         }
-        lgfx::delayMicroseconds(i * 16);
-        if (!lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value, 0, freq).has_value())
+        io::delay_us(i * 16);
+        if (!io::i2c_write_reg8(port, aw_addr, port0_reg, off_value, freq))
         {
           const auto state = confirm_off();
           if (state == off_state_t::unknown) { return "precharge read failed"; }
           if (state == off_state_t::on) { break; }
         }
-        lgfx::delayMicroseconds(1000);
+        io::delay_us(1000);
       }
       for (int retry = 0; retry < 3; ++retry)
       {
-        if (lgfx::i2c::writeRegister8(port, aw_addr, port0_reg, off_value | bus_en, 0, freq).has_value()
-         && lgfx::i2c::readRegister8(port, aw_addr, port0_reg, freq).value_or(0) == (off_value | bus_en))
+        std::uint8_t read = 0;
+        if (io::i2c_write_reg8(port, aw_addr, port0_reg, off_value | bus_en, freq)
+         && io::i2c_read_reg8(port, aw_addr, port0_reg, &read, freq)
+         && read == (off_value | bus_en))
         {
           return nullptr;
         }
@@ -252,21 +254,19 @@
       // clocks and STOP.
       startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc_cores3.internal_i2c);
       if (!i2c.opened) { return false; }
-      const auto started = lgfx::millis();
+      const auto started = io::millis();
       do
       {
 #if defined(M5GFX_AUTODETECT_TEST_CORES3_STACKCHAN_NACK)
         const bool ack = false;
 #else
-        const bool began = lgfx::i2c::beginTransaction(
-          i2c.port, specs::stackchan::i2c_stackchan_ioe::i2c_addr,
-          specs::stackchan::i2c_stackchan_ioe::i2c_freq, false).has_value();
-        const bool ended = lgfx::i2c::endTransaction(i2c.port).has_value();
-        const bool ack = began && ended;
+        const bool ack = io::i2c_ack(i2c.port,
+          specs::stackchan::i2c_stackchan_ioe::i2c_addr,
+          specs::stackchan::i2c_stackchan_ioe::i2c_freq, true);
 #endif
         // In-flight ACK timeout and START recovery may overrun the 50 ms window.
-        if (ack || !gate || lgfx::millis() - started >= 50) { return ack; }
-        lgfx::delay(1);
+        if (ack || !gate || io::millis() - started >= 50) { return ack; }
+        io::delay_ms(1);
       } while (true);
 #endif
     }

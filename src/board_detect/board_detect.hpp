@@ -6,11 +6,7 @@
 #include <cstdint>
 #include <initializer_list>
 
-#if defined (M5GFX_BOARD_DETECT_HOST_HAL)
-#include M5GFX_BOARD_DETECT_HOST_HAL
-#else
-#include "../lgfx/v1/platforms/esp32/common.hpp"
-#endif
+#include "detect_io.hpp"
 #include "dedicated_release_probe.hpp"
 #include "ops.hpp"
 #include "detect_types.hpp"
@@ -92,7 +88,7 @@ namespace board_detect
     void rollback();
 
   private:
-    lgfx::gpio::pin_backup_t saved_[max_detection_pins];
+    io::pin_state_t saved_[max_detection_pins];
     std::uint8_t count_ = 0;
   };
 

@@ -13,9 +13,9 @@
 #include "display_backend.hpp"
 static unsigned package_id;
 static bool psram_active;
-static bool esp_psram_is_initialized() { return psram_active; }
+
 namespace m5gfx {
-static unsigned get_pkg_ver() { return package_id; }
+
 static const char LIBRARY_NAME[] = "host";
 using lgfx::board_t;
 #include "board_detect/detection_package.inl"
@@ -28,6 +28,8 @@ int main() {
       for (bool legacy : {false, true}) {
         host_hardware::reset();
         psram_active = active;
+        host_hardware::psram_active = active;
+        host_hardware::package = package_id;
         const auto out = m5gfx::select_detection_package(legacy);
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
         const auto expected = package_id == 0 ? esp32s3_detectors_qfn56 :

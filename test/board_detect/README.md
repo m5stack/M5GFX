@@ -57,11 +57,14 @@ production function text or redeclare reduced model types. Internal includes
 separate transactions, probing, startup, SPI selection, preparation, package
 selection, and integration without rewriting their bodies.
 
-The runner defines explicit host-only include macros for the ESP32 common header
-and classic touch peripheral substitutes. Without those macros production keeps
-its original relative includes and resolution within M5GFX. The low-level GPIO/I2C backend
-records operations, clocks, snapshots, and responses. Family tests replace the
-GPIO/I2C/SPI/dedicated-GPIO probes; timing tests compile the real probe instead.
+The runner selects `support/detect_io.hpp` through
+`M5GFX_BOARD_DETECT_IO_HEADER`. It records GPIO/I2C operations, clocks,
+snapshots, and responses without SDK headers or firmware driver result types.
+`support/native_devices_io.hpp` adapts native device calls only for construction
+fixtures and test setup; production detection calls the selected I/O directly.
+Family tests replace GPIO/I2C/SPI/dedicated-GPIO probes; timing tests compile the
+real probe instead. Classic touch/LED transport returns the simulated raw counts,
+while detection decisions remain production code.
 Transactions, candidate selection, startup validation, power/refine policy, and
 session policy remain production implementations. Family probes check expected
 I2C SDA/SCL pins where configured; multi-bus Cardputer probes select their expected
@@ -125,9 +128,10 @@ assertions are independent of the fixture update option.
 - Catalog invariants need rule checks for new entries: no-display eligibility,
   active-high GPIO holds, reverse rollback order, LP-pad release at capture, and
   absence of hardcoded board selection in legacy autodetect.
-- The host configuration does not compile S3 dedicated-GPIO release probing,
-  ToughC5 LP-I2C, the <=32-pin hold branch, or ESP-IDF 4.4 branches.
-- Stub `pin_backup_t` and I2C response types can drift from the real HAL;
+- The host configuration compiles S3 dedicated-GPIO release probing against
+  stubs but does not execute it. It does not compile ToughC5 LP-I2C,
+  the <=32-pin hold branch, or ESP-IDF 4.4 branches.
+- The in-memory I/O implementation can drift from the firmware implementation;
   firmware compilation remains necessary to detect API changes.
 
 The pin-coverage tests call each family's signature and confirmation separately
@@ -136,7 +140,7 @@ success scenarios: the S3 test supplies real SPI ID bits and checks the later
 Cardputer sense reads, both I2C buses and both SDA recovery clock sequences.
 They use the production probe implementations, not the response-level probe doubles. Snapshot
 membership comes from capture events, while GPIO mode/read/output, restore and
-hardware-I2C pad selection are observed through the HAL. Low/high, floating and
+hardware-I2C pad selection are observed through the I/O implementation. Low/high, floating and
 mixed GPIO responses, I2C response bytes and every member hint exercise different
 paths; this is a snapshot containment check, not exhaustive hardware simulation.
 Peripheral-specific touch/LED transport remains a host boundary, as in the

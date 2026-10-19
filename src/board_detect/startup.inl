@@ -4,9 +4,9 @@
     {
     public:
       explicit retry_budget_t(std::uint8_t milliseconds)
-      : started_(lgfx::millis()), milliseconds_(milliseconds) {}
+      : started_(io::millis()), milliseconds_(milliseconds) {}
 
-      bool exhausted() const { return lgfx::millis() - started_ >= milliseconds_; }
+      bool exhausted() const { return io::millis() - started_ >= milliseconds_; }
       std::uint32_t deadline_ms() const { return started_ + milliseconds_; }
 
     private:
@@ -16,21 +16,15 @@
 
     void pin_level(int pin, bool high)
     {
-      if (high) { lgfx::gpio_hi(pin); }
-      else      { lgfx::gpio_lo(pin); }
-      lgfx::pinMode(pin, lgfx::pin_mode_t::output);
+      if (high) { io::pin_high(pin); }
+      else      { io::pin_low(pin); }
+      io::pin_mode(pin, io::pin_mode_t::output);
     }
 
     void hold_pin_level(int pin, bool high)
     {
-      const auto bit = std::uint32_t(1) << (pin & 31);
-#if !defined (SOC_GPIO_PIN_COUNT) || SOC_GPIO_PIN_COUNT > 32
-      const bool output = pin & 32 ? REG_READ(GPIO_ENABLE1_REG) & bit : REG_READ(GPIO_ENABLE_REG) & bit;
-      const bool level = pin & 32 ? REG_READ(GPIO_OUT1_REG) & bit : REG_READ(GPIO_OUT_REG) & bit;
-#else
-      const bool output = REG_READ(GPIO_ENABLE_REG) & bit;
-      const bool level = REG_READ(GPIO_OUT_REG) & bit;
-#endif
+      bool level = false;
+      const bool output = io::pin_output_level(pin, &level);
       if (output && level == high) { return; }
       // Set the output latch before enabling the driver, including after M5Unified prehold.
       pin_level(pin, high);
@@ -42,14 +36,9 @@
     {
       for (;;)
       {
-        const auto result = lgfx::i2c::readRegister8(port, addr, reg, power.i2c_freq);
-        if (result.has_value())
-        {
-          *value = result.value();
-          return true;
-        }
+        if (io::i2c_read_reg8(port, addr, reg, value, power.i2c_freq)) { return true; }
         if (retry_budget.exhausted()) { return false; }
-        lgfx::delay(1);
+        io::delay_ms(1);
       }
     }
 
@@ -67,12 +56,12 @@
                                    const ops::retry_policy_t* policy = nullptr)
     {
       const int ports[] = { port };
-      ops::lgfx_backend_context_t backend_context { ports, 1 };
-      const ops::gpio_scope_t gpio_scope { GPIO_NUM_MAX, gpio_pins.data, gpio_pins.size };
-      return ops::run_ops(ops::lgfx_backend(&backend_context),
+      ops::io_backend_context_t backend_context { ports, 1 };
+      const ops::gpio_scope_t gpio_scope { io::pin_count, gpio_pins.data, gpio_pins.size };
+      return ops::run_ops(ops::io_backend(&backend_context),
                           power.devices, power.device_count,
                           sequence.data, sequence.size, gpio_scope, policy,
-                          ops::lgfx_wait_ready_finished);
+                          ops::io_wait_ready_finished);
     }
 
     const pmic_variant_t* read_variant(const power_desc_t& power, int port,
@@ -115,7 +104,7 @@
       pin_level(sd.sd_cs, true);
 
       for (int i = 0; i < 10; ++i) { bus.writeData(0xFF, 8); }
-      lgfx::gpio_lo(sd.sd_cs);
+      io::pin_low(sd.sd_cs);
       static const std::uint8_t cmd58[] = { 0x7A, 0, 0, 0, 0, 0xFD, 0xFF, 0xFF };
       std::uint8_t response[sizeof(cmd58)];
       for (std::size_t i = 0; i < sizeof(cmd58); ++i)
@@ -124,27 +113,27 @@
       }
       if (response[6] == response[7])
       {
-        lgfx::gpio_hi(sd.sd_cs);
+        io::pin_high(sd.sd_cs);
         for (int i = 0; i < 10; ++i) { bus.writeData(0xFF, 8); }
-        lgfx::gpio_lo(sd.sd_cs);
+        io::pin_low(sd.sd_cs);
         static const std::uint8_t cmd0[] = { 0x40, 0, 0, 0, 0, 0x95, 0xFF, 0xFF };
         for (auto value : cmd0) { bus.transferData(value, 8); }
       }
-      lgfx::gpio_hi(sd.sd_cs);
+      io::pin_high(sd.sd_cs);
       bus.endTransaction();
       ctx.transaction->restore_start({ sd.sclk, sd.mosi, sd.miso });
     }
 
     void pin_reset(const reset_desc_t& reset, bool active)
     {
-      lgfx::gpio_hi(reset.pin);
-      lgfx::pinMode(reset.pin, lgfx::pin_mode_t::output);
-      lgfx::delay(1);
+      io::pin_high(reset.pin);
+      io::pin_mode(reset.pin, io::pin_mode_t::output);
+      io::delay_ms(1);
       if (!active) { return; }
-      lgfx::gpio_lo(reset.pin);
-      lgfx::delay(reset.low_ms);
-      lgfx::gpio_hi(reset.pin);
-      lgfx::delay(reset.post_ms);
+      io::pin_low(reset.pin);
+      io::delay_ms(reset.low_ms);
+      io::pin_high(reset.pin);
+      io::delay_ms(reset.post_ms);
     }
 
     class i2c_scope_t
@@ -153,12 +142,12 @@
       i2c_scope_t(detection_transaction_t& transaction_, int port_, const i2c_desc_t& wiring)
       : transaction(transaction_), port(port_), pins { wiring.sda, wiring.scl }
       {
-        opened = lgfx::i2c::init(port, wiring.sda, wiring.scl).has_value();
+        opened = io::i2c_open(port, wiring.sda, wiring.scl);
       }
 
       ~i2c_scope_t()
       {
-        if (opened) { lgfx::i2c::release(port); }
+        if (opened) { io::i2c_close(port); }
         transaction.restore_start(pins);
       }
 
@@ -243,7 +232,7 @@
                static_cast<unsigned>(power_result.status), 0);
     }
     if (power_was_off) { result.prepared &= ~prepared_sd_spi; }
-    lgfx::delay(power_was_off || reset_was_low ? power.cold_wait_ms : power.warm_wait_ms);
+    io::delay_ms(power_was_off || reset_was_low ? power.cold_wait_ms : power.warm_wait_ms);
     result.prepared |= prepared_power;
     return true;
   }
@@ -285,7 +274,7 @@
 
     bool gpio_valid(int pin)
     {
-      return pin >= 0 && pin < GPIO_NUM_MAX && GPIO_IS_VALID_GPIO(pin);
+      return io::pin_valid(pin);
     }
 
     bool optional_gpio_valid(int pin) { return pin == -1 || gpio_valid(pin); }
@@ -377,7 +366,7 @@
       {
         const auto& variant = desc.power.variants[i];
         const ops::gpio_scope_t gpio_scope {
-          GPIO_NUM_MAX, desc.op_gpio_pins.data, desc.op_gpio_pins.size
+          io::pin_count, desc.op_gpio_pins.data, desc.op_gpio_pins.size
         };
         valid = list_valid(variant.power_on)
              && list_valid(variant.reset_assert)
@@ -455,7 +444,7 @@
                      static_cast<unsigned>(release_result.status),
                      0);
           }
-          lgfx::delay(reset.post_ms);
+          io::delay_ms(reset.post_ms);
         }
         else
         {
@@ -492,7 +481,7 @@
       }
       if (ok || retain_confirmed_board)
       {
-        lgfx::delay(reset.low_ms);
+        io::delay_ms(reset.low_ms);
         startup_detail::retry_budget_t release_budget(desc.power.wake_poll_ms);
         const ops::retry_policy_t release_policy { release_budget.deadline_ms(), 1 };
         const auto release_result = startup_detail::run_sequence(
@@ -506,7 +495,7 @@
                    static_cast<unsigned>(release_result.failed_index),
                    static_cast<unsigned>(release_result.status), 0);
         }
-        if (ok || retain_confirmed_board) { lgfx::delay(reset.post_ms); }
+        if (ok || retain_confirmed_board) { io::delay_ms(reset.post_ms); }
       }
       if (retain_confirmed_board) { ok = true; }
     }

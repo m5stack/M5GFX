@@ -241,7 +241,7 @@ namespace m5
                           { nullptr, 0 }, 0),
   };
   // Construction configures the panel TE input before display adoption.
-  static constexpr std::int8_t stopwatch_te_pin = GPIO_NUM_38;
+  static constexpr std::int8_t stopwatch_te_pin = 38;
   static const std::int8_t stopwatch_startup_pins[] = {
     wiring::stopwatch::display_cs, stopwatch_te_pin,
   };
@@ -444,7 +444,7 @@ namespace m5
       // Both boards have pull-ups on G47/G48. A failed read in the wrong
       // direction gets one transaction, not the full 200 ms StickS3 poll.
       // Retry the two orientations under one shared budget for a waking PM1.
-      const auto started = lgfx::millis();
+      const auto started = io::millis();
       do
       {
         for (auto desc = descriptions_; *desc != nullptr; ++desc)
@@ -459,8 +459,8 @@ namespace m5
           result->assign(*desc);
           return true;
         }
-        lgfx::delay(1);
-      } while (lgfx::millis() - started < 200);
+        io::delay_ms(1);
+      } while (io::millis() - started < 200);
       return false;
     }
 
@@ -489,15 +489,14 @@ namespace m5
                                     desc_papermono.internal_i2c);
       if (i2c.opened)
       {
-        const auto started = lgfx::millis();
+        const auto started = io::millis();
         do
         {
-          if (lgfx::i2c::beginTransaction(i2c.port, papermono_probe_addr,
-                                        specs::papermono::touch::i2c_freq, false).has_value()
-           && lgfx::i2c::endTransaction(i2c.port).has_value())
+          if (io::i2c_ack(i2c.port, papermono_probe_addr,
+                           specs::papermono::touch::i2c_freq))
           { return true; }
-          lgfx::delay(1);
-        } while (lgfx::millis() - started < 200);
+          io::delay_ms(1);
+        } while (io::millis() - started < 200);
       }
       if (!ctx.final_attempt) { return false; }
       // Keep the powered member; no second member's power sequence in this attempt.
@@ -861,14 +860,14 @@ namespace m5
       const auto button = std::uint64_t(1) << 41;
       if (!(probe_pin_pulls(ctx, button).pulldown_high & button)) { return false; }
       // AtomS3's backlight PWM input (G16) falls low about 3 us after release. Lite/U have no such pulldown.
-      lgfx::gpio_hi(16);
-      lgfx::pinMode(16, lgfx::pin_mode_t::output);
-      lgfx::delayMicroseconds(10);
-      lgfx::pinMode(16, lgfx::pin_mode_t::input);
-      const auto start = lgfx::micros();
-      while (lgfx::micros() - start < 2000)
+      io::pin_high(16);
+      io::pin_mode(16, io::pin_mode_t::output);
+      io::delay_us(10);
+      io::pin_mode(16, io::pin_mode_t::input);
+      const auto start = io::micros();
+      while (io::micros() - start < 2000)
       {
-        if (!lgfx::gpio_in(16))
+        if (!io::pin_read(16))
         {
           ctx.transaction->restore_start({ 16 });
           return false;
@@ -892,8 +891,8 @@ namespace m5
     {
       // G46 is Capsule's power hold. M5Unified already asserts it before detection;
       // asserting here also covers M5GFX standalone startup.
-      lgfx::gpio_hi(wiring::capsule::power_gpio);
-      lgfx::pinMode(wiring::capsule::power_gpio, lgfx::pin_mode_t::output);
+      io::pin_high(wiring::capsule::power_gpio);
+      io::pin_mode(wiring::capsule::power_gpio, io::pin_mode_t::output);
       const auto mask = (std::uint64_t(1) << wiring::capsule::internal_i2c_sda)
                       | (std::uint64_t(1) << wiring::capsule::internal_i2c_scl);
       return (probe_pin_pulls(ctx, mask).pulldown_high & mask) == mask;
@@ -1007,18 +1006,18 @@ namespace m5
   // former M5Unified GPIO probe without borrowing hardware I2C or LEDC.
   static bool probe_atoms3r_camera(probe_ctx_t& ctx)
   {
-    lgfx::gpio_lo(18); // camera power-down, active high
-    lgfx::pinMode(18, lgfx::pin_mode_t::output);
-    lgfx::gpio_lo(9);
-    lgfx::pinMode(9, lgfx::pin_mode_t::output);
-    lgfx::gpio_lo(12);
-    lgfx::pinMode(12, lgfx::pin_mode_t::output);
-    lgfx::gpio_hi(21);
-    lgfx::pinMode(21, lgfx::pin_mode_t::output);
-    lgfx::gpio_hi(9);
-    lgfx::gpio_hi(12);
-    auto lo = m5gfx::get_gpio_lo_reg(GPIO_NUM_21);
-    auto hi = m5gfx::get_gpio_hi_reg(GPIO_NUM_21);
+    io::pin_low(18); // camera power-down, active high
+    io::pin_mode(18, io::pin_mode_t::output);
+    io::pin_low(9);
+    io::pin_mode(9, io::pin_mode_t::output);
+    io::pin_low(12);
+    io::pin_mode(12, io::pin_mode_t::output);
+    io::pin_high(21);
+    io::pin_mode(21, io::pin_mode_t::output);
+    io::pin_high(9);
+    io::pin_high(12);
+    auto lo = io::pin_low_register(21);
+    auto hi = io::pin_high_register(21);
     const auto clock_xclk = [&](int cycles)
     {
       for (; cycles != 0; --cycles)
@@ -1043,7 +1042,7 @@ namespace m5
         }
         if (cycle & 1)
         {
-          if (cycle == 17) { nack = lgfx::gpio_in(12); }
+          if (cycle == 17) { nack = io::pin_read(12); }
         }
         else
         {
@@ -1051,8 +1050,8 @@ namespace m5
           addr <<= 1;
           if (cycle >= 16)
           {
-            lgfx::pinMode(12, (cycle == 16) ? lgfx::pin_mode_t::input
-                                            : lgfx::pin_mode_t::output);
+            io::pin_mode(12, (cycle == 16) ? io::pin_mode_t::input
+                                            : io::pin_mode_t::output);
           }
         }
       }

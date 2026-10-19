@@ -6,7 +6,6 @@
 #include "generated/esp32p4_wiring.hpp"
 #include "generated/esp32p4_specs.hpp"
 #include "pmic_ops.hpp"
-#include <esp_chip_info.h>
 
 namespace m5gfx
 {

@@ -96,9 +96,3 @@ std::uint32_t soft_spi_read32(probe_ctx_t &, int sclk, int mosi, int miso, int d
 }
 } // namespace board_detect
 } // namespace m5gfx
-
-namespace host_touch {
-static std::uint16_t t4 = 100, t7 = 25;
-static bool available = true;
-static unsigned scans, clears;
-} // namespace host_touch

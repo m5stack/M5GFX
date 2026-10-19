@@ -3,7 +3,7 @@ namespace tab5_detail
   constexpr int sda = wiring::tab5::internal_i2c_sda;
   constexpr int scl = wiring::tab5::internal_i2c_scl;
   constexpr int touch_int = wiring::tab5::touch_int;
-  constexpr int_fast16_t i2c_port = I2C_NUM_1;
+  constexpr int_fast16_t i2c_port = io::i2c_port_1;
   constexpr std::uint32_t i2c_freq = 100000;
   constexpr std::uint8_t pi4io1_addr = 0x43;
   constexpr std::uint8_t pi4io2_addr = 0x44;
@@ -28,9 +28,9 @@ namespace tab5_detail
     {
       std::uint8_t fw_version = 0;
       std::uint8_t fw_reg[2] = { 0, 0 };
-      if (lgfx::i2c::transactionWriteRead(i2c.port, lgfx::Touch_ST7123::default_addr,
+      if (io::i2c_write_read(i2c.port, io::st_touch_address(),
                                            fw_reg, sizeof(fw_reg), &fw_version, 1,
-                                           i2c_freq).has_value())
+                                           i2c_freq))
       {
         result.prepared |= read_st_touch_fw;
         if (fw_version != last_logged_fw)
@@ -45,15 +45,13 @@ namespace tab5_detail
         if (fw_version == 1) { result.prepared |= touch_st7121; break; }
         if (fw_version == 3) { result.prepared |= touch_st7123; break; }
       }
-      else if (lgfx::i2c::beginTransaction(i2c.port, lgfx::Touch_GT911::default_addr_1,
-                                            i2c_freq, false).has_value()
-            && lgfx::i2c::endTransaction(i2c.port).has_value())
+      else if (io::i2c_ack(i2c.port, io::gt911_touch_address(), i2c_freq))
       {
         result.prepared |= touch_gt911;
         ESP_LOGI("M5GFX", "M5Tab5 GT911 touch detected");
         break;
       }
-      lgfx::delay(10);
+      io::delay_ms(10);
     }
     if (!(result.prepared & (read_st_touch_fw | touch_gt911)))
     {
@@ -145,9 +143,7 @@ public:
 private:
   static const board_desc_t* revision_desc()
   {
-    esp_chip_info_t info;
-    esp_chip_info(&info);
-    return info.revision >= 300 ? &desc_tab5x : &desc_tab5;
+    return io::chip_revision() >= 300 ? &desc_tab5x : &desc_tab5;
   }
   static void warn_hint_mismatch(const probe_ctx_t& ctx, const board_def_t* def)
   {
@@ -155,10 +151,9 @@ private:
      && (ctx.hint == desc_tab5.def.id || ctx.hint == desc_tab5x.def.id)
      && ctx.hint != def->id)
     {
-      esp_chip_info_t info;
-      esp_chip_info(&info);
+      const auto revision = io::chip_revision();
       ESP_LOGW("M5GFX", "[Autodetect] Tab5 hint:%u disagrees with chip revision:%u; using %s",
-               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(info.revision),
+               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(revision),
                def->name);
     }
   }

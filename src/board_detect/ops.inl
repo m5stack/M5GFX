@@ -10,98 +10,90 @@ namespace board_detect
 {
 namespace ops
 {
-  struct lgfx_backend_context_t
+  struct io_backend_context_t
   {
     const int* ports;
     std::size_t port_count;
   };
 
-  inline int lgfx_port(void* context, const i2c_device_t& device)
+  inline int io_port(void* context, const i2c_device_t& device)
   {
-    auto* value = static_cast<lgfx_backend_context_t*>(context);
+    auto* value = static_cast<io_backend_context_t*>(context);
     return value != nullptr && device.bus_id < value->port_count ? value->ports[device.bus_id] : -1;
   }
 
-  inline bool lgfx_i2c_read8(void* context, const i2c_device_t& device,
+  inline bool io_i2c_read8(void* context, const i2c_device_t& device,
                              std::uint16_t reg, std::uint8_t* value)
   {
-    const auto read = lgfx::i2c::readRegister8(lgfx_port(context, device), device.addr,
-                                                static_cast<std::uint8_t>(reg), device.freq_hz);
-    if (!read.has_value()) { return false; }
-    *value = read.value();
-    return true;
+    return io::i2c_read_reg8(io_port(context, device), device.addr,
+                              static_cast<std::uint8_t>(reg), value, device.freq_hz);
   }
 
-  inline bool lgfx_i2c_write8(void* context, const i2c_device_t& device,
+  inline bool io_i2c_write8(void* context, const i2c_device_t& device,
                               std::uint16_t reg, std::uint8_t value)
   {
-    // mask 0 is lgfx's full-write path and deliberately performs no read.
-    return lgfx::i2c::writeRegister8(lgfx_port(context, device), device.addr,
-                                     static_cast<std::uint8_t>(reg), value, 0,
-                                     device.freq_hz).has_value();
+    // Write the full register byte without reading it first.
+    return io::i2c_write_reg8(io_port(context, device), device.addr, static_cast<std::uint8_t>(reg), value, device.freq_hz);
   }
 
-  inline bool lgfx_i2c_write16le(void* context, const i2c_device_t& device,
+  inline bool io_i2c_write16le(void* context, const i2c_device_t& device,
                                  std::uint16_t reg, std::uint16_t value)
   {
     const std::uint8_t data[] = {
       static_cast<std::uint8_t>(reg), static_cast<std::uint8_t>(value),
       static_cast<std::uint8_t>(value >> 8),
     };
-    return lgfx::i2c::transactionWrite(lgfx_port(context, device), device.addr,
-                                        data, sizeof(data), device.freq_hz).has_value();
+    return io::i2c_write(io_port(context, device), device.addr,
+                                        data, sizeof(data), device.freq_hz);
   }
 
-  inline bool lgfx_i2c_ready(void* context, const i2c_device_t& device,
+  inline bool io_i2c_ready(void* context, const i2c_device_t& device,
                              std::uint32_t timeout_ms)
   {
-    // lgfx has no per-call timeout. Do not begin another fixed-time transaction
+    // The backend has no per-call timeout. Do not begin another fixed-time transaction
     // once the runner's deadline is reached. An in-flight attempt's overrun
     // depends on the lower I2C implementation: hardware is about 26 ms, while
     // software I2C may take tens of milliseconds with SCL stuck.
     if (timeout_ms == 0) { return false; }
-    const auto port = lgfx_port(context, device);
-    const bool began = lgfx::i2c::beginTransaction(port, device.addr,
-                                                    device.freq_hz, false).has_value();
-    const bool ended = lgfx::i2c::endTransaction(port).has_value();
-    return began && ended;
+    const auto port = io_port(context, device);
+    return io::i2c_ack(port, device.addr, device.freq_hz, true);
   }
 
-  inline void lgfx_wait_ready_finished(void*, const i2c_device_t& device,
+  inline void io_wait_ready_finished(void*, const i2c_device_t& device,
                                        std::uint32_t elapsed_ms, bool ready)
   {
     ESP_LOGD("board_detect", "power wait_ready addr=0x%02x elapsed=%ums ready=%u",
              device.addr, static_cast<unsigned>(elapsed_ms), ready);
   }
 
-  inline bool lgfx_gpio_set_mode(void*, std::uint16_t pin, gpio_mode_t mode)
+  inline bool io_gpio_set_mode(void*, std::uint16_t pin, gpio_mode_t mode)
   {
-    lgfx::pin_mode_t native = lgfx::pin_mode_t::output;
+    io::pin_mode_t native = io::pin_mode_t::output;
     switch (mode)
     {
-    case gpio_mode_t::input:          native = lgfx::pin_mode_t::input; break;
-    case gpio_mode_t::input_pullup:   native = lgfx::pin_mode_t::input_pullup; break;
-    case gpio_mode_t::input_pulldown: native = lgfx::pin_mode_t::input_pulldown; break;
+    case gpio_mode_t::input:          native = io::pin_mode_t::input; break;
+    case gpio_mode_t::input_pullup:   native = io::pin_mode_t::input_pullup; break;
+    case gpio_mode_t::input_pulldown: native = io::pin_mode_t::input_pulldown; break;
     default: break;
     }
-    lgfx::pinMode(pin, native);
+    io::pin_mode(pin, native);
     return true;
   }
 
-  inline bool lgfx_gpio_write(void*, std::uint16_t pin, bool high)
+  inline bool io_gpio_write(void*, std::uint16_t pin, bool high)
   {
-    if (high) { lgfx::gpio_hi(pin); }
-    else      { lgfx::gpio_lo(pin); }
+    if (high) { io::pin_high(pin); }
+    else      { io::pin_low(pin); }
     return true;
   }
 
-  inline void lgfx_delay_ms(void*, std::uint32_t milliseconds) { lgfx::delay(milliseconds); }
-  inline std::uint32_t lgfx_millis(void*) { return lgfx::millis(); }
+  inline void io_delay_ms(void*, std::uint32_t milliseconds) { io::delay_ms(milliseconds); }
+  inline std::uint32_t io_millis(void*) { return io::millis(); }
 
-  inline backend_t lgfx_backend(lgfx_backend_context_t* context)
+  inline backend_t io_backend(io_backend_context_t* context)
   {
-    return { lgfx_i2c_read8, lgfx_i2c_write8, lgfx_i2c_write16le, lgfx_i2c_ready,
-             lgfx_gpio_set_mode, lgfx_gpio_write, lgfx_delay_ms, lgfx_millis, context };
+    return { io_i2c_read8, io_i2c_write8, io_i2c_write16le, io_i2c_ready,
+             io_gpio_set_mode, io_gpio_write, io_delay_ms, io_millis, context };
   }
 }
 }

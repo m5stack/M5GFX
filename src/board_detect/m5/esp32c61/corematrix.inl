@@ -2,7 +2,7 @@
   {
     constexpr int sda = wiring::corematrix::internal_i2c_sda;
     constexpr int scl = wiring::corematrix::internal_i2c_scl;
-    constexpr int_fast16_t i2c_port = I2C_NUM_0;
+    constexpr int_fast16_t i2c_port = io::i2c_port_0;
     constexpr std::uint32_t i2c_freq = pmic_ops::pm1_i2c_freq;
     static const pmic_variant_t power_variants[] = {
       pmic_variant_ack_only(pmic_ops::pm1_i2c_addr, 0,
