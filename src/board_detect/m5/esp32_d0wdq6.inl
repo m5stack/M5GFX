@@ -9,16 +9,6 @@
 #include "pmic_ops.hpp"
 
 #include <new>
-#include <driver/gpio.h>
-#include <esp_attr.h>
-#include <esp_cpu.h>
-#include <esp_rom_sys.h>
-#include <esp_timer.h>
-#include <soc/gpio_struct.h>
-#include <soc/rtc.h>
-#include <soc/rtc_cntl_reg.h>
-#include <soc/rtc_io_reg.h>
-#include <soc/sens_reg.h>
 
 namespace m5gfx
 {
@@ -170,14 +160,14 @@ namespace m5
     {
       const auto& reset = desc.reset;
       startup_detail::pin_level(reset.pin, true);
-      lgfx::delay(1);
-      lgfx::gpio_lo(reset.pin);
-      lgfx::delay(reset.low_ms);
-      lgfx::pinMode(reset.pin, lgfx::pin_mode_t::input_pulldown);
-      lgfx::gpio_hi(reset.pin);
-      const bool ips = lgfx::gpio_in(reset.pin);
-      lgfx::pinMode(reset.pin, lgfx::pin_mode_t::output);
-      lgfx::delay(reset.post_ms);
+      io::delay_ms(1);
+      io::pin_low(reset.pin);
+      io::delay_ms(reset.low_ms);
+      io::pin_mode(reset.pin, io::pin_mode_t::input_pulldown);
+      io::pin_high(reset.pin);
+      const bool ips = io::pin_read(reset.pin);
+      io::pin_mode(reset.pin, io::pin_mode_t::output);
+      io::delay_ms(reset.post_ms);
       if (ctx.allow_reset && ips && detected_option != nullptr)
       {
         *detected_option |= generated_options::stack::ips;
@@ -315,23 +305,22 @@ namespace m5
       }
       bool tough = false;
       bool core2 = false;
-      const auto touch_start = lgfx::millis();
+      const auto touch_start = io::millis();
       do
       {
-        tough = lgfx::i2c::readRegister8(
-          i2c.port, tough_touch_address, touch_probe_register,
-          tough_touch_i2c_frequency).has_value();
-        core2 = lgfx::i2c::readRegister8(
-          i2c.port, core2_touch_address, touch_probe_register,
-          tough_touch_i2c_frequency).has_value();
+        std::uint8_t touch_value = 0;
+        tough = io::i2c_read_reg8(i2c.port, tough_touch_address, touch_probe_register,
+                                  &touch_value, tough_touch_i2c_frequency);
+        core2 = io::i2c_read_reg8(i2c.port, core2_touch_address, touch_probe_register,
+                                  &touch_value, tough_touch_i2c_frequency);
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH) || defined (M5GFX_AUTODETECT_TEST_FAIL_CORE2_TOUCH_POST)
         tough = core2 = false;
 #endif
         // M-Bus devices can answer at either address. Read both even if Tough
         // answers first; simultaneous responses cannot confirm a member.
         if (tough || core2) { break; }
-        lgfx::delay(1);
-      } while (lgfx::millis() - touch_start < touch_startup_poll_ms);
+        io::delay_ms(1);
+      } while (io::millis() - touch_start < touch_startup_poll_ms);
       if ((tough && core2)
        || (tough && (result.option & generated_options::core2::new_pmic)))
       {
@@ -407,9 +396,7 @@ namespace m5
       // Keep the scoped port alive; probe_i2c_ack would release it between reads.
       const auto touch_answers = [&](std::uint8_t addr) -> bool
       {
-        const bool began = lgfx::i2c::beginTransaction(i2c.port, addr, 100000, false).has_value();
-        const bool ended = lgfx::i2c::endTransaction(i2c.port).has_value();
-        return began && ended;
+        return io::i2c_ack(i2c.port, addr, 100000, true);
       };
       bool core2_touch = touch_answers(detail::core2_touch_address);
       bool tough_touch = touch_answers(detail::tough_touch_address);
@@ -595,8 +582,8 @@ namespace m5
       // This family contract keeps the mandatory reset from stage 1 through
       // stage 2, where prepared_reset records that it already completed.
       startup_detail::pin_reset(desc_paper.reset, true);
-      lgfx::pinMode(desc_paper.display.busy, lgfx::pin_mode_t::input_pullup);
-      const bool matched = !lgfx::gpio_in(desc_paper.display.busy);
+      io::pin_mode(desc_paper.display.busy, io::pin_mode_t::input_pullup);
+      const bool matched = !io::pin_read(desc_paper.display.busy);
       ctx.transaction->restore_start(desc_paper.display.busy);
       if (!matched) { ctx.transaction->restore_start(desc_paper.reset.pin); }
       return matched;
@@ -634,24 +621,24 @@ namespace m5
       { return restore_and_fail(); }
       startup_detail::hold_chip_selects(desc_paper);
       const auto& display = desc_paper.display;
-      lgfx::pinMode(display.busy, lgfx::pin_mode_t::input);
+      io::pin_mode(display.busy, io::pin_mode_t::input);
 
       soft_spi_t bus(display.sclk, display.mosi, display.miso, display.dc);
       bus.init();
       bool matched = false;
-      auto started = lgfx::millis();
-      while (!lgfx::gpio_in(display.busy) && lgfx::millis() - started <= 1024) { lgfx::delay(1); }
-      if (lgfx::gpio_in(display.busy))
+      auto started = io::millis();
+      while (!io::pin_read(display.busy) && io::millis() - started <= 1024) { io::delay_ms(1); }
+      if (io::pin_read(display.busy))
       {
         bus.beginTransaction();
-        lgfx::gpio_lo(display.cs);
+        io::pin_low(display.cs);
         bus.writeData(__builtin_bswap16(0x6000), 16);
         bus.writeData(__builtin_bswap16(0x0302), 16);
         bus.wait();
-        lgfx::gpio_hi(display.cs);
-        started = lgfx::millis();
-        while (!lgfx::gpio_in(display.busy) && lgfx::millis() - started <= 192) { lgfx::delay(1); }
-        lgfx::gpio_lo(display.cs);
+        io::pin_high(display.cs);
+        started = io::millis();
+        while (!io::pin_read(display.busy) && io::millis() - started <= 192) { io::delay_ms(1); }
+        io::pin_low(display.cs);
         bus.writeData(__builtin_bswap16(0x1000), 16);
         bus.writeData(__builtin_bswap16(0x0000), 16);
         std::uint8_t data[40] = {};
@@ -659,7 +646,7 @@ namespace m5
         bus.readBytes(data, sizeof(data));
         bus.endRead();
         bus.endTransaction();
-        lgfx::gpio_hi(display.cs);
+        io::pin_high(display.cs);
         const std::uint32_t panel_size = (std::uint32_t(data[0]) << 24)
                                        | (std::uint32_t(data[1]) << 16)
                                        | (std::uint32_t(data[2]) << 8)

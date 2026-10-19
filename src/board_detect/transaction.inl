@@ -1,4 +1,4 @@
-  static void restore_if_changed(lgfx::gpio::pin_backup_t& saved)
+  static void restore_if_changed(io::pin_state_t& saved)
   {
     // restore() briefly disables output driving. Skip it when every saved
     // register already matches so an unchanged output cannot momentarily float.
@@ -23,13 +23,12 @@
       for (std::size_t index = 0; index < list.size; ++index)
       {
         const auto pin = list.data[index];
-        if (pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin)) { return false; }
+        if (!io::pin_valid(pin)) { return false; }
         for (std::size_t prior = 0; prior < count_; ++prior)
         {
-          if (saved_[prior].getPin() == pin) { return false; }
+          if (saved_[prior].pin() == pin) { return false; }
         }
-        saved_[count_].setPin(pin);
-        saved_[count_].backup();
+        saved_[count_].save(pin);
         ++count_;
       }
     }
@@ -38,7 +37,7 @@
     // only after the complete snapshot succeeds.
     for (std::size_t index = 0; index < count_; ++index)
     {
-      lgfx::gpio::release_lp_pad(saved_[index].getPin());
+      io::release_lp_pad(saved_[index].pin());
     }
     return true;
   }
@@ -63,11 +62,11 @@
       const int pin = pins[requested];
       if (pin < 0) { continue; }  // an unused optional signal
       bool found = false;
-      if (pin >= 0 && pin < GPIO_NUM_MAX && GPIO_IS_VALID_GPIO(pin))
+      if (io::pin_valid(pin))
       {
         for (std::size_t index = count_; index != 0; --index)
         {
-          if (saved_[index - 1].getPin() == pin) { found = true; break; }
+          if (saved_[index - 1].pin() == pin) { found = true; break; }
         }
       }
       if (!found && !missing) { missing = true; missing_pin = pin; }
@@ -75,7 +74,7 @@
     // Match full rollback ordering while restoring each captured pin at most once.
     for (std::size_t index = count_; index != 0; --index)
     {
-      const auto pin = saved_[index - 1].getPin();
+      const auto pin = saved_[index - 1].pin();
       for (std::size_t requested = 0; requested < count; ++requested)
       {
         if (pins[requested] == pin)
@@ -89,29 +88,6 @@
     {
       ESP_LOGE("board_detect", "restore_start pin=%d is absent from snapshot", missing_pin);
     }
-  }
-
-  void detection_bus_journal_t::opened_i2c(int port)
-  {
-    if (port < 0) { return; }
-    for (std::size_t index = 0; index < i2c_count_; ++index)
-    {
-      if (i2c_ports_[index] == port) { return; }
-    }
-    if (i2c_count_ < sizeof(i2c_ports_) / sizeof(i2c_ports_[0]))
-    {
-      i2c_ports_[i2c_count_++] = static_cast<std::int8_t>(port);
-    }
-  }
-
-  void detection_bus_journal_t::rollback()
-  {
-    while (i2c_count_ != 0) { lgfx::i2c::release(i2c_ports_[--i2c_count_]); }
-  }
-
-  void detection_bus_journal_t::commit()
-  {
-    i2c_count_ = 0;
   }
 
   detection_transaction_t::detection_transaction_t(
@@ -141,13 +117,11 @@
   void detection_transaction_t::rollback()
   {
     if (!valid_ || committed_) { return; }
-    buses_.rollback();
     gpio_.rollback();
   }
 
   void detection_transaction_t::commit()
   {
     if (!valid_ || committed_) { return; }
-    buses_.commit();
     committed_ = true;
   }

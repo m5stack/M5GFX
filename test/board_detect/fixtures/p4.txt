@@ -17,7 +17,7 @@ reset 0 -1 0 0 0 0
 sd -1 -1 -1 -1 -1
 display -1 -1 -1 -1 -1 -1 -1
 i2c 31 32 1 hold [] ops [23,] options[]
-entry construct_tab5 board_M5Tab5 0 0
+entry construct_tab5 board_M5Tab5 0 1
 35 M5Tab5X 0
 power -1 1 100000 0 0 0 1
 device 100000 0 67 0 1 0
@@ -27,7 +27,7 @@ reset 0 -1 0 0 0 0
 sd -1 -1 -1 -1 -1
 display -1 -1 -1 -1 -1 -1 -1
 i2c 31 32 1 hold [] ops [23,] options[]
-entry construct_tab5 board_M5Tab5X 0 0
+entry construct_tab5 board_M5Tab5X 0 1
 148 M5UnitPoEP4 0
 power -1 1 0 0 0 0 0
 reset 0 -1 0 0 0 0

@@ -50,6 +50,7 @@ namespace m5
     out.touch.reset(make_i2c_touch<lgfx::Touch_CST3530>(touch_corep4x));
     out.panel->setTouch(out.touch.get());
     out.light.reset(new Light_M5CoreP4X(corep4x_detail::i2c_port,
+                                        corep4x_detail::sda, corep4x_detail::scl,
                                         pmic_ops::ioe1_i2c_addr,
                                         corep4x_detail::i2c_freq));
     return construct_status(out.release_to(parts));

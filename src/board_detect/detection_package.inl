@@ -2,11 +2,7 @@
   static bool conditional_detection_pins_unavailable()
   {
 #if defined (CONFIG_SPIRAM_MODE_OCT)
- #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    return esp_psram_is_initialized();
- #else
-    return esp_spiram_is_initialized();
- #endif
+    return board_detect::io::psram_ready();
 #else
     return false;
 #endif
@@ -29,16 +25,16 @@
     package.direct_setup = true;
     // The protected legacy autodetect method never probed ESP32 directly.
     if (legacy_autodetect) { return package; }
-    const auto pkg = m5gfx::get_pkg_ver();
-    if (pkg == EFUSE_RD_CHIP_VER_PKG_ESP32D0WDQ6)
+    const auto pkg = board_detect::io::package_version();
+    if (pkg == board_detect::io::package_classic_q6)
     { package.detectors = board_detect::m5::esp32_d0wdq6_detectors; }
-    else if (pkg == EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4)
+    else if (pkg == board_detect::io::package_classic_pico_d4)
     { package.detectors = board_detect::m5::esp32_pico_d4_detectors; }
     else if (pkg == 6)
     { package.detectors = board_detect::m5::esp32_picov3_detectors; }
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
     package.conditional_pins_unavailable = conditional_detection_pins_unavailable();
-    switch (m5gfx::get_pkg_ver())
+    switch (board_detect::io::package_version())
     {
     case 0: package.detectors = board_detect::m5::esp32s3_detectors_qfn56; break;
     case 1: package.detectors = board_detect::m5::esp32s3_detectors_lga56; break;
@@ -49,7 +45,7 @@
 #elif defined(CONFIG_IDF_TARGET_ESP32C5)
     package.detectors = board_detect::m5::esp32c5_detectors;
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
-    const auto pkg = m5gfx::get_pkg_ver();
+    const auto pkg = board_detect::io::package_version();
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg);
     // Package version: 1 = QFN32 (ESP32-C6FH4/FH8), 0 = QFN40.
     if (pkg == 1) { package.detectors = board_detect::m5::esp32c6_detectors_qfn32; }
@@ -62,7 +58,7 @@
 #elif defined(CONFIG_IDF_TARGET_ESP32H2)
     package.detectors = board_detect::m5::esp32h2_detectors;
 #elif defined(CONFIG_IDF_TARGET_ESP32P4)
-    const auto pkg = m5gfx::get_pkg_ver();
+    const auto pkg = board_detect::io::package_version();
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg);
     if (pkg == 0) { package.detectors = board_detect::m5::esp32p4_detectors; }
 #endif

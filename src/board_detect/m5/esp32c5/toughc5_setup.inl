@@ -32,7 +32,8 @@ namespace m5
     out.bus.reset(make_spi_bus(bus_toughc5));
     out.panel.reset(make_panel<lgfx::Panel_ILI9342>(panel_toughc5, out.bus.get()));
     out.light.reset(make_default_part<Light_M5ToughC5>(
-      toughc5_detail::i2c_port, pmic_ops::ioe1_i2c_addr, toughc5_detail::i2c_freq));
+      toughc5_detail::i2c_port, toughc5_detail::sda, toughc5_detail::scl,
+      pmic_ops::ioe1_i2c_addr, toughc5_detail::i2c_freq));
     out.touch.reset(make_i2c_touch<lgfx::Touch_CHSC6540>(touch_toughc5));
     out.panel->touch(out.touch.get());
     return construct_status(out.release_to(parts));

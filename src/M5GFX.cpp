@@ -34,6 +34,9 @@
 #include "lgfx/v1/touch/Touch_CSTxxx.hpp"
 #include "lgfx/v1/touch/Touch_FT5x06.hpp"
 #include "lgfx/v1/touch/Touch_GT911.hpp"
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+#include "lgfx/v1/platforms/esp32p4/Touch_ST7123.hpp"
+#endif
 
 #include "board_detect/m5/setup_sentinels.hpp"
 
@@ -69,7 +72,6 @@
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7102.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7121.hpp"
 #include "lgfx/v1/platforms/esp32p4/Panel_ST7123.hpp"
-#include "lgfx/v1/platforms/esp32p4/Touch_ST7123.hpp"
 
 #elif defined ( CONFIG_IDF_TARGET_ESP32S3 )
 
@@ -138,11 +140,12 @@ namespace m5gfx
 #if defined (CONFIG_IDF_TARGET_ESP32P4)
   struct Light_M5CoreP4X : public lgfx::ILight
   {
-    Light_M5CoreP4X(int port, std::uint8_t addr, std::uint32_t freq)
-    : _port(port), _addr(addr), _freq(freq) {}
+    Light_M5CoreP4X(int port, int sda, int scl, std::uint8_t addr, std::uint32_t freq)
+    : _port(port), _sda(sda), _scl(scl), _addr(addr), _freq(freq) {}
 
     bool init(uint8_t brightness) override
     {
+      lgfx::i2c::init(_port, _sda, _scl);
       static constexpr uint16_t pwm_freq = 1000;
       const uint8_t freq_data[] = {
         0x25, static_cast<uint8_t>(pwm_freq), static_cast<uint8_t>(pwm_freq >> 8)
@@ -163,6 +166,8 @@ namespace m5gfx
     }
   private:
     int _port;
+    int _sda;
+    int _scl;
     std::uint8_t _addr;
     std::uint32_t _freq;
   };
@@ -237,6 +242,7 @@ namespace m5gfx
   {
     bool init(std::uint8_t brightness) override
     {
+      lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
       setBrightness(brightness);
       return true;
     }
@@ -261,6 +267,7 @@ namespace m5gfx
   {
     bool init(std::uint8_t brightness) override
     {
+      lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
       setBrightness(brightness);
       return true;
     }
@@ -286,6 +293,7 @@ namespace m5gfx
   {
     bool init(std::uint8_t brightness) override
     {
+      lgfx::i2c::init(axp_i2c_port, axp_i2c_sda, axp_i2c_scl);
       setBrightness(brightness);
       return true;
     }
@@ -478,6 +486,7 @@ namespace m5gfx
   {
     bool init(uint8_t brightness) override
     {
+      lgfx::i2c::init(i2c_port, i2c_sda, i2c_scl);
       setBrightness(brightness);
       return true;
     }
@@ -700,12 +709,13 @@ namespace m5gfx
 
   struct Light_M5ToughC5 : public lgfx::ILight
   {
-    Light_M5ToughC5(int_fast16_t port, std::uint8_t addr, std::uint32_t freq)
-    : _port(port), _addr(addr), _freq(freq) {}
+    Light_M5ToughC5(int_fast16_t port, int sda, int scl, std::uint8_t addr, std::uint32_t freq)
+    : _port(port), _sda(sda), _scl(scl), _addr(addr), _freq(freq) {}
     // LCD backlight = M5IOE1 PIN10, driven by the expander's PWM channel 4.
     // Registers: 0x21/0x22 = PWM4 duty (12bit, H[7]=enable), 0x25/0x26 = shared PWM frequency (Hz).
     bool init(uint8_t brightness) override
     {
+      lgfx::i2c::init(_port, _sda, _scl);
       static constexpr uint8_t freq_1khz[] = { 0x25, 0xE8, 0x03 };
       lgfx::i2c::transactionWrite(_port, _addr, freq_1khz, sizeof(freq_1khz), _freq);
       lgfx::i2c::bitOn(_port, _addr, 0x04, 0x02, _freq); // PIN10 output mode
@@ -728,6 +738,8 @@ namespace m5gfx
     }
   private:
     int_fast16_t _port;
+    int _sda;
+    int _scl;
     std::uint8_t _addr;
     std::uint32_t _freq;
   };
@@ -736,11 +748,12 @@ namespace m5gfx
 
   struct Light_ArduinoNessoN1 : public lgfx::ILight
   {
-    Light_ArduinoNessoN1(int_fast16_t port, std::uint8_t addr, std::uint32_t freq)
-    : _port(port), _addr(addr), _freq(freq) {}
+    Light_ArduinoNessoN1(int_fast16_t port, int sda, int scl, std::uint8_t addr, std::uint32_t freq)
+    : _port(port), _sda(sda), _scl(scl), _addr(addr), _freq(freq) {}
 
     bool init(uint8_t brightness) override
     {
+      lgfx::i2c::init(_port, _sda, _scl);
       setBrightness(brightness);
       return true;
     }
@@ -756,6 +769,8 @@ namespace m5gfx
 
   private:
     int_fast16_t _port;
+    int _sda;
+    int _scl;
     std::uint8_t _addr;
     std::uint32_t _freq;
   };

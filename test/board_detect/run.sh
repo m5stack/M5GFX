@@ -12,9 +12,9 @@ failed=0
 for source in "$root"/test/board_detect/*.cpp; do
   name=$(basename "$source" .cpp)
   "${CXX:-c++}" -std=c++11 -O2 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pedantic \
-    '-DM5GFX_BOARD_DETECT_HOST_HAL="lgfx/v1/platforms/esp32/common.hpp"' \
-    '-DM5GFX_BOARD_DETECT_HOST_TOUCH="board_detect/m5/atom_touch.inl"' \
-    -I"$root/test/board_detect/stubs" -I"$root/src" \
+    '-DM5GFX_BOARD_DETECT_IO_HEADER="support/detect_io.hpp"' \
+    -include "$root/test/board_detect/support/native_devices_io.hpp" \
+    -I"$root/test/board_detect" -I"$root/test/board_detect/stubs" -I"$root/src" \
     "$source" -o "$out/$name"
   if (cd "$root"
       "$out/$name"); then

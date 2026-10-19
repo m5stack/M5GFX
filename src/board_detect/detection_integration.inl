@@ -119,16 +119,8 @@
     const auto setup_board = static_cast<board_t>(result.def->id);
 
     const board_detect::prepare_ctx_t& prepare_ctx = probe;
-    const int adopted_i2c_port = result.desc->internal_i2c.hw_port;
-    const bool adopted_i2c_was_open = adopted_i2c_port >= 0
-                                   && lgfx::i2c::isInitialized(adopted_i2c_port);
     const bool prepared = result.desc != nullptr
                        && board_detect::prepare(*result.desc, result, prepare_ctx);
-    if (adopted_i2c_port >= 0 && !adopted_i2c_was_open
-     && lgfx::i2c::isInitialized(adopted_i2c_port))
-    {
-      transaction.buses().opened_i2c(adopted_i2c_port);
-    }
     outcome.result = result;
     const bool accepted = board_detect::finalize_prepared_result(outcome, request.preferred);
     if (!prepared)
@@ -216,12 +208,8 @@
     ctx.allow_reset = allow_reset;
     ctx.i2c_port_probe = probe_i2c_port;
     ctx.transaction = &transaction;
-    const int port = desc.internal_i2c.hw_port;
-    const bool was_open = port >= 0 && lgfx::i2c::isInitialized(port);
     const bool started = entry.fixed_start ? entry.fixed_start(result, ctx)
                                           : prepare(desc, result, ctx);
-    if (port >= 0 && !was_open && lgfx::i2c::isInitialized(port))
-    { transaction.buses().opened_i2c(port); }
     outcome.result = result;
     outcome.verdict = verdict_t::confirmed;
     outcome.attempts = 1;

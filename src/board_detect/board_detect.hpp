@@ -6,11 +6,7 @@
 #include <cstdint>
 #include <initializer_list>
 
-#if defined (M5GFX_BOARD_DETECT_HOST_HAL)
-#include M5GFX_BOARD_DETECT_HOST_HAL
-#else
-#include "../lgfx/v1/platforms/esp32/common.hpp"
-#endif
+#include "detect_io.hpp"
 #include "dedicated_release_probe.hpp"
 #include "ops.hpp"
 #include "detect_types.hpp"
@@ -92,24 +88,12 @@ namespace board_detect
     void rollback();
 
   private:
-    lgfx::gpio::pin_backup_t saved_[max_detection_pins];
+    io::pin_state_t saved_[max_detection_pins];
     std::uint8_t count_ = 0;
   };
 
-  class detection_bus_journal_t
-  {
-  public:
-    void opened_i2c(int port);
-    void rollback();
-    void commit();
-
-  private:
-    std::int8_t i2c_ports_[2] = { -1, -1 };
-    std::uint8_t i2c_count_ = 0;
-  };
-
   // Capture releases LP pad ownership after saving GPIO state.
-  // Rollback restores GPIO and releases journaled buses, but deliberately leaves
+  // Rollback restores GPIO, but deliberately leaves
   // LP ownership released: stale LP routing would hide the pad behind a controller-held line.
   // PMIC register writes are not restored.
   class detection_transaction_t
@@ -127,11 +111,9 @@ namespace board_detect
     void restore_start(const std::int8_t (&pins)[N]) { restore_start(pins, N); }
     void rollback();
     void commit();
-    detection_bus_journal_t& buses() { return buses_; }
 
   private:
     detection_gpio_snapshot_t gpio_;
-    detection_bus_journal_t buses_;
     bool valid_ = false;
     bool committed_ = false;
   };
@@ -229,7 +211,8 @@ namespace board_detect
   struct i2c_desc_t
   {
     // PMIC power/reset descriptions require valid SDA/SCL even when hw_port
-    // is -1; hw_port only controls whether the bus remains open after prepare.
+    // is -1. hw_port tells consumers which hardware port to open themselves;
+    // detection uses only software I2C and does not initialize hardware ports.
     std::int8_t sda;
     std::int8_t scl;
     std::int8_t hw_port;

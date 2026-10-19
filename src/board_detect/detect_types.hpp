@@ -88,6 +88,9 @@ namespace board_detect
     // Optional post-power observation for an already confirmed member. Unlike
     // refinement, failure of retained power may skip it without losing identity.
     refine_fn_t observe_after_power = nullptr;
+    // Some controllers still answer after a partial power sequence; preserve
+    // their observations without changing the default skip policy.
+    bool observe_on_power_failure = false;
 
     void assign(const board_desc_t* value);
   };

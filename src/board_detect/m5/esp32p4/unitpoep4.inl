@@ -7,11 +7,11 @@ namespace unitpoep4_detail
   // Open-drain signaling: output latches stay Low; High releases the pin.
   inline void drive(int pin, bool high)
   {
-    if (high) { lgfx::pinMode(pin, lgfx::pin_mode_t::input); }
+    if (high) { io::pin_mode(pin, io::pin_mode_t::input); }
     else
     {
-      lgfx::gpio_lo(pin);
-      lgfx::pinMode(pin, lgfx::pin_mode_t::output);
+      io::pin_low(pin);
+      io::pin_mode(pin, io::pin_mode_t::output);
     }
   }
 
@@ -20,20 +20,20 @@ namespace unitpoep4_detail
     auto clock = []()
     {
       drive(mdc, true);
-      lgfx::delayMicroseconds(2);
+      io::delay_us(2);
       drive(mdc, false);
     };
     auto bit_out = [&](bool bit)
     {
       drive(mdio, bit);
-      lgfx::delayMicroseconds(2);
+      io::delay_us(2);
       clock();
     };
     auto bit_in = [&]()
     {
       // IP101 changes MDIO after the rising edge; sample while MDC is Low.
-      lgfx::delayMicroseconds(2);
-      const bool bit = lgfx::gpio_in(mdio);
+      io::delay_us(2);
+      const bool bit = io::pin_read(mdio);
       clock();
       return bit;
     };
@@ -76,7 +76,7 @@ public:
   {
     if (result == nullptr || ctx.transaction == nullptr) { return false; }
     const ops::gpio_scope_t scope = {
-      GPIO_NUM_MAX, desc_unitpoep4.op_gpio_pins.data, desc_unitpoep4.op_gpio_pins.size,
+      io::pin_count, desc_unitpoep4.op_gpio_pins.data, desc_unitpoep4.op_gpio_pins.size,
     };
     if (!ops::gpio_allowed(scope, unitpoep4_detail::mdc)
      || !ops::gpio_allowed(scope, unitpoep4_detail::mdio)) { return false; }

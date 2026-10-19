@@ -92,14 +92,14 @@ namespace m5
     void write8(soft_spi_t& bus, int pin_cs, std::uint8_t cmd, std::uint8_t data)
     {
       bus.beginTransaction();
-      lgfx::gpio_lo(pin_cs);
+      io::pin_low(pin_cs);
       bus.writeCommand(cmd, 8);
       bus.writeData(data, 8);
       // An uninitialised Panel_LCD still has _nop_closing=true. Its endWrite()
       // emits NOP before raising CS, so reproduce that probe transaction exactly.
       bus.writeCommand(0x00, 8);
       bus.wait();
-      lgfx::gpio_hi(pin_cs);
+      io::pin_high(pin_cs);
       bus.endTransaction();
     }
 
@@ -107,11 +107,11 @@ namespace m5
     {
       write8(bus, pin_cs, 0xD9, 0x10 | index);
       bus.beginTransaction();
-      lgfx::gpio_lo(pin_cs);
+      io::pin_low(pin_cs);
       bus.writeCommand(cmd, 8);
       bus.beginRead(1);
       const auto value = static_cast<std::uint8_t>(bus.readData(8));
-      lgfx::gpio_hi(pin_cs);
+      io::pin_high(pin_cs);
       bus.endRead();
       // Panel_LCD::readCommand() raises CS before endWrite(). The latter still
       // clocks its closing NOP (with CS high) because the panel is uninitialised.
@@ -134,14 +134,14 @@ namespace m5
       if (!try_c_key) { return panel_variant_t::unknown; }
 
       bus.beginTransaction();
-      lgfx::gpio_lo(pin_cs);
+      io::pin_low(pin_cs);
       bus.writeCommand(0xC8, 8);
       bus.writeData(0xFF, 8);
       bus.writeData(0x93, 8);
       bus.writeData(0x42, 8);
       bus.writeCommand(0x00, 8);
       bus.wait();
-      lgfx::gpio_hi(pin_cs);
+      io::pin_high(pin_cs);
       bus.endTransaction();
       keys[2] = read_parameter(bus, pin_cs, 0xD3, 2);
       keys[3] = read_parameter(bus, pin_cs, 0xD3, 3);
@@ -155,12 +155,12 @@ namespace m5
                                            bool try_c_key = true)
     {
       auto variant = probe_panel_variant(bus, pin_cs, keys, try_c_key);
-      const auto started = lgfx::millis();
+      const auto started = io::millis();
       while (variant == panel_variant_t::unknown && poll_ms)
       {
-        lgfx::delay(1);
+        io::delay_ms(1);
         variant = probe_panel_variant(bus, pin_cs, keys, try_c_key);
-        if (lgfx::millis() - started >= poll_ms) { break; }
+        if (io::millis() - started >= poll_ms) { break; }
       }
       return variant;
     }

@@ -43,6 +43,7 @@ struct Touch_FT5x06 : ITouch {
   int kind() const override { return 2; }
 };
 struct Touch_GT911 : ITouch {
+  static constexpr std::uint8_t default_addr_1 = 0x14;
   int kind() const override { return 3; }
 };
 struct Panel_Device : configured_t {
@@ -54,6 +55,7 @@ struct Panel_Device : configured_t {
   void setRotation(int) {}
   void bus(IBus *b) { attached = b; }
   void touch(ITouch *t) { attached_touch = t; }
+  void setTouch(ITouch *t) { touch(t); }
   void setCalibrateAffine(float *) {}
   void setResetReg(int reg) { reset_reg = reg; }
 };

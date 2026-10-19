@@ -63,7 +63,7 @@ namespace m5
       .with_invert(specs::tab5::backlight::invert)
       .with_offset(specs::tab5::backlight::offset);
 
-  construct_status_t construct_tab5(const board_result_t&, display_parts_t* parts)
+  construct_status_t construct_tab5(const board_result_t& result, display_parts_t* parts)
   {
 #if !CONFIG_SPIRAM
     ESP_LOGE(LIBRARY_NAME, "M5Tab5 need PSRAM enabled");
@@ -78,48 +78,10 @@ namespace m5
 #endif
 #endif
 
-    bool hit_st7121 = false;
-    bool hit_st7123 = false;
-    bool read_st_touch_fw = false;
-    bool found_gt911 = false;
-    int last_logged_fw = -1;
-    for (int i = 0; i < 60; ++i)
-    {
-      std::uint8_t fw_version = 0;
-      std::uint8_t fw_reg[2] = { 0, 0 };
-      if (lgfx::i2c::transactionWriteRead(tab5_detail::i2c_port,
-                                           lgfx::Touch_ST7123::default_addr,
-                                           fw_reg, sizeof(fw_reg), &fw_version, 1,
-                                           tab5_detail::i2c_freq).has_value())
-      {
-        read_st_touch_fw = true;
-        if (fw_version != last_logged_fw)
-        {
-          last_logged_fw = fw_version;
-          ESP_LOGI(LIBRARY_NAME, "M5Tab5 ST touch FW version %02x", fw_version);
-          if (fw_version != 1 && fw_version != 3)
-          {
-            ESP_LOGW(LIBRARY_NAME, "M5Tab5 unknown ST touch FW version %02x", fw_version);
-          }
-        }
-        if (fw_version == 1) { hit_st7121 = true; break; }
-        if (fw_version == 3) { hit_st7123 = true; break; }
-      }
-      else if (lgfx::i2c::beginTransaction(tab5_detail::i2c_port,
-                                            lgfx::Touch_GT911::default_addr_1,
-                                            tab5_detail::i2c_freq, false).has_value()
-            && lgfx::i2c::endTransaction(tab5_detail::i2c_port).has_value())
-      {
-        found_gt911 = true;
-        ESP_LOGI(LIBRARY_NAME, "M5Tab5 GT911 touch detected");
-        break;
-      }
-      lgfx::delay(10);
-    }
-    if (!read_st_touch_fw && !found_gt911)
-    {
-      ESP_LOGW(LIBRARY_NAME, "M5Tab5 ST touch FW version read failed");
-    }
+    const bool hit_st7121 = result.prepared & tab5_detail::touch_st7121;
+    const bool hit_st7123 = result.prepared & tab5_detail::touch_st7123;
+    const bool read_st_touch_fw = result.prepared & tab5_detail::read_st_touch_fw;
+    const bool found_gt911 = result.prepared & tab5_detail::touch_gt911;
 
     const dsi_bus_desc_t bus_tab5 =
       dsi_bus(specs::tab5::bus_id, specs::tab5::bus_lane_num,

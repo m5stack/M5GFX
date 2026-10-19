@@ -2,7 +2,7 @@ namespace c6_display_detail
 {
   constexpr int sda = wiring::nesson1::internal_i2c_sda;
   constexpr int scl = wiring::nesson1::internal_i2c_scl;
-  constexpr int_fast16_t i2c_port = I2C_NUM_0;
+  constexpr int_fast16_t i2c_port = io::i2c_port_0;
   constexpr std::uint32_t pi4io_freq = 100000;
   constexpr std::uint64_t signature_bit = std::uint64_t(1) << 18;
   enum class candidate_t : std::uint8_t { none, unitc6l, nesson1 };

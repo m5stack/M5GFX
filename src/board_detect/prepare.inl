@@ -49,9 +49,9 @@
     }
     if (!(result.prepared & prepared_observation) && result.observe_after_power != nullptr)
     {
-      // Panel metadata is optional after retained power failure; the member
-      // was already confirmed before this observer was attached.
-      if (!(result.prepared & prepared_power_failed)
+      // Optional metadata may skip retained power failure. Observers whose
+      // controllers can still answer may opt in without changing board identity.
+      if ((!(result.prepared & prepared_power_failed) || result.observe_on_power_failure)
        && !result.observe_after_power(result, ctx))
       {
         // Optional panel metadata must not discard a member confirmed by touch.
@@ -78,27 +78,7 @@
       }
     }
     startup_detail::hold_chip_selects(*current);
-    // The internal port is taken over here and handed to later users. Opening it
-    // on other pins before autodetect is a misuse; it is reported, not restored.
-    if (current->internal_i2c.hw_port >= 0
-     && lgfx::i2c::isInitialized(current->internal_i2c.hw_port))
-    {
-      const auto sda = lgfx::i2c::getPinSDA(current->internal_i2c.hw_port);
-      const auto scl = lgfx::i2c::getPinSCL(current->internal_i2c.hw_port);
-      if (sda.has_value() && scl.has_value()
-       && (sda.value() != current->internal_i2c.sda || scl.value() != current->internal_i2c.scl))
-      {
-        ESP_LOGW("board_detect", "I2C%d was open on SDA=%d SCL=%d; moving it to SDA=%d SCL=%d",
-                 current->internal_i2c.hw_port, sda.value(), scl.value(),
-                 current->internal_i2c.sda, current->internal_i2c.scl);
-      }
-    }
-    if (current->internal_i2c.hw_port >= 0
-     && !lgfx::i2c::init(current->internal_i2c.hw_port, current->internal_i2c.sda,
-                         current->internal_i2c.scl).has_value())
-    {
-      ESP_LOGW("board_detect", "I2C%d could not be opened for SDA=%d SCL=%d",
-               current->internal_i2c.hw_port, current->internal_i2c.sda, current->internal_i2c.scl);
-    }
+    // Detection uses software I2C only. Like SPI, hardware I2C belongs to
+    // its consumers; preparation leaves only power and reset ready.
     return true;
   }

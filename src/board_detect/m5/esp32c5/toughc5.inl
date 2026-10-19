@@ -2,12 +2,7 @@
   {
     constexpr int sda = wiring::toughc5::internal_i2c_sda;
     constexpr int scl = wiring::toughc5::internal_i2c_scl;
-#if defined(SOC_LP_I2C_NUM) && SOC_LP_I2C_NUM > 0 && __has_include(<driver/i2c_master.h>) \
- && defined(ESP_IDF_VERSION_VAL) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
-    constexpr int_fast16_t i2c_port = LP_I2C_NUM_0;
-#else
-    constexpr int_fast16_t i2c_port = I2C_NUM_0;
-#endif
+    constexpr int_fast16_t i2c_port = io::low_power_i2c_port_0;
     constexpr std::uint32_t i2c_freq = pmic_ops::pm1_i2c_freq;
     static const pmic_variant_t power_variants[] = {
       pmic_variant_ack_only(pmic_ops::pm1_i2c_addr, 0,
@@ -47,9 +42,9 @@
     stampc5_detector_t() : board_detector_t(members_) {}
     bool signature(probe_ctx_t& ctx) const override
     {
-      const auto sys2 = REG_READ(EFUSE_RD_MAC_SYS2_REG);
-      if (((sys2 >> EFUSE_FLASH_CAP_S) & EFUSE_FLASH_CAP_V) != 1
-       || ((sys2 >> EFUSE_PSRAM_CAP_S) & EFUSE_PSRAM_CAP_V) != 0) { return false; }
+      unsigned flash, psram;
+      io::module_memory_capacity(&flash, &psram);
+      if (flash != 1 || psram != 0) { return false; }
       // Package facts only suggest a board; keep later families from probing
       // this module's user pins without treating it as confirmed.
       if (ctx.candidate == nullptr) { ctx.candidate = &desc_stampc5.def; }

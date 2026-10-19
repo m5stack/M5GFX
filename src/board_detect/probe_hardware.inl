@@ -1,49 +1,49 @@
   bool wait_i2c_scl_high(int pin_scl)
   {
-    lgfx::gpio_hi(pin_scl);
-    lgfx::delayMicroseconds(5);
-    if (lgfx::gpio_in(pin_scl)) { return true; }
-    const auto started = lgfx::micros();
-    while (lgfx::micros() - started < 25000)
+    io::pin_high(pin_scl);
+    io::delay_us(5);
+    if (io::pin_read(pin_scl)) { return true; }
+    const auto started = io::micros();
+    while (io::micros() - started < 25000)
     {
-      if (lgfx::gpio_in(pin_scl)) { return true; }
-      lgfx::delayMicroseconds(1);
+      if (io::pin_read(pin_scl)) { return true; }
+      io::delay_us(1);
     }
     return false;
   }
 
   bool release_held_sda(int pin_sda, int pin_scl)
   {
-    lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
-    lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
-    lgfx::delayMicroseconds(10);
+    io::pin_mode(pin_sda, io::pin_mode_t::input);
+    io::pin_mode(pin_scl, io::pin_mode_t::input);
+    io::delay_us(10);
 
     // A reset of this MCU during a transfer can leave a peripheral holding
     // SDA low while it waits for more clocks. Clock it out (up to 9 bits) and
     // finish with STOP. Input mode is open drain with the output latch high.
-    bool bus_released = lgfx::gpio_in(pin_scl);
-    if (bus_released && !lgfx::gpio_in(pin_sda))
+    bool bus_released = io::pin_read(pin_scl);
+    if (bus_released && !io::pin_read(pin_sda))
     {
-      for (int i = 0; i < 9 && !lgfx::gpio_in(pin_sda); ++i)
+      for (int i = 0; i < 9 && !io::pin_read(pin_sda); ++i)
       {
-        lgfx::gpio_lo(pin_scl);
-        lgfx::delayMicroseconds(5);
+        io::pin_low(pin_scl);
+        io::delay_us(5);
         if (!wait_i2c_scl_high(pin_scl)) { bus_released = false; break; }
       }
       if (bus_released)
       {
-        lgfx::gpio_lo(pin_scl);
-        lgfx::gpio_lo(pin_sda);
-        lgfx::delayMicroseconds(5);
+        io::pin_low(pin_scl);
+        io::pin_low(pin_sda);
+        io::delay_us(5);
         bus_released = wait_i2c_scl_high(pin_scl);
         if (bus_released)
         {
-          lgfx::gpio_hi(pin_sda);
-          lgfx::delayMicroseconds(10);
+          io::pin_high(pin_sda);
+          io::delay_us(10);
         }
       }
     }
-    const bool released = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
+    const bool released = bus_released && io::pin_read(pin_sda) && io::pin_read(pin_scl);
     return released;
   }
 
@@ -79,8 +79,8 @@
       // A floating pin is raised by the internal pull-up during sample() and
       // never reaches this path. Only an externally held-low SCL receives the
       // legacy soft-I2C clock-stretch allowance.
-      lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
-      lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
+      io::pin_mode(pin_sda, io::pin_mode_t::input);
+      io::pin_mode(pin_scl, io::pin_mode_t::input);
       wait_i2c_scl_high(pin_scl);
       ctx.transaction->restore_start({ pin_sda, pin_scl });
     };
@@ -98,9 +98,9 @@
 
   bool probe_pin_pullup_low(probe_ctx_t& ctx, int pin)
   {
-    lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
-    lgfx::delayMicroseconds(10);
-    const bool held_low = !lgfx::gpio_in(pin);
+    io::pin_mode(pin, io::pin_mode_t::input_pullup);
+    io::delay_us(10);
+    const bool held_low = !io::pin_read(pin);
     ctx.transaction->restore_start({ pin });
     return held_low;
   }
@@ -116,22 +116,22 @@
       cache.pin_sda = pin_sda;
       cache.pin_scl = pin_scl;
 
-      lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input_pulldown);
-      lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input_pulldown);
-      lgfx::delayMicroseconds(10);
-      lgfx::pinMode(pin_sda, lgfx::pin_mode_t::input);
-      lgfx::pinMode(pin_scl, lgfx::pin_mode_t::input);
-      lgfx::delayMicroseconds(10);
+      io::pin_mode(pin_sda, io::pin_mode_t::input_pulldown);
+      io::pin_mode(pin_scl, io::pin_mode_t::input_pulldown);
+      io::delay_us(10);
+      io::pin_mode(pin_sda, io::pin_mode_t::input);
+      io::pin_mode(pin_scl, io::pin_mode_t::input);
+      io::delay_us(10);
       // The first check does not wait: a pin pair without pull-ups reads SCL
       // low here, and waiting for it would delay every such detection. Only a
       // bus that has pull-ups and a held SDA is clocked, and only those clocks
       // wait for a stretching peripheral.
-      bool bus_released = lgfx::gpio_in(pin_scl);
-      if (bus_released && !lgfx::gpio_in(pin_sda))
+      bool bus_released = io::pin_read(pin_scl);
+      if (bus_released && !io::pin_read(pin_sda))
       {
         bus_released = release_held_sda(pin_sda, pin_scl);
       }
-      cache.pullup_ok = bus_released && lgfx::gpio_in(pin_sda) && lgfx::gpio_in(pin_scl);
+      cache.pullup_ok = bus_released && io::pin_read(pin_sda) && io::pin_read(pin_scl);
       ctx.transaction->restore_start({ pin_sda, pin_scl });
     }
 
@@ -141,12 +141,11 @@
       cache.checked[addr >> 5] |= bit;
       if (cache.pullup_ok)
       {
-        if (lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value())
+        if (io::i2c_open(ctx.i2c_port_probe, pin_sda, pin_scl))
         {
-          const bool hit = lgfx::i2c::beginTransaction(ctx.i2c_port_probe, addr, 100000, false).has_value()
-                        && lgfx::i2c::endTransaction(ctx.i2c_port_probe).has_value();
+          const bool hit = io::i2c_ack(ctx.i2c_port_probe, addr, 100000);
           if (hit) { cache.ack[addr >> 5] |= bit; }
-          lgfx::i2c::release(ctx.i2c_port_probe);
+          io::i2c_close(ctx.i2c_port_probe);
         }
         ctx.transaction->restore_start({ pin_sda, pin_scl });
       }
@@ -159,21 +158,21 @@
                       std::uint32_t freq, std::uint32_t poll_ms, bool reg16)
   {
     if (data == nullptr || length == 0 || addr < 0x08 || addr > 0x77) { return false; }
-    if (!lgfx::i2c::init(ctx.i2c_port_probe, pin_sda, pin_scl).has_value()) { return false; }
+    if (!io::i2c_open(ctx.i2c_port_probe, pin_sda, pin_scl)) { return false; }
     const std::uint8_t reg_bytes[] = {
       static_cast<std::uint8_t>(reg >> 8), static_cast<std::uint8_t>(reg),
     };
-    const auto started = lgfx::millis();
+    const auto started = io::millis();
     bool success = false;
     do
     {
-      success = lgfx::i2c::transactionWriteRead(
+      success = io::i2c_write_read(
         ctx.i2c_port_probe, addr, reg_bytes + !reg16, 1 + reg16,
-        data, length, freq).has_value();
+        data, length, freq);
       if (success) { break; }
-      lgfx::delay(1);
-    } while (lgfx::millis() - started < poll_ms);
-    lgfx::i2c::release(ctx.i2c_port_probe);
+      io::delay_ms(1);
+    } while (io::millis() - started < poll_ms);
+    io::i2c_close(ctx.i2c_port_probe);
     ctx.transaction->restore_start({ pin_sda, pin_scl });
     return success;
   }
@@ -190,27 +189,38 @@
       if (!(pin_mask & bit)) { continue; }
       // Measure one pin completely before touching the next. On a native-mode
       // SD bus this avoids raising CLK while CMD is temporarily pulled low.
-      lgfx::pinMode(pin, lgfx::pin_mode_t::input_pulldown);
-      lgfx::delayMicroseconds(10);
-      if (lgfx::gpio_in(pin)) { result.pulldown_high |= bit; }
+      io::pin_mode(pin, io::pin_mode_t::input_pulldown);
+      io::delay_us(10);
+      if (io::pin_read(pin)) { result.pulldown_high |= bit; }
       if (release_us != 0)
       {
-        lgfx::pinMode(pin, lgfx::pin_mode_t::input);
-        lgfx::delayMicroseconds(release_us);
-        if (lgfx::gpio_in(pin)) { result.pulldown_release_high |= bit; }
+        io::pin_mode(pin, io::pin_mode_t::input);
+        io::delay_us(release_us);
+        if (io::pin_read(pin)) { result.pulldown_release_high |= bit; }
       }
-      lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
-      lgfx::delayMicroseconds(10);
-      if (lgfx::gpio_in(pin)) { result.pullup_high |= bit; }
+      io::pin_mode(pin, io::pin_mode_t::input_pullup);
+      io::delay_us(10);
+      if (io::pin_read(pin)) { result.pullup_high |= bit; }
       if (release_us != 0)
       {
-        lgfx::pinMode(pin, lgfx::pin_mode_t::input);
-        lgfx::delayMicroseconds(release_us);
-        if (lgfx::gpio_in(pin)) { result.pullup_release_high |= bit; }
+        io::pin_mode(pin, io::pin_mode_t::input);
+        io::delay_us(release_us);
+        if (io::pin_read(pin)) { result.pullup_release_high |= bit; }
       }
       ctx.transaction->restore_start(static_cast<std::int8_t>(pin));
     }
     return result;
+  }
+
+  static bool close_dedicated_release_bundle(io::dedicated_gpio_handle_t bundle)
+  {
+    const int error = io::dedicated_gpio_close(bundle);
+    if (error != 0)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO bundle cleanup failed (%d)", error);
+      return false;
+    }
+    return true;
   }
 
   dedicated_release_result_t probe_dedicated_pin_release(
@@ -222,7 +232,11 @@
     result.requested_samples = samples;
     result.reads = reads;
     for (auto& value : result.median_first_high) { value = dedicated_release_no_high; }
-#if defined (M5GFX_HAS_S3_DEDICATED_GPIO_RELEASE_PROBE)
+    if (!io::dedicated_gpio_supported)
+    {
+      ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO release probe is unavailable in this SDK");
+      return result;
+    }
     if (ctx.transaction == nullptr || pins == nullptr || pin_count == 0
      || pin_count > max_dedicated_release_pins || reads == 0
      || reads > max_dedicated_release_reads || samples == 0
@@ -231,9 +245,9 @@
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe has invalid parameters");
       return result;
     }
-    const int pinned_core = dedicated_release_task_core();
-    if (pinned_core == static_cast<int>(tskNO_AFFINITY)
-     || dedicated_release_core_id() != pinned_core)
+    const int pinned_core = io::dedicated_release_task_core();
+    if (pinned_core == io::no_core_affinity()
+     || io::dedicated_release_core_id() != pinned_core)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe requires a core-pinned task");
       return result;
@@ -245,7 +259,7 @@
     // new_bundle are not atomic: applications that initialize dedicated GPIO
     // concurrently on another core during this brief M5.begin probe are not
     // supported.
-    if (REG_GET_BIT(SYSTEM_CPU_PERI_CLK_EN_REG, SYSTEM_CLK_EN_DEDICATED_GPIO))
+    if (io::dedicated_gpio_in_use())
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO in use; skipping release probe");
       return result;
@@ -254,7 +268,7 @@
     for (std::uint8_t index = 0; index < pin_count; ++index)
     {
       const int pin = pins[index];
-      if (pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin))
+      if (!io::pin_valid(pin))
       {
         ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe has invalid pin (%d)", pin);
         return result;
@@ -267,50 +281,42 @@
       // input_pullup retains output-enable but sets OD with a High latch, so
       // the pad is Hi-Z. Prepare the weakest drive before new_bundle connects
       // its active output route to avoid a transient push-pull/strong drive.
-      lgfx::pinMode(pin, lgfx::pin_mode_t::input_pullup);
-      const auto io_mux = GPIO_PIN_MUX_REG[pin];
-      REG_WRITE(io_mux, (REG_READ(io_mux) & ~(FUN_PU | FUN_PD | FUN_DRV_M)) | FUN_PU);
-      gpio_ll_od_enable(&GPIO, static_cast<gpio_num_t>(pin));
+      io::pin_weak_pullup_open_drain(pin);
     }
 
-    dedic_gpio_bundle_handle_t bundle = nullptr;
-    dedic_gpio_bundle_config_t config = {};
-    config.gpio_array = bundle_pins;
-    config.array_size = pin_count;
-    config.flags.in_en = 1;
-    config.flags.out_en = 1;
-    const int creation_core = dedicated_release_core_id();
+    io::dedicated_gpio_handle_t bundle;
+    const int creation_core = io::dedicated_release_core_id();
     if (creation_core != pinned_core)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated before bundle creation");
       ctx.transaction->restore_start(pins, pin_count);
       return result;
     }
-    const esp_err_t bundle_error = dedic_gpio_new_bundle(&config, &bundle);
-    if (bundle_error != ESP_OK)
+    const int bundle_error = io::dedicated_gpio_open(bundle_pins, pin_count, &bundle);
+    if (bundle_error != 0)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO bundle creation failed (%d)", int(bundle_error));
       ctx.transaction->restore_start(pins, pin_count);
       return result;
     }
-    if (dedicated_release_core_id() != pinned_core)
+    if (io::dedicated_release_core_id() != pinned_core)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated after bundle creation");
-      delete_dedicated_release_bundle(bundle);
+      close_dedicated_release_bundle(bundle);
       ctx.transaction->restore_start(pins, pin_count);
       return result;
     }
     std::uint32_t input_mask = 0;
     std::uint32_t output_mask = 0;
-    esp_err_t input_mask_error = ESP_OK;
-    esp_err_t output_mask_error = ESP_OK;
-    dedicated_release_channel_masks(bundle, pin_count, &input_mask, &output_mask,
+    int input_mask_error = 0;
+    int output_mask_error = 0;
+    io::dedicated_release_channel_masks(bundle, pin_count, &input_mask, &output_mask,
                                     &input_mask_error, &output_mask_error);
-    if (input_mask_error != ESP_OK || output_mask_error != ESP_OK)
+    if (input_mask_error != 0 || output_mask_error != 0)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO channel lookup failed (in=%d out=%d)",
                int(input_mask_error), int(output_mask_error));
-      delete_dedicated_release_bundle(bundle);
+      close_dedicated_release_bundle(bundle);
       ctx.transaction->restore_start(pins, pin_count);
       return result;
     }
@@ -320,30 +326,30 @@
      || output_mask == 0)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO channel allocation is not contiguous");
-      delete_dedicated_release_bundle(bundle);
+      close_dedicated_release_bundle(bundle);
       ctx.transaction->restore_start(pins, pin_count);
       return result;
     }
-    static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    static io::critical_section_t mux;
     const auto measure = [&](std::uint16_t* first_high, std::uint32_t* cycles)
     {
       volatile std::uint32_t raw[max_dedicated_release_reads];
-      taskENTER_CRITICAL(&mux);
+      mux.enter();
       // A dedicated bundle belongs to its creation core. Check immediately
       // after scheduling is stopped and reject the measurement if it migrated.
-      if (dedicated_release_core_id() != creation_core)
+      if (io::dedicated_release_core_id() != creation_core)
       {
-        taskEXIT_CRITICAL(&mux);
+        mux.exit();
         return false;
       }
-      dedicated_release_write_mask(output_mask, 0);
-      lgfx::delayMicroseconds(settle_us);
-      const std::uint32_t started = dedicated_release_cycle_count();
-      dedicated_release_write_mask(output_mask, output_mask);
+      io::dedicated_release_write_mask(output_mask, 0);
+      io::delay_us(settle_us);
+      const std::uint32_t started = io::dedicated_release_cycle_count();
+      io::dedicated_release_write_mask(output_mask, output_mask);
       for (std::uint16_t read = 0; read < reads; ++read)
-      { raw[read] = dedicated_release_read_in(); }
-      const std::uint32_t stopped = dedicated_release_cycle_count();
-      taskEXIT_CRITICAL(&mux);
+      { raw[read] = io::dedicated_release_read_in(); }
+      const std::uint32_t stopped = io::dedicated_release_cycle_count();
+      mux.exit();
       *cycles = stopped - started;
       for (std::uint8_t index = 0; index < pin_count; ++index)
       {
@@ -373,7 +379,7 @@
     }
     if (complete)
     {
-      result.cpu_hz = static_cast<std::uint32_t>(esp_clk_cpu_freq());
+      result.cpu_hz = io::cpu_hz();
       result.available = result.cpu_hz != 0 && result.total_cycles != 0;
       if (result.cpu_hz == 0)
       {
@@ -401,98 +407,91 @@
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated during capture");
     }
 
-    if (!delete_dedicated_release_bundle(bundle)) { result.available = false; }
+    if (!close_dedicated_release_bundle(bundle)) { result.available = false; }
     // del_bundle pin cleanup differs by IDF version (4.4/5.2/5.3 leave the
     // pads alone; newer versions disable output), and out_sel is not restored.
     // Dedicated input routing is peripheral-side. In every version,
-    // The transaction's restore_start (pin_backup_t::restore) restores out_sel,
+    // The transaction's restore_start (pin_state_t::restore) restores out_sel,
     // GPIO_PINn, output-enable, latch, and the complete IO_MUX register
     // (including temporary FUN_DRV).
     ctx.transaction->restore_start(pins, pin_count);
     return result;
-#else
-    ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO release probe is unavailable in this SDK");
-    (void)ctx;
-    (void)pins;
-    (void)settle_us;
-    return result;
-#endif
   }
 
   void soft_spi_t::init()
   {
-    lgfx::gpio_lo(pin_sclk_);
-    lgfx::pinMode(pin_sclk_, lgfx::pin_mode_t::output);
-    lgfx::gpio_lo(pin_mosi_);
-    lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
-    if (pin_miso_ != pin_mosi_) { lgfx::pinMode(pin_miso_, lgfx::pin_mode_t::input); }
-    if (pin_dc_ >= 0) { lgfx::pinMode(pin_dc_, lgfx::pin_mode_t::output); }
+    io::pin_low(pin_sclk_);
+    io::pin_mode(pin_sclk_, io::pin_mode_t::output);
+    io::pin_low(pin_mosi_);
+    io::pin_mode(pin_mosi_, io::pin_mode_t::output);
+    if (pin_miso_ != pin_mosi_) { io::pin_mode(pin_miso_, io::pin_mode_t::input); }
+    if (pin_dc_ >= 0) { io::pin_mode(pin_dc_, io::pin_mode_t::output); }
   }
 
   void soft_spi_t::beginTransaction()
   {
-    lgfx::gpio_lo(pin_sclk_);
+    io::pin_low(pin_sclk_);
   }
 
   void soft_spi_t::endTransaction()
   {
     endRead();
-    lgfx::gpio_lo(pin_sclk_);
+    io::pin_low(pin_sclk_);
   }
 
   void soft_spi_t::clock()
   {
-    lgfx::delayMicroseconds(half_us_);
-    lgfx::gpio_hi(pin_sclk_);
-    lgfx::delayMicroseconds(half_us_);
-    lgfx::gpio_lo(pin_sclk_);
-    lgfx::delayMicroseconds(half_us_);
+    io::delay_us(half_us_);
+    io::pin_high(pin_sclk_);
+    io::delay_us(half_us_);
+    io::pin_low(pin_sclk_);
+    io::delay_us(half_us_);
   }
 
   void soft_spi_t::send(std::uint32_t data, std::uint_fast8_t bits)
   {
     for (std::uint_fast8_t i = 0; i < bits; ++i)
     {
-      if (data & (std::uint32_t(1) << bit_index(i))) { lgfx::gpio_hi(pin_mosi_); }
-      else                                           { lgfx::gpio_lo(pin_mosi_); }
+      if (data & (std::uint32_t(1) << bit_index(i))) { io::pin_high(pin_mosi_); }
+      else                                           { io::pin_low(pin_mosi_); }
       clock();
     }
   }
 
   void soft_spi_t::writeCommand(std::uint32_t data, std::uint_fast8_t bits)
   {
-    if (pin_dc_ >= 0) { lgfx::gpio_lo(pin_dc_); }
+    if (pin_dc_ >= 0) { io::pin_low(pin_dc_); }
     send(data, bits);
   }
 
   void soft_spi_t::writeData(std::uint32_t data, std::uint_fast8_t bits)
   {
-    if (pin_dc_ >= 0) { lgfx::gpio_hi(pin_dc_); }
+    if (pin_dc_ >= 0) { io::pin_high(pin_dc_); }
     send(data, bits);
   }
 
   std::uint32_t soft_spi_t::transferData(std::uint32_t data, std::uint_fast8_t bits)
   {
-    if (pin_dc_ >= 0) { lgfx::gpio_hi(pin_dc_); }
+    if (pin_dc_ >= 0) { io::pin_high(pin_dc_); }
     std::uint32_t value = 0;
     for (std::uint_fast8_t i = 0; i < bits; ++i)
     {
       const auto index = bit_index(i);
-      if (data & (std::uint32_t(1) << index)) { lgfx::gpio_hi(pin_mosi_); }
-      else                                    { lgfx::gpio_lo(pin_mosi_); }
-      lgfx::delayMicroseconds(half_us_);
-      if (lgfx::gpio_in(pin_miso_)) { value |= std::uint32_t(1) << index; }
-      lgfx::gpio_hi(pin_sclk_);
-      lgfx::delayMicroseconds(half_us_);
-      lgfx::gpio_lo(pin_sclk_);
+      if (data & (std::uint32_t(1) << index)) { io::pin_high(pin_mosi_); }
+      else                                    { io::pin_low(pin_mosi_); }
+      io::delay_us(half_us_);
+      if (io::pin_read(pin_miso_)) { value |= std::uint32_t(1) << index; }
+      io::pin_high(pin_sclk_);
+      io::delay_us(half_us_);
+      io::pin_low(pin_sclk_);
     }
     return value;
   }
 
   void soft_spi_t::beginRead(std::uint_fast8_t dummy_bits)
   {
-    if (pin_dc_ >= 0) { lgfx::gpio_hi(pin_dc_); }
-    if (pin_miso_ == pin_mosi_) { lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::input); }
+    if (pin_dc_ >= 0) { io::pin_high(pin_dc_); }
+    if (pin_miso_ == pin_mosi_) { io::pin_mode(pin_mosi_, io::pin_mode_t::input); }
     for (std::uint_fast8_t i = 0; i < dummy_bits; ++i) { clock(); }
   }
 
@@ -501,11 +500,11 @@
     std::uint32_t value = 0;
     for (std::uint_fast8_t i = 0; i < bits; ++i)
     {
-      lgfx::delayMicroseconds(half_us_);
-      if (lgfx::gpio_in(pin_miso_)) { value |= std::uint32_t(1) << bit_index(i); }
-      lgfx::gpio_hi(pin_sclk_);
-      lgfx::delayMicroseconds(half_us_);
-      lgfx::gpio_lo(pin_sclk_);
+      io::delay_us(half_us_);
+      if (io::pin_read(pin_miso_)) { value |= std::uint32_t(1) << bit_index(i); }
+      io::pin_high(pin_sclk_);
+      io::delay_us(half_us_);
+      io::pin_low(pin_sclk_);
     }
     return value;
   }
@@ -521,8 +520,8 @@
     {
       // Input mode leaves the latch high. Clear it before driving MOSI again
       // to avoid a long high pulse on shared data lines such as WS2812 inputs.
-      lgfx::gpio_lo(pin_mosi_);
-      lgfx::pinMode(pin_mosi_, lgfx::pin_mode_t::output);
+      io::pin_low(pin_mosi_);
+      io::pin_mode(pin_mosi_, io::pin_mode_t::output);
     }
   }
 
@@ -537,23 +536,23 @@
       // selecting the panel. ESP32 PICO display probes retain that exact read.
       bus.init();
       bus.beginTransaction();
-      lgfx::gpio_hi(pin_cs);
-      lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
+      io::pin_high(pin_cs);
+      io::pin_mode(pin_cs, io::pin_mode_t::output);
       bus.writeCommand(0, 8);
       bus.wait();
     }
     else
     {
-      lgfx::gpio_hi(pin_cs);
-      lgfx::pinMode(pin_cs, lgfx::pin_mode_t::output);
+      io::pin_high(pin_cs);
+      io::pin_mode(pin_cs, io::pin_mode_t::output);
       bus.init();
       bus.beginTransaction();
     }
-    lgfx::gpio_lo(pin_cs);
+    io::pin_low(pin_cs);
     bus.writeCommand(cmd, 8);
     bus.beginRead(dummy_bits);
     const auto value = bus.readData(32);
-    lgfx::gpio_hi(pin_cs);
+    io::pin_high(pin_cs);
     bus.endTransaction();
 
     // CS is owned by the caller. Restore only the shared bus signals that this

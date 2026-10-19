@@ -17,7 +17,7 @@ namespace c6_displayless_detail
   // The package's flash capacity is a stable eFuse fact; check it before
   // probing NanoC6 GPIO3, which is exposed on StampC6 as a user header pin.
   inline unsigned flash_capacity()
-  { return REG_GET_FIELD(EFUSE_RD_MAC_SPI_SYS_4_REG, EFUSE_FLASH_CAP); }
+  { return io::flash_capacity_code(); }
 }
 
 class stampc6_detector_t final : public board_detector_t
