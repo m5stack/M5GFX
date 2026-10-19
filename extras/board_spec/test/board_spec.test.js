@@ -2329,7 +2329,7 @@ test("Tab5 touch identities select the three DSI panels", async () => {
   const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5_setup.inl"), "utf8");
   assert.match(tab5SetupSource, /tab5_st7121_lane_mbps = 900/);
   assert.match(tab5SetupSource, /hit_st7121 \? tab5_st7121_lane_mbps : specs::tab5::bus_lane_mbps/);
-  assert.match(tab5SetupSource, /fw_version == 1[\s\S]*?hit_st7121 = true[\s\S]*?fw_version == 3[\s\S]*?hit_st7123 = true/);
+  assert.match(tab5SetupSource, /hit_st7121 = result.prepared & tab5_detail::touch_st7121[\s\S]*?hit_st7123 = result.prepared & tab5_detail::touch_st7123/);
   assert.match(tab5SetupSource, /if \(!read_st_touch_fw && !found_gt911\)[\s\S]*?delay\(80\)[\s\S]*?i < 3 && !hit_ili9881[\s\S]*?id\[0\] == 0x98 && id\[1\] == 0x81/);
   assert.match(tab5SetupSource, /if \(found_gt911 \|\| hit_ili9881\)[\s\S]*?Panel_ILI9881C/);
 });

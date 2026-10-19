@@ -58,7 +58,8 @@ construct_status_t construct_nesson1(const board_result_t&, display_parts_t* par
   out.panel.reset(make_panel<lgfx::Panel_ST7789>(panel_nesson1, out.bus.get()));
   out.touch.reset(make_i2c_touch<lgfx::Touch_FT5x06>(touch_nesson1));
   out.light.reset(new Light_ArduinoNessoN1(
-    c6_display_detail::i2c_port, specs::nesson1::backlight_i2c::i2c_addr,
+    c6_display_detail::i2c_port, c6_display_detail::sda, c6_display_detail::scl,
+    specs::nesson1::backlight_i2c::i2c_addr,
     specs::nesson1::backlight_i2c::i2c_freq));
   out.panel->touch(out.touch.get());
   return construct_status(out.release_to(parts));

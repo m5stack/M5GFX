@@ -15,6 +15,7 @@ enum {
   SPI2_HOST = 1,
   SPI3_HOST = 2,
   GPIO_NUM_MAX = 64,
+  GPIO_NUM_NC = -1,
   GPIO_NUM_0 = 0,
   GPIO_NUM_1 = 1,
   GPIO_NUM_2 = 2,

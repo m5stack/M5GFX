@@ -39,7 +39,7 @@ static const board_desc_t member = {{60000, "test member", 0},
                                     no_shared_sd(),
                                     no_display_pins(),
                                     pins(hold),
-                                    no_internal_i2c(),
+                                    internal_i2c(8, 9, 1),
                                     no_options(),
                                     pins(hold)};
 static const board_desc_t other = {{60001, "other member", 0},
@@ -420,12 +420,41 @@ static void reset_faults() {
   assert(host_hardware::ports.empty());
   ++cases;
 }
+// Detection must neither remap nor release a hardware port owned by the caller,
+// including when construction or adoption rolls the GPIO transaction back.
+static void caller_i2c_ownership() {
+  for (bool fixed : {false, true})
+    for (int failure : {0, 1, 2}) {
+      reset();
+      lgfx::i2c::init(1, 10, 11);
+      const auto caller_ports = host_hardware::ports;
+      host_hardware::events.clear();
+      construct_ok = failure != 1;
+      adopt_ok = failure != 2;
+      detector_t detector;
+      const board_detector_t *list[] = {&detector, nullptr};
+      const auto adopt = [](m5gfx::board_detect::m5::display_parts_t &, lgfx::board_t) {
+        return adopt_ok;
+      };
+      detect_request_t req;
+      req.max_attempts = 1;
+      const auto out = fixed
+        ? m5gfx::run_fixed_detection(entries[0], false, adopt)
+        : m5gfx::run_detection_attempt(list, req, true, adopt);
+      assert(out.setup_succeeded == (failure == 0));
+      assert(host_hardware::ports == caller_ports);
+      for (const auto &event : host_hardware::events)
+        assert(event.kind != 6 && event.kind != 7);
+      ++cases;
+    }
+}
 int main() {
   attempts();
   fixed_startup();
   identified_stop();
   prepare_states();
   reset_faults();
+  caller_i2c_ownership();
   std::printf("Integration/fixed/prepare: %u cases passed\n", cases);
   return 0;
 }

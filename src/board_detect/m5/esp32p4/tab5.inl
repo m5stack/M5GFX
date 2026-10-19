@@ -7,6 +7,69 @@ namespace tab5_detail
   constexpr std::uint32_t i2c_freq = 100000;
   constexpr std::uint8_t pi4io1_addr = 0x43;
   constexpr std::uint8_t pi4io2_addr = 0x44;
+  // Board-private prepared bits carry observations to construction. They never
+  // enter the public option or NVS; detection must use software I2C only.
+  enum : std::uint32_t
+  {
+    read_st_touch_fw = 1u << 16,
+    touch_st7121 = 1u << 17,
+    touch_st7123 = 1u << 18,
+    touch_gt911 = 1u << 19,
+  };
+
+  bool observe_touch(board_result_t& result, const prepare_ctx_t& ctx)
+  {
+#if CONFIG_SPIRAM
+    startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+                                    result.desc->internal_i2c);
+    if (!i2c.opened) { return false; }
+    int last_logged_fw = -1;
+    for (int i = 0; i < 60; ++i)
+    {
+      std::uint8_t fw_version = 0;
+      std::uint8_t fw_reg[2] = { 0, 0 };
+      if (lgfx::i2c::transactionWriteRead(i2c.port, lgfx::Touch_ST7123::default_addr,
+                                           fw_reg, sizeof(fw_reg), &fw_version, 1,
+                                           i2c_freq).has_value())
+      {
+        result.prepared |= read_st_touch_fw;
+        if (fw_version != last_logged_fw)
+        {
+          last_logged_fw = fw_version;
+          ESP_LOGI("M5GFX", "M5Tab5 ST touch FW version %02x", fw_version);
+          if (fw_version != 1 && fw_version != 3)
+          {
+            ESP_LOGW("M5GFX", "M5Tab5 unknown ST touch FW version %02x", fw_version);
+          }
+        }
+        if (fw_version == 1) { result.prepared |= touch_st7121; break; }
+        if (fw_version == 3) { result.prepared |= touch_st7123; break; }
+      }
+      else if (lgfx::i2c::beginTransaction(i2c.port, lgfx::Touch_GT911::default_addr_1,
+                                            i2c_freq, false).has_value()
+            && lgfx::i2c::endTransaction(i2c.port).has_value())
+      {
+        result.prepared |= touch_gt911;
+        ESP_LOGI("M5GFX", "M5Tab5 GT911 touch detected");
+        break;
+      }
+      lgfx::delay(10);
+    }
+    if (!(result.prepared & (read_st_touch_fw | touch_gt911)))
+    {
+      ESP_LOGW("M5GFX", "M5Tab5 ST touch FW version read failed");
+    }
+#endif
+    return true;
+  }
+
+  bool fixed_start(board_result_t& result, const prepare_ctx_t& ctx)
+  {
+    result.observe_after_power = observe_touch;
+    result.observe_on_power_failure = true;
+    return prepare(*result.desc, result, ctx);
+  }
+
   // prepare drives TP_INT while releasing the touch controller, so it must be
   // inside both the operation scope and the detection transaction snapshot.
   static constexpr std::int8_t prepare_gpio_pins[] = { touch_int };
@@ -73,6 +136,9 @@ public:
     const auto* desc = revision_desc();
     warn_hint_mismatch(ctx, &desc->def);
     result->assign(desc);
+    result->observe_after_power = tab5_detail::observe_touch;
+    // The touch controller may be readable even if a later power write failed.
+    result->observe_on_power_failure = true;
     result->candidate = ctx.candidate;
     return true;
   }

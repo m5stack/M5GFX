@@ -29,9 +29,11 @@ required. `BoardDetect.yml` runs the same command independently of catalog CI.
 | `integration_s3.cpp` | S3 runner conditional GPIO capture and probe flag propagation, plus fixed-start OPI ownership refusal |
 | `spi_preamble.cpp` | Real soft-SPI zero command, clock count and delay before asserting CS, followed by the actual ID read |
 | `package_module.cpp`, `package_c5.cpp` | Actual C5/C6 eFuse-only candidates, generated protection edges, previous weak evidence, no GPIO/prepare/construct/persist |
-| `package_p4.cpp` | Actual P4 detector list, absent evidence, Tab5/Tab5X revision candidates and retry policy; fixed StampP4 displayless acceptance and detector exclusion |
+| `package_p4.cpp` | Actual P4 detector list, absent evidence, Tab5/Tab5X revision candidates and retry policy; post-power touch polling limits/timing and caller hardware-I2C ownership; fixed StampP4 displayless acceptance and detector exclusion |
 | `description_*.cpp`, chip tests, `fixtures/` | Complete production descriptors, PMIC device/operation lists, register masks, GPIO scopes, board registrations, constructor identity, GPIO power-hold agreement with generated catalog output |
 | `construction_esp32.cpp` | Complete production setup helpers and constructors; fixed Tough PMIC backlight, panel variant/reset register, touch identity, bus frequencies and display-part ownership |
+| `construction_c61.cpp` | CoreMatrix ACK success/failure and unavailable I2C; the temporary hardware port is closed before either successful construction or rejection |
+| `construction_p4.cpp` | Tab5/Tab5X post-power software-I2C observations through real construction: ST firmware 1/3/unknown, GT911, silent touch with DSI ID fallback, retained power failures, DSI lane rate and display-part ownership |
 | `ops_host.cpp` | Typed operation validation/execution, retry, dedicated-release summaries and I2C bus recovery policy |
 | `detect_class_host.cpp`, `detect_session_host.cpp` | Detect-class matching and session verdict/preference/candidate/persistence rules |
 

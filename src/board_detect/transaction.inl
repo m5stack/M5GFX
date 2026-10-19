@@ -91,29 +91,6 @@
     }
   }
 
-  void detection_bus_journal_t::opened_i2c(int port)
-  {
-    if (port < 0) { return; }
-    for (std::size_t index = 0; index < i2c_count_; ++index)
-    {
-      if (i2c_ports_[index] == port) { return; }
-    }
-    if (i2c_count_ < sizeof(i2c_ports_) / sizeof(i2c_ports_[0]))
-    {
-      i2c_ports_[i2c_count_++] = static_cast<std::int8_t>(port);
-    }
-  }
-
-  void detection_bus_journal_t::rollback()
-  {
-    while (i2c_count_ != 0) { lgfx::i2c::release(i2c_ports_[--i2c_count_]); }
-  }
-
-  void detection_bus_journal_t::commit()
-  {
-    i2c_count_ = 0;
-  }
-
   detection_transaction_t::detection_transaction_t(
     pin_list_t unconditional, pin_list_t conditional, bool include_conditional)
   : valid_ { gpio_.capture(unconditional, conditional, include_conditional) }
@@ -141,13 +118,11 @@
   void detection_transaction_t::rollback()
   {
     if (!valid_ || committed_) { return; }
-    buses_.rollback();
     gpio_.rollback();
   }
 
   void detection_transaction_t::commit()
   {
     if (!valid_ || committed_) { return; }
-    buses_.commit();
     committed_ = true;
   }

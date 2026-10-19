@@ -15,6 +15,8 @@ namespace m5
 
   construct_status_t construct_corematrix(const board_result_t&, display_parts_t* parts)
   {
+    lgfx::i2c::init(corematrix_detail::i2c_port, wiring::corematrix::internal_i2c_sda,
+                    wiring::corematrix::internal_i2c_scl);
     bool tm1680_ack = lgfx::i2c::beginTransaction(
       corematrix_detail::i2c_port, specs::corematrix::bus_i2c_addr,
       corematrix_detail::i2c_freq, false).has_value();
@@ -22,6 +24,8 @@ namespace m5
     {
       tm1680_ack = lgfx::i2c::endTransaction(corematrix_detail::i2c_port).has_value();
     }
+    // Construction may fail; close the ACK probe and let Bus_I2C::init own the port.
+    lgfx::i2c::release(corematrix_detail::i2c_port);
     if (!tm1680_ack)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] CoreMatrix TM1680 did not acknowledge");
