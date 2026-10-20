@@ -332,13 +332,19 @@ namespace m5gfx
       this->_rotation = 1; // default rotation
     }
 
+    /// LCD reset line on the PMIC: AXP192 reg 0x96 bit1 (GPIO4), AXP2101 reg 0x90 bit1 (ALDO2 enable).
+    /// On the AXP2101, reg 0x96 is the BLDO1 (backlight) voltage, so it must not be used there.
+    void setResetReg(uint8_t reg) { _rst_reg = reg; }
+
     void rst_control(bool level) override
     {
       uint8_t bits = level ? 2 : 0;
       uint8_t mask = level ? ~0 : ~2;
-      // AXP192 reg 0x96 = GPIO3&4 control
-      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, 0x96, bits, mask, axp_i2c_freq);
+      lgfx::i2c::writeRegister8(axp_i2c_port, axp_i2c_addr, _rst_reg, bits, mask, axp_i2c_freq);
     }
+
+  private:
+    uint8_t _rst_reg = 0x96;
   };
   using Panel_M5StackCore2  = Panel_M5StackCore2_T<lgfx::Panel_ILI9342>;
   using Panel_M5StackCore2E = Panel_M5StackCore2_T<lgfx::Panel_ILI9342E>;
@@ -1498,14 +1504,20 @@ namespace m5gfx
                     }
                   }
                   _log_ili9342_variant(variant, keys);
+                  // Same LCD reset bit as lcd_reset() (reg_data_axp2101_reset on the AXP2101).
+                  const uint8_t rst_reg = isAxp192 ? 0x96 : 0x90;
                   if (variant == ili9342_variant_t::e)
                   {
-                    p = new Panel_M5StackCore2E();
+                    auto pe = new Panel_M5StackCore2E();
+                    pe->setResetReg(rst_reg);
+                    p = pe;
                     _set_ili9342e_read(p, bus_cfg.freq_read);
                   }
                   else
                   {
-                    p = new Panel_M5StackCore2();
+                    auto pc = new Panel_M5StackCore2();
+                    pc->setResetReg(rst_reg);
+                    p = pc;
                   }
                 }
                 p->bus(bus_spi);
