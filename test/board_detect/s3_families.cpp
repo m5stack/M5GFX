@@ -14,7 +14,7 @@ static detection_transaction_t *tx;
 static probe_ctx_t context() {
   probe_ctx_t c;
   c.transaction = tx;
-  c.i2c_port_probe = -1;
+  c.probe_port = -1;
   return c;
 }
 
@@ -24,7 +24,7 @@ static void pm1_table() {
       for (int g12 = 0; g12 < 4; ++g12)
         for (int g13 = 0; g13 < 4; ++g13)
           for (bool final : {false, true})
-            for (board_id_t preferred : {board_id_unknown, desc_stopwatch.def.id,
+            for (board_id_t fallback : {board_id_unknown, desc_stopwatch.def.id,
                                          desc_papermono.def.id, board_id_t(65535)})
               for (board_id_t hint :
                    {board_id_unknown, desc_stopwatch.def.id, desc_papermono.def.id}) {
@@ -59,7 +59,7 @@ static void pm1_table() {
                 auto ctx = context();
                 ctx.final_attempt = final;
                 ctx.attempt = final ? 4 : 0;
-                ctx.preferred = preferred;
+                ctx.fallback = fallback;
                 ctx.hint = hint;
                 board_result_t r;
                 bool ok = pm1_family_detector.confirm(ctx, &r);
@@ -77,8 +77,8 @@ static void pm1_table() {
                     expected = desc_stopwatch.def.id;
                   else
                     expected =
-                        (preferred == desc_stopwatch.def.id || preferred == desc_papermono.def.id)
-                            ? preferred
+                        (fallback == desc_stopwatch.def.id || fallback == desc_papermono.def.id)
+                            ? fallback
                         : (hint == desc_stopwatch.def.id || hint == desc_papermono.def.id) ? hint
                                                                                            : 0;
                 }
@@ -126,11 +126,11 @@ static void paper_refinement() {
         ++cases;
       }
   for (board_id_t hint : {board_id_unknown, desc_stopwatch.def.id, desc_papermono.def.id})
-    for (board_id_t preferred : {board_id_unknown, desc_stopwatch.def.id, desc_papermono.def.id}) {
+    for (board_id_t fallback : {board_id_unknown, desc_stopwatch.def.id, desc_papermono.def.id}) {
       host_hardware::wire = [](int, int, std::uint8_t *, std::size_t, bool) { return false; };
       auto ctx = context();
       ctx.hint = hint;
-      ctx.preferred = preferred;
+      ctx.fallback = fallback;
       board_result_t r;
       r.assign(&desc_papermono);
       assert(!detail::refine_papermono_touch(r, ctx));
@@ -139,7 +139,7 @@ static void paper_refinement() {
       assert(r.def == &desc_papermono.def && r.provisional);
       detect_outcome_t out;
       out.result = r;
-      assert(finalize_prepared_result(out, preferred) == (preferred != desc_stopwatch.def.id));
+      assert(finalize_prepared_result(out, fallback) == (fallback != desc_stopwatch.def.id));
       assert(host_hardware::ports.empty());
       ++cases;
     }
@@ -211,7 +211,7 @@ static void cardputer_table() {
                     };
                     auto ctx = context();
                     ctx.final_attempt = final;
-                    ctx.preferred = pref;
+                    ctx.fallback = pref;
                     ctx.hint = hint;
                     board_result_t r;
                     bool ok = cardputer_family_detector.confirm(ctx, &r);
@@ -297,11 +297,11 @@ static void paper_retry() {
       detect_outcome_t out;
       if (paper_family_detector.confirm(ctx, &out.result)) {
         finalize_prepared_result(out, 0);
-        out.setup_succeeded = true;
+        out.adopted = true;
       }
       return out;
     });
-    assert(out.setup_succeeded && out.result.desc == target && out.attempts == 2 &&
+    assert(out.adopted && out.result.desc == target && out.attempts == 2 &&
            out.verdict == verdict_t::confirmed);
     auto ctx = context();
     ctx.hint = request.hint;
@@ -362,7 +362,7 @@ static void cores3_table() {
                       };
                       auto ctx = context();
                       ctx.final_attempt = final;
-                      ctx.preferred = preference;
+                      ctx.fallback = preference;
                       ctx.hint = hint;
                       board_result_t r;
                       r.assign(&desc_cores3);
@@ -501,7 +501,7 @@ static void fixed_core_s3() {
   ctx.allow_reset = false;
   board_result_t r;
   r.assign(&desc_cores3);
-  assert(cores3_detail::fixed_start(r, ctx));
+  assert(cores3_detail::fixed_prepare(r, ctx));
   assert(vbus_reads == 1 && power_writes > 0 && host_probes::reads == 2);
   assert(r.def == &desc_cores3.def && r.refine == nullptr && !r.provisional &&
          r.option == (cores3_detail::vbus_5v | generated_options::cores3::lcd_e));
@@ -509,14 +509,14 @@ static void fixed_core_s3() {
 }
 
 int main() {
-  assert(find_board(esp32s3_boards, desc_cores3.def.id)->fixed_start == cores3_detail::fixed_start);
-  assert(find_board(esp32s3_boards, desc_cores3se.def.id)->fixed_start ==
-         cores3_detail::fixed_start);
-  assert(find_board(esp32s3_boards, desc_stackchan.def.id)->fixed_start ==
-         cores3_detail::fixed_start);
-  assert(find_board(esp32s3_boards, desc_atoms3.def.id)->fixed_start == fixed_start_atoms3);
-  assert(find_board(esp32s3_boards, desc_atoms3r.def.id)->fixed_start == fixed_start_atoms3r);
-  assert(find_board(esp32s3_boards, desc_airq.def.id)->fixed_start == fixed_start_airq);
+  assert(find_board(esp32s3_boards, desc_cores3.def.id)->fixed_prepare == cores3_detail::fixed_prepare);
+  assert(find_board(esp32s3_boards, desc_cores3se.def.id)->fixed_prepare ==
+         cores3_detail::fixed_prepare);
+  assert(find_board(esp32s3_boards, desc_stackchan.def.id)->fixed_prepare ==
+         cores3_detail::fixed_prepare);
+  assert(find_board(esp32s3_boards, desc_atoms3.def.id)->fixed_prepare == fixed_prepare_atoms3);
+  assert(find_board(esp32s3_boards, desc_atoms3r.def.id)->fixed_prepare == fixed_prepare_atoms3r);
+  assert(find_board(esp32s3_boards, desc_airq.def.id)->fixed_prepare == fixed_prepare_airq);
   host_snapshot::check("s3", esp32s3_boards);
   detection_transaction_t transaction(pins(wiring::detection::unconditional_pins),
                                       pins(wiring::detection::opi_pins), true);

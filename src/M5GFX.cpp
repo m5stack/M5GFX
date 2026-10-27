@@ -132,7 +132,7 @@ namespace m5gfx
 #if defined ( ESP_PLATFORM )
 
   // Candidate I2C probes during detection use a software port.
-  static constexpr int_fast16_t probe_i2c_port = -1;
+  static constexpr int_fast16_t detection_i2c_port = -1;
 
   static constexpr std::uint32_t m5pm1_i2c_freq = 100000;
   static constexpr std::uint8_t m5pm1_i2c_addr = 0x6E; // M5PM1 device i2c address
@@ -793,21 +793,21 @@ namespace m5gfx
 #endif
 
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-#include "board_detect/m5/esp32_d0wdq6_setup.inl"
+#include "board_detect/m5/esp32_d0wdq6_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
-#include "board_detect/m5/esp32s3_setup.inl"
+#include "board_detect/m5/esp32s3_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C3)
-#include "board_detect/m5/esp32c3_setup.inl"
+#include "board_detect/m5/esp32c3_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C5)
-#include "board_detect/m5/esp32c5_setup.inl"
+#include "board_detect/m5/esp32c5_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
-#include "board_detect/m5/esp32c6_setup.inl"
+#include "board_detect/m5/esp32c6_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32C61)
-#include "board_detect/m5/esp32c61_setup.inl"
+#include "board_detect/m5/esp32c61_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32H2)
-#include "board_detect/m5/esp32h2_setup.inl"
+#include "board_detect/m5/esp32h2_construct.inl"
 #elif defined (CONFIG_IDF_TARGET_ESP32P4)
-#include "board_detect/m5/esp32p4_setup.inl"
+#include "board_detect/m5/esp32p4_construct.inl"
 #endif
 
 #if defined (M5GFX_HAS_BOARD_DETECT)
@@ -867,15 +867,15 @@ namespace m5gfx
       {
         // Acceptance is independent of display construction; a failed init may retry.
         _fixed_board = _detect_config.fixed_board;
-        const auto outcome = run_fixed_detection_session(*entry, use_reset,
-          [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
+        const auto outcome = run_fixed_startup_session(*entry, use_reset,
+          [this](board_detect::m5::display_parts_t& parts, board_t representative_board)
           {
-            return !reject_detected_setup(setup_board)
+            return !reject_detected_setup(representative_board)
                 && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
           });
-        if (!outcome.setup_succeeded) { return false; }
+        if (!outcome.adopted) { return false; }
         _board = _fixed_board;
-        return _finish_detected_init(use_clear);
+        return _init_adopted_panel(use_clear);
       }
 #endif
       ESP_LOGW(LIBRARY_NAME, "Fixed board:%u is not supported by this chip",
@@ -885,61 +885,61 @@ namespace m5gfx
 
 #if defined (M5GFX_HAS_BOARD_DETECT)
     static constexpr char NVS_KEY[] = "AUTODETECT";
-    std::uint32_t nvs_board = 0;
+    std::uint32_t hint_board = 0;
     std::uint32_t nvs_handle = 0;
     if (0 == nvs_open(LIBRARY_NAME, NVS_READONLY, &nvs_handle))
     {
-      nvs_get_u32(nvs_handle, NVS_KEY, static_cast<uint32_t*>(&nvs_board));
+      nvs_get_u32(nvs_handle, NVS_KEY, static_cast<uint32_t*>(&hint_board));
       nvs_close(nvs_handle);
-      ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%d", (int)nvs_board);
+      ESP_LOGI(LIBRARY_NAME, "[Autodetect] load from NVS : board:%d", (int)hint_board);
     }
 
-    if (0 == nvs_board)
+    if (0 == hint_board)
     {
 #if defined ( M5GFX_BOARD )
 
-      nvs_board = M5GFX_BOARD;
+      hint_board = M5GFX_BOARD;
 
 #elif defined ( ARDUINO_M5STACK_CORE_ESP32 ) || defined ( ARDUINO_M5STACK_FIRE ) || defined ( ARDUINO_M5Stack_Core_ESP32 )
 
-      nvs_board = board_t::board_M5Stack;
+      hint_board = board_t::board_M5Stack;
 
 #elif defined ( ARDUINO_M5STACK_CORE2 ) || defined ( ARDUINO_M5STACK_Core2 )
 
-      nvs_board = board_t::board_M5StackCore2;
+      hint_board = board_t::board_M5StackCore2;
 
 #elif defined ( ARDUINO_M5STICK_C ) || defined ( ARDUINO_M5Stick_C )
 
-      nvs_board = board_t::board_M5StickC;
+      hint_board = board_t::board_M5StickC;
 
 #elif defined ( ARDUINO_M5STICK_C_PLUS ) || defined ( ARDUINO_M5Stick_C_Plus )
 
-      nvs_board = board_t::board_M5StickCPlus;
+      hint_board = board_t::board_M5StickCPlus;
 
 #elif defined ( ARDUINO_M5STACK_COREINK ) || defined ( ARDUINO_M5Stack_CoreInk )
 
-      nvs_board = board_t::board_M5StackCoreInk;
+      hint_board = board_t::board_M5StackCoreInk;
 
 #elif defined ( ARDUINO_M5STACK_PAPER ) || defined ( ARDUINO_M5STACK_Paper )
 
-      nvs_board = board_t::board_M5Paper;
+      hint_board = board_t::board_M5Paper;
 
 #elif defined ( ARDUINO_M5STACK_TOUGH )
 
-      nvs_board = board_t::board_M5Tough;
+      hint_board = board_t::board_M5Tough;
 
 #elif defined ( ARDUINO_M5STACK_ATOM ) || defined ( ARDUINO_M5Stack_ATOM )
 
-      nvs_board = board_t::board_M5Atom;
+      hint_board = board_t::board_M5Atom;
 
 //#elif defined ( ARDUINO_M5STACK_TIMER_CAM ) || defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
     }
 
     board_detect::detect_request_t request;
-    request.hint = nvs_board <= UINT16_MAX
-                 ? static_cast<board_detect::board_id_t>(nvs_board) : board_detect::board_id_unknown;
-    request.preferred = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
+    request.hint = hint_board <= UINT16_MAX
+                 ? static_cast<board_detect::board_id_t>(hint_board) : board_detect::board_id_unknown;
+    request.fallback = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
     request.allow_reset = use_reset;
     // Failures other than no_signature retry up to max_attempts.
     request.max_attempts = 5;
@@ -949,21 +949,21 @@ namespace m5gfx
       request,
       [this, &package](const board_detect::detect_request_t& attempt, bool final_attempt)
       {
-        if (!package.direct_setup) { panel(nullptr); }
+        if (!package.keep_panel_during_attempt) { panel(nullptr); }
         auto result = run_detection_attempt(package.detectors, attempt, final_attempt,
-          [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
+          [this](board_detect::m5::display_parts_t& parts, board_t representative_board)
           {
-            return !reject_detected_setup(setup_board)
+            return !reject_detected_setup(representative_board)
                 && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
           });
-        if (!package.direct_setup || !result.setup_succeeded)
+        if (!package.keep_panel_during_attempt || !result.adopted)
         {
-          if (package.direct_setup) { panel(nullptr); }
+          if (package.keep_panel_during_attempt) { panel(nullptr); }
           panel(_panel_last.get());
         }
         return result;
       });
-    const auto board = outcome.setup_succeeded
+    const auto board = outcome.adopted
                      ? static_cast<board_t>(outcome.result.def->id) : board_t::board_unknown;
     if (outcome.result.candidate != nullptr)
     { _board_candidate = static_cast<board_t>(outcome.result.candidate->id); }
@@ -980,7 +980,7 @@ namespace m5gfx
 #endif
 
     // Unresolved members and failed adoption must never replace a saved hint.
-    if (board_detect::should_persist_detection(outcome, nvs_board)) {
+    if (board_detect::should_persist_detection(outcome, hint_board)) {
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
         ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", (int)board);
         nvs_set_u32(nvs_handle, NVS_KEY, board);
@@ -989,16 +989,16 @@ namespace m5gfx
     }
 
 #else
-    // Unsupported chips retain the legacy unknown-board result; build hints are ignored.
+    // Unsupported chips return an unknown board; build hints are ignored.
     (void)use_reset;
 #endif
-    return _finish_detected_init(use_clear);
+    return _init_adopted_panel(use_clear);
   }
 
-  bool M5GFX::_finish_detected_init(bool use_clear)
+  bool M5GFX::_init_adopted_panel(bool use_clear)
   {
-    // The new path performs every permitted reset in prepare(). Construction
-    // and panel initialisation never pulse reset a second time.
+    // Detection and preparation have already handled reset. Construction
+    // and panel initialisation must not pulse it again.
     if (false == LGFX_Device::init_impl(false, use_clear)) {
       return false;
     }

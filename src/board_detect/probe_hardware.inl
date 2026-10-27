@@ -57,7 +57,7 @@
     {
       release_held_sda(pin_sda, pin_scl);
       pulls = probe_pin_pulls(ctx, pin_mask);
-      ctx.transaction->restore_start({ pin_sda, pin_scl });
+      ctx.transaction->restore_to_snapshot({ pin_sda, pin_scl });
     }
     return pulls;
   }
@@ -78,20 +78,20 @@
     {
       // A floating pin is raised by the internal pull-up during sample() and
       // never reaches this path. Only an externally held-low SCL receives the
-      // legacy soft-I2C clock-stretch allowance.
+      // soft-I2C clock-stretch allowance.
       io::pin_mode(pin_sda, io::pin_mode_t::input);
       io::pin_mode(pin_scl, io::pin_mode_t::input);
       wait_i2c_scl_high(pin_scl);
-      ctx.transaction->restore_start({ pin_sda, pin_scl });
+      ctx.transaction->restore_to_snapshot({ pin_sda, pin_scl });
     };
     auto recover = [&]()
     {
       // A reset during a transaction can leave a slave holding SDA forever.
-      // The legacy soft-I2C startup recovered it before attempting detection.
+      // Recover it before attempting detection.
       ESP_LOGD("M5GFX", "[Autodetect] recovering held SDA on I2C pins SDA=%d SCL=%d",
                pin_sda, pin_scl);
       release_held_sda(pin_sda, pin_scl);
-      ctx.transaction->restore_start({ pin_sda, pin_scl });
+      ctx.transaction->restore_to_snapshot({ pin_sda, pin_scl });
     };
     return i2c_bus_probe_detail::probe_i2c_bus_present(sample, wait_scl, recover);
   }
@@ -101,7 +101,7 @@
     io::pin_mode(pin, io::pin_mode_t::input_pullup);
     io::delay_us(10);
     const bool held_low = !io::pin_read(pin);
-    ctx.transaction->restore_start({ pin });
+    ctx.transaction->restore_to_snapshot({ pin });
     return held_low;
   }
 
@@ -132,7 +132,7 @@
         bus_released = release_held_sda(pin_sda, pin_scl);
       }
       cache.pullup_ok = bus_released && io::pin_read(pin_sda) && io::pin_read(pin_scl);
-      ctx.transaction->restore_start({ pin_sda, pin_scl });
+      ctx.transaction->restore_to_snapshot({ pin_sda, pin_scl });
     }
 
     const std::uint32_t bit = 1u << (addr & 31);
@@ -141,13 +141,13 @@
       cache.checked[addr >> 5] |= bit;
       if (cache.pullup_ok)
       {
-        if (io::i2c_open(ctx.i2c_port_probe, pin_sda, pin_scl))
+        if (io::i2c_open(ctx.probe_port, pin_sda, pin_scl))
         {
-          const bool hit = io::i2c_ack(ctx.i2c_port_probe, addr, 100000);
+          const bool hit = io::i2c_ack(ctx.probe_port, addr, 100000);
           if (hit) { cache.ack[addr >> 5] |= bit; }
-          io::i2c_close(ctx.i2c_port_probe);
+          io::i2c_close(ctx.probe_port);
         }
-        ctx.transaction->restore_start({ pin_sda, pin_scl });
+        ctx.transaction->restore_to_snapshot({ pin_sda, pin_scl });
       }
     }
     return cache.pullup_ok && (cache.ack[addr >> 5] & bit);
@@ -158,7 +158,7 @@
                       std::uint32_t freq, std::uint32_t poll_ms, bool reg16)
   {
     if (data == nullptr || length == 0 || addr < 0x08 || addr > 0x77) { return false; }
-    if (!io::i2c_open(ctx.i2c_port_probe, pin_sda, pin_scl)) { return false; }
+    if (!io::i2c_open(ctx.probe_port, pin_sda, pin_scl)) { return false; }
     const std::uint8_t reg_bytes[] = {
       static_cast<std::uint8_t>(reg >> 8), static_cast<std::uint8_t>(reg),
     };
@@ -167,13 +167,13 @@
     do
     {
       success = io::i2c_write_read(
-        ctx.i2c_port_probe, addr, reg_bytes + !reg16, 1 + reg16,
+        ctx.probe_port, addr, reg_bytes + !reg16, 1 + reg16,
         data, length, freq);
       if (success) { break; }
       io::delay_ms(1);
     } while (io::millis() - started < poll_ms);
-    io::i2c_close(ctx.i2c_port_probe);
-    ctx.transaction->restore_start({ pin_sda, pin_scl });
+    io::i2c_close(ctx.probe_port);
+    ctx.transaction->restore_to_snapshot({ pin_sda, pin_scl });
     return success;
   }
 
@@ -207,7 +207,7 @@
         io::delay_us(release_us);
         if (io::pin_read(pin)) { result.pullup_release_high |= bit; }
       }
-      ctx.transaction->restore_start(static_cast<std::int8_t>(pin));
+      ctx.transaction->restore_to_snapshot(static_cast<std::int8_t>(pin));
     }
     return result;
   }
@@ -289,21 +289,21 @@
     if (creation_core != pinned_core)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated before bundle creation");
-      ctx.transaction->restore_start(pins, pin_count);
+      ctx.transaction->restore_to_snapshot(pins, pin_count);
       return result;
     }
     const int bundle_error = io::dedicated_gpio_open(bundle_pins, pin_count, &bundle);
     if (bundle_error != 0)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO bundle creation failed (%d)", int(bundle_error));
-      ctx.transaction->restore_start(pins, pin_count);
+      ctx.transaction->restore_to_snapshot(pins, pin_count);
       return result;
     }
     if (io::dedicated_release_core_id() != pinned_core)
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO probe task migrated after bundle creation");
       close_dedicated_release_bundle(bundle);
-      ctx.transaction->restore_start(pins, pin_count);
+      ctx.transaction->restore_to_snapshot(pins, pin_count);
       return result;
     }
     std::uint32_t input_mask = 0;
@@ -317,7 +317,7 @@
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO channel lookup failed (in=%d out=%d)",
                int(input_mask_error), int(output_mask_error));
       close_dedicated_release_bundle(bundle);
-      ctx.transaction->restore_start(pins, pin_count);
+      ctx.transaction->restore_to_snapshot(pins, pin_count);
       return result;
     }
     const std::uint32_t channel_mask = (1u << pin_count) - 1u;
@@ -327,7 +327,7 @@
     {
       ESP_LOGW("M5GFX", "[Autodetect] dedicated GPIO channel allocation is not contiguous");
       close_dedicated_release_bundle(bundle);
-      ctx.transaction->restore_start(pins, pin_count);
+      ctx.transaction->restore_to_snapshot(pins, pin_count);
       return result;
     }
     static io::critical_section_t mux;
@@ -411,10 +411,10 @@
     // del_bundle pin cleanup differs by IDF version (4.4/5.2/5.3 leave the
     // pads alone; newer versions disable output), and out_sel is not restored.
     // Dedicated input routing is peripheral-side. In every version,
-    // The transaction's restore_start (pin_state_t::restore) restores out_sel,
+    // The transaction's restore_to_snapshot (pin_state_t::restore) restores out_sel,
     // GPIO_PINn, output-enable, latch, and the complete IO_MUX register
     // (including temporary FUN_DRV).
-    ctx.transaction->restore_start(pins, pin_count);
+    ctx.transaction->restore_to_snapshot(pins, pin_count);
     return result;
   }
 
@@ -527,13 +527,13 @@
 
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
                                 int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits,
-                                std::uint32_t half_us, bool legacy_zero_preamble)
+                                std::uint32_t half_us, bool deselected_zero_preamble)
   {
     soft_spi_t bus(pin_sclk, pin_mosi, pin_miso, pin_dc, half_us);
-    if (legacy_zero_preamble)
+    if (deselected_zero_preamble)
     {
-      // Legacy _read_panel_id clocked a zero command while CS was high before
-      // selecting the panel. ESP32 PICO display probes retain that exact read.
+      // ESP32 PICO display probes clock a zero command with CS high
+      // before selecting the panel.
       bus.init();
       bus.beginTransaction();
       io::pin_high(pin_cs);
@@ -557,6 +557,6 @@
 
     // CS is owned by the caller. Restore only the shared bus signals that this
     // helper borrowed, using their state at transaction start.
-    ctx.transaction->restore_start({ pin_sclk, pin_mosi, pin_miso, pin_dc });
+    ctx.transaction->restore_to_snapshot({ pin_sclk, pin_mosi, pin_miso, pin_dc });
     return value;
   }

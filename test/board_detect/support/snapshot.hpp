@@ -97,7 +97,7 @@ void check(const char *name, const m5gfx::board_detect::m5::board_entry_t (&entr
     descriptor(out, *entry.desc);
     out << "entry " << host_display::name(entry.construct) << ' '
         << (entry.success_log_name ? entry.success_log_name : "<descriptor>") << ' '
-        << bool(entry.success_annotation) << ' ' << bool(entry.fixed_start) << '\n';
+        << bool(entry.success_annotation) << ' ' << bool(entry.fixed_prepare) << '\n';
   }
   const std::string path = std::string("test/board_detect/fixtures/") + name + ".txt";
   if (std::getenv("M5GFX_UPDATE_SNAPSHOTS")) {

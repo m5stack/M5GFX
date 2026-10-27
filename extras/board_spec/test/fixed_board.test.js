@@ -13,10 +13,10 @@ async function readMain() {
 test("fixed acceptance bypasses NVS and detection and retries clean startup after failure", async () => {
   const main = await readMain();
   const registry = await fs.readFile(path.join(src, "board_detect/m5/board_registry.inl"), "utf8");
-  const fixed = body(main, "static board_detect::detect_outcome_t run_fixed_detection(");
-  const session = body(main, "static board_detect::detect_outcome_t run_fixed_detection_session(");
+  const fixed = body(main, "static board_detect::detect_outcome_t run_fixed_startup(");
+  const session = body(main, "static board_detect::detect_outcome_t run_fixed_startup_session(");
   const select = body(main, "const board_detect::m5::board_entry_t* select_fixed_board(");
-  const finish = body(main, "static board_detect::detect_outcome_t finish_detection_setup(");
+  const finish = body(main, "static board_detect::detect_outcome_t construct_and_adopt(");
   const find = body(registry, "const board_entry_t* find_board(");
   const start = main.indexOf("    _detect_started = true;", main.indexOf("bool M5GFX::init_impl("));
   const end = main.indexOf("\n#if defined (M5GFX_HAS_BOARD_DETECT)\n    static constexpr char NVS_KEY", start);
@@ -58,7 +58,7 @@ struct board_desc_t {
  list_t hold_high_pins,op_gpio_pins;
 };
 void board_result_t::assign(const board_desc_t* value) {desc=value;def=value?&value->def:&board_def_unknown;}
-struct prepare_ctx_t {bool allow_reset=true;int i2c_port_probe=-1;detection_transaction_t* transaction=nullptr;};
+struct prepare_ctx_t {bool allow_reset=true;int probe_port=-1;detection_transaction_t* transaction=nullptr;};
 inline pin_list_t no_pins() {return {nullptr,0};}
 struct detection_transaction_t {
  detection_transaction_t(pin_list_t pins,pin_list_t,bool) {
@@ -66,11 +66,11 @@ struct detection_transaction_t {
  }
  bool valid() {return capture_ok;}
  void rollback() {++rollback_calls;}void commit(){++commit_calls;}
- void restore_start(const std::int8_t*,std::size_t) {}
+ void restore_to_snapshot(const std::int8_t*,std::size_t) {}
  struct buses_t {void opened_i2c(int){}} buses_;
  buses_t& buses(){return buses_;}
 };
-namespace startup_detail {bool description_valid(const board_desc_t&) {return description_ok;}}
+namespace prepare_detail {bool description_valid(const board_desc_t&) {return description_ok;}}
 bool prepare(const board_desc_t&,board_result_t& result,const prepare_ctx_t& ctx) {
  reset_flags.push_back(ctx.allow_reset);
  assert(result.option==0&&result.prepared==0&&!result.provisional&&result.refine==nullptr&&result.candidate==nullptr);
@@ -81,12 +81,12 @@ namespace wiring {namespace detection {const std::int8_t opi_pins[]={33,34,35,36
 struct display_parts_t {int* bus=nullptr;int* panel=nullptr;int* light=nullptr;int* touch=nullptr;};
 enum class construct_status_t {ok,no_display,failed};
 using start_t=bool(*)(board_result_t&,const prepare_ctx_t&);
-struct board_entry_t {const board_desc_t* desc;start_t fixed_start;};
+struct board_entry_t {const board_desc_t* desc;start_t fixed_prepare;};
 template<std::size_t BoardCount> const board_entry_t* find_board(const board_entry_t (&boards)[BoardCount],board_id_t id) ${find}
 board_desc_t desc={{1,"member",0},{0},{1},{2,3,4,5,6,1,7},{-1,-1,-1,-1,-1},{-1,-1,-1},{nullptr,0},{nullptr,0}};
 const board_entry_t entries[]={{&desc,nullptr}};
 const board_entry_t (&esp32s3_boards)[1]=entries;
-construct_status_t setup_detected_board(const board_result_t& result,display_parts_t*) {
+construct_status_t construct_detected_board(const board_result_t& result,display_parts_t*) {
  assert(result.desc==&desc&&result.def==&desc.def&&result.option==4&&result.prepared==prepared_power&&!result.provisional&&result.refine==nullptr);
  ++construct_calls;return !construct_ok?construct_status_t::failed:displayless?construct_status_t::no_display:construct_status_t::ok;
 }
@@ -95,10 +95,10 @@ struct log_t {const char* name;const char* annotation;};
 log_t success_log(const board_result_t&){return {nullptr,nullptr};}
 }
 }}
-const int probe_i2c_port=-1;
-template<class SetupDetected> board_detect::detect_outcome_t finish_detection_setup(board_detect::board_result_t& result,board_detect::detect_outcome_t outcome,board_detect::detection_transaction_t& transaction,board_t setup_board,SetupDetected setup) ${finish}
-template<class SetupDetected> board_detect::detect_outcome_t run_fixed_detection(const board_detect::m5::board_entry_t& entry,bool allow_reset,SetupDetected setup) ${fixed}
-template<class SetupDetected> board_detect::detect_outcome_t run_fixed_detection_session(const board_detect::m5::board_entry_t& entry,bool allow_reset,SetupDetected setup) ${session}
+const int detection_i2c_port=-1;
+template<class Adopt> board_detect::detect_outcome_t construct_and_adopt(board_detect::board_result_t& result,board_detect::detect_outcome_t outcome,board_detect::detection_transaction_t& transaction,board_t representative_board,Adopt adopt) ${finish}
+template<class Adopt> board_detect::detect_outcome_t run_fixed_startup(const board_detect::m5::board_entry_t& entry,bool allow_reset,Adopt adopt) ${fixed}
+template<class Adopt> board_detect::detect_outcome_t run_fixed_startup_session(const board_detect::m5::board_entry_t& entry,bool allow_reset,Adopt adopt) ${session}
 const board_detect::m5::board_entry_t* select_fixed_board(board_t board) ${select}
 bool reject_detected_setup(board_t){return false;}
 struct M5GFX {
@@ -108,7 +108,7 @@ struct M5GFX {
  board_t getBoard() const {return _board;}
  board_t getFixedBoard() const ${fixedGetter}
  bool _adopt_detected_parts(int*,int*,int*,int*){++adopt_calls;return adopt_ok;}
- bool _finish_detected_init(bool){++finish_calls;return true;}
+ bool _init_adopted_panel(bool){++finish_calls;return true;}
  bool init(bool use_reset=true,bool use_clear=true) {
  ${prefix}
  ++nvs_calls;++detect_calls;return false;

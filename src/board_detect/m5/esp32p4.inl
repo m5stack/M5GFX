@@ -28,8 +28,8 @@ static constexpr board_desc_t desc_stampp4 = {
 #include "generated/esp32p4_detector_order.hpp"
 static const board_entry_t esp32p4_boards[] = {
   { &desc_corep4x, construct_corep4x, "board_M5CoreP4X", nullptr },
-  { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr, tab5_detail::fixed_start },
-  { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr, tab5_detail::fixed_start },
+  { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr, tab5_detail::fixed_prepare },
+  { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr, tab5_detail::fixed_prepare },
   { &desc_unitpoep4, construct_displayless, "board_M5UnitPoEP4", nullptr },
   { &desc_stampp4, construct_displayless, "board_M5StampP4", nullptr },
 };

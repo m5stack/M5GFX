@@ -10,7 +10,7 @@
 #include "board_detect/m5/esp32p4.inl"
 namespace m5gfx {
 static const char LIBRARY_NAME[] = "host";
-#include "board_detect/m5/esp32p4/tab5_setup.inl"
+#include "board_detect/m5/esp32p4/tab5_construct.inl"
 namespace board_detect {
 namespace m5 {
 construct_status_t construct_corep4x(const board_result_t &, display_parts_t *) { std::abort(); }
@@ -64,7 +64,7 @@ int main() {
           if (fixed) {
             result.assign(desc);
             const auto *entry = find_board(esp32p4_boards, desc->def.id);
-            assert(entry->fixed_start(result, ctx));
+            assert(entry->fixed_prepare(result, ctx));
           } else {
             assert(tab5_family_detector.confirm(ctx, &result));
             assert(prepare(*result.desc, result, ctx));

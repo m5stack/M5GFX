@@ -1,3 +1,56 @@
+  bool probe_spi_id(probe_ctx_t& ctx, const board_desc_t& desc,
+                    const spi_id_probe_t* probes, std::size_t probe_count,
+                    board_result_t* result, bool three_wire,
+                    std::uint8_t slow_retry_half_us,
+                    bool deselected_zero_preamble)
+  {
+    if (probes == nullptr || probe_count == 0 || result == nullptr
+     || !prepare_detail::description_valid(desc)
+     || desc.display.cs < 0) { return false; }  // no_display_pins() has no SPI ID
+    const std::int8_t pins[] = {
+      desc.display.cs, desc.display.sclk, desc.display.mosi,
+      desc.display.dc, desc.display.rst,
+    };
+    const std::int8_t shared_sd_pins[] = {
+      desc.display.cs, desc.display.sclk, desc.display.mosi,
+      desc.display.dc, desc.display.rst,
+      desc.sd.sclk, desc.sd.mosi, desc.sd.miso, desc.sd.sd_cs,
+    };
+    const auto restore_probe_pins = [&]()
+    {
+      if (desc.sd.sd_cs >= 0) { ctx.transaction->restore_to_snapshot(shared_sd_pins); }
+      else                    { ctx.transaction->restore_to_snapshot(pins); }
+    };
+    board_result_t candidate;
+    candidate.assign(&desc);
+    const prepare_ctx_t& prepare_ctx = ctx;
+    if (desc.sd.sd_cs >= 0)
+    {
+      // Keep both devices deselected while the shared SD bus is switched to
+      // SPI mode. Descriptions without shared SD take the original path.
+      prepare_detail::pin_level(desc.sd.sd_cs, true);
+      prepare_detail::pin_level(desc.display.cs, true);
+      if (!prepare_detail::prepare_sd_spi(desc, candidate, prepare_ctx))
+      {
+        restore_probe_pins();
+        return false;
+      }
+    }
+    if (!prepare_reset(desc, candidate, prepare_ctx, ctx.probe_port))
+    {
+      restore_probe_pins();
+      return false;
+    }
+    if (observe_spi_variant(ctx, desc, probes, probe_count, &candidate.option,
+                            three_wire, slow_retry_half_us, deselected_zero_preamble))
+    {
+      *result = candidate;
+      return true;
+    }
+    restore_probe_pins();
+    return false;
+  }
+
   struct spi_id_member_t
   {
     const board_desc_t* desc;
@@ -6,10 +59,10 @@
     bool three_wire;
     bool touches_conditional_pins;
     std::uint8_t slow_retry_half_us;
-    bool legacy_zero_preamble;
+    bool deselected_zero_preamble;
   };
 
-  bool fixed_start_spi_variant(board_result_t& result, const prepare_ctx_t& ctx,
+  bool fixed_prepare_spi_variant(board_result_t& result, const prepare_ctx_t& ctx,
                                const spi_id_member_t& member)
   {
     if (!prepare(*result.desc, result, ctx)) { return false; }
@@ -17,14 +70,14 @@
     static_cast<prepare_ctx_t&>(probe) = ctx;
     if (!observe_spi_variant(probe, *result.desc, member.probes, member.probe_count,
                              &result.option, member.three_wire,
-                             member.slow_retry_half_us, member.legacy_zero_preamble))
+                             member.slow_retry_half_us, member.deselected_zero_preamble))
     {
       ESP_LOGW("M5GFX", "Fixed board:%u panel variant unreadable; using default",
                static_cast<unsigned>(result.def->id));
     }
     const auto& display = result.desc->display;
     const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
-    ctx.transaction->restore_start(signals);
+    ctx.transaction->restore_to_snapshot(signals);
     return true;
   }
 
@@ -66,7 +119,7 @@
       if (member_count_ == 0 || result == nullptr) { return false; }
       const auto& first = members_desc_[0];
       if (first.desc == nullptr || first.probes == nullptr || first.probe_count == 0
-       || !startup_detail::description_valid(*first.desc)
+       || !prepare_detail::description_valid(*first.desc)
        || first.desc->display.cs < 0) { return false; }
 
       const auto& desc = *first.desc;
@@ -77,9 +130,9 @@
       board_result_t candidate;
       candidate.assign(&desc);
       const prepare_ctx_t& prepare_ctx = ctx;
-      if (!prepare_reset(desc, candidate, prepare_ctx, ctx.i2c_port_probe))
+      if (!prepare_reset(desc, candidate, prepare_ctx, ctx.probe_port))
       {
-        ctx.transaction->restore_start(pins);
+        ctx.transaction->restore_to_snapshot(pins);
         return false;
       }
 
@@ -89,10 +142,10 @@
       const std::uint32_t panel_id = soft_spi_read32(
         ctx, desc.display.sclk, desc.display.mosi, read_pin,
         desc.display.dc, desc.display.cs, read_probe.cmd, read_probe.dummy_bits,
-        1, first.legacy_zero_preamble);
+        1, first.deselected_zero_preamble);
 
-      // Members of a legacy family share the physical read. Compare the one
-      // captured value in legacy priority order instead of resetting the same
+      // Members of this family share one physical read. Compare the
+      // captured value in member order instead of resetting the same
       // panel again for each possible member.
       for (std::uint8_t member_index = 0; member_index < member_count_; ++member_index)
       {
@@ -102,7 +155,7 @@
           const auto& probe = member.probes[probe_index];
           if (probe.cmd != read_probe.cmd || probe.dummy_bits != read_probe.dummy_bits)
           {
-            ctx.transaction->restore_start(pins);
+            ctx.transaction->restore_to_snapshot(pins);
             return false;
           }
           for (std::size_t value = 0; value < probe.value_count; ++value)
@@ -115,7 +168,7 @@
           }
         }
       }
-      ctx.transaction->restore_start(pins);
+      ctx.transaction->restore_to_snapshot(pins);
       return false;
     }
 
@@ -130,7 +183,7 @@
       }
       return probe_spi_id(ctx, *member.desc, member.probes, member.probe_count, result,
                           member.three_wire, member.slow_retry_half_us,
-                          member.legacy_zero_preamble);
+                          member.deselected_zero_preamble);
     }
 
     const spi_id_member_t* members_desc_;

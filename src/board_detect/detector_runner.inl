@@ -160,7 +160,9 @@
     {
       unsigned chosen = count;
       unsigned best = 4;
-      // Among constraint-ready families: power hold + hint, power hold, hint, others.
+      // Without a hint this reproduces the generated array order. A hint can
+      // advance a ready family; power-hold families take priority only while ready.
+      // Among ready families: power hold + hint, power hold, hint, others.
       // Equal ranks retain their order in list.
       for (unsigned i = 0; i < count; ++i)
       {

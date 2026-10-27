@@ -13,7 +13,7 @@
   {
     const board_detect::board_detector_t* const* detectors = nullptr;
     bool conditional_pins_unavailable = false;
-    bool direct_setup = false;
+    bool keep_panel_during_attempt = false;
   };
 
   __attribute__((always_inline)) static inline detection_package_t select_detection_package()
@@ -21,20 +21,20 @@
     detection_package_t package;
     // Selection does not probe or configure any GPIO.
 #if !defined(CONFIG_IDF_TARGET) || defined(CONFIG_IDF_TARGET_ESP32)
-    package.direct_setup = true;
+    package.keep_panel_during_attempt = true;
     const auto pkg = board_detect::io::package_version();
     if (pkg == board_detect::io::package_classic_q6)
     { package.detectors = board_detect::m5::esp32_d0wdq6_detectors; }
     else if (pkg == board_detect::io::package_classic_pico_d4)
     { package.detectors = board_detect::m5::esp32_pico_d4_detectors; }
-    else if (pkg == 6)
+    else if (pkg == board_detect::io::package_classic_picov3)
     { package.detectors = board_detect::m5::esp32_picov3_detectors; }
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
     package.conditional_pins_unavailable = conditional_detection_pins_unavailable();
     switch (board_detect::io::package_version())
     {
-    case 0: package.detectors = board_detect::m5::esp32s3_detectors_qfn56; break;
-    case 1: package.detectors = board_detect::m5::esp32s3_detectors_lga56; break;
+    case board_detect::io::package_s3_qfn56: package.detectors = board_detect::m5::esp32s3_detectors_qfn56; break;
+    case board_detect::io::package_s3_lga56: package.detectors = board_detect::m5::esp32s3_detectors_lga56; break;
     default: break;
     }
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -45,8 +45,8 @@
     const auto pkg = board_detect::io::package_version();
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg);
     // Package version: 1 = QFN32 (ESP32-C6FH4/FH8), 0 = QFN40.
-    if (pkg == 1) { package.detectors = board_detect::m5::esp32c6_detectors_qfn32; }
-    else if (pkg == 0)
+    if (pkg == board_detect::io::package_c6_qfn32) { package.detectors = board_detect::m5::esp32c6_detectors_qfn32; }
+    else if (pkg == board_detect::io::package_c6_qfn40)
     {
       package.detectors = board_detect::m5::esp32c6_detectors_qfn40;
     }
@@ -57,7 +57,7 @@
 #elif defined(CONFIG_IDF_TARGET_ESP32P4)
     const auto pkg = board_detect::io::package_version();
     ESP_LOGD(LIBRARY_NAME, "pkg_ver : %02x", (int)pkg);
-    if (pkg == 0) { package.detectors = board_detect::m5::esp32p4_detectors; }
+    if (pkg == board_detect::io::package_p4) { package.detectors = board_detect::m5::esp32p4_detectors; }
 #endif
     return package;
   }
@@ -86,16 +86,16 @@
     return static_cast<std::uint32_t>(board) == id ? find_board(boards, id) : nullptr;
   }
 
-  static bool reject_detected_setup(board_t setup_board)
+  static bool reject_detected_setup(board_t representative_board)
   {
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS)
     static constexpr board_t rejected[] = { M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS };
     for (const auto board : rejected)
     {
-      if (setup_board == board) { return true; }
+      if (representative_board == board) { return true; }
     }
 #else
-    (void)setup_board;
+    (void)representative_board;
 #endif
     return false;
   }

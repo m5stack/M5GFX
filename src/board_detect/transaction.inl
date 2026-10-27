@@ -47,12 +47,12 @@
     for (std::size_t index = count_; index != 0; --index) { restore_if_changed(saved_[index - 1]); }
   }
 
-  void detection_gpio_snapshot_t::restore_start(const std::int8_t* pins,
+  void detection_gpio_snapshot_t::restore_to_snapshot(const std::int8_t* pins,
                                                  std::size_t count)
   {
     if (pins == nullptr && count != 0)
     {
-      ESP_LOGE("board_detect", "restore_start missing pin list");
+      ESP_LOGE("board_detect", "restore_to_snapshot missing pin list");
       return;
     }
     bool missing = false;
@@ -86,7 +86,7 @@
     }
     if (missing)
     {
-      ESP_LOGE("board_detect", "restore_start pin=%d is absent from snapshot", missing_pin);
+      ESP_LOGE("board_detect", "restore_to_snapshot pin=%d is absent from snapshot", missing_pin);
     }
   }
 
@@ -101,7 +101,7 @@
     rollback();
   }
 
-  void detection_transaction_t::restore_start(std::initializer_list<int> pins)
+  void detection_transaction_t::restore_to_snapshot(std::initializer_list<int> pins)
   {
     std::int8_t values[max_detection_pins];
     std::size_t count = 0;
@@ -111,7 +111,7 @@
       // Anything outside int8_t is not a GPIO; keep it absent instead of aliasing.
       values[count++] = (pin < -1 || pin > INT8_MAX) ? INT8_MAX : static_cast<std::int8_t>(pin);
     }
-    gpio_.restore_start(values, count);
+    gpio_.restore_to_snapshot(values, count);
   }
 
   void detection_transaction_t::rollback()

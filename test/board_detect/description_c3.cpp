@@ -7,6 +7,6 @@ int main() {
   using namespace m5gfx::board_detect;
   using namespace m5;
   for (const auto &entry : esp32c3_boards)
-    assert(startup_detail::description_valid(*entry.desc));
+    assert(prepare_detail::description_valid(*entry.desc));
   host_snapshot::check("c3", esp32c3_boards);
 }

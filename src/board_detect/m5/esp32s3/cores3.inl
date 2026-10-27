@@ -17,8 +17,8 @@
     constexpr std::uint8_t aw_addr = specs::cores3::i2c_io_expander::i2c_addr;
     bool refine(board_result_t& result, const prepare_ctx_t& ctx);
 
-    // Detection rollback restores GPIO and chip selects only.  Like the legacy
-    // path, completed AW9523/AXP2101 writes are intentionally not rolled back.
+    // Detection rollback restores GPIO and chip selects only; completed
+    // AW9523/AXP2101 writes are intentionally not rolled back.
     static const pmic_variant_t power_variants[] = {
       pmic_variant_confirmed_option(axp_addr, specs::cores3::pmic::id_reg,
         ops::list(pmic_ops::cores3_vbus_off_power_on), reg_bit(0, 0), reg_bit(0, 0),
@@ -92,10 +92,9 @@
         | (std::uint64_t(1) << wiring::cores3::display_sclk)
         | (std::uint64_t(1) << wiring::cores3::display_mosi);
       const auto pull = probe_pin_pulls(ctx, spi_mask);
-      (void)pull;  // FORCE_VBUS still performs/restores the legacy-equivalent measurement.
-      // Unlike the legacy input_pullup sequence, probe_pin_pulls restores the
-      // captured pin modes immediately. Construction's SPI init overwrites
-      // these pins next, so retaining the temporary pull-ups had no effect.
+      (void)pull;  // FORCE_VBUS still performs and restores the measurement.
+      // probe_pin_pulls restores the captured pin modes immediately;
+      // construction configures the SPI pins after this observation.
 #if defined(M5GFX_AUTODETECT_TEST_CORES3_FORCE_VBUS)
       return vbus_5v;
 #else
@@ -130,7 +129,7 @@
       const std::int8_t signals[] = {
         display.dc, display.sclk, display.mosi, display.miso
       };
-      ctx.transaction->restore_start(signals);
+      ctx.transaction->restore_to_snapshot(signals);
       return true;
     }
 
@@ -203,7 +202,7 @@
       const char* failed = "no I2C transaction";
       if (ctx.transaction != nullptr)
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc_cores3.internal_i2c);
+        prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port, desc_cores3.internal_i2c);
         failed = i2c.opened ? precharge_bus_out(i2c.port) : "I2C open failed";
       }
       if (failed != nullptr)
@@ -212,15 +211,15 @@
       }
     }
 
-    bool fixed_start(board_result_t& result, const prepare_ctx_t& ctx)
+    bool fixed_prepare(board_result_t& result, const prepare_ctx_t& ctx)
     {
       probe_ctx_t probe;
       static_cast<prepare_ctx_t&>(probe) = ctx;
       result.option |= observe_vbus(probe);
       const auto& desc = *result.desc;
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
-        if (!i2c.opened || !startup_detail::prepare_power(desc, result, i2c.port, true))
+        prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port, desc.internal_i2c);
+        if (!i2c.opened || !prepare_detail::prepare_power(desc, result, i2c.port, true))
         { return false; }
       }
       if (result.option & vbus_5v) { enable_bus_out(ctx); }
@@ -252,7 +251,7 @@
       // Initialize once; the ACK loop does not repeat the base's pull measurements.
       // Software I2C START may recover held SDA on each ACK with up to nine
       // clocks and STOP.
-      startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc_cores3.internal_i2c);
+      prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port, desc_cores3.internal_i2c);
       if (!i2c.opened) { return false; }
       const auto started = io::millis();
       do
@@ -316,7 +315,7 @@
       };
       const auto fallback = [&](const board_desc_t* representative, const char* why) -> bool
       {
-        if (!select_provisional_member(ctx, &result, possible(ctx.preferred),
+        if (!select_provisional_member(ctx, &result, possible(ctx.fallback),
                                        possible(ctx.hint), representative, why)) { return false; }
         return refine_panel(result, ctx);
       };
@@ -329,8 +328,8 @@
         if (band == release_unavailable)
         {
           // Dedicated GPIO timing can be unavailable from an unpinned task.
-          // Retain legacy camera-absence selection so normal SE boots do not
-          // regress to five retries and an uncached candidate; elimination remains.
+          // Camera absence selects SE when timing is unavailable; otherwise
+          // normal SE boots would exhaust retries without a cacheable result.
           result.assign(&desc_cores3se);
           return refine_panel(result, ctx);
         }
@@ -348,7 +347,7 @@
         // new-probe window; an in-flight fixed-time I2C call may overrun it.
         ESP_LOGW("M5GFX", "[Autodetect] StackChan base gate without IOE ACK");
       }
-      // Older base firmware remains CoreS3, matching the established contract.
+      // Only firmware at or above firmware_min identifies the StackChan base.
       result.assign(firmware_read && firmware >= specs::stackchan::i2c_stackchan_ioe::firmware_min
                     ? &desc_stackchan : &desc_cores3);
       return refine_panel(result, ctx);

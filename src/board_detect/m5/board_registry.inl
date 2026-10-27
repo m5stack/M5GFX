@@ -21,7 +21,7 @@ namespace m5
   using construct_fn_t = construct_status_t (*)(const board_result_t&, display_parts_t*);
   using success_annotation_fn_t = const char* (*)(const board_result_t&);
 
-  using fixed_start_fn_t = bool (*)(board_result_t&, const prepare_ctx_t&);
+  using fixed_prepare_fn_t = bool (*)(board_result_t&, const prepare_ctx_t&);
 
   struct board_entry_t
   {
@@ -29,13 +29,13 @@ namespace m5
     construct_fn_t construct;
     const char* success_log_name;
     success_annotation_fn_t success_annotation;
-    fixed_start_fn_t fixed_start;
+    fixed_prepare_fn_t fixed_prepare;
 
     constexpr board_entry_t(const board_desc_t* desc_, construct_fn_t construct_,
                             const char* name_, success_annotation_fn_t annotation_,
-                            fixed_start_fn_t fixed_start_ = nullptr)
+                            fixed_prepare_fn_t fixed_prepare_ = nullptr)
     : desc(desc_), construct(construct_), success_log_name(name_),
-      success_annotation(annotation_), fixed_start(fixed_start_) {}
+      success_annotation(annotation_), fixed_prepare(fixed_prepare_) {}
   };
 
   template <std::size_t BoardCount>
@@ -70,7 +70,7 @@ namespace m5
   }
 
   template <std::size_t BoardCount>
-  construct_status_t setup_board(const board_entry_t (&boards)[BoardCount],
+  construct_status_t construct_board(const board_entry_t (&boards)[BoardCount],
                                  const board_result_t& result, display_parts_t* parts)
   {
     if (parts == nullptr || result.def == nullptr) { return construct_status_t::failed; }

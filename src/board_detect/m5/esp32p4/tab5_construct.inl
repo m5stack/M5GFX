@@ -1,10 +1,10 @@
-#include "../setup_common.inl"
+#include "../construct_common.inl"
 
 namespace board_detect
 {
 namespace m5
 {
-  // The catalog emitter supports one board-level DSI bus; legacy ST7121 units
+  // The catalog emitter supports one board-level DSI bus; ST7121 units
   // alone need 900 Mbps after their panel variant is identified at runtime.
   static constexpr std::uint16_t tab5_st7121_lane_mbps = 900;
 

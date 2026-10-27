@@ -25,6 +25,8 @@ namespace m5gfx { namespace board_detect { namespace io {
  *   int pin_count;                    // Exclusive upper bound of GPIO numbers.
  *   unsigned package_classic_q6;       // Classic ESP32 Q6 package code.
  *   unsigned package_classic_pico_d4;  // Classic ESP32 PICO-D4 package code.
+ *   unsigned package_classic_picov3, package_s3_qfn56, package_s3_lga56;
+ *   unsigned package_c6_qfn40, package_c6_qfn32, package_p4;
  *   bool dedicated_gpio_supported;    // Whether the S3 release probe can run.
  *
  * Types:

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #pragma once
 
-#include "../setup_common.inl"
+#include "../construct_common.inl"
 
 namespace board_detect
 {

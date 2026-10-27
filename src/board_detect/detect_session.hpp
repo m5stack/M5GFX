@@ -8,13 +8,13 @@ namespace m5gfx
 namespace board_detect
 {
   // Classify identification even after preparation fails; unresolved members stay provisional.
-  // This classification does not imply setup succeeded.
-  inline bool finalize_prepared_result(detect_outcome_t& outcome, board_id_t preferred)
+  // This classification does not imply the result was adopted.
+  inline bool finalize_prepared_result(detect_outcome_t& outcome, board_id_t fallback)
   {
     outcome.verdict = outcome.result.provisional ? verdict_t::candidate : verdict_t::confirmed;
     outcome.candidate_kind = outcome.result.provisional ? candidate_kind_t::provisional : candidate_kind_t::none;
-    if (outcome.result.provisional && preferred != board_id_unknown
-     && outcome.result.def->id != preferred)
+    if (outcome.result.provisional && fallback != board_id_unknown
+     && outcome.result.def->id != fallback)
     {
       outcome.result.candidate = outcome.result.def;
       outcome.reason = fail_reason_t::family_unresolved;
@@ -23,12 +23,12 @@ namespace board_detect
     return true;
   }
 
-  // Persist only a confirmed board with successful setup and an ID different from
-  // the NVS value, or the build-time board when NVS has no saved value.
-  inline bool should_persist_detection(const detect_outcome_t& outcome, std::uint32_t previous)
+  // Persist only after confirmed adoption, when the board differs from the
+  // hint (the saved NVS value, or the build-time board if no value was saved).
+  inline bool should_persist_detection(const detect_outcome_t& outcome, std::uint32_t previous_hint)
   {
-    return outcome.verdict == verdict_t::confirmed && outcome.setup_succeeded
-        && previous != outcome.result.def->id;
+    return outcome.verdict == verdict_t::confirmed && outcome.adopted
+        && previous_hint != outcome.result.def->id;
   }
 
   template <typename RunAttempt>
@@ -46,7 +46,7 @@ namespace board_detect
       const bool final_attempt = attempt + 1 == request.max_attempts;
       outcome = run_attempt(request, final_attempt);
       outcome.attempts = ++attempts;
-      if (outcome.setup_succeeded) { return outcome; }
+      if (outcome.adopted) { return outcome; }
       // Failed setup still leaves stronger family evidence than a weak hint.
       if (outcome.candidate_kind == candidate_kind_t::provisional
        && outcome.result.candidate == nullptr)

@@ -112,7 +112,7 @@ static void cover(const board_detector_t* const* detectors) {
             host_hardware::events.clear();
             probe_ctx_t ctx;
             ctx.transaction = &tx;
-            ctx.i2c_port_probe = -1;
+            ctx.probe_port = -1;
             ctx.allow_reset = true;
             ctx.final_attempt = true;
             ctx.hint = hint ? hint->id : board_id_unknown;

@@ -47,7 +47,7 @@ int main() {
     board_result_t r;
     r.assign(&first);
     const spi_id_member_t member = {&first, variants, 2, true, false, 5, false};
-    assert(fixed_start_spi_variant(r, ctx, member));
+    assert(fixed_prepare_spi_variant(r, ctx, member));
     assert(r.def == &first.def && r.option == unsigned(mode >= 2) && !r.provisional &&
            r.refine == nullptr);
     assert(reads == unsigned(mode == 0 || mode == 3 ? 2 : 1) &&
@@ -78,11 +78,11 @@ int main() {
       detect_outcome_t out;
       if (detector.confirm(ctx, &out.result)) {
         finalize_prepared_result(out, 0);
-        out.setup_succeeded = true;
+        out.adopted = true;
       }
       return out;
     });
-    assert(out.setup_succeeded && out.attempts == 2 && out.result.desc == target);
+    assert(out.adopted && out.attempts == 2 && out.result.desc == target);
     probe_ctx_t ctx;
     ctx.transaction = &tx;
     ctx.hint = req.hint;

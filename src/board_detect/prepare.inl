@@ -9,17 +9,17 @@
     {
       return false;
     }
-    if (!startup_detail::description_valid(desc)) { return false; }
+    if (!prepare_detail::description_valid(desc)) { return false; }
     const board_desc_t* current = &desc;
     if (!(result.prepared & prepared_power))
     {
       if (desc.power.variants != nullptr)
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
+        prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port, desc.internal_i2c);
         if (!i2c.opened
-         || !startup_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
+         || !prepare_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
       }
-      else if (!startup_detail::prepare_power(desc, result, ctx.i2c_port_probe, true)) { return false; }
+      else if (!prepare_detail::prepare_power(desc, result, ctx.probe_port, true)) { return false; }
     }
     if (!(result.prepared & prepared_refine) && result.refine != nullptr)
     {
@@ -38,7 +38,7 @@
         if (!result.refine(result, ctx)) { return false; }
         if (result.desc == nullptr || result.def != &result.desc->def
          || result.def->id == board_id_unknown
-         || !startup_detail::description_valid(*result.desc)) { return false; }
+         || !prepare_detail::description_valid(*result.desc)) { return false; }
         current = result.desc;
       }
       result.prepared |= prepared_refine;
@@ -60,24 +60,24 @@
       }
       result.prepared |= prepared_observation;
     }
-    if (!startup_detail::prepare_sd_spi(*current, result, ctx)) { return false; }
+    if (!prepare_detail::prepare_sd_spi(*current, result, ctx)) { return false; }
     const bool reset_was_prepared = result.prepared & prepared_reset;
     if (!reset_was_prepared)
     {
       if (current->reset.kind == reset_kind_t::i2c_regs)
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, current->internal_i2c);
+        prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port, current->internal_i2c);
         if (!i2c.opened || !prepare_reset(*current, result, ctx, i2c.port, nullptr, true))
         {
           return false;
         }
       }
-      else if (!prepare_reset(*current, result, ctx, ctx.i2c_port_probe, nullptr, true))
+      else if (!prepare_reset(*current, result, ctx, ctx.probe_port, nullptr, true))
       {
         return false;
       }
     }
-    startup_detail::hold_chip_selects(*current);
+    prepare_detail::hold_chip_selects(*current);
     // Detection uses software I2C only. Like SPI, hardware I2C belongs to
     // its consumers; preparation leaves only power and reset ready.
     return true;

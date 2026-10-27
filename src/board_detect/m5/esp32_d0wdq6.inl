@@ -26,7 +26,7 @@ namespace m5
 
   namespace detail
   {
-    bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx);
+    bool fixed_prepare_core(board_result_t& result, const prepare_ctx_t& ctx);
     bool stack_reset_and_sample_ips(const board_desc_t& desc, const prepare_ctx_t& ctx,
                                     std::uint32_t* detected_option);
   }
@@ -141,9 +141,9 @@ namespace m5
 
     bool sd_pull_mask(const board_desc_t& desc, std::uint64_t* mask)
     {
-      if (mask == nullptr || !startup_detail::gpio_valid(desc.sd.sd_cs)
-       || !startup_detail::gpio_valid(desc.sd.sclk)
-       || !startup_detail::gpio_valid(desc.sd.mosi))
+      if (mask == nullptr || !prepare_detail::gpio_valid(desc.sd.sd_cs)
+       || !prepare_detail::gpio_valid(desc.sd.sclk)
+       || !prepare_detail::gpio_valid(desc.sd.mosi))
       {
         return false;
       }
@@ -157,7 +157,7 @@ namespace m5
                                     std::uint32_t* detected_option)
     {
       const auto& reset = desc.reset;
-      startup_detail::pin_level(reset.pin, true);
+      prepare_detail::pin_level(reset.pin, true);
       io::delay_ms(1);
       io::pin_low(reset.pin);
       io::delay_ms(reset.low_ms);
@@ -184,13 +184,13 @@ namespace m5
   static const board_entry_t esp32_d0wdq6_boards[] = {
     { &desc_timercam, construct_displayless, "board_M5TimerCam", nullptr },
     { &desc_station, construct_station, nullptr, nullptr },
-    { &desc_core2, construct_core2, nullptr, nullptr, detail::fixed_start_core },
-    { &desc_tough, construct_tough, nullptr, nullptr, detail::fixed_start_core },
+    { &desc_core2, construct_core2, nullptr, nullptr, detail::fixed_prepare_core },
+    { &desc_tough, construct_tough, nullptr, nullptr, detail::fixed_prepare_core },
     { &desc_stack, construct_stack, nullptr, nullptr },
     { &desc_paper, construct_paper, nullptr, nullptr },
     { &desc_stickcplus, construct_stickcplus, "M5StickCPlus", nullptr },
     { &desc_stickc, construct_stickc, "M5StickC", nullptr },
-    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr, fixed_start_coreink },
+    { &desc_coreink, construct_coreink, "M5StackCoreInk", nullptr, fixed_prepare_coreink },
     { &desc_stickcplus2, construct_stickcplus2, "M5StickCPlus2", nullptr },
     { &desc_atompsram, construct_atompsram, "", nullptr },
     { &desc_atomvoice, construct_displayless, "board_M5AtomVoice", nullptr },
@@ -203,21 +203,21 @@ namespace m5
   namespace detail
   {
     const pmic_variant_t* observe_core_pmic(int port)
-    { return startup_detail::read_variant(desc_core2.power, port); }
+    { return prepare_detail::read_variant(desc_core2.power, port); }
 
     bool observe_core_panel(board_result_t& result, const prepare_ctx_t& ctx,
                             panel_variant_t& variant, std::uint32_t keys[4])
     {
       // Power may have just enabled a cold SD card. Put it in SPI mode before
       // sharing the panel clocks, including the fixed-board startup path.
-      if (!startup_detail::prepare_sd_spi(*result.desc, result, ctx)) { return false; }
+      if (!prepare_detail::prepare_sd_spi(*result.desc, result, ctx)) { return false; }
       ESP_LOGD("board_detect_m5", "Core panel observation after SD SPI preparation");
       const auto& display = desc_core2.display;
       const std::int8_t signals[] = {
         display.dc, display.sclk, display.mosi, display.miso
       };
-      startup_detail::pin_level(display.cs, true);
-      startup_detail::pin_level(desc_core2.sd.sd_cs, true);
+      prepare_detail::pin_level(display.cs, true);
+      prepare_detail::pin_level(desc_core2.sd.sd_cs, true);
       soft_spi_t bus(display.sclk, display.mosi, display.mosi, display.dc);
       bus.init();
       // Without reset, leave the same 120 ms window for a waking panel.
@@ -225,11 +225,11 @@ namespace m5
                                             ctx.allow_reset ? 1 : 120);
       if (ctx.allow_reset)
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+        prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port,
                                          desc_core2.internal_i2c);
         if (!i2c.opened || !prepare_reset(desc_core2, result, ctx, i2c.port))
         {
-          ctx.transaction->restore_start(signals);
+          ctx.transaction->restore_to_snapshot(signals);
           return false;
         }
         std::uint32_t after_keys[4] = {};
@@ -244,11 +244,11 @@ namespace m5
       return true;
     }
 
-    bool fixed_start_core(board_result_t& result, const prepare_ctx_t& ctx)
+    bool fixed_prepare_core(board_result_t& result, const prepare_ctx_t& ctx)
     {
       const auto& desc = *result.desc;
       {
-        startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe, desc.internal_i2c);
+        prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port, desc.internal_i2c);
         const auto* pmic = i2c.opened ? observe_core_pmic(i2c.port) : nullptr;
         // Never send a default controller's write list when its identity is unknown.
         if (pmic == nullptr)
@@ -258,7 +258,7 @@ namespace m5
           return false;
         }
         result.option |= pmic->detected_option;
-        if (!startup_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
+        if (!prepare_detail::prepare_power(desc, result, i2c.port, true)) { return false; }
       }
       panel_variant_t variant;
       std::uint32_t keys[4] = {};
@@ -267,7 +267,7 @@ namespace m5
       if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
       const auto& display = desc.display;
       const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
-      ctx.transaction->restore_start(signals);
+      ctx.transaction->restore_to_snapshot(signals);
       return prepare(desc, result, ctx);
     }
 
@@ -278,7 +278,7 @@ namespace m5
       const bool observed = observe_core_panel(result, ctx, variant, keys);
       const auto& display = desc_core2.display;
       const std::int8_t signals[] = { display.dc, display.sclk, display.mosi, display.miso };
-      ctx.transaction->restore_start(signals);
+      ctx.transaction->restore_to_snapshot(signals);
       if (!observed) { return false; }
       log_panel_variant(variant, keys);
       if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
@@ -294,11 +294,11 @@ namespace m5
       std::uint32_t keys[4] = {};
       panel_variant_t variant;
       if (!observe_core_panel(result, ctx, variant, keys)) { return false; }
-      startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+      prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port,
                                        desc_core2.internal_i2c);
       if (!i2c.opened)
       {
-        ctx.transaction->restore_start(signals);
+        ctx.transaction->restore_to_snapshot(signals);
         return false;
       }
       bool tough = false;
@@ -322,7 +322,7 @@ namespace m5
       if ((tough && core2)
        || (tough && (result.option & generated_options::core2::new_pmic)))
       {
-        ctx.transaction->restore_start(signals);
+        ctx.transaction->restore_to_snapshot(signals);
         return false;
       }
       if (!tough && !core2)
@@ -336,10 +336,10 @@ namespace m5
           return nullptr;
         };
         if (!select_provisional_member(ctx, &result,
-                               possible(ctx.preferred), possible(ctx.hint),
+                               possible(ctx.fallback), possible(ctx.hint),
                                &desc_core2, "Core2/Tough touch unidentified"))
         {
-          ctx.transaction->restore_start(signals);
+          ctx.transaction->restore_to_snapshot(signals);
           return false;
         }
       }
@@ -351,7 +351,7 @@ namespace m5
       if (variant == panel_variant_t::e) { result.option |= generated_options::core2::lcd_e; }
       if (result.def->id == desc_tough.def.id)
       { result.option &= ~generated_options::core2::new_pmic; }
-      ctx.transaction->restore_start(signals);
+      ctx.transaction->restore_to_snapshot(signals);
       return true;
     }
   }
@@ -371,20 +371,20 @@ namespace m5
 
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
-      if (!startup_detail::description_valid(desc_station)
-       || !startup_detail::description_valid(desc_core2)
-       || !startup_detail::description_valid(desc_tough)
-       || !startup_detail::gpio_valid(desc_station.display.dc)
-       || !startup_detail::gpio_valid(desc_core2.display.dc)
-       || !startup_detail::gpio_valid(desc_tough.display.dc))
+      if (!prepare_detail::description_valid(desc_station)
+       || !prepare_detail::description_valid(desc_core2)
+       || !prepare_detail::description_valid(desc_tough)
+       || !prepare_detail::gpio_valid(desc_station.display.dc)
+       || !prepare_detail::gpio_valid(desc_core2.display.dc)
+       || !prepare_detail::gpio_valid(desc_tough.display.dc))
       {
         return false;
       }
-      startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+      prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port,
                                       desc_core2.internal_i2c);
       if (!i2c.opened) { return false; }
       prepare_ctx_t prepare_ctx = ctx;
-      prepare_ctx.i2c_port_probe = i2c.port;
+      prepare_ctx.probe_port = i2c.port;
       const auto* pmic = detail::observe_core_pmic(i2c.port);
       if (pmic == nullptr) { return false; }
       ctx.family_identified = true;
@@ -459,24 +459,24 @@ namespace m5
       // A cold AXP192 Core2/Tough with either Port A line externally held low
       // also enters this Station path and stays unidentified after an LCD miss.
       // Only the Station probe needs the exceptional pre-power SD transition.
-      startup_detail::pin_level(desc_core2.display.cs, true);
+      prepare_detail::pin_level(desc_core2.display.cs, true);
       const auto sd_pulls = probe_pin_pulls(ctx, sd_mask);
       const bool sd_present = sd_pulls.pulldown_high == sd_mask
                            && sd_pulls.pullup_high == sd_mask;
       std::uint32_t preprepared = 0;
       if (sd_present)
       {
-        startup_detail::pin_level(desc_core2.sd.sd_cs, true);
+        prepare_detail::pin_level(desc_core2.sd.sd_cs, true);
         board_result_t sd_result;
         sd_result.assign(&desc_core2);
-        if (!startup_detail::prepare_sd_spi(desc_core2, sd_result, prepare_ctx)) { return false; }
+        if (!prepare_detail::prepare_sd_spi(desc_core2, sd_result, prepare_ctx)) { return false; }
         preprepared |= sd_result.prepared & prepared_sd_spi;
       }
       result->assign(&desc_station);
       result->prepared = preprepared;
       if (!prepare_reset(desc_station, *result, prepare_ctx, i2c.port))
       {
-        ctx.transaction->restore_start(desc_station.reset.pin);
+        ctx.transaction->restore_to_snapshot(desc_station.reset.pin);
         return false;
       }
       const auto& display = desc_station.display;
@@ -485,12 +485,12 @@ namespace m5
         detail::panel_id_command, 1);
       if ((detected_id & detail::station_id_mask) != detail::station_id)
       {
-        ctx.transaction->restore_start(desc_station.reset.pin);
+        ctx.transaction->restore_to_snapshot(desc_station.reset.pin);
         // Neither hint nor preference may send Core2 power after a Station miss.
         *result = {};
         return false;
       }
-      ctx.transaction->restore_start(desc_core2.sd.sd_cs);
+      ctx.transaction->restore_to_snapshot(desc_core2.sd.sd_cs);
       return true;
     }
 
@@ -509,13 +509,13 @@ namespace m5
 
     bool signature(probe_ctx_t& ctx) const override
     {
-      if (!startup_detail::description_valid(desc_stack)
-       || !startup_detail::gpio_valid(desc_stack.display.dc)) { return false; }
+      if (!prepare_detail::description_valid(desc_stack)
+       || !prepare_detail::gpio_valid(desc_stack.display.dc)) { return false; }
       std::uint64_t sd_mask;
       if (!detail::sd_pull_mask(desc_stack, &sd_mask)) { return false; }
-      startup_detail::pin_level(desc_stack.display.cs, true);
+      prepare_detail::pin_level(desc_stack.display.cs, true);
       const auto pulls = probe_pin_pulls(ctx, sd_mask);
-      ctx.transaction->restore_start(desc_stack.display.cs);
+      ctx.transaction->restore_to_snapshot(desc_stack.display.cs);
       const bool pull_match = pulls.pulldown_high == sd_mask && pulls.pullup_high == sd_mask;
       if (!pull_match)
       {
@@ -534,8 +534,8 @@ namespace m5
 
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
-      if (!startup_detail::description_valid(desc_stack)
-       || !startup_detail::gpio_valid(desc_stack.display.dc)) { return false; }
+      if (!prepare_detail::description_valid(desc_stack)
+       || !prepare_detail::gpio_valid(desc_stack.display.dc)) { return false; }
       *result = {};
       result->assign(&desc_stack);
       const prepare_ctx_t& prepare_ctx = ctx;
@@ -544,21 +544,21 @@ namespace m5
         desc_stack.display.mosi, desc_stack.display.dc
       };
       // Both devices are deselected before the first shared-wire operation.
-      startup_detail::pin_level(desc_stack.sd.sd_cs, true);
-      startup_detail::pin_level(desc_stack.display.cs, true);
-      if (!startup_detail::prepare_power(desc_stack, *result, ctx.i2c_port_probe)
-       || !startup_detail::prepare_sd_spi(desc_stack, *result, prepare_ctx)) { return false; }
-      startup_detail::pin_level(desc_stack.reset.pin, true);
-      if (!prepare_reset(desc_stack, *result, prepare_ctx, ctx.i2c_port_probe, &result->option))
+      prepare_detail::pin_level(desc_stack.sd.sd_cs, true);
+      prepare_detail::pin_level(desc_stack.display.cs, true);
+      if (!prepare_detail::prepare_power(desc_stack, *result, ctx.probe_port)
+       || !prepare_detail::prepare_sd_spi(desc_stack, *result, prepare_ctx)) { return false; }
+      prepare_detail::pin_level(desc_stack.reset.pin, true);
+      if (!prepare_reset(desc_stack, *result, prepare_ctx, ctx.probe_port, &result->option))
       { return false; }
-      startup_detail::hold_chip_selects(desc_stack);
+      prepare_detail::hold_chip_selects(desc_stack);
       const auto& display = desc_stack.display;
       const auto panel_id = soft_spi_read32(
         ctx, display.sclk, display.mosi, display.mosi, display.dc, display.cs,
         detail::panel_id_command, 1);
       if ((panel_id & detail::panel_id_mask) != detail::common_panel_id)
       { return false; }
-      ctx.transaction->restore_start(signals);
+      ctx.transaction->restore_to_snapshot(signals);
       return true;
     }
 
@@ -575,22 +575,22 @@ namespace m5
 
     bool signature(probe_ctx_t& ctx) const override
     {
-      if (!startup_detail::description_valid(desc_paper)
-       || !startup_detail::gpio_valid(desc_paper.display.busy)) { return false; }
+      if (!prepare_detail::description_valid(desc_paper)
+       || !prepare_detail::gpio_valid(desc_paper.display.busy)) { return false; }
       // This family contract keeps the mandatory reset from stage 1 through
       // stage 2, where prepared_reset records that it already completed.
-      startup_detail::pin_reset(desc_paper.reset, true);
+      prepare_detail::pin_reset(desc_paper.reset, true);
       io::pin_mode(desc_paper.display.busy, io::pin_mode_t::input_pullup);
       const bool matched = !io::pin_read(desc_paper.display.busy);
-      ctx.transaction->restore_start(desc_paper.display.busy);
-      if (!matched) { ctx.transaction->restore_start(desc_paper.reset.pin); }
+      ctx.transaction->restore_to_snapshot(desc_paper.display.busy);
+      if (!matched) { ctx.transaction->restore_to_snapshot(desc_paper.reset.pin); }
       return matched;
     }
 
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
-      if (!startup_detail::description_valid(desc_paper)
-       || !startup_detail::gpio_valid(desc_paper.display.busy)) { return false; }
+      if (!prepare_detail::description_valid(desc_paper)
+       || !prepare_detail::gpio_valid(desc_paper.display.busy)) { return false; }
       *result = {};
       result->assign(&desc_paper);
       result->prepared = prepared_reset;
@@ -607,17 +607,17 @@ namespace m5
       const prepare_ctx_t& prepare_ctx = ctx;
       auto restore_and_fail = [&]() -> bool
       {
-        ctx.transaction->restore_start(pins);
+        ctx.transaction->restore_to_snapshot(pins);
         return false;
       };
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPER_CONFIRM)
       // Test-only failure injection after stage 1 retained reset state.
       return restore_and_fail();
 #endif
-      if (!startup_detail::prepare_power(desc_paper, *result, ctx.i2c_port_probe)
-       || !startup_detail::prepare_sd_spi(desc_paper, *result, prepare_ctx))
+      if (!prepare_detail::prepare_power(desc_paper, *result, ctx.probe_port)
+       || !prepare_detail::prepare_sd_spi(desc_paper, *result, prepare_ctx))
       { return restore_and_fail(); }
-      startup_detail::hold_chip_selects(desc_paper);
+      prepare_detail::hold_chip_selects(desc_paper);
       const auto& display = desc_paper.display;
       io::pin_mode(display.busy, io::pin_mode_t::input);
 
@@ -654,7 +654,7 @@ namespace m5
       if (!matched)
       { return restore_and_fail(); }
 
-      ctx.transaction->restore_start(success_restore);
+      ctx.transaction->restore_to_snapshot(success_restore);
       // Success retains the display reset, power, and chip-select pins.
       return true;
     }

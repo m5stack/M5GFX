@@ -1,17 +1,17 @@
   // run_detection_attempt: detection_transaction_t -> detect_board -> prepare
-  // -> finalize_prepared_result -> finish_detection_setup.
+  // -> finalize_prepared_result -> construct_and_adopt.
   // detection_gpio_snapshot_t::capture reclaims GPIO before probing.
   // detect_board owns family order/stops; run_detection_session owns retries/candidates.
-  // finalize_prepared_result classifies identity; finish_detection_setup sets setup_succeeded.
+  // finalize_prepared_result classifies identity; construct_and_adopt sets adopted.
   // should_persist_detection gates the NVS write in M5GFX.cpp.
-  template <class SetupDetected>
-  static board_detect::detect_outcome_t finish_detection_setup(
+  template <class Adopt>
+  static board_detect::detect_outcome_t construct_and_adopt(
     board_detect::board_result_t& result, board_detect::detect_outcome_t outcome,
     board_detect::detection_transaction_t& transaction,
-    board_t setup_board, SetupDetected setup)
+    board_t representative_board, Adopt adopt)
   {
     board_detect::m5::display_parts_t parts;
-    const auto construct_result = board_detect::m5::setup_detected_board(result, &parts);
+    const auto construct_result = board_detect::m5::construct_detected_board(result, &parts);
     if (construct_result == board_detect::m5::construct_status_t::failed)
     {
       ESP_LOGW(LIBRARY_NAME, "[Autodetect] setup failed for detected board:%u",
@@ -25,10 +25,10 @@
     {
       ESP_LOGI(LIBRARY_NAME, "[Autodetect] display is unavailable for detected board:%u",
                static_cast<unsigned>(result.def->id));
-      transaction.restore_start(result.desc->hold_high_pins.data,
+      transaction.restore_to_snapshot(result.desc->hold_high_pins.data,
                                 result.desc->hold_high_pins.size);
     }
-    if (!setup(parts, setup_board))
+    if (!adopt(parts, representative_board))
     {
       // A rejecting adopter must not retain any of these raw pointers. Release
       // the bus before rollback restores its GPIO routing, then destroy every
@@ -43,18 +43,18 @@
     }
     transaction.commit();
     outcome.result = result;
-    outcome.setup_succeeded = true;
+    outcome.adopted = true;
     const auto log = board_detect::m5::success_log(result);
     if (log.name != nullptr && log.name[0] != '\0')
     { ESP_LOGI(LIBRARY_NAME, "[Autodetect] %s%s", log.name, log.annotation); }
     return outcome;
   }
 
-  template <class SetupDetected>
+  template <class Adopt>
   static board_detect::detect_outcome_t run_detection_attempt(
     const board_detect::board_detector_t* const* detectors,
     const board_detect::detect_request_t& request, bool final_attempt,
-    SetupDetected setup)
+    Adopt adopt)
   {
     board_detect::detect_outcome_t outcome;
     if (detectors == nullptr) { return outcome; }
@@ -76,10 +76,10 @@
     }
     board_detect::probe_ctx_t probe;
     probe.allow_reset = request.allow_reset;
-    probe.preferred = request.preferred;
+    probe.fallback = request.fallback;
     probe.attempt = request.attempt;
     probe.final_attempt = final_attempt;
-    probe.i2c_port_probe = probe_i2c_port;
+    probe.probe_port = detection_i2c_port;
     probe.transaction = &transaction;
     probe.enabled_ids = request.target_set;
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
@@ -115,14 +115,14 @@
       transaction.rollback();
       return outcome;
     }
-    // Failure injection historically sees the representative before refine.
-    const auto setup_board = static_cast<board_t>(result.def->id);
+    // Failure injection uses the family representative captured before refine.
+    const auto representative_board = static_cast<board_t>(result.def->id);
 
     const board_detect::prepare_ctx_t& prepare_ctx = probe;
     const bool prepared = result.desc != nullptr
                        && board_detect::prepare(*result.desc, result, prepare_ctx);
     outcome.result = result;
-    const bool accepted = board_detect::finalize_prepared_result(outcome, request.preferred);
+    const bool accepted = board_detect::finalize_prepared_result(outcome, request.fallback);
     if (!prepared)
     {
       // Preserve the matched family's identification; adoption still failed.
@@ -137,18 +137,18 @@
       transaction.rollback();
       return outcome;
     }
-    return finish_detection_setup(result, outcome, transaction, setup_board, setup);
+    return construct_and_adopt(result, outcome, transaction, representative_board, adopt);
   }
 
   // Fixed startup honors constructor/adopter hooks and observe_* injections (CORES3_FORCE_VBUS), but bypasses detector-only hooks.
-  template <class SetupDetected>
-  static board_detect::detect_outcome_t run_fixed_detection(
-    const board_detect::m5::board_entry_t& entry, bool allow_reset, SetupDetected setup)
+  template <class Adopt>
+  static board_detect::detect_outcome_t run_fixed_startup(
+    const board_detect::m5::board_entry_t& entry, bool allow_reset, Adopt adopt)
   {
     using namespace board_detect;
     detect_outcome_t outcome;
     const auto& desc = *entry.desc;
-    if (!startup_detail::description_valid(desc))
+    if (!prepare_detail::description_valid(desc))
     {
       ESP_LOGW(LIBRARY_NAME, "Fixed board:%u has an invalid startup description", unsigned(desc.def.id));
       return outcome;
@@ -206,9 +206,9 @@
     result.assign(&desc);
     prepare_ctx_t ctx;
     ctx.allow_reset = allow_reset;
-    ctx.i2c_port_probe = probe_i2c_port;
+    ctx.probe_port = detection_i2c_port;
     ctx.transaction = &transaction;
-    const bool started = entry.fixed_start ? entry.fixed_start(result, ctx)
+    const bool started = entry.fixed_prepare ? entry.fixed_prepare(result, ctx)
                                           : prepare(desc, result, ctx);
     outcome.result = result;
     outcome.verdict = verdict_t::confirmed;
@@ -219,22 +219,23 @@
       transaction.rollback();
       return outcome;
     }
-    return finish_detection_setup(result, outcome, transaction,
-                                  static_cast<board_t>(desc.def.id), setup);
+    return construct_and_adopt(result, outcome, transaction,
+                                  static_cast<board_t>(desc.def.id), adopt);
   }
 
-  template <class SetupDetected>
-  static board_detect::detect_outcome_t run_fixed_detection_session(
-    const board_detect::m5::board_entry_t& entry, bool allow_reset, SetupDetected setup)
+  template <class Adopt>
+  static board_detect::detect_outcome_t run_fixed_startup_session(
+    const board_detect::m5::board_entry_t& entry, bool allow_reset, Adopt adopt)
   {
     board_detect::detect_request_t request;
     request.allow_reset = allow_reset;
     request.max_attempts = 5;
     // Fixed startup has no no_signature result or candidate selection. The
-    // shared session retries every failure and permits reset from attempt 3.
+    // shared session retries every failure. If reset was disabled, the fourth
+    // and fifth attempts enable it (attempt indices 3 and 4).
     return board_detect::run_detection_session(request,
-      [&entry, &setup](const board_detect::detect_request_t& attempt, bool)
+      [&entry, &adopt](const board_detect::detect_request_t& attempt, bool)
       {
-        return run_fixed_detection(entry, attempt.allow_reset, setup);
+        return run_fixed_startup(entry, attempt.allow_reset, adopt);
       });
   }

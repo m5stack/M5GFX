@@ -7,7 +7,7 @@
 #include "board_detect/m5/esp32_d0wdq6.inl"
 #include "support/display_devices.hpp"
 namespace m5gfx {
-#include "board_detect/m5/esp32_d0wdq6_setup.inl"
+#include "board_detect/m5/esp32_d0wdq6_construct.inl"
 }
 using namespace m5gfx::board_detect;
 using namespace m5gfx::board_detect::m5;
@@ -35,7 +35,7 @@ int main() {
     board_result_t r;
     r.assign(entry.desc);
     display_parts_t parts;
-    auto status = setup_detected_board(r, &parts);
+    auto status = construct_detected_board(r, &parts);
     assert(status != construct_status_t::failed);
     if (status == construct_status_t::ok) {
       assert(parts.panel && parts.bus);

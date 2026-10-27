@@ -25,7 +25,7 @@ int main() {
     request.conditional_pins_unavailable = unavailable;
     const auto out = m5gfx::run_detection_attempt(list, request, false,
         [](m5gfx::board_detect::m5::display_parts_t &, lgfx::board_t) { return true; });
-    assert(out.setup_succeeded && host_hardware::ports.empty());
+    assert(out.adopted && host_hardware::ports.empty());
     // Fixed startup also refuses a GPIO currently owned by OPI PSRAM.
     reset();
     conditional_unavailable = unavailable;
@@ -35,9 +35,9 @@ int main() {
     desc.hold_high_pins = pins(reserved);
     desc.op_gpio_pins = pins(reserved);
     const m5gfx::board_detect::m5::board_entry_t entry(&desc, construct, "OPI", nullptr);
-    const auto fixed = m5gfx::run_fixed_detection(entry, false,
+    const auto fixed = m5gfx::run_fixed_startup(entry, false,
         [](m5gfx::board_detect::m5::display_parts_t &, lgfx::board_t) { return true; });
-    assert(fixed.setup_succeeded == !unavailable && host_hardware::ports.empty());
+    assert(fixed.adopted == !unavailable && host_hardware::ports.empty());
     ++cases;
   }
   std::printf("S3 integration conditional pins: 2 cases passed\n");

@@ -18,13 +18,13 @@ namespace board_detect
 {
   struct prepare_ctx_t
   {
-    // A retry must not override the caller's reset policy.
+    // The session may enable reset for its final two attempts.
     bool allow_reset = true;
     board_id_t hint = board_id_unknown;
-    board_id_t preferred = board_id_unknown;
+    board_id_t fallback = board_id_unknown;
     std::uint8_t attempt = 0;
     bool final_attempt = false;
-    int i2c_port_probe = -1;
+    int probe_port = -1;
     // Non-null while board-detection components are running.
     detection_transaction_t* transaction = nullptr;
   };
@@ -76,7 +76,7 @@ namespace board_detect
   public:
     bool capture(pin_list_t unconditional, pin_list_t conditional,
                  bool include_conditional);
-    void restore_start(const std::int8_t* pins, std::size_t count);
+    void restore_to_snapshot(const std::int8_t* pins, std::size_t count);
     void rollback();
 
   private:
@@ -96,11 +96,11 @@ namespace board_detect
     ~detection_transaction_t();
 
     bool valid() const { return valid_; }
-    void restore_start(const std::int8_t* pins, std::size_t count) { gpio_.restore_start(pins, count); }
-    void restore_start(std::int8_t pin) { restore_start(&pin, 1); }
-    void restore_start(std::initializer_list<int> pins);
+    void restore_to_snapshot(const std::int8_t* pins, std::size_t count) { gpio_.restore_to_snapshot(pins, count); }
+    void restore_to_snapshot(std::int8_t pin) { restore_to_snapshot(&pin, 1); }
+    void restore_to_snapshot(std::initializer_list<int> pins);
     template <std::size_t N>
-    void restore_start(const std::int8_t (&pins)[N]) { restore_start(pins, N); }
+    void restore_to_snapshot(const std::int8_t (&pins)[N]) { restore_to_snapshot(pins, N); }
     void rollback();
     void commit();
 
@@ -402,14 +402,15 @@ namespace board_detect
   struct probe_ctx_t : prepare_ctx_t
   {
     // The hint moves its detector family forward. Candidate selection within
-    // that family is detector-specific: the S3 SPI-ID family probes only the
-    // hinted member, while legacy families retain their established ordering.
+    // that family is detector-specific: spi_id_detector_t without shared_id_read
+    // probes only the hinted member on the first non-final attempt, when
+    // it has a probe description; otherwise it scans members in order.
     // A family whose members are all candidate-only is never moved forward.
     // hint and final_attempt are inherited by prepare/refine.
     i2c_scan_cache_t i2c_cache;
     // True once any family entered confirm() in this detection pass.
     bool confirm_attempted = false;
-    // A chip ID has established this family. Stop later family probes in this
+    // A chip ID has identified this family. Stop later family probes in this
     // attempt even if its member is unresolved; retry/session verdicts stay unchanged.
     bool family_identified = false;
     // A signature may suggest one board without entering confirm(). The first
@@ -465,7 +466,7 @@ namespace board_detect
   // in both masks, D in neither, F only in pullup_high, and X only in
   // pulldown_high. Every call measures the requested pins again.
   static constexpr std::uint32_t pull_release_us = 128;
-  // Zero preserves the legacy pull-only sequence and timing.
+  // Zero selects the pull-only sequence without a release interval.
   // Release masks contain levels read without pulls after each bias; release_sampled
   // marks those masks as measured only when release_us is nonzero.
   pin_pull_result_t probe_pin_pulls(probe_ctx_t& ctx, std::uint64_t pin_mask,
@@ -531,7 +532,7 @@ namespace board_detect
   std::uint32_t soft_spi_read32(probe_ctx_t& ctx, int pin_sclk, int pin_mosi, int pin_miso,
                                 int pin_dc, int pin_cs, std::uint8_t cmd, std::uint8_t dummy_bits,
                                 std::uint32_t half_us = 1,
-                                bool legacy_zero_preamble = false);
+                                bool deselected_zero_preamble = false);
 
   struct spi_id_probe_t
   {
@@ -556,7 +557,7 @@ namespace board_detect
                     const spi_id_probe_t* probes, std::size_t probe_count,
                     board_result_t* result, bool three_wire,
                     std::uint8_t slow_retry_half_us = 0,
-                    bool legacy_zero_preamble = false);
+                    bool deselected_zero_preamble = false);
 
   // Kept callable by family detectors; validates desc before touching hardware.
   bool prepare_reset(const board_desc_t& desc, board_result_t& result,

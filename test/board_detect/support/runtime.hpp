@@ -12,7 +12,7 @@ namespace board_detect {
 #include "board_detect/member_selection.inl"
 #include "board_detect/transaction.inl"
 #include "board_detect/detector_runner.inl"
-#include "board_detect/startup.inl"
+#include "board_detect/prepare_steps.inl"
 #include "board_detect/spi_detector.inl"
 #include "board_detect/prepare.inl"
 } // namespace board_detect

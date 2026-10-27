@@ -50,7 +50,8 @@ namespace pmic_ops
     ops::i2c_write8(1, 0x94, 28), ops::i2c_write8(1, 0x95, 28),
   };
   // BUS_OUT_EN (P0 bit1) is left to the CoreS3 refine step, which precharges BUS_OUT first.
-  // If these ops fail part way, refine is skipped and BUS_OUT_EN stays off until setExtOutput().
+  // Autodetection skips refine after a partial failure; fixed startup still runs
+  // its explicit BUS_OUT precharge and enable sequence.
   static constexpr ops::op_t cores3_vbus_5v_power_on[] = {
     ops::i2c_bit_off(1, 0x23, 0x1F),
     ops::i2c_bit_on(0, 0x02, 0x05), ops::i2c_bit_on(0, 0x03, 0x83),

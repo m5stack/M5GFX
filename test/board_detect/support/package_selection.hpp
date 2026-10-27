@@ -42,7 +42,7 @@ int main() {
       const auto expected = package_id == 0 ? esp32p4_detectors : nullptr;
       assert(!out.conditional_pins_unavailable);
 #endif
-      assert(out.detectors == expected && !out.direct_setup);
+      assert(out.detectors == expected && !out.keep_panel_during_attempt);
       assert(host_hardware::events.empty() && host_hardware::ports.empty());
       ++cases;
     }

@@ -74,7 +74,7 @@ test("generated detector arrays follow catalog priority on every chip and packag
   assert.deepEqual(validateSchema(groups, schema), []);
   const priorities = detectorPriority(boards, groups);
   assert.deepEqual(priorities.get("esp32s3_detectors_qfn56").ordered, [
-    "dial_detector", "paper_family_detector", "cores3_family_detector", "spi_id_detector", "capsule_detector",
+    "dial_detector", "paper_family_detector", "cores3_family_detector", "atoms3_family_detector", "capsule_detector",
     "pm1_family_detector", "pm1_ext_family_detector", "airq_detector",
     "cardputer_family_detector", "stamplc_detector", "powerhub_detector", "dualkey_detector",
   ]);

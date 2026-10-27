@@ -20,7 +20,7 @@ namespace tab5_detail
   bool observe_touch(board_result_t& result, const prepare_ctx_t& ctx)
   {
 #if CONFIG_SPIRAM
-    startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+    prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port,
                                     result.desc->internal_i2c);
     if (!i2c.opened) { return false; }
     int last_logged_fw = -1;
@@ -61,7 +61,7 @@ namespace tab5_detail
     return true;
   }
 
-  bool fixed_start(board_result_t& result, const prepare_ctx_t& ctx)
+  bool fixed_prepare(board_result_t& result, const prepare_ctx_t& ctx)
   {
     result.observe_after_power = observe_touch;
     result.observe_on_power_failure = true;
