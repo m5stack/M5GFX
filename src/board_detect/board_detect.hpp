@@ -35,7 +35,7 @@ namespace board_detect
     std::uint8_t mask;
   };
 
-  // Build lists only with registers(), pins() and options(), which
+  // Build lists only with pins() and options(), which
   // take the size from the array itself. A hand-written size cannot be verified.
   template <typename T>
   struct list_desc_t
@@ -44,10 +44,8 @@ namespace board_detect
     std::uint8_t size;
   };
 
-  using register_list_t = list_desc_t<std::uint8_t>;
   using pin_list_t = list_desc_t<std::int8_t>;
   using option_list_t = list_desc_t<const char*>;
-  static constexpr std::uint8_t max_pmic_restore_registers = 6;
 
   template <std::size_t N>
   struct list_size_t
@@ -55,12 +53,6 @@ namespace board_detect
     static_assert(N <= 255, "description list is too large");
     static constexpr std::uint8_t value = static_cast<std::uint8_t>(N);
   };
-
-  template <std::size_t N>
-  constexpr register_list_t registers(const std::uint8_t (&data)[N])
-  {
-    return { data, list_size_t<N>::value };
-  }
 
   template <std::size_t N>
   constexpr pin_list_t pins(const std::int8_t (&data)[N])
@@ -130,7 +122,6 @@ namespace board_detect
     reg_bit_t reset_state;
     ops::op_list_t reset_assert;
     ops::op_list_t reset_release;
-    register_list_t restore_registers;
     std::uint32_t detected_option;
     // Confirmed multi-variant power descriptions select one operation list
     // from the detector's option bits. A zero mask selects unconditionally.
@@ -250,11 +241,11 @@ namespace board_detect
     ops::op_list_t power_on,
     reg_bit_t power_state, reg_bit_t reset_state,
     ops::op_list_t reset_assert, ops::op_list_t reset_release,
-    register_list_t restore_registers, std::uint32_t detected_option)
+    std::uint32_t detected_option)
   {
     return { addr, id_reg, id_value, 0xFF, power_on, power_state, reset_state,
              reset_assert, reset_release,
-             restore_registers, detected_option, 0, 0 };
+             detected_option, 0, 0 };
   }
 
   constexpr pmic_variant_t pmic_variant_ack_only(
@@ -262,11 +253,11 @@ namespace board_detect
     ops::op_list_t power_on,
     reg_bit_t power_state, reg_bit_t reset_state,
     ops::op_list_t reset_assert, ops::op_list_t reset_release,
-    register_list_t restore_registers, std::uint32_t detected_option)
+    std::uint32_t detected_option)
   {
     return { addr, id_reg, 0, 0, power_on, power_state, reset_state,
              reset_assert, reset_release,
-             restore_registers, detected_option, 0, 0 };
+             detected_option, 0, 0 };
   }
 
   constexpr pmic_variant_t pmic_variant_confirmed_option(
@@ -274,11 +265,11 @@ namespace board_detect
     ops::op_list_t power_on,
     reg_bit_t power_state, reg_bit_t reset_state,
     ops::op_list_t reset_assert, ops::op_list_t reset_release,
-    register_list_t restore_registers, std::uint32_t option_mask,
+    std::uint32_t option_mask,
     std::uint32_t option_value)
   {
     return { addr, id_reg, 0, 0, power_on, power_state, reset_state,
-             reset_assert, reset_release, restore_registers, 0,
+             reset_assert, reset_release, 0,
              option_mask, option_value };
   }
 
@@ -408,13 +399,6 @@ namespace board_detect
     std::uint32_t ack[4] = {};
   };
 
-  struct detector_workspace_t
-  {
-    // Per-detection scalar scratch carried from signature() to its immediately
-    // following confirm(). GPIO state is owned by detection_transaction_t.
-    std::uint64_t values[4] = {};
-  };
-
   struct probe_ctx_t : prepare_ctx_t
   {
     // The hint moves its detector family forward. Candidate selection within
@@ -423,7 +407,6 @@ namespace board_detect
     // A family whose members are all candidate-only is never moved forward.
     // hint and final_attempt are inherited by prepare/refine.
     i2c_scan_cache_t i2c_cache;
-    detector_workspace_t detector_workspace;
     // True once any family entered confirm() in this detection pass.
     bool confirm_attempted = false;
     // A chip ID has established this family. Stop later family probes in this

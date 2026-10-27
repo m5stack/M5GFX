@@ -282,7 +282,7 @@ static void prepare_states() {
   static const ops::op_t writes[] = {ops::i2c_write8(0, 0x10, 1)};
   static const pmic_variant_t variants[] = {
       pmic_variant_confirmed_option(0x6e, 0, ops::list(writes), reg_bit(0, 0), reg_bit(0, 0),
-                                    ops::no_ops(), ops::no_ops(), {nullptr, 0}, 0, 0)};
+                                    ops::no_ops(), ops::no_ops(), 0, 0)};
   const board_desc_t desc = {{60002, "power fixture", 0},
                              i2c_power_confirmed(100000, variants, devices),
                              no_reset(),
@@ -357,8 +357,7 @@ static void reset_faults() {
   static const ops::op_t release_ops[] = {ops::i2c_write8(0, 0x11, 1)};
   static const pmic_variant_t variant[] = {
       pmic_variant_confirmed_option(0x6e, 0, ops::no_ops(), reg_bit(0, 0), reg_bit(0, 0),
-                                    ops::list(assert_ops), ops::list(release_ops),
-                                    {nullptr, 0}, 0, 0)};
+                                    ops::list(assert_ops), ops::list(release_ops), 0, 0)};
   const board_desc_t base = {{60003, "reset fixture", 0},
                              i2c_power_confirmed(100000, variant, devices),
                              i2c_reset(1, 2, reset_hold_when_skipped),

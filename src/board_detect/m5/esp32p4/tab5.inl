@@ -74,7 +74,7 @@ namespace tab5_detail
   static const pmic_variant_t power_variants[] = {
     pmic_variant_ack_only(pi4io1_addr, 0, ops::list(pmic_ops::tab5_power_on),
                           reg_bit(0, 0), reg_bit(0, 0),
-                          { nullptr, 0 }, { nullptr, 0 }, { nullptr, 0 }, 0),
+                          { nullptr, 0 }, { nullptr, 0 }, 0),
   };
 }
 

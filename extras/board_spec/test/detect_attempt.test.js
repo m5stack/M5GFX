@@ -17,7 +17,6 @@ test("production attempt yields before construction and preserves adoption and r
   const main = await readMain();
   const attempt = body(main, "static board_detect::detect_outcome_t run_detection_attempt(");
   const finish = body(main, "static board_detect::detect_outcome_t finish_detection_setup(");
-  const compat = body(main, "board_t M5GFX::autodetect(");
   const projection = main.slice(main.indexOf("    const auto board = outcome.setup_succeeded"), main.indexOf("#if defined ( ARDUINO_M5STACK_ATOM )", main.indexOf("    const auto board = outcome.setup_succeeded")));
   const header = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
   const candidateGetter = body(header, "board_t getCandidateBoard(");
@@ -66,21 +65,11 @@ log_t success_log(const board_result_t&) {return {nullptr,nullptr};}
 const int probe_i2c_port=0;
 template<class SetupDetected> board_detect::detect_outcome_t finish_detection_setup(board_detect::board_result_t& result, board_detect::detect_outcome_t outcome, board_detect::detection_transaction_t& transaction, board_t setup_board, SetupDetected setup) ${finish}
 template<class SetupDetected> board_detect::detect_outcome_t run_detection_attempt(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, SetupDetected setup) ${attempt}
-struct package_t {const board_detect::board_detector_t* const* detectors;bool conditional_pins_unavailable=false;};
-package_t active_package;
-package_t select_detection_package(bool) {return active_package;}
-bool reject_detected_setup(board_t) {return false;}
-struct holder_t {int* get() {return nullptr;}};
 struct M5GFX {
  board_t _board=board_t::board_unknown,_board_candidate=board_t::board_unknown;
  board_t getBoard() const {return _board;}
  board_t getCandidateBoard() const ${candidateGetter}
  void project(const board_detect::detect_outcome_t& outcome) { ${projection} }
- struct {board_t fallback_board=board_t::board_unknown;} _detect_config;
- holder_t _panel_last;
- void panel(int*) {}
- bool _adopt_detected_parts(int*,int*,int*,int*) {return true;}
- board_t autodetect(bool use_reset,board_t board,bool final_attempt,bool* transient_fallback,bool* no_signature,board_t* candidate_board) ${compat}
 };
 int main() {
  using namespace board_detect;
@@ -141,12 +130,6 @@ int main() {
  assert(construct_count==0&&adopt_count==0&&rollback_count==5&&commit_count==0);
  assert(!should_persist_detection(yielded,0));
  refined_member=nullptr;
- // The protected compatibility wrapper must deliver QFN40 weak candidates.
- detected={};detected.candidate=&desc.def;detected.status=detect_status_t::no_match;
- active_package.detectors=list;M5GFX gfx;board_t candidate=board_t::board_unknown;
- bool transient=false,no_signature=false;
- assert(gfx.autodetect(false,board_t::board_unknown,true,&transient,&no_signature,&candidate)==board_t::board_unknown);
- assert(candidate==board_t::member);assert(!transient);
 }
 `, "attempt");
 });
@@ -204,4 +187,41 @@ test("production init restores panel according to adoption independently of verd
     'assert(calls==(!direct?1:adopted?0:2));assert(clears==(direct&&!adopted));',
     '}}',
   ].join("\n"), "panel restoration");
+});
+
+test("setup rejection lists preserve all historical board groups", async () => {
+  const reject = body(await readMain(), "static bool reject_detected_setup(");
+  const groups = [
+    ["board_M5StickCPlus"],
+    ["board_M5StopWatch", "board_M5PaperMono"],
+    ["board_M5ChainCaptain"],
+    ["board_M5PaperColor"],
+    ["board_M5PaperS3"],
+    ["board_M5PaperDIY"],
+    ["board_M5Cardputer", "board_M5CardputerADV", "board_M5VAMeter"],
+    ["board_M5AirQ"],
+    ["board_M5StamPLC"],
+    ["board_M5CoreP4X"],
+    ["board_M5Tab5", "board_M5Tab5X"],
+    ["board_M5StampC5", "board_M5ToughC5"],
+    ["board_M5CoreMatrix"],
+  ];
+  const names = ["board_unknown", ...new Set(groups.flat())];
+  await compileRun(`
+#include <cassert>
+#include <initializer_list>
+enum class board_t {${names.join(",")}};
+bool reject_default(board_t setup_board) ${reject}
+${groups.map((boards, index) => `
+#define M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS ${boards.map((name) => `board_t::${name}`).join(",")}
+bool reject_${index}(board_t setup_board) ${reject}
+#undef M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS
+`).join("\n")}
+int main() {
+ for (const auto board : {${names.map((name) => `board_t::${name}`).join(",")}}) {
+  assert(!reject_default(board));
+  ${groups.map((boards, index) => `assert(reject_${index}(board) == (${boards.map((name) => `board == board_t::${name}`).join(" || ")}));`).join("\n  ")}
+ }
+}
+`, "setup rejection");
 });

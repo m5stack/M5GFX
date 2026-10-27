@@ -40,8 +40,7 @@ namespace ops
 
   enum class op_kind_t : std::uint8_t
   {
-    // Current PMIC descriptions use register writes, delays and GPIO operations;
-    // transfer remains a reserved, unsupported operation. wait_ready cannot
+    // wait_ready cannot
     // shorten one lgfx I2C transaction. Deadline overrun depends on the lower I2C implementation
     // (hardware is about 26 ms; software I2C may take tens of milliseconds
     // with SCL stuck), but no new transaction begins at zero remaining time.
@@ -53,7 +52,6 @@ namespace ops
     i2c_write16le,
     i2c_masked8,
     i2c_wait_ready,
-    i2c_transfer,
   };
 
   class op_t
@@ -87,12 +85,6 @@ namespace ops
       std::uint16_t interval_ms;
       std::uint8_t dev;
     };
-    struct transfer_t
-    {
-      std::uint16_t blob_offset;
-      std::uint16_t blob_size;
-      std::uint8_t dev;
-    };
     union payload_t
     {
       reg8_t reg8;
@@ -100,14 +92,12 @@ namespace ops
       gpio_t gpio;
       delay_t delay;
       wait_t wait;
-      transfer_t transfer;
 
       constexpr payload_t(reg8_t value) : reg8(value) {}
       constexpr payload_t(reg16_t value) : reg16(value) {}
       constexpr payload_t(gpio_t value) : gpio(value) {}
       constexpr payload_t(delay_t value) : delay(value) {}
       constexpr payload_t(wait_t value) : wait(value) {}
-      constexpr payload_t(transfer_t value) : transfer(value) {}
     };
 
     constexpr op_t(op_kind_t kind, payload_t payload) : kind_(kind), payload_(payload) {}
@@ -125,7 +115,6 @@ namespace ops
     friend constexpr op_t i2c_bit_on(std::uint8_t, std::uint16_t, std::uint8_t);
     friend constexpr op_t i2c_bit_off(std::uint8_t, std::uint16_t, std::uint8_t);
     friend constexpr op_t i2c_wait_ready(std::uint8_t, std::uint32_t, std::uint16_t);
-    friend constexpr op_t i2c_transfer(std::uint8_t, std::uint16_t, std::uint16_t);
     friend struct decoded_register_write_t;
     friend struct op_access_t;
   };
@@ -189,14 +178,6 @@ namespace ops
                 op_t::payload_t(op_t::wait_t { timeout_ms, interval_ms, dev }));
   }
 
-  // Payload bytes live in a companion blob. Execution is deliberately reserved.
-  constexpr op_t i2c_transfer(std::uint8_t dev, std::uint16_t blob_offset,
-                              std::uint16_t blob_size)
-  {
-    return op_t(op_kind_t::i2c_transfer,
-                op_t::payload_t(op_t::transfer_t { blob_offset, blob_size, dev }));
-  }
-
   struct op_list_t
   {
     const op_t* data;
@@ -243,19 +224,6 @@ namespace ops
   {
     std::uint32_t deadline_ms;
     std::uint16_t interval_ms;
-  };
-
-  struct backend_t
-  {
-    bool (*i2c_read8)(void*, const i2c_device_t&, std::uint16_t, std::uint8_t*);
-    bool (*i2c_write8)(void*, const i2c_device_t&, std::uint16_t, std::uint8_t);
-    bool (*i2c_write16le)(void*, const i2c_device_t&, std::uint16_t, std::uint16_t);
-    bool (*i2c_ready)(void*, const i2c_device_t&, std::uint32_t);
-    bool (*gpio_set_mode)(void*, std::uint16_t, gpio_mode_t);
-    bool (*gpio_write)(void*, std::uint16_t, bool);
-    void (*delay_ms)(void*, std::uint32_t);
-    std::uint32_t (*millis)(void*);
-    void* ctx;
   };
 
   struct decoded_register_write_t
@@ -336,7 +304,6 @@ namespace ops
     for (std::size_t i = 0; i < count; ++i)
     {
       const auto kind = operations[i].kind();
-      if (kind == op_kind_t::i2c_transfer) { return result(op_status_t::unsupported, i); }
       if (kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_write16le
        || kind == op_kind_t::i2c_masked8
        || kind == op_kind_t::i2c_wait_ready)
@@ -386,7 +353,7 @@ namespace ops
         }
       }
       if (static_cast<std::uint8_t>(kind)
-        > static_cast<std::uint8_t>(op_kind_t::i2c_transfer))
+        > static_cast<std::uint8_t>(op_kind_t::i2c_wait_ready))
       {
         return result(op_status_t::invalid_op, i);
       }
@@ -394,198 +361,6 @@ namespace ops
     return result(op_status_t::ok, count);
   }
 
-  inline bool retry_available(const backend_t& backend, const retry_policy_t* policy)
-  {
-    if (policy == nullptr || backend.millis == nullptr) { return false; }
-    return static_cast<std::int32_t>(backend.millis(backend.ctx) - policy->deadline_ms) < 0;
-  }
-
-  inline const retry_policy_t* operation_retry_policy(
-    const backend_t& backend, const i2c_device_t& device,
-    const retry_policy_t* policy, retry_policy_t& device_policy)
-  {
-    if (!(device.flags & i2c_device_retry_transient_nack)) { return policy; }
-    // MCU-based PM1/IOE1 slaves can NACK briefly while processing a write.
-    device_policy = { backend.millis(backend.ctx) + transient_nack_retry_ms,
-                      transient_nack_retry_interval_ms };
-    if (policy != nullptr)
-    {
-      if (static_cast<std::int32_t>(policy->deadline_ms - device_policy.deadline_ms) > 0)
-      { device_policy.deadline_ms = policy->deadline_ms; }
-      if (policy->interval_ms < device_policy.interval_ms)
-      { device_policy.interval_ms = policy->interval_ms; }
-    }
-    return &device_policy;
-  }
-
-  inline void retry_delay(const backend_t& backend, const retry_policy_t& policy)
-  {
-    if (backend.delay_ms != nullptr) { backend.delay_ms(backend.ctx, policy.interval_ms); }
-  }
-
-  inline run_result_t run_ops(const backend_t& backend,
-                              const i2c_device_t* devices, std::size_t device_count,
-                              const op_t* operations, std::size_t count,
-                              const gpio_scope_t& gpio_scope,
-                              const retry_policy_t* policy = nullptr,
-                              void (*wait_ready_finished)(void*, const i2c_device_t&,
-                                                          std::uint32_t, bool) = nullptr)
-  {
-    auto checked = validate_ops(devices, device_count, operations, count, gpio_scope);
-    if (checked.status != op_status_t::ok) { return checked; }
-    if (policy != nullptr
-     && (policy->interval_ms == 0 || backend.millis == nullptr || backend.delay_ms == nullptr))
-    {
-      return result(op_status_t::unsupported, 0);
-    }
-    // Validate backend support for the complete list before the first side effect.
-    for (std::size_t i = 0; i < count; ++i)
-    {
-      const auto kind = operations[i].kind();
-      if (kind == op_kind_t::delay_ms && backend.delay_ms == nullptr)
-      {
-        return result(op_status_t::unsupported, i);
-      }
-      if (kind == op_kind_t::gpio_set_mode && backend.gpio_set_mode == nullptr)
-      {
-        return result(op_status_t::unsupported, i);
-      }
-      if ((kind == op_kind_t::gpio_write_high || kind == op_kind_t::gpio_write_low)
-       && backend.gpio_write == nullptr)
-      {
-        return result(op_status_t::unsupported, i);
-      }
-      if (kind == op_kind_t::i2c_wait_ready
-       && (backend.i2c_ready == nullptr || backend.millis == nullptr
-        || backend.delay_ms == nullptr))
-      {
-        return result(op_status_t::unsupported, i);
-      }
-      if ((kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_write16le
-        || kind == op_kind_t::i2c_masked8)
-       && ((kind == op_kind_t::i2c_write16le ? backend.i2c_write16le == nullptr
-                                             : backend.i2c_write8 == nullptr)
-        || (kind == op_kind_t::i2c_masked8
-         && op_access_t::reg8(operations[i]).mask != 0xFF
-         && backend.i2c_read8 == nullptr)
-        || ((devices[op_access_t::dev(operations[i])].flags
-             & i2c_device_retry_transient_nack) != 0
-         && (backend.millis == nullptr || backend.delay_ms == nullptr))))
-      {
-        return result(op_status_t::unsupported, i);
-      }
-    }
-    for (std::size_t i = 0; i < count; ++i)
-    {
-      const auto& operation = operations[i];
-      const auto kind = operation.kind();
-      if (kind == op_kind_t::delay_ms)
-      {
-        backend.delay_ms(backend.ctx, op_access_t::milliseconds(operation));
-      }
-      else if (kind == op_kind_t::gpio_set_mode)
-      {
-        if (!backend.gpio_set_mode(backend.ctx, op_access_t::pin(operation),
-                                   op_access_t::mode(operation)))
-        {
-          return result(op_status_t::gpio_error, i);
-        }
-      }
-      else if (kind == op_kind_t::gpio_write_high || kind == op_kind_t::gpio_write_low)
-      {
-        if (!backend.gpio_write(backend.ctx, op_access_t::pin(operation),
-                                kind == op_kind_t::gpio_write_high))
-        {
-          return result(op_status_t::gpio_error, i);
-        }
-      }
-      else if (kind == op_kind_t::i2c_wait_ready)
-      {
-        const auto& device = devices[op_access_t::dev(operation)];
-        const auto started = backend.millis(backend.ctx);
-        const auto deadline = started + op_access_t::timeout(operation);
-        for (;;)
-        {
-          const auto now = backend.millis(backend.ctx);
-          const auto remaining = static_cast<std::int32_t>(deadline - now) > 0
-                               ? deadline - now : 0;
-          const auto wire_timeout = device.wire_timeout_ms == 0
-                                  ? remaining
-                                  : (device.wire_timeout_ms < remaining
-                                     ? device.wire_timeout_ms : remaining);
-          if (backend.i2c_ready(backend.ctx, device, wire_timeout))
-          {
-            if (wait_ready_finished)
-            { wait_ready_finished(backend.ctx, device, backend.millis(backend.ctx) - started, true); }
-            break;
-          }
-          if (static_cast<std::int32_t>(backend.millis(backend.ctx) - deadline) >= 0)
-          {
-            if (wait_ready_finished)
-            { wait_ready_finished(backend.ctx, device, backend.millis(backend.ctx) - started, false); }
-            return result(op_status_t::timeout, i);
-          }
-          const auto left = deadline - backend.millis(backend.ctx);
-          const auto interval = op_access_t::interval(operation);
-          backend.delay_ms(backend.ctx, interval < left ? interval : left);
-        }
-      }
-      else
-      {
-        if (kind == op_kind_t::i2c_write16le)
-        {
-          const auto write = op_access_t::reg16(operation);
-          const auto& device = devices[write.dev];
-          retry_policy_t device_retry_policy {};
-          const auto* operation_policy = operation_retry_policy(
-            backend, device, policy, device_retry_policy);
-          while (!backend.i2c_write16le(backend.ctx, device, write.reg, write.value))
-          {
-            if (!retry_available(backend, operation_policy))
-            {
-              return result(operation_policy == nullptr ? op_status_t::i2c_nack
-                                                         : op_status_t::timeout, i);
-            }
-            retry_delay(backend, *operation_policy);
-          }
-          continue;
-        }
-        const auto write = op_access_t::reg8(operation);
-        const auto& device = devices[write.dev];
-        retry_policy_t device_retry_policy {};
-        const auto* operation_policy = operation_retry_policy(
-          backend, device, policy, device_retry_policy);
-        for (;;)
-        {
-          bool ok = false;
-          if (kind == op_kind_t::i2c_write8 || write.mask == 0xFF)
-          {
-            ok = backend.i2c_write8(backend.ctx, device, write.reg, write.value);
-          }
-          else
-          {
-            std::uint8_t old_value = 0;
-            if (backend.i2c_read8 != nullptr
-             && backend.i2c_read8(backend.ctx, device, write.reg, &old_value))
-            {
-              const auto new_value = static_cast<std::uint8_t>(
-                (old_value & static_cast<std::uint8_t>(~write.mask))
-                | (write.value & write.mask));
-              ok = backend.i2c_write8(backend.ctx, device, write.reg, new_value);
-            }
-          }
-          if (ok) { break; }
-          if (!retry_available(backend, operation_policy))
-          {
-            return result(operation_policy == nullptr ? op_status_t::i2c_nack
-                                                       : op_status_t::timeout, i);
-          }
-          retry_delay(backend, *operation_policy);
-        }
-      }
-    }
-    return result(op_status_t::ok, count);
-  }
 }
 }
 }

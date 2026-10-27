@@ -64,11 +64,6 @@ namespace board_detect
       outcome.candidate_kind = kind;
       if (outcome.verdict != verdict_t::confirmed && candidate != nullptr)
       { outcome.verdict = verdict_t::candidate; }
-      // A mismatched preference retries until the final attempt. A retained
-      // power failure skips member selection; a retry can run refinement once
-      // power preparation succeeds and apply the observed member preference.
-      if (final_attempt && outcome.reason == fail_reason_t::family_unresolved
-       && outcome.candidate_kind == candidate_kind_t::provisional) { return outcome; }
       // This reason ends the session without another attempt.
       if (outcome.reason == fail_reason_t::no_signature) { return outcome; }
     }

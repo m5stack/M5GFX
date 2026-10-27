@@ -131,11 +131,16 @@ int main() {
  assert(nvs_calls==0&&detect_calls==0);
  }
  assert(commit_calls==3&&rollback_calls==15);
- prepare_ok=false;reset_flags.clear();M5GFX retry;retry._detect_config.fixed_board=board_t::member;
- assert(!retry.init(false));assert(reset_flags==std::vector<bool>({false,false,false,true,true}));prepare_ok=true;
- prepare_ok=false;startup_countdown=4;reset_flags.clear();M5GFX transient;transient._detect_config.fixed_board=board_t::member;
- assert(transient.init(false));assert(reset_flags==std::vector<bool>({false,false,false,true}));
- assert(transient.getBoard()==board_t::member);prepare_ok=true;
+ for(bool reset : {false,true}) for(int recovered_at=0;recovered_at<=5;++recovered_at) {
+  prepare_ok=false;startup_countdown=recovered_at;reset_flags.clear();
+  M5GFX retry;retry._detect_config.fixed_board=board_t::member;
+  assert(retry.init(reset)==(recovered_at!=0));
+  assert(retry.getBoard()==(recovered_at?board_t::member:board_t::board_unknown));
+  const int count=recovered_at?recovered_at:5;
+  assert(reset_flags.size()==static_cast<unsigned>(count));
+  for(int attempt=0;attempt<count;++attempt) {assert(reset_flags[attempt]==(reset||attempt>=3));}
+ }
+ prepare_ok=true;
  const int old_captures=captures,old_starts=start_calls;
  opi_active=true;desc.display.cs=33;M5GFX opi;opi._detect_config.fixed_board=board_t::member;
  assert(!opi.init()&&opi.getFixedBoard()==board_t::member&&opi.getBoard()==board_t::board_unknown);

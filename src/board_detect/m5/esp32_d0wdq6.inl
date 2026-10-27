@@ -36,12 +36,10 @@ namespace m5
   static const pmic_variant_t core_pmic_variants[] = {
     pmic_variant(0x34, 0x03, 0x03, ops::list(pmic_ops::power192),
                  reg_bit(0x12, 0x04), reg_bit(0x96, 0x02),
-                 ops::list(pmic_ops::reset192), ops::list(pmic_ops::release192),
-                 { nullptr, 0 }, 0),
+                 ops::list(pmic_ops::reset192), ops::list(pmic_ops::release192), 0),
     pmic_variant(0x34, 0x03, 0x4A, ops::list(pmic_ops::power2101),
                  reg_bit(0x90, 0x08), reg_bit(0x90, 0x02),
                  ops::list(pmic_ops::reset2101), ops::list(pmic_ops::release2101),
-                 { nullptr, 0 },
                  generated_options::core2::new_pmic),
   };
 

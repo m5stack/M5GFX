@@ -92,8 +92,8 @@ with `npm test`:
   retained assertions cover S3 family panel types, DMA, bus sharing, backlight and
   touch selection, plus CoreS3, classic Atom, C6 displays, and Tab5 setup. Complete
   descriptor snapshots do not contain these device construction settings.
-- `detect_attempt.test.js`: public `setDetectConfig`, `getCandidateBoard`, legacy
-  `autodetect`, and `init_impl` panel restoration. Its combined fixture also
+- `detect_attempt.test.js`: public `setDetectConfig`, `getCandidateBoard`,
+  and `init_impl` panel restoration. Its combined fixture also
   retains older integration assertions.
 - The first test in `fixed_board.test.js`: public fixed acceptance/getter and
   startup-prefix behavior, including its combined legacy integration fixture.

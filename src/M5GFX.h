@@ -215,10 +215,6 @@ namespace m5gfx
 
     bool init_impl(bool use_reset, bool use_clear) override;
     bool _finish_detected_init(bool use_clear);
-    board_t autodetect(bool use_reset = false, board_t board = board_t::board_unknown,
-                       bool final_attempt = false, bool* transient_fallback = nullptr,
-                       bool* no_signature = nullptr,
-                       board_t* candidate_board = nullptr);
     bool _adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
                                lgfx::ILight* light, lgfx::ITouch* touch);
     void _set_backlight(lgfx::ILight* bl);

@@ -200,13 +200,11 @@ namespace m5
     no_options(), pins(wiring::vameter::hold),
   };
 
-  // Preserve the register order needed by future rollback support.
-  static const std::uint8_t sticks3_restore_order[] = { 0x09, 0x11, 0x13, 0x10, 0x16 };
   static const pmic_variant_t sticks3_pmic_variants[] = {
     pmic_variant_ack_only(specs::sticks3::pmic::i2c_addr, specs::sticks3::pmic::id_reg,
                           ops::list(pmic_ops::sticks3_power_on),
                           reg_bit(0x11, 0x04), reg_bit(0x11, 0x04),
-                          ops::no_ops(), ops::no_ops(), registers(sticks3_restore_order), 0),
+                          ops::no_ops(), ops::no_ops(), 0),
   };
 
   static constexpr board_desc_t desc_sticks3 = {
@@ -228,8 +226,7 @@ namespace m5
     pmic_variant_ack_only(specs::stopwatch::pmic::i2c_addr,
                           specs::stopwatch::pmic::id_reg,
                           ops::list(pmic_ops::stopwatch_power_on),
-                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
-                          { nullptr, 0 }, 0),
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(), 0),
   };
   static const pmic_variant_t papermono_pmic_variants[] = {
     pmic_variant_ack_only(specs::papermono::pmic::i2c_addr,
@@ -237,8 +234,7 @@ namespace m5
                           // Also without OPI PSRAM: the refine needs the touch
                           // powered and out of reset to confirm PaperMono.
                           ops::list(pmic_ops::papermono_power_on),
-                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
-                          { nullptr, 0 }, 0),
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(), 0),
   };
   // Construction configures the panel TE input before display adoption.
   static constexpr std::int8_t stopwatch_te_pin = 38;
@@ -281,12 +277,12 @@ namespace m5
                           specs::chaincaptain::pmic::id_reg,
 #if !(defined(CONFIG_ESP32S3_SPIRAM_SUPPORT)) || !defined(CONFIG_SPIRAM_MODE_OCT)
                           ops::no_ops(), reg_bit(0, 0), reg_bit(0, 0),
-                          ops::no_ops(), ops::no_ops(), { nullptr, 0 }, 0),
+                          ops::no_ops(), ops::no_ops(), 0),
 #else
                           ops::list(pmic_ops::chaincaptain_power_on),
                           reg_bit(0, 0), reg_bit(0, 0),
                           ops::list(pmic_ops::chaincaptain_reset_assert),
-                          ops::list(pmic_ops::chaincaptain_reset_release), { nullptr, 0 }, 0),
+                          ops::list(pmic_ops::chaincaptain_reset_release), 0),
 #endif
   };
   static const pmic_variant_t papercolor_pmic_variants[] = {
@@ -297,8 +293,7 @@ namespace m5
 #else
                           ops::list(pmic_ops::papercolor_power_on),
 #endif
-                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
-                          { nullptr, 0 }, 0),
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(), 0),
   };
   static constexpr board_desc_t desc_chaincaptain = {
     { id(lgfx::board_M5ChainCaptain), "M5ChainCaptain", 0 },
@@ -360,8 +355,7 @@ namespace m5
   static const pmic_variant_t paperdiy_pmic_variants[] = {
     pmic_variant_ack_only(specs::paperdiy::pmic::i2c_addr, specs::paperdiy::pmic::id_reg,
                           ops::list(pmic_ops::paperdiy_power_on),
-                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(),
-                          { nullptr, 0 }, 0),
+                          reg_bit(0, 0), reg_bit(0, 0), ops::no_ops(), ops::no_ops(), 0),
   };
   static constexpr board_desc_t desc_paperdiy = {
     { id(lgfx::board_M5PaperDIY), "M5PaperDIY", 0 },

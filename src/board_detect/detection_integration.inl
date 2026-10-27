@@ -227,13 +227,14 @@
   static board_detect::detect_outcome_t run_fixed_detection_session(
     const board_detect::m5::board_entry_t& entry, bool allow_reset, SetupDetected setup)
   {
-    board_detect::detect_outcome_t outcome;
-    for (std::uint8_t attempt = 0; attempt < 5; ++attempt)
-    {
-      if (attempt == 3) { allow_reset = true; }
-      outcome = run_fixed_detection(entry, allow_reset, setup);
-      outcome.attempts = attempt + 1;
-      if (outcome.setup_succeeded) { return outcome; }
-    }
-    return outcome;
+    board_detect::detect_request_t request;
+    request.allow_reset = allow_reset;
+    request.max_attempts = 5;
+    // Fixed startup has no no_signature result or candidate selection. The
+    // shared session retries every failure and permits reset from attempt 3.
+    return board_detect::run_detection_session(request,
+      [&entry, &setup](const board_detect::detect_request_t& attempt, bool)
+      {
+        return run_fixed_detection(entry, attempt.allow_reset, setup);
+      });
   }
