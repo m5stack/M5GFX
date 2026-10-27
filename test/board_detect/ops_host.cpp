@@ -211,11 +211,6 @@ static void test_validation()
     assert(bdops::validate_ops(devices, 1, &absent, 1, gpio_scope).status
            == bdops::op_status_t::invalid_gpio);
   }
-  {
-    const auto operation = bdops::i2c_transfer(0, 0, 1);
-    assert(bdops::validate_ops(devices, 1, &operation, 1, gpio_scope).status
-           == bdops::op_status_t::unsupported);
-  }
 }
 
 static void test_i2c_execution()

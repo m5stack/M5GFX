@@ -8,7 +8,7 @@ namespace corep4x_detail
     pmic_variant_ack_only(pmic_ops::pm1_i2c_addr, 0,
                           ops::list(pmic_ops::corep4x_power_on),
                           reg_bit(0, 0), reg_bit(0, 0),
-                          { nullptr, 0 }, { nullptr, 0 }, { nullptr, 0 }, 0),
+                          { nullptr, 0 }, { nullptr, 0 }, 0),
   };
 }
 

@@ -63,10 +63,7 @@ inline void descriptor(std::ostream &out, const board_desc_t &d) {
     operations(out, v.power_on);
     operations(out, v.reset_assert);
     operations(out, v.reset_release);
-    out << " restore[";
-    for (unsigned j = 0; j < v.restore_registers.size; ++j)
-      out << unsigned(v.restore_registers.data[j]) << ',';
-    out << "]\n";
+    out << "\n";
   }
   out << "reset " << unsigned(d.reset.kind) << ' ' << int(d.reset.pin) << ' '
       << unsigned(d.reset.low_ms) << ' ' << unsigned(d.reset.post_ms) << ' '

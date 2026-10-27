@@ -40,8 +40,7 @@ namespace ops
 
   enum class op_kind_t : std::uint8_t
   {
-    // Current PMIC descriptions use register writes, delays and GPIO operations;
-    // transfer remains a reserved, unsupported operation. wait_ready cannot
+    // wait_ready cannot
     // shorten one lgfx I2C transaction. Deadline overrun depends on the lower I2C implementation
     // (hardware is about 26 ms; software I2C may take tens of milliseconds
     // with SCL stuck), but no new transaction begins at zero remaining time.
@@ -53,7 +52,6 @@ namespace ops
     i2c_write16le,
     i2c_masked8,
     i2c_wait_ready,
-    i2c_transfer,
   };
 
   class op_t
@@ -87,12 +85,6 @@ namespace ops
       std::uint16_t interval_ms;
       std::uint8_t dev;
     };
-    struct transfer_t
-    {
-      std::uint16_t blob_offset;
-      std::uint16_t blob_size;
-      std::uint8_t dev;
-    };
     union payload_t
     {
       reg8_t reg8;
@@ -100,14 +92,12 @@ namespace ops
       gpio_t gpio;
       delay_t delay;
       wait_t wait;
-      transfer_t transfer;
 
       constexpr payload_t(reg8_t value) : reg8(value) {}
       constexpr payload_t(reg16_t value) : reg16(value) {}
       constexpr payload_t(gpio_t value) : gpio(value) {}
       constexpr payload_t(delay_t value) : delay(value) {}
       constexpr payload_t(wait_t value) : wait(value) {}
-      constexpr payload_t(transfer_t value) : transfer(value) {}
     };
 
     constexpr op_t(op_kind_t kind, payload_t payload) : kind_(kind), payload_(payload) {}
@@ -125,7 +115,6 @@ namespace ops
     friend constexpr op_t i2c_bit_on(std::uint8_t, std::uint16_t, std::uint8_t);
     friend constexpr op_t i2c_bit_off(std::uint8_t, std::uint16_t, std::uint8_t);
     friend constexpr op_t i2c_wait_ready(std::uint8_t, std::uint32_t, std::uint16_t);
-    friend constexpr op_t i2c_transfer(std::uint8_t, std::uint16_t, std::uint16_t);
     friend struct decoded_register_write_t;
     friend struct op_access_t;
   };
@@ -187,14 +176,6 @@ namespace ops
   {
     return op_t(op_kind_t::i2c_wait_ready,
                 op_t::payload_t(op_t::wait_t { timeout_ms, interval_ms, dev }));
-  }
-
-  // Payload bytes live in a companion blob. Execution is deliberately reserved.
-  constexpr op_t i2c_transfer(std::uint8_t dev, std::uint16_t blob_offset,
-                              std::uint16_t blob_size)
-  {
-    return op_t(op_kind_t::i2c_transfer,
-                op_t::payload_t(op_t::transfer_t { blob_offset, blob_size, dev }));
   }
 
   struct op_list_t
@@ -336,7 +317,6 @@ namespace ops
     for (std::size_t i = 0; i < count; ++i)
     {
       const auto kind = operations[i].kind();
-      if (kind == op_kind_t::i2c_transfer) { return result(op_status_t::unsupported, i); }
       if (kind == op_kind_t::i2c_write8 || kind == op_kind_t::i2c_write16le
        || kind == op_kind_t::i2c_masked8
        || kind == op_kind_t::i2c_wait_ready)
@@ -386,7 +366,7 @@ namespace ops
         }
       }
       if (static_cast<std::uint8_t>(kind)
-        > static_cast<std::uint8_t>(op_kind_t::i2c_transfer))
+        > static_cast<std::uint8_t>(op_kind_t::i2c_wait_ready))
       {
         return result(op_status_t::invalid_op, i);
       }

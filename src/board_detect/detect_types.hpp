@@ -99,7 +99,7 @@ namespace board_detect
   enum class candidate_kind_t : std::uint8_t { none, weak, provisional };
   enum class fail_reason_t : std::uint8_t
   {
-    none, no_signature, confirm_transient, confirm_definitive, excluded_by_set,
+    none, no_signature, excluded_by_set,
     family_unresolved, prepare_failed, construct_failed, adopt_failed,
   };
 

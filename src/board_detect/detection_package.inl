@@ -16,15 +16,12 @@
     bool direct_setup = false;
   };
 
-  __attribute__((always_inline)) static inline detection_package_t select_detection_package(bool legacy_autodetect = false)
+  __attribute__((always_inline)) static inline detection_package_t select_detection_package()
   {
     detection_package_t package;
-    (void)legacy_autodetect;
     // Selection does not probe or configure any GPIO.
 #if !defined(CONFIG_IDF_TARGET) || defined(CONFIG_IDF_TARGET_ESP32)
     package.direct_setup = true;
-    // The protected legacy autodetect method never probed ESP32 directly.
-    if (legacy_autodetect) { return package; }
     const auto pkg = board_detect::io::package_version();
     if (pkg == board_detect::io::package_classic_q6)
     { package.detectors = board_detect::m5::esp32_d0wdq6_detectors; }

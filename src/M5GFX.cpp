@@ -1025,51 +1025,6 @@ namespace m5gfx
     return true;
   }
 
-  board_t M5GFX::autodetect(bool use_reset, board_t board,
-                            bool final_attempt, bool* transient_fallback,
-                            bool* no_signature, board_t* candidate_board)
-  {
-    panel(nullptr);
-#if defined (M5GFX_HAS_BOARD_DETECT)
-    const auto package = select_detection_package(true);
-    board_detect::detect_request_t request;
-    request.hint = static_cast<std::uint32_t>(board) <= UINT16_MAX
-                 ? static_cast<board_detect::board_id_t>(board) : board_detect::board_id_unknown;
-    request.preferred = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
-    request.allow_reset = use_reset;
-    request.conditional_pins_unavailable = package.conditional_pins_unavailable;
-    const auto outcome = board_detect::run_detection_session(request,
-      [this, &package, final_attempt](const board_detect::detect_request_t& attempt, bool)
-      {
-        return run_detection_attempt(package.detectors, attempt, final_attempt,
-          [this](board_detect::m5::display_parts_t& parts, board_t setup_board)
-          {
-            return !reject_detected_setup(setup_board)
-                && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
-          });
-      });
-    if (no_signature != nullptr)
-    { *no_signature = outcome.reason == board_detect::fail_reason_t::no_signature; }
-    if (candidate_board != nullptr && *candidate_board == board_t::board_unknown
-     && outcome.result.candidate != nullptr)
-    { *candidate_board = static_cast<board_t>(outcome.result.candidate->id); }
-    if (outcome.setup_succeeded && transient_fallback != nullptr)
-    { *transient_fallback = outcome.result.provisional; }
-    panel(_panel_last.get());
-    return outcome.setup_succeeded ? static_cast<board_t>(outcome.result.def->id)
-                                   : board_t::board_unknown;
-#else
-    (void)use_reset;
-    (void)board;
-    (void)final_attempt;
-    (void)transient_fallback;
-    (void)no_signature;
-    (void)candidate_board;
-    panel(_panel_last.get());
-    return board_t::board_unknown;
-#endif
-  }
-
 #else
 
   bool M5GFX::init_impl(bool use_reset, bool use_clear)
@@ -1077,23 +1032,10 @@ namespace m5gfx
     _detect_started = true;
     // SDL has no detection pass; a fixed board overrides its build-time model.
     _fixed_board = _detect_config.fixed_board;
-    board_t b = _fixed_board;
+    board_t board = _fixed_board;
 #if defined (M5GFX_BOARD)
-    if (b == board_t::board_unknown) { b = M5GFX_BOARD; }
+    if (board == board_t::board_unknown) { board = M5GFX_BOARD; }
 #endif
-    _board = autodetect(use_reset, b);
-    return LGFX_Device::init_impl(use_reset, use_clear);
-  }
-
-  board_t M5GFX::autodetect(bool use_reset, board_t board,
-                            bool final_attempt, bool* transient_fallback,
-                            bool* no_signature, board_t* candidate_board)
-  {
-    (void)use_reset;
-    (void)final_attempt;
-    (void)transient_fallback;
-    (void)no_signature;
-    (void)candidate_board;
     auto p = new Panel_sdl();
     _panel_last.reset(p);
     auto pnl_cfg = p->config();
@@ -1298,7 +1240,8 @@ namespace m5gfx
 
     panel(_panel_last.get());
 
-    return board;
+    _board = board;
+    return LGFX_Device::init_impl(use_reset, use_clear);
   }
 
 

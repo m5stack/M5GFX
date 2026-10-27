@@ -22,10 +22,10 @@
     static const pmic_variant_t power_variants[] = {
       pmic_variant_confirmed_option(axp_addr, specs::cores3::pmic::id_reg,
         ops::list(pmic_ops::cores3_vbus_off_power_on), reg_bit(0, 0), reg_bit(0, 0),
-        ops::no_ops(), ops::no_ops(), { nullptr, 0 }, vbus_5v, 0),
+        ops::no_ops(), ops::no_ops(), vbus_5v, 0),
       pmic_variant_confirmed_option(axp_addr, specs::cores3::pmic::id_reg,
         ops::list(pmic_ops::cores3_vbus_5v_power_on), reg_bit(0, 0), reg_bit(0, 0),
-        ops::no_ops(), ops::no_ops(), { nullptr, 0 }, vbus_5v, vbus_5v),
+        ops::no_ops(), ops::no_ops(), vbus_5v, vbus_5v),
     };
   }
 

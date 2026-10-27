@@ -11,7 +11,7 @@ namespace c6_display_detail
     pmic_variant_ack_only(specs::nesson1::i2c_pi4io2::i2c_addr, 0,
                           ops::list(pmic_ops::nesson1_power_on),
                           reg_bit(0, 0), reg_bit(0, 0),
-                          { nullptr, 0 }, { nullptr, 0 }, { nullptr, 0 }, 0),
+                          { nullptr, 0 }, { nullptr, 0 }, 0),
   };
 }
 

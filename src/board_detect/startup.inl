@@ -304,7 +304,7 @@
 
     // Checked before any pin or register is touched, on every public entry
     // that acts on a description. Lists are expected to come from ops::list(),
-    // registers(), pins() and options(); a hand-written size cannot be checked
+    // pins() and options(); a hand-written size cannot be checked
     // against its array, but a missing array with a non-zero size is rejected here.
     bool description_valid(const board_desc_t& desc)
     {
@@ -371,9 +371,7 @@
         valid = list_valid(variant.power_on)
              && list_valid(variant.reset_assert)
              && list_valid(variant.reset_release)
-             && list_valid(variant.restore_registers)
              && variant_device_valid(desc.power, variant)
-             && variant.restore_registers.size <= max_pmic_restore_registers
              && (variant.option_select_value & ~variant.option_select_mask) == 0
              && (desc.reset.kind != reset_kind_t::i2c_regs
                  || (variant.reset_assert.size != 0 && variant.reset_release.size != 0))

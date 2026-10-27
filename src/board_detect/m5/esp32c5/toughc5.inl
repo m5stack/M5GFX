@@ -9,8 +9,7 @@
                             ops::list(pmic_ops::toughc5_power_on),
                             reg_bit(0, 0), reg_bit(0, 0),
                             ops::list(pmic_ops::toughc5_reset_assert),
-                            ops::list(pmic_ops::toughc5_reset_release),
-                            { nullptr, 0 }, 0),
+                            ops::list(pmic_ops::toughc5_reset_release), 0),
     };
   }
 
