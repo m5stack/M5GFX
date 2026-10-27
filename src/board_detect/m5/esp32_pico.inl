@@ -92,7 +92,7 @@ static constexpr std::uint32_t stickc_id_values[] = { 0x7C };
 // probes compare under mask 0xFB and accept both with this single value.
 static constexpr std::uint32_t stickcplus_id_values[] = { 0x81 };
 static const spi_id_probe_t stickc_probes[] = {
-  // The legacy read checks the low byte only; the part-catalog probe describes
+  // This family checks the low byte only; the part-catalog probe describes
   // full IDs used by other boards and is intentionally not emitted here.
   spi_id_probe(0x04, 0xFF, stickc_id_values, 0, 1),
 };
@@ -131,8 +131,8 @@ static const board_def_t* const coreink_members[] = { &desc_coreink.def, nullptr
 static const spi_id_member_t coreink_member_descs[] = {
   { &desc_coreink, coreink_probes, 2, true, false, 0, true },
 };
-static bool fixed_start_coreink(board_result_t& result, const prepare_ctx_t& ctx)
-{ return fixed_start_spi_variant(result, ctx, coreink_member_descs[0]); }
+static bool fixed_prepare_coreink(board_result_t& result, const prepare_ctx_t& ctx)
+{ return fixed_prepare_spi_variant(result, ctx, coreink_member_descs[0]); }
 static const spi_id_detector_t coreink_detector(coreink_members, coreink_member_descs, 1);
 
 static const board_def_t* const stickcplus2_members[] = { &desc_stickcplus2.def, nullptr };
@@ -168,7 +168,7 @@ private:
     io::pin_mode(2, io::pin_mode_t::input_pullup);
     io::delay_rom_us(5);
     const bool atom_g2 = io::pin_read(2);
-    ctx.transaction->restore_start({ 2 });
+    ctx.transaction->restore_to_snapshot({ 2 });
     if (!atom_g2) { return false; }
     // StickC LCD reset is pulled high; Atom leaves G18 unconnected.
     const auto g18 = probe_pin_pulls(ctx, 1ULL << 18);
@@ -183,7 +183,7 @@ private:
     const bool up1 = read_g34(io::pin_mode_t::input_pullup);
     const bool down2 = read_g34(io::pin_mode_t::input_pulldown);
     const bool up2 = read_g34(io::pin_mode_t::input_pullup);
-    ctx.transaction->restore_start({ 23, 34 });
+    ctx.transaction->restore_to_snapshot({ 23, 34 });
 
     if (down)
     {
@@ -220,7 +220,7 @@ private:
       io::pin_mode(25, io::pin_mode_t::input_pulldown);
       io::delay_rom_us(10);
       const bool matrix_pulls = io::pin_read(21) && io::pin_read(25);
-      ctx.transaction->restore_start({ 21, 25 });
+      ctx.transaction->restore_to_snapshot({ 21, 25 });
       if (!linked || !matrix_pulls) { result->provisional = true; }
     }
     else if (ratio100 <= lite_limit * reference)

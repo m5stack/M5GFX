@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #pragma once
 
-#include "setup_common.inl"
+#include "construct_common.inl"
 
 namespace board_detect
 {
@@ -22,7 +22,7 @@ namespace m5
   static constexpr panel_desc_t panel_paper = panel().with_size(960, 540).with_pins(desc_paper.display.cs, desc_paper.display.rst, desc_paper.display.busy).with_rotation(3, -1);
   static constexpr i2c_touch_desc_t touch_paper = i2c_touch(0x5D).with_port(I2C_NUM_1).with_pins(GPIO_NUM_21, GPIO_NUM_22, GPIO_NUM_36).with_freq(400000).with_range(0, 539, 0, 959).with_rotation(1);
 
-  #include "esp32_pico_setup.inl"
+  #include "esp32_pico_construct.inl"
 
   static_assert(bus_station.dma_channel == 1 && bus_core2.dma_channel == 1
              && bus_tough.dma_channel == 1 && bus_stack.dma_channel == 1
@@ -112,9 +112,9 @@ namespace m5
     return construct_status(out.release_to(parts));
   }
 
-  construct_status_t setup_detected_board(const board_result_t& result, display_parts_t* parts)
+  construct_status_t construct_detected_board(const board_result_t& result, display_parts_t* parts)
   {
-    return setup_board(esp32_d0wdq6_boards, result, parts);
+    return construct_board(esp32_d0wdq6_boards, result, parts);
   }
 }
 }

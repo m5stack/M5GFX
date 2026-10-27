@@ -39,7 +39,7 @@ namespace c3_detail
     // GPIO20 is UART0 RX. Restore its IO_MUX immediately after the read so
     // the console input keeps its pre-detection configuration.
     const bool high = io::uart_rx_held_high();
-    ctx.transaction->restore_start({ 20 });
+    ctx.transaction->restore_to_snapshot({ 20 });
     return high;
   }
 }

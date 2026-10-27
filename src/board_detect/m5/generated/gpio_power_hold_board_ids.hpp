@@ -1,4 +1,5 @@
-// Generated from GPIO power-hold devices and pin roles in the board catalog.
+// Generated from extras/board_spec; do not edit by hand.
+// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
 #pragma once
 
 namespace m5gfx { namespace board_detect {

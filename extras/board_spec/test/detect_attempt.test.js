@@ -16,8 +16,8 @@ import { body, compileRun } from "./detect_host_helpers.js";
 test("production attempt yields before construction and preserves adoption and rollback semantics", async () => {
   const main = await readMain();
   const attempt = body(main, "static board_detect::detect_outcome_t run_detection_attempt(");
-  const finish = body(main, "static board_detect::detect_outcome_t finish_detection_setup(");
-  const projection = main.slice(main.indexOf("    const auto board = outcome.setup_succeeded"), main.indexOf("#if defined ( ARDUINO_M5STACK_ATOM )", main.indexOf("    const auto board = outcome.setup_succeeded")));
+  const finish = body(main, "static board_detect::detect_outcome_t construct_and_adopt(");
+  const projection = main.slice(main.indexOf("    const auto board = outcome.adopted"), main.indexOf("#if defined ( ARDUINO_M5STACK_ATOM )", main.indexOf("    const auto board = outcome.adopted")));
   const header = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
   const candidateGetter = body(header, "board_t getCandidateBoard(");
   await compileRun(`
@@ -38,13 +38,13 @@ struct board_desc_t { board_def_t def; struct { int hw_port; } internal_i2c; str
 void board_result_t::assign(const board_desc_t* d) { desc=d; def=&d->def; }
 const board_desc_t* refined_member=nullptr;
 struct board_detector_t {};
-struct prepare_ctx_t { bool allow_reset; board_id_t preferred; unsigned attempt; bool final_attempt; int i2c_port_probe; detection_transaction_t* transaction; const board_id_t* enabled_ids; };
+struct prepare_ctx_t { bool allow_reset; board_id_t fallback; unsigned attempt; bool final_attempt; int probe_port; detection_transaction_t* transaction; const board_id_t* enabled_ids; };
 struct probe_ctx_t : prepare_ctx_t { bool confirm_attempted; };
 inline int pins(int) {return 0;} inline int no_pins() {return 0;}
 struct detection_transaction_t {
  detection_transaction_t(int,int,bool) {} bool valid() {return true;}
  void rollback() {++rollback_count;} void commit() {++commit_count;}
- void restore_start(const int*, int) {++reset_count;}
+ void restore_to_snapshot(const int*, int) {++reset_count;}
  struct buses_t {void opened_i2c(int) {}} buses_;
  buses_t& buses() {return buses_;}
 };
@@ -56,15 +56,15 @@ namespace m5 {
 namespace wiring { namespace detection { const int unconditional_pins=0; } }
 struct display_parts_t {int* bus=nullptr;int* panel=nullptr;int* light=nullptr;int* touch=nullptr;};
 enum class construct_status_t {failed, no_display, success};
-construct_status_t setup_detected_board(const board_result_t&, display_parts_t*) {++construct_count; return !construct_ok ? construct_status_t::failed : no_display ? construct_status_t::no_display : construct_status_t::success;}
+construct_status_t construct_detected_board(const board_result_t&, display_parts_t*) {++construct_count; return !construct_ok ? construct_status_t::failed : no_display ? construct_status_t::no_display : construct_status_t::success;}
 void destroy_display_parts(display_parts_t*) {}
 struct log_t {const char* name; const char* annotation;};
 log_t success_log(const board_result_t&) {return {nullptr,nullptr};}
 }
 } }
-const int probe_i2c_port=0;
-template<class SetupDetected> board_detect::detect_outcome_t finish_detection_setup(board_detect::board_result_t& result, board_detect::detect_outcome_t outcome, board_detect::detection_transaction_t& transaction, board_t setup_board, SetupDetected setup) ${finish}
-template<class SetupDetected> board_detect::detect_outcome_t run_detection_attempt(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, SetupDetected setup) ${attempt}
+const int detection_i2c_port=0;
+template<class Adopt> board_detect::detect_outcome_t construct_and_adopt(board_detect::board_result_t& result, board_detect::detect_outcome_t outcome, board_detect::detection_transaction_t& transaction, board_t representative_board, Adopt adopt) ${finish}
+template<class Adopt> board_detect::detect_outcome_t run_detection_attempt(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, Adopt adopt) ${attempt}
 struct M5GFX {
  board_t _board=board_t::board_unknown,_board_candidate=board_t::board_unknown;
  board_t getBoard() const {return _board;}
@@ -76,22 +76,22 @@ int main() {
  const board_desc_t desc={{1,"member",0},{-1},{nullptr,0}};
  const board_detector_t d; const board_detector_t* list[]={&d,nullptr};
  for(int provisional=0; provisional<2; ++provisional)
- for(int preferred=0; preferred<3; ++preferred)
+ for(int fallback=0; fallback<3; ++fallback)
  for(int failure=0; failure<4; ++failure)
  for(int displayless=0; displayless<2; ++displayless) {
   rollback_count=commit_count=construct_count=adopt_count=reset_count=0;
   detected={}; detected.assign(&desc); detected.status=detect_status_t::matched;
   power_failed=provisional; prepare_ok=failure!=1; construct_ok=failure!=2; adopt_ok=failure!=3; no_display=displayless;
-  detect_request_t req; req.preferred=preferred; req.max_attempts=5;
+  detect_request_t req; req.fallback=fallback; req.max_attempts=5;
   auto out=run_detection_session(req,[&](const detect_request_t& r,bool final) {
    return run_detection_attempt(list,r,final,[](m5::display_parts_t&,board_t) {++adopt_count; return adopt_ok;});
   });
-  const bool yields=provisional && preferred==2 && prepare_ok;
+  const bool yields=provisional && fallback==2 && prepare_ok;
   const bool success=failure==0 && !yields;
   M5GFX standalone;standalone.project(out);
   assert(standalone.getBoard()==(success?board_t::member:board_t::board_unknown));
   assert(standalone.getCandidateBoard()==(provisional&&!success?board_t::member:board_t::board_unknown));
-  assert(out.setup_succeeded==success);
+  assert(out.adopted==success);
   assert(out.verdict==(provisional ? verdict_t::candidate : verdict_t::confirmed));
   assert(out.candidate_kind==(provisional ? candidate_kind_t::provisional : candidate_kind_t::none));
   assert(out.attempts==(success ? 1:5));
@@ -102,28 +102,28 @@ int main() {
   assert(should_persist_detection(out,0)==(success&&!provisional));
  }
  // A retained power failure retries without construction, then refinement can select the preference.
- const board_desc_t preferred_desc={{2,"preferred",0},{-1},{nullptr,0}};
+ const board_desc_t fallback_desc={{2,"fallback",0},{-1},{nullptr,0}};
  rollback_count=commit_count=construct_count=adopt_count=reset_count=0;
  detected={};detected.assign(&desc);detected.status=detect_status_t::matched;
- prepare_ok=construct_ok=adopt_ok=true;no_display=false;refined_member=&preferred_desc;
- detect_request_t recovery;recovery.preferred=2;recovery.max_attempts=5;
+ prepare_ok=construct_ok=adopt_ok=true;no_display=false;refined_member=&fallback_desc;
+ detect_request_t recovery;recovery.fallback=2;recovery.max_attempts=5;
  auto recovered=run_detection_session(recovery,[&](const detect_request_t& r,bool final) {
   power_failed=r.attempt==0;
   return run_detection_attempt(list,r,final,[](m5::display_parts_t&,board_t){++adopt_count;return true;});
  });
- assert(recovered.attempts==2&&recovered.setup_succeeded&&recovered.result.def==&preferred_desc.def);
+ assert(recovered.attempts==2&&recovered.adopted&&recovered.result.def==&fallback_desc.def);
  assert(recovered.verdict==verdict_t::confirmed&&recovered.candidate_kind==candidate_kind_t::none);
  assert(construct_count==1&&adopt_count==1&&rollback_count==1&&commit_count==1);
  // The final refined provisional member replaces the initial retained representative.
  rollback_count=commit_count=construct_count=adopt_count=reset_count=0;
- recovery.preferred=3;recovery.hint=2;
+ recovery.fallback=3;recovery.hint=2;
  auto yielded=run_detection_session(recovery,[&](const detect_request_t& r,bool final) {
   detected={};detected.assign(&desc);detected.status=detect_status_t::matched;
   power_failed=r.attempt==0;prepare_ok=r.attempt==0||final;
-  detected.provisional=final;refined_member=final?&preferred_desc:nullptr;
+  detected.provisional=final;refined_member=final?&fallback_desc:nullptr;
   return run_detection_attempt(list,r,final,[](m5::display_parts_t&,board_t){++adopt_count;return true;});
  });
- assert(yielded.attempts==5&&!yielded.setup_succeeded&&yielded.result.candidate==&preferred_desc.def);
+ assert(yielded.attempts==5&&!yielded.adopted&&yielded.result.candidate==&fallback_desc.def);
  assert(yielded.candidate_kind==candidate_kind_t::provisional&&yielded.verdict==verdict_t::candidate);
  M5GFX projected;projected.project(yielded);
  assert(projected.getBoard()==board_t::board_unknown&&projected.getCandidateBoard()==static_cast<board_t>(2));
@@ -166,7 +166,7 @@ int main(){M5GFX gfx;detect_config_t cfg;assert(gfx.getDetectConfig().fallback_b
 
 test("production init restores panel according to adoption independently of verdict", async () => {
   const main = await readMain();
-  const start = main.indexOf("        if (!package.direct_setup ||");
+  const start = main.indexOf("        if (!package.keep_panel_during_attempt ||");
   assert.ok(start >= 0);
   const restore = main.slice(start, main.indexOf("        return result;", start));
   await compileRun([
@@ -177,12 +177,12 @@ test("production init restores panel according to adoption independently of verd
     'void panel(int* p) {++calls; if (!p) ++clears;}',
     'struct holder_t {int value; int* get() {return &value;}} _panel_last;',
     'void restore(bool direct, const board_detect::detect_outcome_t& result) {',
-    'struct {bool direct_setup;} package={direct};',
+    'struct {bool keep_panel_during_attempt;} package={direct};',
     restore,
     '}',
     'int main() {for(int verdict=0;verdict<3;++verdict) for(int adopted=0;adopted<2;++adopted) for(int direct=0;direct<2;++direct) {',
     'calls=clears=0;board_detect::detect_outcome_t result;',
-    'result.verdict=static_cast<board_detect::verdict_t>(verdict);result.setup_succeeded=adopted;',
+    'result.verdict=static_cast<board_detect::verdict_t>(verdict);result.adopted=adopted;',
     'restore(direct,result);',
     'assert(calls==(!direct?1:adopted?0:2));assert(clears==(direct&&!adopted));',
     '}}',
@@ -211,10 +211,10 @@ test("setup rejection lists preserve all historical board groups", async () => {
 #include <cassert>
 #include <initializer_list>
 enum class board_t {${names.join(",")}};
-bool reject_default(board_t setup_board) ${reject}
+bool reject_default(board_t representative_board) ${reject}
 ${groups.map((boards, index) => `
 #define M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS ${boards.map((name) => `board_t::${name}`).join(",")}
-bool reject_${index}(board_t setup_board) ${reject}
+bool reject_${index}(board_t representative_board) ${reject}
 #undef M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS
 `).join("\n")}
 int main() {

@@ -113,15 +113,15 @@ static void reset() {
 namespace m5gfx {
 namespace board_detect {
 namespace m5 {
-construct_status_t setup_detected_board(const board_result_t &r, display_parts_t *parts) {
-  return setup_board(test_driver::entries, r, parts);
+construct_status_t construct_detected_board(const board_result_t &r, display_parts_t *parts) {
+  return construct_board(test_driver::entries, r, parts);
 }
 void destroy_display_parts(display_parts_t *) { ++test_driver::destroys; }
 success_log_t success_log(const board_result_t &r) { return success_log(test_driver::entries, r); }
 } // namespace m5
 } // namespace board_detect
 static constexpr char LIBRARY_NAME[] = "host";
-static constexpr int probe_i2c_port = -1;
+static constexpr int detection_i2c_port = -1;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 static bool conditional_detection_pins_unavailable() { return test_driver::conditional_unavailable; }
 #endif
@@ -143,7 +143,7 @@ static void attempts() {
           adopt_ok = failure != 3;
           no_display = displayless;
           detect_request_t req;
-          req.preferred = pref;
+          req.fallback = pref;
           req.max_attempts = 5;
           auto out = run_detection_session(req, [&](const detect_request_t &request, bool final) {
             return m5gfx::run_detection_attempt(
@@ -155,7 +155,7 @@ static void attempts() {
           });
           bool yields = prov && pref == other.def.id && prepare_ok,
                success = failure == 0 && !yields;
-          assert(out.setup_succeeded == success &&
+          assert(out.adopted == success &&
                  out.verdict == (prov ? verdict_t::candidate : verdict_t::confirmed));
           assert(out.candidate_kind ==
                  (prov ? candidate_kind_t::provisional : candidate_kind_t::none));
@@ -175,7 +175,7 @@ static void attempts() {
   const board_detector_t *list[] = {&detector, nullptr};
   detect_request_t req;
   req.max_attempts = 5;
-  req.preferred = other.def.id;
+  req.fallback = other.def.id;
   refinement = &other;
   auto recovered = run_detection_session(req, [&](const detect_request_t &request, bool final) {
     power_failed = request.attempt == 0;
@@ -185,14 +185,14 @@ static void attempts() {
           return true;
         });
   });
-  assert(recovered.setup_succeeded && recovered.attempts == 2 &&
+  assert(recovered.adopted && recovered.attempts == 2 &&
          recovered.result.def == &other.def && constructions == 1 && adoptions == 1 &&
          refinements == 1);
   assert(host_hardware::ports.empty());
   ++cases;
   reset();
   refinement = &other;
-  req.preferred = 65535;
+  req.fallback = 65535;
   auto yielded = run_detection_session(req, [&](const detect_request_t &request, bool final) {
     power_failed = request.attempt == 0;
     prepare_ok = request.attempt == 0 || final;
@@ -203,7 +203,7 @@ static void attempts() {
           return true;
         });
   });
-  assert(yielded.attempts == 5 && !yielded.setup_succeeded &&
+  assert(yielded.attempts == 5 && !yielded.adopted &&
          yielded.result.candidate == &other.def &&
          yielded.candidate_kind == candidate_kind_t::provisional && constructions == 0 &&
          adoptions == 0);
@@ -219,13 +219,13 @@ static void fixed_startup() {
         adopt_ok = !fail_adopt;
         const m5gfx::board_detect::m5::board_entry_t entry(&member, construct, "member", nullptr,
                                                            fixed);
-        auto out = m5gfx::run_fixed_detection_session(
+        auto out = m5gfx::run_fixed_startup_session(
             entry, allow_reset, [](m5gfx::board_detect::m5::display_parts_t &, lgfx::board_t) {
               ++adoptions;
               return adopt_ok;
             });
         bool success = !fail_construct && !fail_adopt;
-        assert(out.setup_succeeded == success && out.attempts == (success ? 3 : 5));
+        assert(out.adopted == success && out.attempts == (success ? 3 : 5));
         assert(out.verdict == verdict_t::confirmed && !out.result.provisional &&
                out.result.refine == nullptr && out.result.desc == &member);
         assert(fixed_starts == out.attempts && refinements == 0);
@@ -308,7 +308,7 @@ static void prepare_states() {
             prepare_ctx_t ctx;
             ctx.transaction = &transaction;
             ctx.final_attempt = final;
-            ctx.i2c_port_probe = -1;
+            ctx.probe_port = -1;
             board_result_t r;
             r.assign(&desc);
             r.refine = row < 2 ? refine : nullptr;
@@ -438,9 +438,9 @@ static void caller_i2c_ownership() {
       detect_request_t req;
       req.max_attempts = 1;
       const auto out = fixed
-        ? m5gfx::run_fixed_detection(entries[0], false, adopt)
+        ? m5gfx::run_fixed_startup(entries[0], false, adopt)
         : m5gfx::run_detection_attempt(list, req, true, adopt);
-      assert(out.setup_succeeded == (failure == 0));
+      assert(out.adopted == (failure == 0));
       assert(host_hardware::ports == caller_ports);
       for (const auto &event : host_hardware::events)
         assert(event.kind != 6 && event.kind != 7);

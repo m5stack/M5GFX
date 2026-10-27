@@ -41,7 +41,7 @@
  #else
   // IDF 4.4 exposes the same S3 instructions through cpu_ll.h and reports
   // allocated channels as masks rather than offsets.
-  #define M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL
+  #define M5GFX_S3_DEDICATED_GPIO_IDF44_CPU_LL
   #include <hal/cpu_ll.h>
  #endif
  #include <hal/gpio_ll.h>
@@ -140,7 +140,7 @@ namespace m5gfx { namespace board_detect { namespace io {
   __attribute__((always_inline)) inline bool i2c_open(int port, int sda, int scl)
   { return lgfx::i2c::init(port, sda, scl).has_value(); }
   __attribute__((always_inline)) inline void i2c_close(int port) { lgfx::i2c::release(port); }
-  // Some callers historically end even a failed begin; preserve both policies.
+  // Callers choose whether to end a failed begin through end_on_failure.
   __attribute__((always_inline)) inline bool i2c_ack(int port, std::uint16_t addr, std::uint32_t freq, bool end_on_failure = false)
   {
     const bool began = lgfx::i2c::beginTransaction(port, addr, freq, false).has_value();
@@ -170,6 +170,12 @@ namespace m5gfx { namespace board_detect { namespace io {
   static constexpr unsigned package_classic_q6 = EFUSE_RD_CHIP_VER_PKG_ESP32D0WDQ6;
   static constexpr unsigned package_classic_pico_d4 = EFUSE_RD_CHIP_VER_PKG_ESP32PICOD4;
 #endif
+  static constexpr unsigned package_classic_picov3 = 6;
+  static constexpr unsigned package_s3_qfn56 = 0;
+  static constexpr unsigned package_s3_lga56 = 1;
+  static constexpr unsigned package_c6_qfn40 = 0;
+  static constexpr unsigned package_c6_qfn32 = 1;
+  static constexpr unsigned package_p4 = 0;
   __attribute__((always_inline)) inline unsigned package_version() { return lgfx::get_pkg_ver(); }
   __attribute__((always_inline)) inline bool psram_ready()
   {
@@ -233,7 +239,7 @@ namespace m5gfx { namespace board_detect { namespace io {
   static constexpr bool dedicated_gpio_supported = true;
   __attribute__((always_inline)) inline std::uint32_t dedicated_release_read_in()
   {
-#if defined (M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL)
+#if defined (M5GFX_S3_DEDICATED_GPIO_IDF44_CPU_LL)
     return cpu_ll_read_dedic_gpio_in();
 #else
     return dedic_gpio_cpu_ll_read_in();
@@ -241,7 +247,7 @@ namespace m5gfx { namespace board_detect { namespace io {
   }
   __attribute__((always_inline)) inline void dedicated_release_write_mask(std::uint32_t mask, std::uint32_t value)
   {
-#if defined (M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL)
+#if defined (M5GFX_S3_DEDICATED_GPIO_IDF44_CPU_LL)
     cpu_ll_write_dedic_gpio_mask(mask, value);
 #else
     dedic_gpio_cpu_ll_write_mask(mask, value);
@@ -252,7 +258,7 @@ namespace m5gfx { namespace board_detect { namespace io {
     int* in_error, int* out_error)
   {
     const auto bundle = static_cast<dedic_gpio_bundle_handle_t>(handle.value);
-#if defined (M5GFX_S3_DEDICATED_GPIO_LEGACY_CPU_LL)
+#if defined (M5GFX_S3_DEDICATED_GPIO_IDF44_CPU_LL)
     *in_error = dedic_gpio_get_in_mask(bundle, in_mask);
     *out_error = dedic_gpio_get_out_mask(bundle, out_mask);
 #else

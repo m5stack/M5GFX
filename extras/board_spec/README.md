@@ -80,10 +80,13 @@ sentinel values. Value precedence is board value, then part default, then the
 panel-class default.
 
 `detector_order.json` maps each package's detector families to catalog boards.
-`emit-wiring` generates the detector arrays with GPIO power-hold families first,
-preserving the declared order within each group. A board qualifies only when a
-`power_hold` device also has a GPIO `dev:<id>.*` role. The generated board IDs
-give the runtime hint pass the same priority rule. Add a new family to the
+`emit-wiring` generates a topological order from the declared constraints.
+Among families whose predecessors are already placed, GPIO power-hold families
+go first, then declaration order breaks ties. A board qualifies only when a
+`power_hold` device also has a GPIO `dev:<id>.*` role. Without a hint, runtime follows this generated order. With a hint, runtime
+selects constraint-ready families by GPIO power hold, then hint, then generated
+order. A hinted family can therefore precede a power-hold family whose
+predecessors have not run yet. Add a new family to the
 manifest; `npm test` checks that each generated array is included by its source.
 
 ## Connector types
@@ -289,3 +292,32 @@ detect_class_expected` in the board's wiring namespace. Detectors copy this
 value into a function-local `constexpr` before matching physical samples.
 Revision-choice classes remain local evidence rather than board-wide gates.
 Descriptors and probe procedures remain handwritten C++.
+
+## Autodetection test injections
+
+These compile-time macros exercise detection failures and observations. They do
+not change the public detection configuration. Fixed startup bypasses detector
+hooks, but still uses constructor, adopter, and VBUS observation hooks.
+
+| Macro (`M5GFX_AUTODETECT_TEST_` prefix) | Injection point and effect |
+| --- | --- |
+| `EXCLUDE_ATOMS3` | Attempt target filter excludes AtomS3 and other unlisted boards to exercise excluded-result rollback. |
+| `FAIL_SETUP_BOARDS` | Comma-separated board IDs reject adoption in `reject_detected_setup`; autodetection uses the pre-refine representative ID. |
+| `FAIL_CORES3_SETUP` | CoreS3 constructor returns failure before allocating display parts. |
+| `STOPWATCH_NO_DISPLAY` | StopWatch constructor returns no-display without allocating its panel. |
+| `FAIL_STOPWATCH_TOUCH` | PM1 family confirm uses an unanswered touch address for StopWatch. |
+| `FAIL_PAPERMONO_TOUCH` | PM1 family confirm and refine use an unanswered touch address for PaperMono. |
+| `FAIL_CARDPUTER_VARIANT` | Cardputer confirm discards both VAMeter and ADV responses. |
+| `FAIL_CORE2_TOUCH` | AXP family confirm and post-power refine discard Core2 and Tough touch responses. |
+| `FAIL_CORE2_TOUCH_PRE` | AXP family confirm discards Core2 and Tough touch responses. |
+| `FAIL_CORE2_TOUCH_POST` | AXP family post-power refine discards Core2 and Tough touch responses. |
+| `CORE_FAMILY_FORCE_STATION` | AXP family confirm discards touch responses and forces the G12 class to floating for Station selection. |
+| `FAIL_PAPER_CONFIRM` | Paper confirm fails after signature retained reset state, restoring its probe pins. |
+| `CORES3_FORCE_VBUS` | CoreS3 confirm and fixed preparation observe external 5 V after performing the VBUS pin measurement. |
+| `CORES3_STACKCHAN_GATE` | CoreS3 post-power base gate returns true after measuring its pins. |
+| `CORES3_FORCE_STACKCHAN` | CoreS3 post-power base ACK and firmware meet the StackChan threshold. |
+| `CORES3_STACKCHAN_NACK` | CoreS3 post-power base ACK loop returns NACK throughout its poll window. |
+| `CORES3_NO_CAMERA` | CoreS3 confirm and post-power refine skip camera reads and treat the camera as absent. |
+| `CORES3_CAMERA_ABSENT_AT_CONFIRM` | CoreS3 confirm skips the initial camera read; post-power refine can still find a waking camera. |
+| `CORES3_FORCE_SE` | CoreS3 confirm skips the initial camera read and forces the short-release band. |
+| `CORES3_RELEASE_AMBIGUOUS` | CoreS3 confirm skips the initial camera read and forces the ambiguous-release band. |

@@ -36,7 +36,7 @@ detect_outcome_t attempt(family::c6_display_family_detector_t& detector,
     out.reason = fail_reason_t::no_signature;
   } else if (detector.confirm(ctx, &out.result)) {
     finalize_prepared_result(out, 0);
-    out.setup_succeeded = true;
+    out.adopted = true;
   } else if (ctx.candidate) {
     out.verdict = verdict_t::candidate;
     out.candidate_kind = candidate_kind_t::weak;
@@ -98,7 +98,7 @@ int main() {
       return attempt(detector, r, last);
     });
     assert(out.verdict == (!bus ? verdict_t::unknown : response ? verdict_t::confirmed : verdict_t::candidate));
-    assert(out.setup_succeeded == (bus && response));
+    assert(out.adopted == (bus && response));
     assert(!bus || response || out.result.candidate == &family::desc_unitc6l.def);
     assert(should_persist_detection(out, 0) == (bus && response));
     const unsigned expected_attempts = !bus || response ? 1 : 5;

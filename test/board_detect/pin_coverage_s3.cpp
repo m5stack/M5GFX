@@ -47,7 +47,7 @@ static void cardputer_success() {
         host_hardware::events.clear();
         probe_ctx_t ctx;
         ctx.transaction = &tx;
-        ctx.i2c_port_probe = -1;
+        ctx.probe_port = -1;
         ctx.final_attempt = true;
         board_result_t result;
         const bool confirmed = cardputer_family_detector.confirm(ctx, &result);

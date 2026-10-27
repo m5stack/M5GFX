@@ -1,4 +1,5 @@
-// Generated from detector_order.json and board catalog.
+// Generated from extras/board_spec; do not edit by hand.
+// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
 #pragma once
 
 namespace m5gfx { namespace board_detect {
@@ -13,15 +14,15 @@ static constexpr detector_order_edge_t detector_order_edges[] = {
   { 4, 142 }, // stickc_family_detector (board_M5StickCPlus, board_M5StickC) before atom_family_detector (board_M5AtomVoice, board_M5AtomMatrix, board_M5AtomLite, board_M5AtomU): Atom touch probing on G13 runs after StickC LCD SCLK
   { 6, 142 }, // coreink_detector (board_M5StackCoreInk) before atom_family_detector (board_M5AtomVoice, board_M5AtomMatrix, board_M5AtomLite, board_M5AtomU): Atom touch probing runs after CoreInk display probing
   { 32, 15 }, // pm1_ext_family_detector (board_M5ChainCaptain, board_M5PaperColor) before airq_detector (board_M5AirQ): AirQ RST G2 and DC G3 overlap ChainCaptain and PaperColor internal I2C SCL and SDA
-  { 10, 11 }, // cores3_family_detector (board_M5StackCoreS3, board_M5StackCoreS3SE, board_M5StackChan) before spi_id_detector (board_M5AtomS3, board_M5DinMeter, board_M5AtomS3Lite, board_M5AtomS3U): AtomS3 MOSI G21 overlaps CoreS3 touch INT; probe CoreS3 first to avoid output contention
+  { 10, 11 }, // cores3_family_detector (board_M5StackCoreS3, board_M5StackCoreS3SE, board_M5StackChan) before atoms3_family_detector (board_M5AtomS3, board_M5DinMeter, board_M5AtomS3Lite, board_M5AtomS3U): AtomS3 MOSI G21 overlaps CoreS3 touch INT; probe CoreS3 first to avoid output contention
   { 12, 139 }, // dial_detector (board_M5Dial) before capsule_detector (board_M5Capsule): Capsule SDA G8 is Dial LCD reset; probe Dial before toggling G8
-  { 11, 139 }, // spi_id_detector (board_M5AtomS3, board_M5DinMeter, board_M5AtomS3Lite, board_M5AtomS3U) before capsule_detector (board_M5Capsule): Capsule SDA G8 is DinMeter LCD reset; probe DinMeter before toggling G8
+  { 11, 139 }, // atoms3_family_detector (board_M5AtomS3, board_M5DinMeter, board_M5AtomS3Lite, board_M5AtomS3U) before capsule_detector (board_M5Capsule): Capsule SDA G8 is DinMeter LCD reset; probe DinMeter before toggling G8
   { 10, 147 }, // cores3_family_detector (board_M5StackCoreS3, board_M5StackCoreS3SE, board_M5StackChan) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 12, 147 }, // dial_detector (board_M5Dial) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 30, 147 }, // pm1_family_detector (board_M5StopWatch, board_M5PaperMono) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 32, 147 }, // pm1_ext_family_detector (board_M5ChainCaptain, board_M5PaperColor) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 34, 147 }, // paper_family_detector (board_M5PaperDIY, board_M5PaperS3) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
-  { 11, 147 }, // spi_id_detector (board_M5AtomS3, board_M5DinMeter, board_M5AtomS3Lite, board_M5AtomS3U) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
+  { 11, 147 }, // atoms3_family_detector (board_M5AtomS3, board_M5DinMeter, board_M5AtomS3Lite, board_M5AtomS3U) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 14, 147 }, // cardputer_family_detector (board_M5Cardputer, board_M5CardputerADV, board_M5VAMeter) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 15, 147 }, // airq_detector (board_M5AirQ) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins
   { 21, 147 }, // stamplc_detector (board_M5StamPLC) before dualkey_detector (board_M5DualKey): Probe displayed QFN56 boards before DualKey NC pins

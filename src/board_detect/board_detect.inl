@@ -26,7 +26,7 @@ namespace board_detect
 
 #include "probe_hardware.inl"
 
-#include "startup.inl"
+#include "prepare_steps.inl"
 
 #include "spi_detector.inl"
 

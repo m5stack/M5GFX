@@ -10,10 +10,10 @@ int main()
   unsigned cases = 0;
   // All selection-table rows, including displayless adoption and setup failure.
   for (int verdict = 0; verdict != 4; ++verdict)
-  for (board_id_t preferred = 0; preferred != 4; ++preferred)
+  for (board_id_t fallback = 0; fallback != 4; ++fallback)
   for (int adopted = 0; adopted != 2; ++adopted)
   {
-    detect_request_t request; request.preferred = preferred; request.max_attempts = 5;
+    detect_request_t request; request.fallback = fallback; request.max_attempts = 5;
     unsigned calls = 0, construct = 0, adopt = 0, saves = 0;
     auto outcome = run_detection_session(request, [&](const detect_request_t& r, bool) {
       ++calls; detect_outcome_t out;
@@ -23,16 +23,16 @@ int main()
         return out;
       }
       out.result.def = &member; out.result.provisional = verdict == 2;
-      if (!finalize_prepared_result(out, r.preferred)) { return out; }
+      if (!finalize_prepared_result(out, r.fallback)) { return out; }
       ++construct; ++adopt;
-      out.setup_succeeded = adopted;
+      out.adopted = adopted;
       out.reason = adopted ? fail_reason_t::none : fail_reason_t::adopt_failed;
       return out;
     });
-    const bool yields = verdict == 2 && preferred != 0 && preferred != member.id;
+    const bool yields = verdict == 2 && fallback != 0 && fallback != member.id;
     assert(calls == unsigned(verdict < 2 || (adopted && !yields) ? 1 : 5));
     assert(construct == (verdict < 2 || yields ? 0 : calls)); assert(adopt == construct);
-    const auto board = outcome.setup_succeeded ? outcome.result.def->id : board_id_unknown;
+    const auto board = outcome.adopted ? outcome.result.def->id : board_id_unknown;
     const auto candidate = board ? board_id_unknown : outcome.result.candidate ? outcome.result.candidate->id : board_id_unknown;
     assert(board == (verdict >= 2 && !yields && adopted ? member.id : board_id_unknown));
     assert(candidate == (yields ? member.id : verdict == 1 ? weak.id : verdict == 2 && !adopted ? member.id : board_id_unknown));
@@ -44,19 +44,19 @@ int main()
     ++cases;
   }
   // A weak candidate survives unknown attempts; provisional replaces it through the final retry.
-  detect_request_t request; request.max_attempts = 5; request.hint = other.id; request.preferred = other.id;
+  detect_request_t request; request.max_attempts = 5; request.hint = other.id; request.fallback = other.id;
   auto out = run_detection_session(request, [&](const detect_request_t& r, bool final) {
-    assert(r.hint == other.id); assert(r.preferred == other.id); assert(final == (r.attempt == 4));
+    assert(r.hint == other.id); assert(r.fallback == other.id); assert(final == (r.attempt == 4));
     assert(r.allow_reset == (r.attempt >= 3));
     detect_outcome_t result;
     if (r.attempt == 0) { result.verdict = verdict_t::candidate; result.candidate_kind = candidate_kind_t::weak; result.result.candidate = &weak; }
-    if (r.attempt == 3) { result.result.def = &member; result.result.provisional = true; assert(!finalize_prepared_result(result, r.preferred)); }
+    if (r.attempt == 3) { result.result.def = &member; result.result.provisional = true; assert(!finalize_prepared_result(result, r.fallback)); }
     return result;
   });
   assert(out.attempts == 5 && out.result.candidate == &member && out.candidate_kind == candidate_kind_t::provisional);
   assert(!should_persist_detection(out, 0));
   // A provisional setup failure cannot be downgraded by weak/unknown retries.
-  request.preferred = 0;
+  request.fallback = 0;
   out = run_detection_session(request, [&](const detect_request_t& r, bool) {
     detect_outcome_t result;
     if (r.attempt == 0) { result.result.def = &member; result.result.provisional = true; finalize_prepared_result(result, 0); result.reason = fail_reason_t::construct_failed; }
@@ -79,19 +79,19 @@ int main()
       }
       return result;
     });
-    assert(out.attempts == 5 && out.verdict == verdict_t::confirmed && !out.setup_succeeded);
+    assert(out.attempts == 5 && out.verdict == verdict_t::confirmed && !out.adopted);
     assert(out.result.candidate == &weak && out.candidate_kind == kind && !should_persist_detection(out, 0));
   }
   // An early mismatch may refine successfully on the next attempt.
-  request.preferred = other.id;
+  request.fallback = other.id;
   out = run_detection_session(request, [&](const detect_request_t& r, bool) {
     detect_outcome_t result; result.result.def = r.attempt == 0 ? &member : &other;
     result.result.provisional = r.attempt == 0;
-    if (finalize_prepared_result(result, r.preferred)) { result.setup_succeeded = true; }
+    if (finalize_prepared_result(result, r.fallback)) { result.adopted = true; }
     return result;
   });
-  assert(out.attempts == 2 && out.setup_succeeded && out.result.def == &other);
-  request.preferred = 0;
+  assert(out.attempts == 2 && out.adopted && out.result.def == &other);
+  request.fallback = 0;
   // Retained candidates follow confidence first, and provisional recency second.
   for (auto first : {candidate_kind_t::weak, candidate_kind_t::provisional})
   for (auto next : {candidate_kind_t::weak, candidate_kind_t::provisional}) {
@@ -109,20 +109,20 @@ int main()
     assert(out.candidate_kind == (next == candidate_kind_t::provisional ? next : first));
   }
   // Initial power failure retains Core2; final refinement selects Tough while yielding to Paper.
-  request.hint = other.id; request.preferred = weak.id;
+  request.hint = other.id; request.fallback = weak.id;
   out = run_detection_session(request, [&](const detect_request_t& r, bool final) {
     detect_outcome_t result;
     if (r.attempt == 0 || final) {
       result.result.def = final ? &other : &member;
       result.result.provisional = true;
-      assert(!finalize_prepared_result(result, r.preferred));
+      assert(!finalize_prepared_result(result, r.fallback));
     }
     return result;
   });
-  assert(out.attempts == 5 && !out.setup_succeeded && out.result.candidate == &other);
+  assert(out.attempts == 5 && !out.adopted && out.result.candidate == &other);
   assert(out.verdict == verdict_t::candidate && out.candidate_kind == candidate_kind_t::provisional);
   assert(!should_persist_detection(out, 0));
-  request.preferred = 0;
+  request.fallback = 0;
   // Reset escalation and immutable hint remain true through the final retry.
   out = run_detection_session(request, [&](const detect_request_t& r, bool final) {
     assert(r.hint == other.id); assert(final == (r.attempt == 4)); assert(r.allow_reset == (r.attempt >= 3));

@@ -362,8 +362,8 @@ namespace m5
     i2c_power_confirmed(specs::paperdiy::pmic::i2c_freq, paperdiy_pmic_variants,
                         pmic_ops::pm1_devices),
     no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
-    // hw_port = -1: the legacy path released the probe port after the PM1
-    // writes and never opened the hardware port (no touch on PaperDIY).
+    // hw_port = -1: PaperDIY has no touch controller needing hardware I2C
+    // after the PM1 writes; release the probe port.
     internal_i2c(wiring::paperdiy::internal_i2c_sda, wiring::paperdiy::internal_i2c_scl, -1),
     no_options(), no_pins(),
   };
@@ -479,7 +479,7 @@ namespace m5
 
     bool refine_papermono_touch(board_result_t& result, const prepare_ctx_t& ctx)
     {
-      startup_detail::i2c_scope_t i2c(*ctx.transaction, ctx.i2c_port_probe,
+      prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port,
                                     desc_papermono.internal_i2c);
       if (i2c.opened)
       {
@@ -576,7 +576,7 @@ namespace m5
         if (id == desc_papermono.def.id) { return &desc_papermono; }
         return nullptr;
       };
-      return select_provisional_member(ctx, result, possible(ctx.preferred),
+      return select_provisional_member(ctx, result, possible(ctx.fallback),
                                        possible(ctx.hint), nullptr,
                                        "PM1 member evidence ambiguous");
     }
@@ -676,9 +676,9 @@ namespace m5
     bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
     {
       if (result == nullptr) { return false; }
-      // The legacy block skipped the PM1 read when hinted PaperS3 and the
-      // GT911 read when hinted PaperDIY; each skip saves up to 200 ms or two
-      // touch-controller transactions. Restrict these skips to the first attempt.
+      // A PaperS3 hint skips the PM1 read; a PaperDIY hint skips GT911.
+      // This saves up to 200 ms or two touch transactions on the first
+      // non-final attempt; later attempts perform both checks.
       if (ctx.attempt != 0 || ctx.final_attempt || ctx.hint != desc_papers3.def.id)
       {
         std::uint8_t pm1_id[2] = {};
@@ -813,9 +813,9 @@ namespace m5
            && (pulls.pulldown_high & adv_mask) == adv_mask) { return &desc_cardputer_adv; }
           return nullptr;
         };
-        const auto* preferred = possible(ctx.preferred);
+        const auto* fallback = possible(ctx.fallback);
         const auto* hinted = possible(ctx.hint);
-        chosen = preferred ? preferred : hinted ? hinted : &desc_cardputer;
+        chosen = fallback ? fallback : hinted ? hinted : &desc_cardputer;
         result->provisional = true;
         ESP_LOGW("board_detect_m5", "Cardputer variant unanswered; using %s for this boot",
                  chosen->def.name);
@@ -837,8 +837,8 @@ namespace m5
     { &desc_dinmeter, dinmeter_probes, sizeof(dinmeter_probes) / sizeof(dinmeter_probes[0]),
       specs::dinmeter::bus_three_wire, wiring::dinmeter::touches_opi_pins, 0, false },
   };
-  static bool fixed_start_atoms3(board_result_t& result, const prepare_ctx_t& ctx)
-  { return fixed_start_spi_variant(result, ctx, spi_id_member_descs[0]); }
+  static bool fixed_prepare_atoms3(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_prepare_spi_variant(result, ctx, spi_id_member_descs[0]); }
   static const spi_id_detector_t spi_display_detector(
     spi_id_members, spi_id_member_descs,
     sizeof(spi_id_member_descs) / sizeof(spi_id_member_descs[0]));
@@ -863,11 +863,11 @@ namespace m5
       {
         if (!io::pin_read(16))
         {
-          ctx.transaction->restore_start({ 16 });
+          ctx.transaction->restore_to_snapshot({ 16 });
           return false;
         }
       }
-      ctx.transaction->restore_start({ 16 });
+      ctx.transaction->restore_to_snapshot({ 16 });
       const bool lite_ir = probe_pin_pullup_low(ctx, 4);
       const bool u_ir = probe_pin_pullup_low(ctx, 12);
       if (lite_ir == u_ir) { return false; }
@@ -875,7 +875,7 @@ namespace m5
       return true;
     }
   };
-  static const atoms3_family_detector_t spi_id_detector;
+  static const atoms3_family_detector_t atoms3_family_detector;
 
   class capsule_detector_t final : public board_detector_t
   {
@@ -984,8 +984,8 @@ namespace m5
     { &desc_atoms3r, atoms3r_probes, sizeof(atoms3r_probes) / sizeof(atoms3r_probes[0]),
       specs::atoms3r::bus_three_wire, wiring::atoms3r::touches_opi_pins, 5, false },
   };
-  static bool fixed_start_atoms3r(board_result_t& result, const prepare_ctx_t& ctx)
-  { return fixed_start_spi_variant(result, ctx, atoms3r_member_descs[0]); }
+  static bool fixed_prepare_atoms3r(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_prepare_spi_variant(result, ctx, atoms3r_member_descs[0]); }
   static const spi_id_detector_t atoms3r_display_detector(
     atoms3r_members, atoms3r_member_descs,
     sizeof(atoms3r_member_descs) / sizeof(atoms3r_member_descs[0]));
@@ -996,8 +996,8 @@ namespace m5
     return match_detect_class(expected, probe_pin_pulls(ctx, expected.mask));
   }
 
-  // The camera needs XCLK while its SCCB address is sent. This follows the
-  // former M5Unified GPIO probe without borrowing hardware I2C or LEDC.
+  // The camera needs XCLK while its SCCB address is sent. Generate both
+  // through GPIO without borrowing hardware I2C or LEDC.
   static bool probe_atoms3r_camera(probe_ctx_t& ctx)
   {
     io::pin_low(18); // camera power-down, active high
@@ -1052,7 +1052,7 @@ namespace m5
       *hi = 1u << 12; // SDA high: STOP
       nack_bits = (nack_bits << 1) | nack;
     }
-    ctx.transaction->restore_start({ 9, 12, 18, 21 });
+    ctx.transaction->restore_to_snapshot({ 9, 12, 18, 21 });
     return nack_bits == 1 || nack_bits == 2;
   }
 
@@ -1118,8 +1118,8 @@ namespace m5
       if (!probe_i2c_read(ctx, sda, scl, 0x18, 0xFD, &id_hi, 1, 100000, 0)
        || !probe_i2c_read(ctx, sda, scl, 0x18, 0xFE, &id_lo, 1, 100000, 0)
        || id_hi != 0x83 || id_lo != 0x11) { return false; }
-      // The legacy detector checked BMI270 before the codec: an added ES8311
-      // must not turn an AtomS3R Ext/Cam into a confirmed Voice board.
+      // An added ES8311 must not turn an AtomS3R Ext/Cam into a confirmed
+      // Voice board; exclude members carrying BMI270.
       if (probe_i2c_ack(ctx, sda, scl, 0x68)
        || probe_i2c_ack(ctx, sda, scl, 0x69)) { return false; }
       result->assign(&desc_atomvoices3r);
@@ -1139,8 +1139,8 @@ namespace m5
     { &desc_airq, airq_probes, sizeof(airq_probes) / sizeof(airq_probes[0]),
       specs::airq::bus_three_wire, wiring::airq::touches_opi_pins, 0, false },
   };
-  static bool fixed_start_airq(board_result_t& result, const prepare_ctx_t& ctx)
-  { return fixed_start_spi_variant(result, ctx, airq_member_descs[0]); }
+  static bool fixed_prepare_airq(board_result_t& result, const prepare_ctx_t& ctx)
+  { return fixed_prepare_spi_variant(result, ctx, airq_member_descs[0]); }
   static const spi_id_detector_t airq_detector(
     airq_members, airq_member_descs,
     sizeof(airq_member_descs) / sizeof(airq_member_descs[0]), false, airq_signature);
@@ -1214,23 +1214,23 @@ namespace m5
 
   static const board_entry_t esp32s3_boards[] = {
     { &desc_dualkey, construct_displayless, "board_M5DualKey", nullptr },
-    { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr, cores3_detail::fixed_start },
-    { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr, cores3_detail::fixed_start },
-    { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr, cores3_detail::fixed_start },
-    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation, fixed_start_atoms3 },
+    { &desc_cores3, construct_cores3, "board_M5StackCoreS3", nullptr, cores3_detail::fixed_prepare },
+    { &desc_cores3se, construct_cores3, "board_M5StackCoreS3SE", nullptr, cores3_detail::fixed_prepare },
+    { &desc_stackchan, construct_cores3, "board_M5StackChan", nullptr, cores3_detail::fixed_prepare },
+    { &desc_atoms3, construct_atoms3, "board_M5AtomS3", atoms3_success_annotation, fixed_prepare_atoms3 },
     { &desc_atoms3lite, construct_displayless, "board_M5AtomS3Lite", nullptr },
     { &desc_atoms3u, construct_displayless, "board_M5AtomS3U", nullptr },
     { &desc_stamps3, construct_displayless, "board_M5StampS3", nullptr },
     { &desc_capsule, construct_displayless, "board_M5Capsule", nullptr },
     { &desc_powerhub, construct_displayless, "board_M5PowerHub", nullptr },
-    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation, fixed_start_atoms3r },
+    { &desc_atoms3r, construct_atoms3r, "board_M5AtomS3R", atoms3r_success_annotation, fixed_prepare_atoms3r },
     { &desc_atoms3rcam, construct_displayless, "board_M5AtomS3RCam", nullptr },
     { &desc_atoms3rext, construct_displayless, "board_M5AtomS3RExt", nullptr },
     { &desc_atomvoices3r, construct_displayless, "board_M5AtomVoiceS3R", nullptr },
     { &desc_stamps3bat, construct_displayless, "board_M5StampS3Bat", nullptr },
     { &desc_stamps3mini, construct_displayless, "board_M5StampS3Mini", nullptr },
     { &desc_dinmeter, construct_dinmeter, "board_M5DinMeter", nullptr },
-    { &desc_airq, construct_airq, "M5AirQ", nullptr, fixed_start_airq },
+    { &desc_airq, construct_airq, "M5AirQ", nullptr, fixed_prepare_airq },
     { &desc_stamplc, construct_stamplc, "board_M5StamPLC", nullptr },
     { &desc_dial, construct_dial, "board_M5Dial", nullptr },
     { &desc_cardputer, construct_cardputer, "board_M5Cardputer", nullptr },

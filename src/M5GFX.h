@@ -214,7 +214,7 @@ namespace m5gfx
     board_t _fixed_board = board_t::board_unknown;
 
     bool init_impl(bool use_reset, bool use_clear) override;
-    bool _finish_detected_init(bool use_clear);
+    bool _init_adopted_panel(bool use_clear);
     bool _adopt_detected_parts(lgfx::IBus* bus, lgfx::Panel_Device* panel_part,
                                lgfx::ILight* light, lgfx::ITouch* touch);
     void _set_backlight(lgfx::ILight* bl);
@@ -226,7 +226,8 @@ namespace m5gfx
     using LGFXBase::drawBitmap;
 
     static M5GFX* getInstance(void) { return _instance; }
-    /// Weak guess from the last init() when no board was set up; board_unknown otherwise.
+    /// Candidate from the last init() when no board was adopted: a weak guess,
+    /// provisional member, or family representative rejected by fallback_board; board_unknown otherwise.
     /// The guessed board is not set up.
     board_t getCandidateBoard(void) const { return _board_candidate; }
     /// Board accepted from detect_config_t::fixed_board by the last init(), even if

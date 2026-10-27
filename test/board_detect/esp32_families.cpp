@@ -14,7 +14,7 @@ static unsigned cases;
 static probe_ctx_t context() {
   probe_ctx_t ctx;
   ctx.transaction = tx;
-  ctx.i2c_port_probe = -1;
+  ctx.probe_port = -1;
   ctx.allow_reset = false;
   return ctx;
 }
@@ -76,7 +76,7 @@ static void axp_table() {
                       auto ctx = context();
                       ctx.final_attempt = final;
                       ctx.attempt = final ? 4 : 0;
-                      ctx.preferred = preference;
+                      ctx.fallback = preference;
                       ctx.hint = hint;
                       board_result_t r;
                       bool ok = axp_family_detector.confirm(ctx, &r);
@@ -147,7 +147,7 @@ static void core_refinement() {
               host_probes::on_read = []() { assert(host_probes::transfers > 0); };
               auto ctx = context();
               ctx.final_attempt = final;
-              ctx.preferred = preference;
+              ctx.fallback = preference;
               ctx.hint = hint;
               board_result_t r;
               r.assign(&desc_core2);
@@ -234,7 +234,7 @@ static void atom_and_stack() {
   detect_outcome_t out;
   out.result = r;
   finalize_prepared_result(out, 0);
-  out.setup_succeeded = true;
+  out.adopted = true;
   assert(out.candidate_kind == candidate_kind_t::provisional && !should_persist_detection(out, 0));
   assert(host_touch::scans == 1 && host_touch::clears == 1);
   ++cases;
@@ -288,7 +288,7 @@ static void stack_confirmation() {
       detect_outcome_t out;
       out.result = r;
       finalize_prepared_result(out, 0);
-      out.setup_succeeded = true;
+      out.adopted = true;
       assert(should_persist_detection(out, 0) && !should_persist_detection(out, desc_stack.def.id));
       ++cases;
     }
@@ -320,7 +320,7 @@ static void fixed_core() {
           auto ctx = context();
           board_result_t r;
           r.assign(selected);
-          assert(detail::fixed_start_core(r, ctx) == pmic_known);
+          assert(detail::fixed_prepare_core(r, ctx) == pmic_known);
           assert(identity_reads > 0);
           if (!pmic_known)
             assert(writes == 0 && host_probes::reads == 0);
@@ -395,11 +395,11 @@ static void stickc_shared_read() {
   }
 }
 int main() {
-  assert(find_board(esp32_d0wdq6_boards, desc_core2.def.id)->fixed_start ==
-         detail::fixed_start_core);
-  assert(find_board(esp32_d0wdq6_boards, desc_tough.def.id)->fixed_start ==
-         detail::fixed_start_core);
-  assert(find_board(esp32_d0wdq6_boards, desc_coreink.def.id)->fixed_start == fixed_start_coreink);
+  assert(find_board(esp32_d0wdq6_boards, desc_core2.def.id)->fixed_prepare ==
+         detail::fixed_prepare_core);
+  assert(find_board(esp32_d0wdq6_boards, desc_tough.def.id)->fixed_prepare ==
+         detail::fixed_prepare_core);
+  assert(find_board(esp32_d0wdq6_boards, desc_coreink.def.id)->fixed_prepare == fixed_prepare_coreink);
   host_snapshot::check("esp32", esp32_d0wdq6_boards);
   detection_transaction_t transaction(pins(wiring::detection::unconditional_pins), no_pins(),
                                       false);

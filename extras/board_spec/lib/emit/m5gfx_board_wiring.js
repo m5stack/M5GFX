@@ -258,17 +258,18 @@ export function renderM5GFXWiringHeader(entries) {
   const partitioned = partitionDetectionPins(entries, chip);
   const lines = [
     "// Generated from extras/board_spec; do not edit by hand.",
+    "// Regenerate in extras/board_spec: node cli/spec.js emit-wiring",
     "// Unspecified values use target-specific unknown or sentinel values.",
     "// Precedence: board value > part default > panel-class default.",
     "#pragma once",
     "",
     "#include <cstdint>",
     "",
-    "namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {",
   ];
   if (entries.some(({ board }) => detectClassesForBoard(board).length)) {
-    lines.splice(7, 0, '#include "../../detect_class.hpp"', "");
+    lines.push('#include "../../detect_class.hpp"', "");
   }
+  lines.push("namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {");
   for (const entry of entries) {
     const value = entry.emitted;
     const subdivision = cardputerSubdivisionForEntry(entry, entries);

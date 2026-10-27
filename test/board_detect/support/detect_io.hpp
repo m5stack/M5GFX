@@ -179,6 +179,12 @@ namespace m5gfx { namespace board_detect { namespace io {
                              std::uint32_t) {
     return host_hardware::wire && host_hardware::wire(addr, reglen ? reg[0] : -1, data, len, false);
   }
+  static constexpr unsigned package_classic_picov3 = 6;
+  static constexpr unsigned package_s3_qfn56 = 0;
+  static constexpr unsigned package_s3_lga56 = 1;
+  static constexpr unsigned package_c6_qfn40 = 0;
+  static constexpr unsigned package_c6_qfn32 = 1;
+  static constexpr unsigned package_p4 = 0;
   inline unsigned package_version() { return host_hardware::package; }
   inline bool psram_ready() { return host_hardware::psram_active; }
   inline unsigned chip_revision() { return host_chip::revision; }

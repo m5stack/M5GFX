@@ -1,4 +1,5 @@
-// Generated from detector_order.json and board catalog.
+// Generated from extras/board_spec; do not edit by hand.
+// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
 #pragma once
 
 static const board_detector_t* const esp32h2_detectors[] = {

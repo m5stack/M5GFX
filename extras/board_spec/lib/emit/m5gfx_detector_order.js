@@ -87,17 +87,17 @@ export function renderDetectorOrderHeaders(boards, groups) {
       + "\n  nullptr,\n};\n"
       + `static_assert(sizeof(${name}) / sizeof(${name}[0]) - 1 <= max_detector_families,\n`
       + `              "${name} exceeds the detection session family limit");\n`;
-    outputs.set(group.output, (outputs.get(group.output) ?? "// Generated from detector_order.json and board catalog.\n#pragma once\n\n") + array + "\n");
+    outputs.set(group.output, (outputs.get(group.output) ?? "// Generated from extras/board_spec; do not edit by hand.\n// Regenerate in extras/board_spec: node cli/spec.js emit-wiring\n#pragma once\n\n") + array + "\n");
   }
   const holdBoards = boards.filter(hasGpioPowerHold).sort((a, b) => a.legacy_board_id - b.legacy_board_id);
   outputs.set("gpio_power_hold_board_ids.hpp",
-    "// Generated from GPIO power-hold devices and pin roles in the board catalog.\n#pragma once\n\n"
+    "// Generated from extras/board_spec; do not edit by hand.\n// Regenerate in extras/board_spec: node cli/spec.js emit-wiring\n#pragma once\n\n"
     + "namespace m5gfx { namespace board_detect {\n"
     + "static constexpr board_id_t gpio_power_hold_board_ids[] = {\n"
     + holdBoards.map((board) => `  ${board.legacy_board_id}, // ${oneLine(`board_${board.name}`)}`).join("\n") + "\n};\n"
     + "} } // namespace m5gfx::board_detect\n");
   outputs.set("detector_order_constraints.hpp",
-    "// Generated from detector_order.json and board catalog.\n#pragma once\n\n"
+    "// Generated from extras/board_spec; do not edit by hand.\n// Regenerate in extras/board_spec: node cli/spec.js emit-wiring\n#pragma once\n\n"
     + "namespace m5gfx { namespace board_detect {\n"
     + `static constexpr unsigned max_detector_families = ${maxFamilies};\n`
     + "struct detector_order_edge_t { board_id_t before; board_id_t after; };\n"

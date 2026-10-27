@@ -1,4 +1,5 @@
-// Generated from extras/board_spec; host tests only. Do not edit by hand.
+// Generated from extras/board_spec; do not edit by hand.
+// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
 #pragma once
 #include <set>
 #include <vector>
@@ -30,7 +31,7 @@ static const expected_detector_pins_t expected_detector_pins[] = {
   { &pm1_family_detector, "pm1_family_detector", { 4, 13, 14, 15, 16, 17, 18, 39, 40, 41, 42, 45, 46, 47, 48 }, { 30, 29 } },
   { &pm1_ext_family_detector, "pm1_ext_family_detector", { 2, 3, 11, 12, 13, 14, 15, 16, 43, 44, 45, 46, 47 }, { 32, 28 } },
   { &paper_family_detector, "paper_family_detector", { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 41, 42, 44, 45, 46, 48 }, { 34, 19 } },
-  { &spi_id_detector, "spi_id_detector", { 4, 5, 6, 7, 8, 9, 12, 15, 16, 17, 21, 33, 34, 41, 46 }, { 11, 13, 137, 138 } },
+  { &atoms3_family_detector, "atoms3_family_detector", { 4, 5, 6, 7, 8, 9, 12, 15, 16, 17, 21, 33, 34, 41, 46 }, { 11, 13, 137, 138 } },
   { &cardputer_family_detector, "cardputer_family_detector", { 5, 6, 8, 9, 33, 34, 35, 36, 37, 38 }, { 14, 24, 16 } },
   { &airq_detector, "airq_detector", { 1, 2, 3, 4, 5, 6, 46 }, { 15 } },
   { &stamplc_detector, "stamplc_detector", { 3, 6, 7, 8, 9, 10, 12 }, { 21 } },

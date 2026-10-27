@@ -19,8 +19,8 @@ namespace m5gfx {
 namespace board_detect {
 namespace m5 {
 #include "board_detect/m5/display_parts.inl"
-construct_status_t setup_detected_board(const board_result_t &result, display_parts_t *parts) {
-  return setup_board(esp32p4_boards, result, parts);
+construct_status_t construct_detected_board(const board_result_t &result, display_parts_t *parts) {
+  return construct_board(esp32p4_boards, result, parts);
 }
 void destroy_display_parts(display_parts_t *parts) {
   assert(!parts->bus && !parts->panel && !parts->light && !parts->touch);
@@ -29,7 +29,7 @@ void destroy_display_parts(display_parts_t *parts) {
 }
 static unsigned get_pkg_ver() { return 0; }
 static const char LIBRARY_NAME[] = "host";
-static const int probe_i2c_port = -1;
+static const int detection_i2c_port = -1;
 using lgfx::board_t;
 #include "board_detect/detection_package.inl"
 #include "board_detect/detection_integration.inl"
@@ -96,14 +96,14 @@ static unsigned tab5_observations() {
           detection_transaction_t transaction(pins(watched), no_pins(), false);
           probe_ctx_t ctx;
           ctx.transaction = &transaction;
-          ctx.i2c_port_probe = -1;
+          ctx.probe_port = -1;
           board_result_t result;
           result.option = 0xA5;
           if (fixed) {
             result.assign(desc);
             const auto *entry = find_board(esp32p4_boards, desc->def.id);
-            assert(entry && entry->fixed_start == tab5_detail::fixed_start);
-            assert(entry->fixed_start(result, ctx));
+            assert(entry && entry->fixed_prepare == tab5_detail::fixed_prepare);
+            assert(entry->fixed_prepare(result, ctx));
           } else {
             assert(tab5_family_detector.confirm(ctx, &result));
             assert(result.observe_after_power == tab5_detail::observe_touch);
@@ -165,7 +165,7 @@ int main() {
       });
       assert(out.result.candidate == expected &&
              out.verdict == (weak ? verdict_t::candidate : verdict_t::unknown) &&
-             !out.setup_succeeded && !should_persist_detection(out, 0));
+             !out.adopted && !should_persist_detection(out, 0));
       assert(out.attempts == (weak ? 5 : 1));
       ++cases;
     }
@@ -174,14 +174,14 @@ int main() {
   const auto *fixed = m5gfx::select_fixed_board(lgfx::board_M5StampP4);
   assert(fixed && fixed->desc == &desc_stampp4 && fixed->construct == construct_displayless);
   unsigned adoptions = 0;
-  const auto out = m5gfx::run_fixed_detection_session(*fixed, false,
+  const auto out = m5gfx::run_fixed_startup_session(*fixed, false,
       [&](display_parts_t &parts, lgfx::board_t board) {
         ++adoptions;
         assert(board == lgfx::board_M5StampP4);
         assert(!parts.bus && !parts.panel && !parts.light && !parts.touch);
         return true;
       });
-  assert(out.setup_succeeded && out.attempts == 1 && out.verdict == verdict_t::confirmed &&
+  assert(out.adopted && out.attempts == 1 && out.verdict == verdict_t::confirmed &&
          out.result.desc == &desc_stampp4 && adoptions == 1);
   assert(host_hardware::events.empty() && host_hardware::ports.empty());
   for (auto detector = esp32p4_detectors; *detector; ++detector) assert(!(*detector)->has_member(desc_stampp4.def.id));

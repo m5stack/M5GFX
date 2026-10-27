@@ -64,12 +64,12 @@ int main() {
               req.attempt = start;
               req.max_attempts = 5;
               req.hint = hint;
-              req.preferred = pref;
+              req.fallback = pref;
               auto out = run_detection_session(req, [&](const detect_request_t &request, bool) {
                 detection_transaction_t transaction(no_pins(), no_pins(), false);
                 probe_ctx_t ctx;
                 ctx.transaction = &transaction;
-                ctx.preferred = request.preferred;
+                ctx.fallback = request.fallback;
                 detect_outcome_t out;
                 out.result = detect_board(seeded ? with_seed : normal, request.hint, ctx);
                 out.reason = fail_reason_t::no_signature;
@@ -84,7 +84,7 @@ int main() {
 #else
               bool matches = flash == 2;
 #endif
-              assert(out.attempts == 1 && !out.setup_succeeded &&
+              assert(out.attempts == 1 && !out.adopted &&
                      later.calls == unsigned(!matches));
               assert(host_hardware::events.empty() && !should_persist_detection(out, 0));
               const auto *expected = seeded ? &earlier : matches ? &desc.def : nullptr;

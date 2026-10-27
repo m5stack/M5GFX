@@ -83,7 +83,7 @@ public:
     const int id1 = unitpoep4_detail::read_phy_register(2);
     const int id2 = unitpoep4_detail::read_phy_register(3);
     // Even successful displayless detection must return both management pins.
-    ctx.transaction->restore_start(unitpoep4_detail::gpio_pins,
+    ctx.transaction->restore_to_snapshot(unitpoep4_detail::gpio_pins,
                                    sizeof(unitpoep4_detail::gpio_pins));
     if (id1 != 0x0243 || id2 != 0x0C54) { return false; }
     result->assign(&desc_unitpoep4);

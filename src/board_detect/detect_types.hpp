@@ -107,7 +107,7 @@ namespace board_detect
   {
     const board_id_t* target_set = nullptr;
     board_id_t hint = board_id_unknown;
-    board_id_t preferred = board_id_unknown;
+    board_id_t fallback = board_id_unknown;
     bool allow_reset = false;
     std::uint8_t attempt = 0;
     std::uint8_t max_attempts = 1;
@@ -121,9 +121,9 @@ namespace board_detect
     board_result_t result;
     fail_reason_t reason = fail_reason_t::none;
     std::uint8_t attempts = 0;
-    // Identification and successful adoption remain separate: legacy init
+    // Identification and successful adoption remain separate: the session
     // retries a confirmed family when preparation or display adoption fails.
-    bool setup_succeeded = false;
+    bool adopted = false;
   };
 }
 }
