@@ -33,7 +33,7 @@
     ]
   },
   "esp32s3_detectors_qfn56": {
-    "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/families.inl", "output": "esp32s3_detector_order.hpp",
+    "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/board_entries.inl", "output": "esp32s3_detector_order.hpp",
     "constraints": [
       { "after": "airq_detector", "before": "pm1_ext_family_detector", "reason": "AirQ RST G2 and DC G3 overlap ChainCaptain and PaperColor internal I2C SCL and SDA" },
       { "after": "atoms3_family_detector", "before": "cores3_family_detector", "reason": "AtomS3 MOSI G21 overlaps CoreS3 touch INT; probe CoreS3 first to avoid output contention" },
@@ -65,7 +65,7 @@
     ]
   },
   "esp32s3_detectors_lga56": {
-    "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/families.inl", "output": "esp32s3_detector_order.hpp",
+    "chip": "esp32s3", "source": "src/board_detect/m5/esp32s3/board_entries.inl", "output": "esp32s3_detector_order.hpp",
     "constraints": [
       { "before": "atomvoices3r_detector", "after": "atoms3r_detector", "reason": "Voice codec on G45/G0 is read before AtomS3R display probing can drive Voice I2S DOUT G48" },
       { "before": "atomvoices3r_detector", "after": "pmic_id_detector", "reason": "Voice codec is identified before the G47/G48 PM1 bus can touch Voice I2S DOUT G48" },

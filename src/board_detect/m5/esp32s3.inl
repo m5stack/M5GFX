@@ -5,3 +5,4 @@
 // ESP32-S3 families live in this directory so each family can grow without
 // turning the package-level registry into another monolithic implementation.
 #include "esp32s3/families.inl"
+#include "esp32s3/board_entries.inl"

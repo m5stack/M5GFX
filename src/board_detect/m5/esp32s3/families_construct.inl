@@ -639,9 +639,5 @@ namespace m5
 #endif
   }
 
-  construct_status_t construct_detected_board(const board_result_t& result, display_parts_t* parts)
-  {
-    return construct_board(esp32s3_boards, result, parts);
-  }
 }
 }
