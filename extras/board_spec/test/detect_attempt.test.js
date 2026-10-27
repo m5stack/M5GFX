@@ -188,3 +188,40 @@ test("production init restores panel according to adoption independently of verd
     '}}',
   ].join("\n"), "panel restoration");
 });
+
+test("setup rejection lists preserve all historical board groups", async () => {
+  const reject = body(await readMain(), "static bool reject_detected_setup(");
+  const groups = [
+    ["board_M5StickCPlus"],
+    ["board_M5StopWatch", "board_M5PaperMono"],
+    ["board_M5ChainCaptain"],
+    ["board_M5PaperColor"],
+    ["board_M5PaperS3"],
+    ["board_M5PaperDIY"],
+    ["board_M5Cardputer", "board_M5CardputerADV", "board_M5VAMeter"],
+    ["board_M5AirQ"],
+    ["board_M5StamPLC"],
+    ["board_M5CoreP4X"],
+    ["board_M5Tab5", "board_M5Tab5X"],
+    ["board_M5StampC5", "board_M5ToughC5"],
+    ["board_M5CoreMatrix"],
+  ];
+  const names = ["board_unknown", ...new Set(groups.flat())];
+  await compileRun(`
+#include <cassert>
+#include <initializer_list>
+enum class board_t {${names.join(",")}};
+bool reject_default(board_t setup_board) ${reject}
+${groups.map((boards, index) => `
+#define M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS ${boards.map((name) => `board_t::${name}`).join(",")}
+bool reject_${index}(board_t setup_board) ${reject}
+#undef M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS
+`).join("\n")}
+int main() {
+ for (const auto board : {${names.map((name) => `board_t::${name}`).join(",")}}) {
+  assert(!reject_default(board));
+  ${groups.map((boards, index) => `assert(reject_${index}(board) == (${boards.map((name) => `board == board_t::${name}`).join(" || ")}));`).join("\n  ")}
+ }
+}
+`, "setup rejection");
+});

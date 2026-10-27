@@ -56,9 +56,8 @@
                                    const ops::retry_policy_t* policy = nullptr)
     {
       const int ports[] = { port };
-      ops::io_backend_context_t backend_context { ports, 1 };
       const ops::gpio_scope_t gpio_scope { io::pin_count, gpio_pins.data, gpio_pins.size };
-      return ops::run_ops(ops::io_backend(&backend_context),
+      return ops::run_ops(ports, 1,
                           power.devices, power.device_count,
                           sequence.data, sequence.size, gpio_scope, policy,
                           ops::io_wait_ready_finished);

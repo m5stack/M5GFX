@@ -88,57 +88,14 @@
 
   static bool reject_detected_setup(board_t setup_board)
   {
+#if defined (M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS)
+    static constexpr board_t rejected[] = { M5GFX_AUTODETECT_TEST_FAIL_SETUP_BOARDS };
+    for (const auto board : rejected)
+    {
+      if (setup_board == board) { return true; }
+    }
+#else
     (void)setup_board;
-#if (!defined(CONFIG_IDF_TARGET) || defined(CONFIG_IDF_TARGET_ESP32)) && defined (M5GFX_AUTODETECT_TEST_FAIL_STICKCPLUS_SETUP)
-    if (setup_board == board_t::board_M5StickCPlus) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_SETUP)
-    if (setup_board == board_t::board_M5StopWatch
-    || setup_board == board_t::board_M5PaperMono) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_CHAINCAPTAIN_SETUP)
-    if (setup_board == board_t::board_M5ChainCaptain) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERCOLOR_SETUP)
-    if (setup_board == board_t::board_M5PaperColor) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERS3_SETUP)
-    if (setup_board == board_t::board_M5PaperS3) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERDIY_SETUP)
-    if (setup_board == board_t::board_M5PaperDIY) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_CARDPUTER_SETUP)
-    if (setup_board == board_t::board_M5Cardputer
-    || setup_board == board_t::board_M5CardputerADV
-    || setup_board == board_t::board_M5VAMeter) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_AIRQ_SETUP)
-    if (setup_board == board_t::board_M5AirQ) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined (M5GFX_AUTODETECT_TEST_FAIL_STAMPLC_SETUP)
-    if (setup_board == board_t::board_M5StamPLC) { return true; }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32P4) && defined (M5GFX_AUTODETECT_TEST_FAIL_COREP4X_SETUP)
-    if (setup_board == board_t::board_M5CoreP4X)
-    {
-    return true;
-    }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32P4) && defined (M5GFX_AUTODETECT_TEST_FAIL_TAB5_SETUP)
-    if (setup_board == board_t::board_M5Tab5
-    || setup_board == board_t::board_M5Tab5X)
-    {
-    return true;
-    }
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32C5) && defined (M5GFX_AUTODETECT_TEST_FAIL_TOUGHC5_SETUP)
-
-    return true;
-#endif
-#if defined(CONFIG_IDF_TARGET_ESP32C61) && defined (M5GFX_AUTODETECT_TEST_FAIL_COREMATRIX_SETUP)
-
-    return true;
 #endif
     return false;
   }
