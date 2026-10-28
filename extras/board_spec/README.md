@@ -256,7 +256,7 @@ Measure each of these states on real hardware before writing a value.
    `node cli/spec.js emit-wiring`, and `node build/bundle.js`; then run
    `node cli/spec.js check` and `npm test`. Commit the generated files; do not edit them
    by hand.
-3. The generated wiring header (`src/board_detect/m5/generated/<chip>_wiring.hpp`)
+3. The generated board-data header (`src/board_detect/m5/generated/<chip>_board_data.hpp`)
    gets `detect_class_mask` (the classified pins) and one mask per class
    (`detect_class_up` / `_down` / `_floating` / `_fixed`). These constants exist only
    for boards with at least one class. The classified pins also join the chip's
@@ -268,7 +268,7 @@ Measure each of these states on real hardware before writing a value.
    `match_detect_class(expected, probe_pin_pulls(ctx, expected.mask))`
    (`src/board_detect/probe_types.hpp`). `spi_id_detector_t` takes such a signature
    function as its fifth constructor argument; see `airq_signature()` in
-   `src/board_detect/m5/esp32s3/families.inl`. Other detector types call the match
+   `src/board_detect/m5/esp32s3.inl`. Other detector types call the match
    from their own signature.
 
 A match only means "not excluded". The candidate is still confirmed by its normal
@@ -291,6 +291,13 @@ Board-wide `detect_class` facts generate a `constexpr detect_class_expected_t
 detect_class_expected` in the board's wiring namespace. Detectors copy this
 value into a function-local `constexpr` before matching physical samples.
 Revision-choice classes remain local evidence rather than board-wide gates.
+`emit-wiring` writes one `<chip>_board_data.hpp` per chip catalog, combining
+wiring constants and construction specifications. The `wiring_output` and
+`specs_output` target fields retain the component group names; the CLI combines
+these groups under the corresponding `_board_data.hpp` name. Detector-order
+headers stay separate because they refer to handwritten detector definitions.
+`check` rejects missing, stale, and obsolete generated headers.
+
 Descriptors and probe procedures remain handwritten C++.
 
 ## Autodetection test injections

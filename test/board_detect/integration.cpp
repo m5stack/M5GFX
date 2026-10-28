@@ -8,9 +8,9 @@
 #include "support/probes.hpp"
 #include "board_detect/m5/board_registry.inl"
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
-#include "board_detect/m5/generated/esp32s3_wiring.hpp"
+#include "board_detect/m5/generated/esp32s3_board_data.hpp"
 #else
-#include "board_detect/m5/generated/esp32c6_wiring.hpp"
+#include "board_detect/m5/generated/esp32c6_board_data.hpp"
 #endif
 using namespace m5gfx::board_detect;
 namespace test_driver {

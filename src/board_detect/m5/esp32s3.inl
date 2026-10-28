@@ -5,8 +5,7 @@
 #include "../board_detect.hpp"
 #include "pmic_ops.hpp"
 #include "board_registry.inl"
-#include "generated/esp32s3_wiring.hpp"
-#include "generated/esp32s3_specs.hpp"
+#include "generated/esp32s3_board_data.hpp"
 
 namespace m5gfx
 {

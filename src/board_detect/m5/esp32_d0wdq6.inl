@@ -4,8 +4,7 @@
 
 #include "../board_detect.hpp"
 #include "board_registry.inl"
-#include "generated/esp32_d0wdq6_specs.hpp"
-#include "generated/esp32_d0wdq6_wiring.hpp"
+#include "generated/esp32_d0wdq6_board_data.hpp"
 #include "pmic_ops.hpp"
 
 #include <new>

@@ -232,9 +232,9 @@ function boolean(value) { return value ? "true" : "false"; }
 function optionalFlag(value) { return value === null ? "-1" : (value ? "1" : "0"); }
 function uint(value) { return `0x${value.toString(16).toUpperCase()}`; }
 
-export function renderM5GFXSpecsHeader(specs) {
+export function renderM5GFXSpecsHeader(specs, preamble = true) {
   const entries = Array.isArray(specs) ? specs : [specs];
-  const lines = [
+  const lines = preamble ? [
     "// Generated from extras/board_spec; do not edit by hand.",
     "// Regenerate in extras/board_spec: node cli/spec.js emit-wiring",
     "// Unspecified values use target-specific unknown or sentinel values.",
@@ -242,8 +242,8 @@ export function renderM5GFXSpecsHeader(specs) {
     "#pragma once",
     "",
     "#include <cstdint>",
-    '#include "../setup_sentinels.hpp"',
-  ];
+  ] : [];
+  lines.push('#include "../setup_sentinels.hpp"');
   for (const entry of entries) {
     lines.push("", `namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace ${entry.namespace} {`);
     if (entry.bus.kind === "parallel_epd") {
