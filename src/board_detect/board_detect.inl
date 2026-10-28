@@ -3,7 +3,7 @@
 #pragma once
 
 #include "board_detect.hpp"
-#include "i2c_bus_probe.hpp"
+#include "probe_types.hpp"
 #include "ops.inl"
 #include "m5/generated/gpio_power_hold_board_ids.hpp"
 #include "m5/generated/detector_order_constraints.hpp"
@@ -15,20 +15,12 @@ namespace m5gfx
 {
 namespace board_detect
 {
-  // Call after family-specific evidence gates; a hint is eligible only while
-  // that member remains possible. Defaults may be absent for open families.
-  // Only some chips' detectors use it.
-#include "member_selection.inl"
 
 #include "transaction.inl"
 
 #include "detector_runner.inl"
 
 #include "probe_hardware.inl"
-
-#include "prepare_steps.inl"
-
-#include "spi_detector.inl"
 
 #include "prepare.inl"
 }

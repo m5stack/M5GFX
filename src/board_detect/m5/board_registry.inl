@@ -2,6 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #pragma once
 
+namespace lgfx
+{
+inline namespace v1
+{
+  struct IBus;
+  struct Panel_Device;
+  struct ILight;
+  struct ITouch;
+}
+}
+
 namespace m5gfx
 {
 namespace board_detect
@@ -12,7 +23,13 @@ namespace m5
   constexpr std::uint8_t pi4io_id_register = 0x01;
   constexpr bool is_pi4io(std::uint8_t value) { return (value & 0xE0) == 0xA0; }
 
-  struct display_parts_t;
+  struct display_parts_t
+  {
+    lgfx::IBus* bus = nullptr;
+    lgfx::Panel_Device* panel = nullptr;
+    lgfx::ILight* light = nullptr;
+    lgfx::ITouch* touch = nullptr;
+  };
   enum class construct_status_t : std::uint8_t { ok, no_display, failed };
   constexpr construct_status_t construct_status(bool success)
   { return success ? construct_status_t::ok : construct_status_t::failed; }

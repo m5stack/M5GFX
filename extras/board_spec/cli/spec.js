@@ -12,8 +12,9 @@ import { validatePartCatalog } from "../lib/parts.js";
 import { renderRevisionDoc, validateTargets, validateBoardEnums } from "../lib/targets.js";
 import { formatBoard } from "../lib/format.js";
 import { emitPinTable, PIN_NAMES, PIN_TABLE_TARGETS, renderPinTableInl, renderPinTableJson } from "../lib/emit/m5unified_pin_table.js";
-import { emitM5GFXWiring, m5gfxBoardMapping, renderM5GFXWiringHeader, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
-import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
+import { emitM5GFXWiring, m5gfxBoardMapping, selectM5GFXWiringBoards } from "../lib/emit/m5gfx_board_wiring.js";
+import { emitM5GFXSpecs } from "../lib/emit/m5gfx_board_specs.js";
+import { renderM5GFXBoardDataHeader } from "../lib/emit/m5gfx_board_data.js";
 import { renderDetectorOrderHeaders } from "../lib/emit/m5gfx_detector_order.js";
 import { renderDetectorProbePins } from "../lib/emit/m5gfx_detector_probe_pins.js";
 import { validateSchema } from "../lib/schema.js";
@@ -191,13 +192,16 @@ function wiringEntries(boards, connectorTypes, contexts, mappings, target) {
   });
 }
 
-async function wiringOutputs(boards, connectorTypes, contexts, targets) {
+async function boardDataOutputs(boards, connectorTypes, contexts, targets) {
   const outputs = new Map();
   const target = targets.m5gfx_board_desc ?? {};
   const mappings = Object.keys(target.boards ?? {}).map((id) => m5gfxBoardMapping(target, boards.find((board) => board.id === id))).filter(Boolean);
   for (const filename of new Set(mappings.map((mapping) => mapping.wiringOutput))) {
     const selected = mappings.filter((mapping) => mapping.wiringOutput === filename);
-    outputs.set(filename, renderM5GFXWiringHeader(wiringEntries(boards, connectorTypes, contexts, selected, target)));
+    const entries = wiringEntries(boards, connectorTypes, contexts, selected, target);
+    const specs = specsEntries(boards, connectorTypes, contexts, selected);
+    outputs.set(filename.replace(/_wiring\.hpp$/, "_board_data.hpp"),
+      renderM5GFXBoardDataHeader(entries, specs));
   }
   return outputs;
 }
@@ -217,22 +221,14 @@ function detectorProbePins(boards, connectorTypes, contexts, targets, detectorOr
   return renderDetectorProbePins(entries, detectorOrder);
 }
 
-function specsOutputs(boards, connectorTypes, contexts, targets) {
-  const outputs = new Map();
-  const target = targets.m5gfx_board_desc ?? {};
-  const mappings = Object.keys(target.boards ?? {}).map((id) => m5gfxBoardMapping(target, boards.find((board) => board.id === id)))
-    .filter((mapping) => mapping?.specsOutput);
-  for (const filename of new Set(mappings.map((mapping) => mapping.specsOutput))) {
-    const selected = mappings.filter((mapping) => mapping.specsOutput === filename).map((mapping) => {
-      const board = boards.find((item) => item.id === mapping.boardId);
-      if (!board) throw new Error(`${mapping.boardId} board is required for M5GFX specs`);
-      const ctx = contexts.get(board.id);
-      const variants = resolveAll(board, connectorTypes, resolveCatalogs(ctx)).map((item) => item.board);
-      return emitM5GFXSpecs(board, variants, ctx.parts, mapping);
-    });
-    outputs.set(filename, renderM5GFXSpecsHeader(selected));
-  }
-  return outputs;
+function specsEntries(boards, connectorTypes, contexts, mappings) {
+  return mappings.filter((mapping) => mapping.specsOutput).map((mapping) => {
+    const board = boards.find((item) => item.id === mapping.boardId);
+    if (!board) throw new Error(`${mapping.boardId} board is required for M5GFX specs`);
+    const ctx = contexts.get(board.id);
+    const variants = resolveAll(board, connectorTypes, resolveCatalogs(ctx)).map((item) => item.board);
+    return emitM5GFXSpecs(board, variants, ctx.parts, mapping);
+  });
 }
 
 async function writeWiringOutput() {
@@ -248,10 +244,7 @@ async function writeWiringOutput() {
   await validateGenerationInputs(boards, contexts, connectorTypes, parts, targets, accessories);
   const directory = path.resolve(root, "../../src/board_detect/m5/generated");
   await fs.mkdir(directory, { recursive: true });
-  for (const [filename, output] of await wiringOutputs(boards, connectorTypes, contexts, targets)) {
-    await fs.writeFile(safeOutputPath(directory, filename), output);
-  }
-  for (const [filename, output] of specsOutputs(boards, connectorTypes, contexts, targets)) {
+  for (const [filename, output] of await boardDataOutputs(boards, connectorTypes, contexts, targets)) {
     await fs.writeFile(safeOutputPath(directory, filename), output);
   }
   for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
@@ -415,13 +408,16 @@ async function check() {
     await assertGeneratedFile(path.join(pinTableDir, `${targetId}.inl`), pinTables.inl);
   }
   const wiringDirectory = path.resolve(root, "../../src/board_detect/m5/generated");
-  for (const [filename, output] of await wiringOutputs(boards, connectorTypes, contexts, targets)) {
-    await assertGeneratedFile(path.join(wiringDirectory, filename), output);
+  const detectionOutputs = new Map([
+    ...await boardDataOutputs(boards, connectorTypes, contexts, targets),
+    ...renderDetectorOrderHeaders(boards, detectorOrder),
+  ]);
+  for (const filename of await fs.readdir(wiringDirectory)) {
+    if (filename.endsWith(".hpp") && !detectionOutputs.has(filename)) {
+      throw new Error(`obsolete generated artifact: ${filename}`);
+    }
   }
-  for (const [filename, output] of specsOutputs(boards, connectorTypes, contexts, targets)) {
-    await assertGeneratedFile(path.join(wiringDirectory, filename), output);
-  }
-  for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
+  for (const [filename, output] of detectionOutputs) {
     await assertGeneratedFile(path.join(wiringDirectory, filename), output);
   }
   await assertGeneratedFile(path.resolve(root, "../../test/board_detect/generated/detector_probe_pins.hpp"),

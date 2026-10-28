@@ -8,23 +8,10 @@
 #include "support/probes.hpp"
 #include "board_detect/m5/board_registry.inl"
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
-#include "board_detect/m5/generated/esp32s3_wiring.hpp"
+#include "board_detect/m5/generated/esp32s3_board_data.hpp"
 #else
-#include "board_detect/m5/generated/esp32c6_wiring.hpp"
+#include "board_detect/m5/generated/esp32c6_board_data.hpp"
 #endif
-namespace lgfx {
-struct IBus;
-struct Panel_Device;
-struct ILight;
-struct ITouch;
-} // namespace lgfx
-namespace m5gfx {
-namespace board_detect {
-namespace m5 {
-#include "board_detect/m5/display_parts.inl"
-}
-} // namespace board_detect
-} // namespace m5gfx
 using namespace m5gfx::board_detect;
 namespace test_driver {
 static std::function<void(const probe_ctx_t &)> on_signature;

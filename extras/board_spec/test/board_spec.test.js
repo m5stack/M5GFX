@@ -595,7 +595,7 @@ test("PSRAM may share connector roles but rejects another device signal", () => 
 
 test("generated ESP32 wiring preserves the replaced board values", async () => {
   const source = await fs.readFile(
-    path.join(root, "../../src/board_detect/m5/generated/esp32_d0wdq6_wiring.hpp"), "utf8");
+    path.join(root, "../../src/board_detect/m5/generated/esp32_d0wdq6_board_data.hpp"), "utf8");
   assert.deepEqual(parseGeneratedWiring(source), {
     ...legacyEsp32Wiring, atommatrix: {}, atomu: {}, atomvoice: {},
   });
@@ -1008,7 +1008,7 @@ test("AtomS3 exposes the display wiring expected by the future reset declaration
   assert.deepEqual(emitted.hold, [15]);
 });
 
-const esp32s3SetupPath = path.join(root, "../../src/board_detect/m5/esp32s3/families_construct.inl");
+const esp32s3SetupPath = path.join(root, "../../src/board_detect/m5/esp32s3_construct.inl");
 
 test("AtomS3 generated panel construction matches every legacy field", async () => {
   const source = catalogBoards.find((item) => item.id === "m5atoms3");
@@ -1050,7 +1050,7 @@ test("AtomS3R generated specs preserve the legacy setup", async () => {
   assert.equal(pinTable.values.port_a_pin1, 1);
   assert.equal(pinTable.values.port_a_pin2, 2);
 
-  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(wiringHeader, /namespace atoms3r \{[\s\S]*?touches_opi_pins = false/);
   assert.match(wiringHeader, /unconditional_pins\[\] = \{[^}]*14, 15,[^}]*21,[^}]*42, 43, 44, 45,[^}]*48/);
   assert.match(wiringHeader, /unconditional_pins\[\] = \{ 0, 1, 2,/);
@@ -1158,7 +1158,7 @@ test("StamPLC generated specs preserve the legacy setup", async () => {
   };
   for (const [name, value] of Object.entries(expectedPins)) assert.equal(pinTable.values[name], value, name);
 
-  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(wiringHeader, /namespace stamplc \{[\s\S]*?shared_sd_miso = 9;[\s\S]*?shared_sd_sd_cs = 10;/);
   assert.match(wiringHeader, /unconditional_pins\[\] = \{[^}]*\b9, 10,[^}]*\}/);
   // Construction settings await host coverage; preserve these legacy checks.
@@ -1211,7 +1211,7 @@ test("AirQ generated specs preserve the legacy setup", async () => {
   assert.match(header, /probe_gdew0154d67[\s\S]*?cmd = 0x2F;[\s\S]*?dummy_bits = 0;[\s\S]*?mask = 0xFFFFFFFF;/);
   assert.match(header, /probe_gdew0154m09[\s\S]*?cmd = 0x70;[\s\S]*?dummy_bits = 0;[\s\S]*?mask = 0xFFFF00FF;/);
 
-  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(wiringHeader, /namespace airq \{[\s\S]*?display_busy = 1;[\s\S]*?power_gpio = 46;/);
   assert.match(wiringHeader, /unconditional_pins\[\] = \{ 0, 1, 2,[^}]*45, 46, 47, 48 \};/);
   // Construction settings await host coverage; preserve these legacy checks.
@@ -1252,7 +1252,7 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
 
   assert.equal(specs.m5stickc.probes.st7735s, undefined);
   // Construction settings await host coverage; preserve these legacy checks.
-  const picoSetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_pico_construct.inl"), "utf8");
+  const picoSetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_d0wdq6_construct.inl"), "utf8");
   assert.match(picoSetupSource, /construct_atompsram[\s\S]*?construct_status_t::no_display/);
 });
 
@@ -1308,7 +1308,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.equal(classify({ pulldownHigh: 0n, pullupHigh: 0n }), "none");
 
   // Construction settings await host coverage; preserve these legacy checks.
-  const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6/c6_display_construct.inl"), "utf8");
+  const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6_construct.inl"), "utf8");
   assert.match(esp32c6SetupSource,
     /make_spi_bus\(bus_nesson1\)[\s\S]*?make_panel<lgfx::Panel_ST7789>/);
   assert.doesNotMatch(esp32c6SetupSource, /_read_panel_id/);
@@ -1374,7 +1374,7 @@ test("Cardputer family generated specs and wiring preserve the legacy setup", as
     for (const [name, value] of Object.entries(expected.pins)) assert.equal(pinTable.values[name], value, `${id} ${name}`);
   }
 
-  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(wiringHeader, /namespace cardputer \{[\s\S]*?namespace cardputer_subdivision \{[\s\S]*?sense_pins\[\] = \{ 5, 6, 8, 9 \};/);
   assert.match(wiringHeader, /vameter_i2c_addrs\[\] = \{ 0x40, 0x41 \};[\s\S]*?vameter_i2c_sda = 5;[\s\S]*?vameter_i2c_scl = 6;/);
   assert.match(wiringHeader, /unconditional_pins\[\] = \{[^}]*5, 6, 7, 8, 9[^}]*\}/);
@@ -1561,7 +1561,7 @@ test("AtomPsram fallback inputs are captured for transaction restoration", () =>
 
 test("ESP32-S3 detector filters hinted and OPI-conflicting candidates per model", async () => {
 
-  const wiring = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const wiring = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(wiring, /namespace atoms3 \{[\s\S]*?touches_opi_pins = true/);
   assert.match(wiring, /namespace dinmeter \{[\s\S]*?touches_opi_pins = false/);
 
@@ -1572,7 +1572,7 @@ test("generated wiring header links from two translation units", async (t) => {
   const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
   if (probe.error?.code === "ENOENT") return t.skip(`C++ compiler not found (${compiler})`);
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-wiring-odr-"));
-  const include = '#include "src/board_detect/m5/generated/esp32_d0wdq6_wiring.hpp"\n';
+  const include = 'enum { SPI2_HOST = 1, SPI3_HOST = 2 };\n#include "src/board_detect/m5/generated/esp32_d0wdq6_board_data.hpp"\n';
   try {
     await fs.writeFile(path.join(directory, "a.cpp"), `${include}int wiring_a() { return m5gfx::board_detect::m5::wiring::tough::hold[0]; }\n`);
     await fs.writeFile(path.join(directory, "b.cpp"), `${include}int wiring_a();\nint main() { return wiring_a() == m5gfx::board_detect::m5::wiring::tough::hold[0] ? 0 : 1; }\n`);
@@ -2326,7 +2326,7 @@ test("Tab5 touch identities select the three DSI panels", async () => {
   assert.deepEqual(detectionPinsForEntries([{ board: source, chip: chipP4, emitted: wiring }]), [22, 23, 31, 32]);
 
   // Construction settings await host coverage; preserve these legacy checks.
-  const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5_construct.inl"), "utf8");
+  const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4_construct.inl"), "utf8");
   assert.match(tab5SetupSource, /tab5_st7121_lane_mbps = 900/);
   assert.match(tab5SetupSource, /hit_st7121 \? tab5_st7121_lane_mbps : specs::tab5::bus_lane_mbps/);
   assert.match(tab5SetupSource, /hit_st7121 = result.prepared & tab5_detail::touch_st7121[\s\S]*?hit_st7123 = result.prepared & tab5_detail::touch_st7123/);
@@ -2337,7 +2337,7 @@ test("Tab5 touch identities select the three DSI panels", async () => {
 test("every descriptor operation GPIO is inside its execution and rollback scope", async () => {
 
   const s3Wiring = parseGeneratedWiring(await fs.readFile(
-    path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8",
+    path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8",
   ));
   for (const [boardName, sequence] of [
     ["stopwatch", "stopwatch_power_on"],
@@ -2348,7 +2348,7 @@ test("every descriptor operation GPIO is inside its execution and rollback scope
   }
 
   assert.equal(parseGeneratedWiring(await fs.readFile(
-    path.join(root, "../../src/board_detect/m5/generated/esp32p4_wiring.hpp"), "utf8",
+    path.join(root, "../../src/board_detect/m5/generated/esp32p4_board_data.hpp"), "utf8",
   )).tab5.touch_int, 23);
   for (const desc of ["tab5", "tab5x"]) {
 
@@ -2413,7 +2413,7 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
   assert.doesNotMatch(s3Header, /touch \{[\s\S]*?i2c_addr/);
   assert.doesNotMatch(s3Header, /bus_host|bus_three_wire/);
 
-  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+  const wiringHeader = await fs.readFile(path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   const unconditional = /unconditional_pins\[\] = \{ ([^}]*) \}/.exec(wiringHeader)[1].split(", ").map(Number);
   assert.deepEqual(unconditional, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]);
   for (const pin of [...Object.values(epdPins), 41, 42, 44, 48]) {
@@ -2455,19 +2455,19 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   assert.deepEqual(releasePins, [38, 39, 40, 41, 42, 46, 47, 48]);
 
   const generatedSpecs = await fs.readFile(
-    path.join(root, "../../src/board_detect/m5/generated/esp32s3_specs.hpp"), "utf8");
+    path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(generatedSpecs, /namespace i2c_io_expander \{[\s\S]*?i2c_addr = 0x58;[\s\S]*?id_reg = 0x10;[\s\S]*?id_value = 0x23;/);
   assert.match(generatedSpecs, /namespace i2c_camera \{[\s\S]*?i2c_addr = 0x21;[\s\S]*?id_reg = 0x0;[\s\S]*?id_value = 0x9B;/);
   assert.match(generatedSpecs, /namespace i2c_stackchan_ioe \{[\s\S]*?i2c_addr = 0x6F;[\s\S]*?i2c_freq = 100000;[\s\S]*?firmware_reg = 0x2;[\s\S]*?firmware_min = 0x4;/);
   assert.match(generatedSpecs, /namespace release_probe \{[\s\S]*?pins\[] = \{ 38, 39, 40, 41, 42, 46, 47, 48 \};[\s\S]*?reads = 256;[\s\S]*?samples = 9;[\s\S]*?settle_us = 10;[\s\S]*?short_max_ns = 260;[\s\S]*?long_min_ns = 330;/);
   const generatedWiring = await fs.readFile(
-    path.join(root, "../../src/board_detect/m5/generated/esp32s3_wiring.hpp"), "utf8");
+    path.join(root, "../../src/board_detect/m5/generated/esp32s3_board_data.hpp"), "utf8");
   assert.match(generatedWiring, /namespace cores3 \{[\s\S]*?camera_href = 38;[\s\S]*?camera_d7 = 47;[\s\S]*?camera_d6 = 48;/);
 
   // The CoreS3 LCD is 3-wire: panel reads use MOSI, never the D/C pin shared with SD MISO.
 
   // Construction settings await host coverage; preserve these legacy checks.
-  const coreSetup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3/cores3_construct.inl"), "utf8");
+  const coreSetup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3_construct.inl"), "utf8");
   assert.match(coreSetup, /make_spi_bus\(bus_cores3\)[\s\S]*?result\.option & generated_options::cores3::lcd_e/);
 });
 

@@ -7,7 +7,6 @@ namespace board_detect
 {
 namespace m5
 {
-#include "display_parts.inl"
 
   struct spi_bus_desc_t
   {

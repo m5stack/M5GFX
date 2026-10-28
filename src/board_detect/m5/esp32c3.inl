@@ -4,7 +4,7 @@
 
 #include "../board_detect.hpp"
 #include "board_registry.inl"
-#include "generated/esp32c3_wiring.hpp"
+#include "generated/esp32c3_board_data.hpp"
 
 namespace m5gfx { namespace board_detect { namespace m5 {
 

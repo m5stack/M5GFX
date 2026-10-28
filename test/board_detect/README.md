@@ -52,7 +52,7 @@ behavior. No production decision was changed to match the synthetic fixture.
 ## Hardware boundary
 
 Tests include production `.hpp` and `.inl` files, the complete model types, board
-IDs, and generated wiring/specification/order headers. They do not extract
+IDs, and generated board-data and detector-order headers. They do not extract
 production function text or redeclare reduced model types. Internal includes
 separate transactions, probing, startup, SPI selection, preparation, package
 selection, and integration without rewriting their bodies.

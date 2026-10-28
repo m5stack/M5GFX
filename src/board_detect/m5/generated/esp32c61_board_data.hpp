@@ -5,6 +5,23 @@
 #pragma once
 
 #include <cstdint>
+
+namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {
+
+namespace corematrix {
+  constexpr std::int8_t internal_i2c_sda = 0;
+  constexpr std::int8_t internal_i2c_scl = 1;
+  constexpr std::int8_t internal_i2c_port = 0;
+} // namespace corematrix
+
+namespace detection {
+  constexpr std::int8_t unconditional_pins[] = { 0, 1 };
+} // namespace detection
+
+} // namespace wiring
+
+} } } // namespace m5gfx::board_detect::m5
+
 #include "../setup_sentinels.hpp"
 
 namespace m5gfx { namespace board_detect { namespace m5 { namespace specs { namespace corematrix {

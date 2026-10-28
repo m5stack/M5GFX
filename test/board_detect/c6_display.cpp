@@ -3,7 +3,7 @@
 #include <initializer_list>
 #include <vector>
 #include "board_detect/board_detect.hpp"
-#include "board_detect/detect_session.hpp"
+#include "board_detect/detect_types.hpp"
 #include "board_detect/m5/generated/detector_order_constraints.hpp"
 #include "board_detect/m5/esp32c6.inl"
 

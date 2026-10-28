@@ -9,7 +9,7 @@
 namespace lgfx { struct Panel_TM1680 : Panel_Device {}; }
 namespace m5gfx {
 static const char LIBRARY_NAME[] = "host";
-#include "board_detect/m5/esp32c61/corematrix_construct.inl"
+#include "board_detect/m5/esp32c61_construct.inl"
 }
 using namespace m5gfx::board_detect;
 using namespace m5gfx::board_detect::m5;

@@ -250,13 +250,13 @@ export function validateDetectionPins(entries, chip, pins = detectionPinsForEntr
   return pins;
 }
 
-export function renderM5GFXWiringHeader(entries) {
+export function renderM5GFXWiringHeader(entries, preamble = true) {
   const chips = new Map(entries.map((entry) => [entry.chip?.id, entry.chip]));
   if (chips.size !== 1 || chips.has(undefined)) throw new Error("M5GFX wiring output requires exactly one chip catalog");
   const chip = chips.values().next().value;
   validateDetectionPins(entries, chip);
   const partitioned = partitionDetectionPins(entries, chip);
-  const lines = [
+  const lines = preamble ? [
     "// Generated from extras/board_spec; do not edit by hand.",
     "// Regenerate in extras/board_spec: node cli/spec.js emit-wiring",
     "// Unspecified values use target-specific unknown or sentinel values.",
@@ -265,9 +265,9 @@ export function renderM5GFXWiringHeader(entries) {
     "",
     "#include <cstdint>",
     "",
-  ];
+  ] : [];
   if (entries.some(({ board }) => detectClassesForBoard(board).length)) {
-    lines.push('#include "../../detect_class.hpp"', "");
+    lines.push('#include "../../probe_types.hpp"', "");
   }
   lines.push("namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {");
   for (const entry of entries) {

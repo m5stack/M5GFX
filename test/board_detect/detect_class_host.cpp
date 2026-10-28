@@ -1,4 +1,4 @@
-#include "board_detect/detect_class.hpp"
+#include "board_detect/probe_types.hpp"
 #include <cassert>
 #include <initializer_list>
 using namespace m5gfx::board_detect;

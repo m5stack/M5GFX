@@ -21,7 +21,7 @@ test("production attempt yields before construction and preserves adoption and r
   const header = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
   const candidateGetter = body(header, "board_t getCandidateBoard(");
   await compileRun(`
-#include "board_detect/detect_session.hpp"
+#include "board_detect/detect_types.hpp"
 #include <cassert>
 #include <initializer_list>
 #define CONFIG_IDF_TARGET_ESP32C6 1

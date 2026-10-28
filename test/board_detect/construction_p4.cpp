@@ -10,12 +10,7 @@
 #include "board_detect/m5/esp32p4.inl"
 namespace m5gfx {
 static const char LIBRARY_NAME[] = "host";
-#include "board_detect/m5/esp32p4/tab5_construct.inl"
-namespace board_detect {
-namespace m5 {
-construct_status_t construct_corep4x(const board_result_t &, display_parts_t *) { std::abort(); }
-}
-}
+#include "board_detect/m5/esp32p4_construct.inl"
 }
 using namespace m5gfx::board_detect;
 using namespace m5gfx::board_detect::m5;

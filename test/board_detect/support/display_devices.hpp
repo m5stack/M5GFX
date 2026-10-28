@@ -3,6 +3,7 @@
 #include <memory>
 using spi_host_device_t = int;
 namespace lgfx {
+inline namespace v1 {
 struct device_config_t {
   int freq_write = 0, freq_read = 0, spi_mode = 0, spi_3wire = 0, use_lock = 0, spi_host = 0,
       dma_channel = 0;
@@ -23,6 +24,7 @@ struct configured_t {
 };
 struct IBus : configured_t {
   virtual ~IBus() {}
+  virtual bool init() { return true; }
   virtual void release() {}
 };
 struct Bus_SPI : IBus {};
@@ -62,6 +64,7 @@ struct Panel_Device : configured_t {
 struct Panel_IT8951 : Panel_Device {};
 struct Panel_GDEW0154M09 : Panel_Device {};
 struct Panel_GDEW0154D67 : Panel_Device {};
+} // namespace v1
 } // namespace lgfx
 namespace m5gfx {
 struct Panel_M5StickC : lgfx::Panel_Device {};
