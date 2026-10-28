@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "../../detect_class.hpp"
+#include "../../probe_types.hpp"
 
 namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {
 

@@ -9,16 +9,9 @@
 #include "board_detect/m5/esp32p4.inl"
 #include "support/display_backend.hpp"
 #include "support/snapshot.hpp"
-namespace lgfx {
-struct IBus;
-struct Panel_Device;
-struct ILight;
-struct ITouch;
-}
 namespace m5gfx {
 namespace board_detect {
 namespace m5 {
-#include "board_detect/m5/display_parts.inl"
 construct_status_t construct_detected_board(const board_result_t &result, display_parts_t *parts) {
   return construct_board(esp32p4_boards, result, parts);
 }

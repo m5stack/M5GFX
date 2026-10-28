@@ -12,19 +12,6 @@
 #else
 #include "board_detect/m5/generated/esp32c6_wiring.hpp"
 #endif
-namespace lgfx {
-struct IBus;
-struct Panel_Device;
-struct ILight;
-struct ITouch;
-} // namespace lgfx
-namespace m5gfx {
-namespace board_detect {
-namespace m5 {
-#include "board_detect/m5/display_parts.inl"
-}
-} // namespace board_detect
-} // namespace m5gfx
 using namespace m5gfx::board_detect;
 namespace test_driver {
 static std::function<void(const probe_ctx_t &)> on_signature;

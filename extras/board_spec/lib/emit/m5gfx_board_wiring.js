@@ -267,7 +267,7 @@ export function renderM5GFXWiringHeader(entries) {
     "",
   ];
   if (entries.some(({ board }) => detectClassesForBoard(board).length)) {
-    lines.push('#include "../../detect_class.hpp"', "");
+    lines.push('#include "../../probe_types.hpp"', "");
   }
   lines.push("namespace m5gfx { namespace board_detect { namespace m5 { namespace wiring {");
   for (const entry of entries) {

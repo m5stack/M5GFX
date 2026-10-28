@@ -7,10 +7,9 @@
 #include <initializer_list>
 
 #include "detect_io.hpp"
-#include "dedicated_release_probe.hpp"
+#include "probe_types.hpp"
 #include "ops.hpp"
 #include "detect_types.hpp"
-#include "detect_class.hpp"
 
 namespace m5gfx
 {

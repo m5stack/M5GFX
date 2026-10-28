@@ -266,7 +266,7 @@ Measure each of these states on real hardware before writing a value.
 4. A catalog entry does not install a gate by itself. In the candidate's signature,
    build a `detect_class_expected_t` from the five constants and return
    `match_detect_class(expected, probe_pin_pulls(ctx, expected.mask))`
-   (`src/board_detect/detect_class.hpp`). `spi_id_detector_t` takes such a signature
+   (`src/board_detect/probe_types.hpp`). `spi_id_detector_t` takes such a signature
    function as its fifth constructor argument; see `airq_signature()` in
    `src/board_detect/m5/esp32s3/families.inl`. Other detector types call the match
    from their own signature.

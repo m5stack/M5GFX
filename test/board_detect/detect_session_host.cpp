@@ -1,4 +1,4 @@
-#include "board_detect/detect_session.hpp"
+#include "board_detect/detect_types.hpp"
 #include <cassert>
 #include <cstdio>
 #include <initializer_list>

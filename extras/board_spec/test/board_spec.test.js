@@ -1008,7 +1008,7 @@ test("AtomS3 exposes the display wiring expected by the future reset declaration
   assert.deepEqual(emitted.hold, [15]);
 });
 
-const esp32s3SetupPath = path.join(root, "../../src/board_detect/m5/esp32s3/families_construct.inl");
+const esp32s3SetupPath = path.join(root, "../../src/board_detect/m5/esp32s3_construct.inl");
 
 test("AtomS3 generated panel construction matches every legacy field", async () => {
   const source = catalogBoards.find((item) => item.id === "m5atoms3");
@@ -1252,7 +1252,7 @@ test("ESP32 PICO catalogs preserve probe order, legacy SPI reads, and fallback",
 
   assert.equal(specs.m5stickc.probes.st7735s, undefined);
   // Construction settings await host coverage; preserve these legacy checks.
-  const picoSetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_pico_construct.inl"), "utf8");
+  const picoSetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32_d0wdq6_construct.inl"), "utf8");
   assert.match(picoSetupSource, /construct_atompsram[\s\S]*?construct_status_t::no_display/);
 });
 
@@ -1308,7 +1308,7 @@ test("ESP32-C6 catalogs and detector preserve both display boards", async () => 
   assert.equal(classify({ pulldownHigh: 0n, pullupHigh: 0n }), "none");
 
   // Construction settings await host coverage; preserve these legacy checks.
-  const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6/c6_display_construct.inl"), "utf8");
+  const esp32c6SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32c6_construct.inl"), "utf8");
   assert.match(esp32c6SetupSource,
     /make_spi_bus\(bus_nesson1\)[\s\S]*?make_panel<lgfx::Panel_ST7789>/);
   assert.doesNotMatch(esp32c6SetupSource, /_read_panel_id/);
@@ -2326,7 +2326,7 @@ test("Tab5 touch identities select the three DSI panels", async () => {
   assert.deepEqual(detectionPinsForEntries([{ board: source, chip: chipP4, emitted: wiring }]), [22, 23, 31, 32]);
 
   // Construction settings await host coverage; preserve these legacy checks.
-  const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4/tab5_construct.inl"), "utf8");
+  const tab5SetupSource = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32p4_construct.inl"), "utf8");
   assert.match(tab5SetupSource, /tab5_st7121_lane_mbps = 900/);
   assert.match(tab5SetupSource, /hit_st7121 \? tab5_st7121_lane_mbps : specs::tab5::bus_lane_mbps/);
   assert.match(tab5SetupSource, /hit_st7121 = result.prepared & tab5_detail::touch_st7121[\s\S]*?hit_st7123 = result.prepared & tab5_detail::touch_st7123/);
@@ -2467,7 +2467,7 @@ test("CoreS3 family catalog keeps shared wiring and option power variants", asyn
   // The CoreS3 LCD is 3-wire: panel reads use MOSI, never the D/C pin shared with SD MISO.
 
   // Construction settings await host coverage; preserve these legacy checks.
-  const coreSetup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3/cores3_construct.inl"), "utf8");
+  const coreSetup = await fs.readFile(path.join(root, "../../src/board_detect/m5/esp32s3_construct.inl"), "utf8");
   assert.match(coreSetup, /make_spi_bus\(bus_cores3\)[\s\S]*?result\.option & generated_options::cores3::lcd_e/);
 });
 

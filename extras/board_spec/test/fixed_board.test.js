@@ -25,7 +25,7 @@ test("fixed acceptance bypasses NVS and detection and retries clean startup afte
   const getterSource = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
   const fixedGetter = body(getterSource, "board_t getFixedBoard(");
   await compileRun(`
-#include "board_detect/detect_session.hpp"
+#include "board_detect/detect_types.hpp"
 #include <cassert>
 #include <cstddef>
 #include <cstddef>

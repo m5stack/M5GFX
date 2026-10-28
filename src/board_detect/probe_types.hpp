@@ -1,6 +1,71 @@
 // Copyright (c) M5Stack. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #pragma once
+#include <cstdint>
+
+namespace m5gfx { namespace board_detect {
+  struct pin_pull_result_t
+  {
+    std::uint64_t pulldown_high = 0;
+    std::uint64_t pullup_high = 0;
+    std::uint64_t pulldown_release_high = 0;
+    std::uint64_t pullup_release_high = 0;
+    bool release_sampled = false;
+  };
+
+  // Catalog detect_class floating follows internal pulls after 10 us only.
+  // This floating class additionally requires both biased levels to survive release.
+  enum class pull_class_t : std::uint8_t
+  {
+    up, down, weak_up, weak_down, floating, conflict, pull_dependent,
+  };
+
+  // Requires a measured pin in 0..63. Pull-dependent pins without release
+  // samples cannot be distinguished as floating or weakly biased.
+  inline pull_class_t classify_pin_pull(const pin_pull_result_t& measured, int pin)
+  {
+    const auto bit = std::uint64_t(1) << pin;
+    const bool pd = measured.pulldown_high & bit;
+    const bool pu = measured.pullup_high & bit;
+    if (pd && pu) { return pull_class_t::up; }
+    if (!pd && !pu) { return pull_class_t::down; }
+    if (pd && !pu) { return pull_class_t::conflict; }
+    if (!measured.release_sampled) { return pull_class_t::pull_dependent; }
+    const bool pd_release = measured.pulldown_release_high & bit;
+    const bool pu_release = measured.pullup_release_high & bit;
+    if (!pd_release && pu_release) { return pull_class_t::floating; }
+    if (!pd_release && !pu_release) { return pull_class_t::weak_down; }
+    if (pd_release && pu_release) { return pull_class_t::weak_up; }
+    return pull_class_t::conflict;
+  }
+
+  struct detect_class_expected_t
+  {
+    std::uint64_t mask;
+    std::uint64_t up;
+    std::uint64_t down;
+    std::uint64_t floating;
+    std::uint64_t fixed;
+  };
+
+  // Catalog detect_class only on pins whose classification is invariant across
+  // cold boots, software resets, wake from sleep and interrupted detection.
+  // Driven pins may use fixed only when the driver is always powered. Do not
+  // use PMIC-switched pulls or pins without internal pulls. This is a gate
+  // before driven probes: board pins exclude candidates; choice soc_pins may
+  // select revisions (revision selection is not implemented yet).
+  inline bool match_detect_class(const detect_class_expected_t& expected,
+                                 const pin_pull_result_t& measured)
+  {
+    const auto up = measured.pulldown_high & measured.pullup_high;
+    const auto down = ~(measured.pulldown_high | measured.pullup_high);
+    const auto floating = measured.pullup_high & ~measured.pulldown_high;
+    const auto matched = (expected.up & up) | (expected.down & down)
+                       | (expected.floating & floating) | (expected.fixed & (up | down));
+    return (matched & expected.mask) == expected.mask;
+  }
+} }
+
 
 #include <cstddef>
 #include <cstdint>
@@ -128,5 +193,41 @@ namespace board_detect
                                                      : pin_release_band_t::ambiguous;
     return summary;
   }
+}
+}
+
+
+namespace m5gfx
+{
+namespace board_detect
+{
+namespace i2c_bus_probe_detail
+{
+  struct line_state_t
+  {
+    line_state_t(bool sda, bool scl, bool scl_held = false)
+    : sda_high(sda), scl_high(scl), scl_held_low(scl_held) {}
+    bool sda_high;
+    bool scl_high;
+    bool scl_held_low;
+  };
+
+  template <typename Sample, typename WaitScl, typename Recover>
+  bool probe_i2c_bus_present(Sample sample, WaitScl wait_scl, Recover recover)
+  {
+    line_state_t state = sample();
+    if (!state.scl_high && state.scl_held_low)
+    {
+      wait_scl();
+      state = sample();
+    }
+    if (state.scl_high && !state.sda_high)
+    {
+      recover();
+      state = sample();
+    }
+    return state.sda_high && state.scl_high;
+  }
+}
 }
 }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "construct_common.inl"
 
 namespace board_detect { namespace m5 {

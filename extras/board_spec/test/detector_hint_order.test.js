@@ -34,7 +34,7 @@ test("production detector order matches the reference for every package and boar
   const groups = JSON.parse(await fs.readFile(path.join(root, "detector_order.json"), "utf8"));
   // Derive candidate-only flags from the production descriptions, including
   // mixed families where a candidate-only member must not suppress promotion.
-  const descriptorFiles = ["esp32c3.inl", "esp32c5/toughc5.inl", "esp32c6/c6_displayless.inl", "esp32s3/families.inl"];
+  const descriptorFiles = ["esp32c3.inl", "esp32c5.inl", "esp32c6.inl", "esp32s3.inl"];
   const descriptors = (await Promise.all(descriptorFiles.map(n => fs.readFile(path.join(src, "board_detect/m5", n), "utf8")))).join("\n");
   const candidateNames = new Set([...descriptors.matchAll(/"([^"]+)", def_flag_candidate_only/g)].map(m => m[1]));
   assert.equal(candidateNames.size, 4);

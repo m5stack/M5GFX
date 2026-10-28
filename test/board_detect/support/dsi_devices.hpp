@@ -38,11 +38,19 @@ struct DsiPanel : Panel_Device {
   detail_t config_detail() const { return detail; }
   void config_detail(const detail_t &value) { detail = value; }
 };
+struct Panel_ST7102 : DsiPanel {};
+struct Touch_CST3530 : ITouch {};
 struct Panel_ILI9881C : DsiPanel { int kind() const override { return 1; } };
 struct Panel_ST7121 : DsiPanel { int kind() const override { return 2; } };
 struct Panel_ST7123 : DsiPanel { int kind() const override { return 3; } };
 struct Touch_ST7123 : ITouch {
   static constexpr std::uint8_t default_addr = 0x55;
   int kind() const override { return 4; }
+};
+}
+
+namespace m5gfx {
+struct Light_M5CoreP4X : lgfx::ILight {
+  template <class... Args> Light_M5CoreP4X(Args...) {}
 };
 }

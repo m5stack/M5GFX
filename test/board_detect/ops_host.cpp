@@ -1,6 +1,5 @@
 #include "board_detect/ops.inl"
-#include "board_detect/dedicated_release_probe.hpp"
-#include "board_detect/i2c_bus_probe.hpp"
+#include "board_detect/probe_types.hpp"
 #include "board_detect/m5/pmic_ops.hpp"
 
 #include <cassert>
