@@ -1102,12 +1102,13 @@ namespace m5gfx
       h = 128;
       break;
 
+    // SDL stores pixels in window orientation, so rotation zero must keep w/h.
     case board_M5Paper:
     case board_M5PaperS3:
     case board_M5PaperDIY:
-      w = 960;
-      h = 540;
-      pnl_cfg.offset_rotation = 3;
+      w = 540;
+      h = 960;
+      pnl_cfg.offset_rotation = 0;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
       r = 0;
       break;
@@ -1120,9 +1121,9 @@ namespace m5gfx
       break;
 
     case board_M5PaperMono:
-      w = 800;
-      h = 480;
-      pnl_cfg.offset_rotation = 3;
+      w = 480;
+      h = 800;
+      pnl_cfg.offset_rotation = 0;
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
       r = 0;
       break;
@@ -1140,6 +1141,7 @@ namespace m5gfx
       break;
 
     case board_M5Station:
+    case board_M5StamPLC:
     case board_M5Cardputer:
     case board_M5CardputerADV:
     case board_M5DinMeter:
@@ -1155,13 +1157,6 @@ namespace m5gfx
     case board_ArduinoNessoN1:
       w = 135;
       h = 240;
-      break;
-
-    case board_M5StamPLC:
-      w = 135;
-      h = 240;
-      pnl_cfg.offset_rotation = 1;
-      r = 0;
       break;
 
     case board_M5StackCore2:
