@@ -947,12 +947,12 @@ namespace m5
       // GPIO38/39 may carry OPI PSRAM in this build; do not disturb that bus.
       return false;
 #else
-      // G21 has a board-local 10 kOhm pull-up. G38/G39 are NC on this revision;
+      // G21 has a board-local 10 kOhm pull-up. G38/G39 are NC on DualKey;
       // an external pull on either pin disproves DualKey. Revisit for revisions
       // that populate either NC net.
       constexpr std::uint64_t g21 = std::uint64_t(1) << 21;
       if (!(probe_pin_pulls(ctx, g21).pulldown_high & g21)) { return false; }
-      // Release for 128 us instead of 32 us so a slow weak pull is no longer mistaken for NC.
+      // Release for 128 us so a slow weak pull is not mistaken for NC.
       const auto socket_pulls = probe_pin_pulls(ctx, (std::uint64_t(1) << 38) | (std::uint64_t(1) << 39), pull_release_us);
       if (classify_pin_pull(socket_pulls, 38) != pull_class_t::floating
        || classify_pin_pull(socket_pulls, 39) != pull_class_t::floating)

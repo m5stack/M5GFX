@@ -115,7 +115,7 @@
         "roles": "datasheet"
       },
       "measured_by": {
-        "roles": "docs/investigations/c3-stamp-displayless-2026-09-29.md"
+        "roles": "Internal-pull GPIO survey on M5StampC3"
       }
     },
     "21": {

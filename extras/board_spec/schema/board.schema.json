@@ -53,7 +53,7 @@
       "type": "object",
       "additionalProperties": { "enum": ["generated", "measured", "datasheet", null] }
     },
-    "measuredBy": { "type": "object", "additionalProperties": { "type": "string" } },
+    "measuredBy": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^(https?://|(?!.*([dD][oO][cC][sS][/\\\\]|\\.[mM][dD]$))).*$" } },
     "pin": {
       "type": "object",
       "additionalProperties": false,

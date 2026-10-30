@@ -408,8 +408,8 @@ namespace m5gfx { namespace board_detect { namespace io {
   template <int led_gpio, std::uint16_t pixels>
   static IRAM_ATTR void send_black(std::uint32_t mhz)
   {
-    // WS2812C-2020 T0H = 0.22-0.38 us. Aim at the middle: loop overhead adds to the set value, and 0.35 us
-    // sat at the upper edge (single LEDs mid-chain lit, varying with the USB hub = LED supply voltage).
+    // WS2812C-2020 T0H = 0.22-0.38 us. Aim at the middle: loop overhead adds to the set value,
+    // and values near the upper edge lit single LEDs mid-chain depending on the LED supply voltage.
     const std::uint32_t high = mhz * 28 / 100; // 0.28 us
     const std::uint32_t low = mhz * 90 / 100;  // 0.9 us
     for (int bit = 0; bit < pixels * 24; ++bit)

@@ -59,8 +59,8 @@ SD wiring uses card terminal names (`clk`, `cmd`, `d0` through `d3`). The
 `spi`, `sdio1`, and `sdio4` modes in `devices.sd.derived`.
 
 M5GFX target metadata derives `chip` and `legacy_board_id` from the board
-catalog and `board_enum` as `board_<name>`. The unused `desc_name` adapter
-field is removed; descriptor names remain a handwritten C++ convention. The namespace removes the leading `m5stack_` or `m5`
+catalog and `board_enum` as `board_<name>`. Descriptor names remain a handwritten
+C++ convention. The namespace removes the leading `m5stack_` or `m5`
 and all underscores from the catalog ID; the overrides are
 `m5cardputer_adv` with `cpp_namespace: "cardputer_adv"` and
 `arduino_nesso_n1` with `cpp_namespace: "nesson1"`. These derived fields must
@@ -174,11 +174,10 @@ data lines share the flash-only pads represented by the chip's reserved GPIOs.
 ### Detection compatibility notes
 
 - ChainCaptain detection holds the generated display chip-select high during
-  prepare. Earlier deselection is intentional and matches the transaction
-  discipline used by other detected boards.
-- Paper family (PaperS3 / PaperDIY) signature no longer drives the internal
-  I2C lines high before the pull-up check; it only measures them against the
-  internal pull-down (and pull-up) with a 10 us settle, which is read-only.
+  prepare, following the detection transaction discipline.
+- Paper family (PaperS3 / PaperDIY) signature only measures the internal
+  I2C lines against the internal pull-down (and pull-up) with a 10 us settle,
+  which is read-only.
   PaperS3 drives its power-off request line low before setting it to output,
   and the detection transaction records the parallel-EPD pins as well.
 
@@ -275,8 +274,8 @@ A match only means "not excluded". The candidate is still confirmed by its norma
 probe (for example the display ID).
 
 `detect_class` on `choices.<id>.soc_pins` is reserved for selecting a board revision or
-part by measurement. That selection is not implemented yet, and choice values are not
-used as board-wide gates.
+part by measurement; no detector uses it. Choice values are not used as board-wide
+gates.
 
 ### Limits
 

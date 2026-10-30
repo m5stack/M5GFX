@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.resolve(here, "../../../src");
-// Deferred public-API tests retain their existing fixtures until a native class boundary is available.
+// Public-API tests use the original fixtures.
 async function readMain() {
   return (await Promise.all(["M5GFX.cpp", "board_detect/detection_package.inl", "board_detect/detection_integration.inl"].map((name) => fs.readFile(path.join(src, name), "utf8")))).join("\n");
 }
