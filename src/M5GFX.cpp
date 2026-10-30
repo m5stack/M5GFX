@@ -316,7 +316,6 @@ namespace m5gfx
     }
   };
 
-  // Touch_M5Tough は lgfx::Touch_CHSC6540 に統合済み
 
   struct Panel_M5StickC : public lgfx::Panel_ST7735S
   {
