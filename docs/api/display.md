@@ -105,9 +105,9 @@ void loop() {}
 ```
 
 Run [DisplayRotation](../../examples/Basic/DisplayRotation/DisplayRotation.ino)
-to cycle through all eight views. It uses the same F geometry and corner pattern
-as the diagram, adds logical X/Y arrows, and prints the startup rotation and
-each view's dimensions to Serial at 115200 baud. Its timed cycle is intended for
+to cycle through all eight views. It uses the same F geometry and corner marker
+positions as the diagram (with different corner colors), adds logical X/Y arrows,
+and prints the startup rotation and each view's dimensions to Serial at 115200 baud. Its timed cycle is intended for
 LCDs; the sketch stops on an e-paper display.
 
 ### State changes and redraws
@@ -131,9 +131,9 @@ chassis reference used by the generic rotation chart. The listed M5Stack LCD
 families use rotation zero as that reference.
 
 The following values describe **M5GFX initialization alone**, before application
-code or another library changes rotation. The table describes the defaults in this branch (based on v0.2.29).
+code or another library changes rotation. The table describes the defaults in M5GFX 0.3.0.
 
-| Device | LCD driver | `offset_rotation` | Startup `getRotation()` | Startup width × height | Rotation 0 width × height |
+| Device | Display driver | `offset_rotation` | Startup `getRotation()` | Startup width × height | Rotation 0 width × height |
 | --- | --- | --- | --- | --- | --- |
 | Core / Basic / M5GO / Gray / Fire | ILI9342 | 0 | 0 | 320 × 240 | 320 × 240 |
 | Core2 / Tough | ILI9342 | 0 | 0 | 320 × 240 | 320 × 240 |
@@ -143,6 +143,12 @@ code or another library changes rotation. The table describes the defaults in th
 | DinMeter | ST7789 | 3 | 0 | 240 × 135 | 240 × 135 |
 | StickC Plus2 | ST7789 | 0 | 0 | 135 × 240 | 135 × 240 |
 | ChainCaptain | JD9853 | 2 | 0 | 240 × 240 | 240 × 240 |
+| StamPLC | ST7789 | 1 | 0 | 240 × 135 | 240 × 135 |
+| CoreMatrix | TM1680 | 0 | 0 | 16 × 16 | 16 × 16 |
+| Paper | IT8951 | 3 | 0 | 540 × 960 | 540 × 960 |
+| PaperS3 / PaperDIY | EPD (ED047TC1) | 3 | 0 | 540 × 960 | 540 × 960 |
+| PaperColor | ED2208 | 0 | 0 | 400 × 600 | 400 × 600 |
+| PaperMono | SSD1677 | 3 | 0 | 480 × 800 | 480 × 800 |
 
 For a reproducible device reference, draw an F immediately after `init()` without
 changing rotation. Hold the device so that this F is upright, then keep it still:
