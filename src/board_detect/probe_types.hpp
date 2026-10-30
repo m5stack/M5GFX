@@ -53,7 +53,7 @@ namespace m5gfx { namespace board_detect {
   // Driven pins may use fixed only when the driver is always powered. Do not
   // use PMIC-switched pulls or pins without internal pulls. This is a gate
   // before driven probes: board pins exclude candidates; choice soc_pins may
-  // select revisions (revision selection is not implemented yet).
+  // select revisions (reserved; no detector uses it).
   inline bool match_detect_class(const detect_class_expected_t& expected,
                                  const pin_pull_result_t& measured)
   {

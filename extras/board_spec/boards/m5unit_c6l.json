@@ -109,7 +109,7 @@
       "roles": [
         "bus:main_spi.miso"
       ],
-      "note": "Legacy setup routes this NC signal as MISO",
+      "note": "Routed as MISO although NC on the board",
       "verified": {
         "roles": "generated"
       }

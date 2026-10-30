@@ -59,11 +59,11 @@ public:
   // A config set here is final: anything a previous setI2C() captured is dropped.
   void config(const config_t& cfg) { _config = cfg; _i2c_resolver = nullptr; }
 
-  // Kept for sketches that hand over an M5Unified I2C_Class (or anything with
-  // getPort / getSDA / getSCL returning small non-negative numbers). As before only
-  // a pointer is kept and the object is read when the display is initialized, so it
-  // has to stay alive until init(). While set it selects the bus, ahead of
-  // i2c_master_bus and of the port / pins in config_t, which are left untouched;
+  // Accepts an M5Unified I2C_Class (or anything with getPort / getSDA / getSCL
+  // returning small non-negative numbers). Only a pointer is kept and the object
+  // is read when the display is initialized, so it has to stay alive until init().
+  // While set it selects the bus, ahead of i2c_master_bus and of the port / pins
+  // in config_t, which are left untouched;
   // config() or setI2C(nullptr) drops it again (pass nullptr, not 0 or NULL). A
   // template so that this header needs nothing from M5Unified; the lambda body
   // resolves at the call site, so the class has to be complete there (it is,
@@ -77,7 +77,7 @@ public:
       const int port = i2c->getPort();
       const int sda = i2c->getSDA();
       const int scl = i2c->getSCL();
-      // not begun, or out of the range the config can hold: fail as the old code did
+      // not begun, or out of the range the config can hold: fail
       if (port < 0 || sda < 0 || scl < 0 || port > INT8_MAX || sda > INT8_MAX || scl > INT8_MAX) { return false; }
       cfg.i2c_port = static_cast<int8_t>(port);
       cfg.pin_sda = static_cast<int8_t>(sda);

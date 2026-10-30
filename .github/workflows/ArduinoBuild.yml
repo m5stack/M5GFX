@@ -79,12 +79,12 @@ jobs:
       - name: Configure arduino-cli
         run: |
           arduino-cli config init
-          # The M5Stack index is intermittently unavailable (404 as of
-          # 2026-07). Try the primary URL first and fall back to the CN
-          # mirror. Either index is then passed through a patch script that
-          # fixes stale toolsDependencies entries (the CN index renames all
-          # tools with a "-cn" suffix but older platforms still reference the
-          # pre-rename versions); the script is a no-op on a consistent index.
+          # The M5Stack index is intermittently unavailable. Try the primary URL
+          # first and fall back to the CN mirror. Either index is then passed
+          # through a patch script that fixes stale toolsDependencies entries
+          # (the CN index renames all tools with a "-cn" suffix but older
+          # platforms still reference the pre-rename versions); the script is a
+          # no-op on a consistent index.
           if [[ "${{ matrix.board_manager_url }}" == *package_m5stack_index*.json ]]; then
             PRIMARY="${{ matrix.board_manager_url }}"
             INDEX=/tmp/package_m5stack_index.json

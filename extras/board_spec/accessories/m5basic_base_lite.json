@@ -15,5 +15,5 @@
     "port_e": { "type": "hy2_4p", "standard": "port_uart" }
   },
   "devices": { "rgb_led": { "kind": "led_strip", "part": "sk6812", "spec": { "count": 10 } } },
-  "note": "Port D/E pin order follows the current M5Unified table (D 34/35, E 5/13); the README lists 35/34 and 13/5."
+  "note": "Port D/E pin order follows the current M5Unified table (D 34/35, E 5/13); the M5BasicBaseLite README (source_url) lists 35/34 and 13/5."
 }

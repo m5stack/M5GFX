@@ -37,17 +37,11 @@ required. `BoardDetect.yml` runs the same command independently of catalog CI.
 | `ops_host.cpp` | Typed operation validation/execution, retry, dedicated-release summaries and I2C bus recovery policy |
 | `detect_class_host.cpp`, `detect_session_host.cpp` | Detect-class matching and session verdict/preference/candidate/persistence rules |
 
-[MIGRATION.md](MIGRATION.md) maps original test names to the C++ checks and lists
-removed source-text assertions. The fixtures record the complete semantic fields
+The fixtures record the complete semantic fields
 of 61 descriptions; pointers are represented by constructor names or callback
 presence, rather than unstable addresses. Catalog tests also compare fixture
 internal-I2C usage with `targets.json` metadata. Fixed callback identities are also
 checked in the ESP32 and S3 tests.
-
-The previous synthetic P4 test returned false from every signature. The real
-Tab5 signature returns true for a present bus: an unanswered ID retains weak
-evidence and retries five times. The new P4 test exercises that production
-behavior. No production decision was changed to match the synthetic fixture.
 
 ## Hardware boundary
 
@@ -97,9 +91,10 @@ with `npm test`:
   retains older integration assertions.
 - The first test in `fixed_board.test.js`: public fixed acceptance/getter and
   startup-prefix behavior, including its combined legacy integration fixture.
-- M5Unified-dependent checks: package defaults, `BOARD_ID`, GPIO46 pre-hold, and
-  explicit fallback/candidate/build-default precedence. These belong in
-  M5Unified's test suite when that migration is scheduled.
+
+M5Unified-dependent checks (package defaults, `BOARD_ID`, GPIO46 pre-hold, and
+explicit fallback/candidate/build-default precedence) are not covered by these
+tests.
 
 The public class needs a separately designed test boundary. Options include a
 native SDL2 build of the real class, an includeable implementation shared with

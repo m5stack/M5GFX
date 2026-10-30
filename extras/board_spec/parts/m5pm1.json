@@ -8,7 +8,7 @@
     "reg": "0x00",
     "value": "0x50",
     "match": "ack_only",
-    "note": "device id 0x2050 (reg 0x00-0x01 LE) の下位バイト"
+    "note": "low byte of device id 0x2050 (reg 0x00-0x01, little-endian)"
   },
   "pins": {
     "gpio0": { "cap": ["input", "output"] },

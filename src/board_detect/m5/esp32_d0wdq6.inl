@@ -280,7 +280,7 @@ static const spi_id_probe_t coreink_probes[] = {
                specs::coreink::probe_gdew0154d67::mask,
                specs::coreink::probe_gdew0154d67::values, 0,
                specs::coreink::probe_gdew0154d67::dummy_bits),
-  // First lot: 0x00F00000; 2023-11-17 lot: 0x00F01600.
+  // GDEW0154M09 register 0x70 ID reads on two production lots: 0x00F00000 and 0x00F01600.
   spi_id_probe(specs::coreink::probe_gdew0154m09::cmd,
                specs::coreink::probe_gdew0154m09::mask,
                specs::coreink::probe_gdew0154m09::values,
@@ -400,7 +400,7 @@ private:
       return false;
     }
     // At 1.2 V and 0.1 ms/ch the measured T7/T4 ratios are Matrix 0.26,
-    // Lite 0.42-0.45, U 0.71 (atom-picod4-pin-edge-2026-09-28).
+    // Lite 0.42-0.45, U 0.71.
     constexpr std::uint32_t matrix_limit = 34;
     constexpr std::uint32_t lite_limit = 58;
     const std::uint32_t ratio100 = std::uint32_t(t7_) * 100;
