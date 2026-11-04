@@ -233,6 +233,14 @@ namespace m5gfx
     /// Board accepted from detect_config_t::fixed_board by the last init(), even if
     /// its display setup failed; board_unknown otherwise.
     board_t getFixedBoard(void) const { return _fixed_board; }
+    /// Runs detection without constructing or initialising a display and returns
+    /// the confirmed board, or board_unknown when it cannot be confirmed. The
+    /// probes use the same hint and detector order as init(); every GPIO they
+    /// touch is restored afterwards, nothing is saved to NVS, and the result
+    /// does not change the board that init() will use. use_reset allows the
+    /// probes to pulse reset lines, like init(). On a build without board
+    /// detection this returns the already known board.
+    board_t detectBoard(bool use_reset = true);
     /// Stores the settings for the next detection. See detect_config_t.
     void setDetectConfig(const detect_config_t& config);
     /// Returns the stored settings, as requested.

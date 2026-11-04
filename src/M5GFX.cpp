@@ -848,41 +848,10 @@ namespace m5gfx
     _set_backlight(bl);
   }
 
-  bool M5GFX::init_impl(bool use_reset, bool use_clear)
+#if defined (M5GFX_HAS_BOARD_DETECT)
+  // Saved detection hint, then the build-time board when nothing was saved.
+  static std::uint32_t load_detection_hint(void)
   {
-    _detect_started = true;
-    _board_candidate = board_t::board_unknown;
-    if (getBoard() != board_t::board_unknown)
-    {
-      return true;
-    }
-
-    _fixed_board = board_t::board_unknown;
-    if (_detect_config.fixed_board != board_t::board_unknown)
-    {
-#if defined (M5GFX_HAS_BOARD_DETECT)
-      const auto* entry = select_fixed_board(_detect_config.fixed_board);
-      if (entry != nullptr)
-      {
-        // Acceptance is independent of display construction; a failed init may retry.
-        _fixed_board = _detect_config.fixed_board;
-        const auto outcome = run_fixed_startup_session(*entry, use_reset,
-          [this](board_detect::m5::display_parts_t& parts, board_t representative_board)
-          {
-            return !reject_detected_setup(representative_board)
-                && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
-          });
-        if (!outcome.adopted) { return false; }
-        _board = _fixed_board;
-        return _init_adopted_panel(use_clear);
-      }
-#endif
-      ESP_LOGW(LIBRARY_NAME, "Fixed board:%u is not supported by this chip",
-               static_cast<unsigned>(_detect_config.fixed_board));
-      return false;
-    }
-
-#if defined (M5GFX_HAS_BOARD_DETECT)
     static constexpr char NVS_KEY[] = "AUTODETECT";
     std::uint32_t hint_board = 0;
     std::uint32_t nvs_handle = 0;
@@ -919,7 +888,7 @@ namespace m5gfx
 
       hint_board = board_t::board_M5StackCoreInk;
 
-#elif defined ( ARDUINO_M5STACK_PAPER ) || defined ( ARDUINO_M5STACK_Paper )
+#elif defined ( ARDUINO_M5STACK_PAPER ) || defined ( ARDUINO_M5Stack_Paper )
 
       hint_board = board_t::board_M5Paper;
 
@@ -934,6 +903,46 @@ namespace m5gfx
 //#elif defined ( ARDUINO_M5STACK_TIMER_CAM ) || defined ( ARDUINO_M5Stack_Timer_CAM )
 #endif
     }
+    return hint_board;
+  }
+#endif
+
+  bool M5GFX::init_impl(bool use_reset, bool use_clear)
+  {
+    _detect_started = true;
+    _board_candidate = board_t::board_unknown;
+    if (getBoard() != board_t::board_unknown)
+    {
+      return true;
+    }
+
+    _fixed_board = board_t::board_unknown;
+    if (_detect_config.fixed_board != board_t::board_unknown)
+    {
+#if defined (M5GFX_HAS_BOARD_DETECT)
+      const auto* entry = select_fixed_board(_detect_config.fixed_board);
+      if (entry != nullptr)
+      {
+        // Acceptance is independent of display construction; a failed init may retry.
+        _fixed_board = _detect_config.fixed_board;
+        const auto outcome = run_fixed_startup_session(*entry, use_reset,
+          [this](board_detect::m5::display_parts_t& parts, board_t representative_board)
+          {
+            return !reject_detected_setup(representative_board)
+                && _adopt_detected_parts(parts.bus, parts.panel, parts.light, parts.touch);
+          });
+        if (!outcome.adopted) { return false; }
+        _board = _fixed_board;
+        return _init_adopted_panel(use_clear);
+      }
+#endif
+      ESP_LOGW(LIBRARY_NAME, "Fixed board:%u is not supported by this chip",
+               static_cast<unsigned>(_detect_config.fixed_board));
+      return false;
+    }
+
+#if defined (M5GFX_HAS_BOARD_DETECT)
+    const std::uint32_t hint_board = load_detection_hint();
 
     board_detect::detect_request_t request;
     request.hint = hint_board <= UINT16_MAX
@@ -980,6 +989,8 @@ namespace m5gfx
 
     // Unresolved members and failed adoption must never replace a saved hint.
     if (board_detect::should_persist_detection(outcome, hint_board)) {
+      static constexpr char NVS_KEY[] = "AUTODETECT";
+      std::uint32_t nvs_handle = 0;
       if (0 == nvs_open(LIBRARY_NAME, NVS_READWRITE, &nvs_handle)) {
         ESP_LOGI(LIBRARY_NAME, "[Autodetect] save to NVS : board:%d", (int)board);
         nvs_set_u32(nvs_handle, NVS_KEY, board);
@@ -993,6 +1004,48 @@ namespace m5gfx
 #endif
     return _init_adopted_panel(use_clear);
   }
+
+#if defined (M5GFX_HAS_BOARD_DETECT)
+  board_t M5GFX::detectBoard(bool use_reset)
+  {
+    const auto board = getBoard();
+    if (board != board_t::board_unknown) { return board; }
+
+    if (_detect_config.fixed_board != board_t::board_unknown)
+    {
+      return select_fixed_board(_detect_config.fixed_board) != nullptr
+           ? _detect_config.fixed_board : board_t::board_unknown;
+    }
+
+    const std::uint32_t hint_board = load_detection_hint();
+    board_detect::detect_request_t request;
+    request.hint = hint_board <= UINT16_MAX
+                 ? static_cast<board_detect::board_id_t>(hint_board) : board_detect::board_id_unknown;
+    request.fallback = static_cast<board_detect::board_id_t>(_detect_config.fallback_board);
+    request.allow_reset = use_reset;
+    request.max_attempts = 5;
+    auto package = select_detection_package();
+    request.conditional_pins_unavailable = package.conditional_pins_unavailable;
+    const auto outcome = board_detect::run_detection_session(
+      request,
+      [&package](const board_detect::detect_request_t& attempt, bool final_attempt)
+      {
+        return run_identity_attempt(package.detectors, attempt, final_attempt);
+      });
+    if (outcome.verdict == board_detect::verdict_t::confirmed
+     && outcome.result.def != nullptr)
+    {
+      return static_cast<board_t>(outcome.result.def->id);
+    }
+    return board_t::board_unknown;
+  }
+#else
+  board_t M5GFX::detectBoard(bool use_reset)
+  {
+    (void)use_reset;
+    return getBoard();
+  }
+#endif
 
   bool M5GFX::_init_adopted_panel(bool use_clear)
   {
@@ -1238,6 +1291,11 @@ namespace m5gfx
     return LGFX_Device::init_impl(use_reset, use_clear);
   }
 
+  board_t M5GFX::detectBoard(bool use_reset)
+  {
+    (void)use_reset;
+    return _fixed_board;
+  }
 
 #endif  /// end of if defined (ESP_PLATFORM)
 
