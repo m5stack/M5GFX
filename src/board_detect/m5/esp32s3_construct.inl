@@ -412,6 +412,28 @@ namespace m5
       .with_range(specs::stopwatch::touch::x_min, specs::stopwatch::touch::x_max,
                   specs::stopwatch::touch::y_min, specs::stopwatch::touch::y_max)
       .with_rotation(specs::stopwatch::touch::rotation_offset);
+  // StopWatch units exist with either CST820 (0x15) or the two-finger
+  // CST9217 (0x5A). Both share the same reset, interrupt, and I2C pins.
+  static constexpr std::uint8_t stopwatch_cst9217_addr = 0x5A;
+  static constexpr i2c_touch_desc_t touch_stopwatch_cst9217 =
+    touch_stopwatch.with_addr(stopwatch_cst9217_addr).with_range(0, 466, 0, 466);
+
+  static bool stopwatch_has_touch_at(const i2c_touch_desc_t& desc, std::uint8_t addr)
+  {
+    // Keep the hardware I2C port owned by its consumers. As during detection,
+    // probe on the software port and restore the pins afterwards.
+    if (!io::i2c_open(detection_i2c_port, desc.sda, desc.scl)) return false;
+    // The board power sequence only waits 2 ms after releasing touch reset;
+    // CST9217 needs up to 50 ms before it answers. Probe immediately first so
+    // CST820 boards do not pay that boot delay.
+    bool found = false;
+    for (int retry = 0; retry < 6 && !found; ++retry) {
+      found = io::i2c_ack(detection_i2c_port, addr, desc.freq, true);
+      if (!found) io::delay_ms(10);
+    }
+    io::i2c_close(detection_i2c_port);
+    return found;
+  }
 
   construct_status_t construct_stopwatch(const board_result_t&, display_parts_t* parts)
   {
@@ -426,7 +448,14 @@ namespace m5
     out.bus.reset(make_spi_bus(bus_stopwatch));
     out.panel.reset(make_panel<Panel_StopWatch>(panel_stopwatch, out.bus.get()));
     lgfx::pinMode(stopwatch_te_pin, lgfx::pin_mode_t::input_pullup);
-    out.touch.reset(make_i2c_touch<lgfx::Touch_CST816S>(touch_stopwatch));
+    if (stopwatch_has_touch_at(touch_stopwatch_cst9217, stopwatch_cst9217_addr))
+    {
+      out.touch.reset(make_i2c_touch<lgfx::Touch_CST9217>(touch_stopwatch_cst9217));
+    }
+    else
+    {
+      out.touch.reset(make_i2c_touch<lgfx::Touch_CST816S>(touch_stopwatch));
+    }
     out.panel->touch(out.touch.get());
     return construct_status(out.release_to(parts));
 #endif

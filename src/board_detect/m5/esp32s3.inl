@@ -467,8 +467,10 @@ namespace m5
     // Share the injected address between pre-power confirmation and refine.
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_STOPWATCH_TOUCH)
     static constexpr std::uint8_t stopwatch_probe_addr = 0x16;
+    static constexpr std::uint8_t stopwatch_cst9217_probe_addr = 0x17;
 #else
     static constexpr std::uint8_t stopwatch_probe_addr = specs::stopwatch::touch::i2c_addr;
+    static constexpr std::uint8_t stopwatch_cst9217_probe_addr = 0x5A;
 #endif
 #if defined (M5GFX_AUTODETECT_TEST_FAIL_PAPERMONO_TOUCH)
     static constexpr std::uint8_t papermono_probe_addr = 0x39;
@@ -529,7 +531,10 @@ namespace m5
       // member evidence. Wait only when its selected power sequence needs it.
       const bool stopwatch_touch = probe_i2c_ack(
         ctx, wiring::stopwatch::internal_i2c_sda,
-        wiring::stopwatch::internal_i2c_scl, detail::stopwatch_probe_addr);
+        wiring::stopwatch::internal_i2c_scl, detail::stopwatch_probe_addr)
+        || probe_i2c_ack(ctx, wiring::stopwatch::internal_i2c_sda,
+                         wiring::stopwatch::internal_i2c_scl,
+                         detail::stopwatch_cst9217_probe_addr);
       const bool papermono_touch = probe_i2c_ack(
         ctx, wiring::papermono::internal_i2c_sda,
         wiring::papermono::internal_i2c_scl, detail::papermono_probe_addr);

@@ -263,6 +263,9 @@ namespace m5
     constexpr i2c_touch_desc_t with_port(int value) const
     { return { addr, static_cast<std::int8_t>(value), sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, offset_rotation, bus_shared }; }
 
+    constexpr i2c_touch_desc_t with_addr(std::uint8_t value) const
+    { return { value, port, sda, scl, pin_int, freq, x_min, x_max, y_min, y_max, offset_rotation, bus_shared }; }
+
     constexpr i2c_touch_desc_t with_pins(int sda_, int scl_, int interrupt) const
     { return { addr, port, static_cast<std::int8_t>(sda_), static_cast<std::int8_t>(scl_), static_cast<std::int8_t>(interrupt), freq, x_min, x_max, y_min, y_max, offset_rotation, bus_shared }; }
 
