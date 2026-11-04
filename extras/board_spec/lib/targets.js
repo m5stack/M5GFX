@@ -277,9 +277,19 @@ export function validateBoardEnums(boards, source) {
     if (/^0[0-9]+$/.test(value ?? "")) return invalid(`octal board_t value is unsupported: ${name} = ${value}`);
     values.set(name, value);
   }
+  // An entry may be declared as an alias of another spelling
+  // (", board_New = board_Old"); follow the chain to the literal value.
+  const canonicalLiteral = (name) => {
+    let literal = values.get(name);
+    for (let depth = 0; depth < 8; ++depth) {
+      if (!/^board_[A-Za-z0-9_]+$/.test(literal ?? "")) return literal;
+      literal = values.get(literal);
+    }
+    return undefined;
+  };
   return boards.flatMap((board) => {
     const name = `board_${board.name}`;
-    const literal = values.get(name);
+    const literal = canonicalLiteral(name);
     const explicitInteger = /^(?:0|[1-9][0-9]*|0[xX][0-9a-fA-F]+)$/.test(literal ?? "");
     return explicitInteger && Number(literal) === board.legacy_board_id ? [] : [{
       id: "E_TGT_BOARD_ID", path: `/boards/${board.id}/legacy_board_id`,

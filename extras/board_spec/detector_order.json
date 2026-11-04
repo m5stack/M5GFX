@@ -133,6 +133,12 @@
         ]
       },
       {
+        "detector": "stampp4xhub_detector",
+        "boards": [
+          "m5stampp4xhub"
+        ]
+      },
+      {
         "detector": "tab5_family_detector",
         "boards": [
           "m5stack_tab5",
@@ -151,6 +157,16 @@
         "before": "corep4x_detector",
         "after": "tab5_family_detector",
         "reason": "Probe the CoreP4X internal devices before Tab5"
+      },
+      {
+        "before": "stampp4xhub_detector",
+        "after": "tab5_family_detector",
+        "reason": "Probe the Hub PM1 on its own bus before the Tab5 family"
+      },
+      {
+        "before": "stampp4xhub_detector",
+        "after": "unitpoep4_detector",
+        "reason": "Probe the Hub PM1 and IOE1 before driving Ethernet management pins"
       },
       {
         "before": "tab5_family_detector",

@@ -50,11 +50,13 @@
     return outcome;
   }
 
-  template <class Adopt>
-  static board_detect::detect_outcome_t run_detection_attempt(
+  // Runs identification and preparation, then hands the confirmed result to
+  // finish(): construct_and_adopt() for a display, or identity alone.
+  template <class Finish>
+  static board_detect::detect_outcome_t run_detection_attempt_with(
     const board_detect::board_detector_t* const* detectors,
     const board_detect::detect_request_t& request, bool final_attempt,
-    Adopt adopt)
+    Finish finish)
   {
     board_detect::detect_outcome_t outcome;
     if (detectors == nullptr) { return outcome; }
@@ -137,7 +139,44 @@
       transaction.rollback();
       return outcome;
     }
-    return construct_and_adopt(result, outcome, transaction, representative_board, adopt);
+    return finish(result, outcome, transaction, representative_board);
+  }
+
+  template <class Adopt>
+  static board_detect::detect_outcome_t run_detection_attempt(
+    const board_detect::board_detector_t* const* detectors,
+    const board_detect::detect_request_t& request, bool final_attempt,
+    Adopt adopt)
+  {
+    return run_detection_attempt_with(detectors, request, final_attempt,
+      [adopt](board_detect::board_result_t& result,
+              board_detect::detect_outcome_t outcome,
+              board_detect::detection_transaction_t& transaction,
+              board_t representative_board)
+      {
+        return construct_and_adopt(result, outcome, transaction, representative_board, adopt);
+      });
+  }
+
+  // Completes an attempt with identity alone. The session accepts the board and
+  // stops retrying; the uncommitted transaction restores every probed GPIO.
+  static board_detect::detect_outcome_t finish_identity_only(
+    board_detect::board_result_t&,
+    board_detect::detect_outcome_t outcome,
+    board_detect::detection_transaction_t&,
+    board_t)
+  {
+    // `adopted` is the session's accept-and-stop flag here; no display part was adopted.
+    outcome.adopted = true;
+    return outcome;
+  }
+
+  static board_detect::detect_outcome_t run_identity_attempt(
+    const board_detect::board_detector_t* const* detectors,
+    const board_detect::detect_request_t& request, bool final_attempt)
+  {
+    return run_detection_attempt_with(detectors, request, final_attempt,
+                                      finish_identity_only);
   }
 
   // Fixed startup honors constructor/adopter hooks and observe_* injections (CORES3_FORCE_VBUS), but bypasses detector-only hooks.

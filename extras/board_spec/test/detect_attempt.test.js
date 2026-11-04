@@ -16,6 +16,7 @@ import { body, compileRun } from "./detect_host_helpers.js";
 test("production attempt yields before construction and preserves adoption and rollback semantics", async () => {
   const main = await readMain();
   const attempt = body(main, "static board_detect::detect_outcome_t run_detection_attempt(");
+  const attemptWith = body(main, "static board_detect::detect_outcome_t run_detection_attempt_with(");
   const finish = body(main, "static board_detect::detect_outcome_t construct_and_adopt(");
   const projection = main.slice(main.indexOf("    const auto board = outcome.adopted"), main.indexOf("#if defined ( ARDUINO_M5STACK_ATOM )", main.indexOf("    const auto board = outcome.adopted")));
   const header = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
@@ -64,6 +65,7 @@ log_t success_log(const board_result_t&) {return {nullptr,nullptr};}
 } }
 const int detection_i2c_port=0;
 template<class Adopt> board_detect::detect_outcome_t construct_and_adopt(board_detect::board_result_t& result, board_detect::detect_outcome_t outcome, board_detect::detection_transaction_t& transaction, board_t representative_board, Adopt adopt) ${finish}
+template<class Finish> board_detect::detect_outcome_t run_detection_attempt_with(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, Finish finish) ${attemptWith}
 template<class Adopt> board_detect::detect_outcome_t run_detection_attempt(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, Adopt adopt) ${attempt}
 struct M5GFX {
  board_t _board=board_t::board_unknown,_board_candidate=board_t::board_unknown;

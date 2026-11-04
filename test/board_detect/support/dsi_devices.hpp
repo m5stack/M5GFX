@@ -53,4 +53,7 @@ namespace m5gfx {
 struct Light_M5CoreP4X : lgfx::ILight {
   template <class... Args> Light_M5CoreP4X(Args...) {}
 };
+struct Light_M5StamP4XHub : lgfx::ILight {
+  template <class... Args> Light_M5StamP4XHub(Args...) {}
+};
 }

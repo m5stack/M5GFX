@@ -69,6 +69,9 @@ construct_status_t construct_stack(const board_result_t &, display_parts_t *) {
 construct_status_t construct_stamplc(const board_result_t &, display_parts_t *) {
   std::abort();
 }
+construct_status_t construct_stampp4xhub(const board_result_t &, display_parts_t *) {
+  std::abort();
+}
 construct_status_t construct_station(const board_result_t &, display_parts_t *) {
   std::abort();
 }
@@ -155,6 +158,8 @@ inline const char *name(m5gfx::board_detect::m5::construct_fn_t function) {
     return "construct_stack";
   if (function == construct_stamplc)
     return "construct_stamplc";
+  if (function == construct_stampp4xhub)
+    return "construct_stampp4xhub";
   if (function == construct_station)
     return "construct_station";
   if (function == construct_stickc)

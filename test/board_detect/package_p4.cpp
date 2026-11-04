@@ -121,9 +121,61 @@ static unsigned tab5_observations() {
         }
   return cases;
 }
+// Identity-only attempts must confirm the board without constructing any
+// display part, and must leave every probed GPIO as they found it.
+static unsigned hub_identity_cases() {
+  host_hardware::reset();
+  host_probes::reset();
+  host_dsi::reset(false);
+  bool pins_ok = false;
+  unsigned pm1_reads = 0, ioe_reads = 0, stray = 0;
+  host_probes::expected_i2c = [&](int sda, int scl, std::uint8_t) {
+    pins_ok = (sda == wiring::stampp4xhub::internal_i2c_sda
+            && scl == wiring::stampp4xhub::internal_i2c_scl);
+  };
+  host_hardware::wire = [&](int addr, int reg, std::uint8_t *data,
+                            std::size_t len, bool write) {
+    // Other detectors probe their own pin pairs; only this board's bus may answer.
+    if (!pins_ok) { return false; }
+    if (write) { ++stray; return false; }
+    if (reg == -1) { return addr == pmic_ops::pm1_i2c_addr || addr == pmic_ops::ioe1_i2c_addr; }
+    if (addr == pmic_ops::pm1_i2c_addr) {
+      if (reg != 0 || len == 0 || len > 2) { ++stray; return false; }
+      data[0] = 0x50;
+      if (len == 2) { data[1] = 0x20; }
+      ++pm1_reads;
+      return true;
+    }
+    if (addr == pmic_ops::ioe1_i2c_addr) {
+      if (reg != 0 || len != 1) { ++stray; return false; }
+      *data = 0;
+      ++ioe_reads;
+      return true;
+    }
+    ++stray;
+    return false;
+  };
+  const auto caller_ports = host_hardware::ports;
+  detect_request_t request;
+  request.allow_reset = false;
+  request.max_attempts = 5;
+  const auto out = run_detection_session(request,
+    [](const detect_request_t &attempt, bool final_attempt) {
+      return m5gfx::run_identity_attempt(esp32p4_detectors, attempt, final_attempt);
+    });
+  assert(out.adopted && out.verdict == verdict_t::confirmed && out.attempts == 1);
+  assert(out.result.def != nullptr && out.result.def->id == 157);
+  // The detector read the PM1 ID and IOE1 once, with no writes anywhere.
+  assert(pm1_reads == 1 && ioe_reads == 1 && stray == 0);
+  assert(host_dsi::id_reads == 0);
+  assert(host_hardware::ports == caller_ports);
+  return 1;
+}
+
 int main() {
   host_snapshot::check("p4", esp32p4_boards);
   unsigned cases = tab5_observations();
+  cases += hub_identity_cases();
   for (bool weak : {false, true})
     for (int revision : {0, 300}) {
       host_hardware::reset();
