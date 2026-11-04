@@ -8,6 +8,7 @@
 { board_t::board_M5Tab5X, 32, 31, 54, 53 },
 { board_t::board_M5StampP4, 255, 255, 255, 255 },
 { board_t::board_M5StampP4X, 255, 255, 255, 255 },
+{ board_t::board_M5StamP4XHub, 1, 0, 255, 255 },
 { board_t::board_M5UnitPoEP4, 1, 0, 54, 53 },
 { board_t::board_unknown, 22, 21, 33, 32 },
 

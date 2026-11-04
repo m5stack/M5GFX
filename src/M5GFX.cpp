@@ -138,6 +138,49 @@ namespace m5gfx
   static constexpr std::uint8_t m5pm1_i2c_addr = 0x6E; // M5PM1 device i2c address
 
 #if defined (CONFIG_IDF_TARGET_ESP32P4)
+  // The Hub drives its LCD backlight from PM1 GPIO3 (PWM channel 0); the PM1 is
+  // on the same internal bus as the rest of the board peripherals.
+  struct Light_M5StamP4XHub : public lgfx::ILight
+  {
+    Light_M5StamP4XHub(int port, int sda, int scl, std::uint8_t addr, std::uint32_t freq)
+    : _port(port), _sda(sda), _scl(scl), _addr(addr), _freq(freq) {}
+
+    bool init(uint8_t brightness) override
+    {
+      lgfx::i2c::init(_port, _sda, _scl);
+      // Keep the PM1 awake: its I2C idle sleep and watchdog would stop the PWM.
+      lgfx::i2c::writeRegister8(_port, _addr, 0x09, 0x00, 0, _freq);
+      lgfx::i2c::writeRegister8(_port, _addr, 0x0A, 0x00, 0, _freq);
+      // GPIO3 -> PWM peripheral (special function) with a push-pull driver.
+      lgfx::i2c::writeRegister8(_port, _addr, 0x16, 0xC0, 0x3F, _freq);
+      lgfx::i2c::bitOff(_port, _addr, 0x13, 1u << 3, _freq);
+      static constexpr std::uint16_t pwm_freq = 5000;
+      const uint8_t freq_data[] = {
+        0x34, static_cast<uint8_t>(pwm_freq), static_cast<uint8_t>(pwm_freq >> 8)
+      };
+      lgfx::i2c::transactionWrite(_port, _addr, freq_data, sizeof(freq_data), _freq);
+      setBrightness(brightness);
+      return true;
+    }
+
+    void setBrightness(uint8_t brightness) override
+    {
+      const std::uint16_t duty = (brightness * 4095u) / 255u;
+      // High byte bit4 enables the channel; duty 0 also disables it.
+      const uint8_t duty_data[] = {
+        0x30, static_cast<uint8_t>(duty),
+        static_cast<uint8_t>((duty >> 8) | (duty ? 0x10 : 0x00))
+      };
+      lgfx::i2c::transactionWrite(_port, _addr, duty_data, sizeof(duty_data), _freq);
+    }
+  private:
+    int _port;
+    int _sda;
+    int _scl;
+    std::uint8_t _addr;
+    std::uint32_t _freq;
+  };
+
   struct Light_M5CoreP4X : public lgfx::ILight
   {
     Light_M5CoreP4X(int port, int sda, int scl, std::uint8_t addr, std::uint32_t freq)
@@ -1140,6 +1183,7 @@ namespace m5gfx
     case board_M5AirQ:         title = "M5AirQ";         break;
     case board_M5VAMeter:      title = "M5VAMeter";      break;
     case board_M5StamPLC:      title = "M5StamPLC";      break;
+    case board_M5StamP4XHub:   title = "M5StamP4XHub";   break;
     case board_M5Tab5:         title = "M5Tab5";         break;
     case board_M5Tab5X:        title = "M5Tab5X";        break;
     case board_M5UnitPoEP4:    title = "M5UnitPoEP4";    break;
@@ -1235,6 +1279,7 @@ namespace m5gfx
       h = 240;
       break;
 
+    case board_M5StamP4XHub:
     case board_M5Tab5:
     case board_M5Tab5X:
       w = 720;

@@ -8,6 +8,16 @@ sd -1 -1 -1 -1 -1
 display -1 -1 -1 -1 -1 -1 -1
 i2c 11 9 1 hold [] ops [] options[]
 entry construct_corep4x board_M5CoreP4X 0 0
+157 M5StamP4XHub 0
+power -1 1 100000 0 0 0 1
+device 100000 0 110 0 1 1
+device 100000 0 79 0 1 1
+variant 110 0 0 0 0 0 0 0 0 0 0 [][][]
+reset 0 -1 0 0 0 0
+sd -1 -1 -1 -1 -1
+display -1 -1 -1 -1 -1 -1 -1
+i2c 0 1 1 hold [] ops [] options[]
+entry construct_stampp4xhub board_M5StamP4XHub 0 0
 22 M5Tab5 0
 power -1 1 100000 0 0 0 1
 device 100000 0 67 0 1 0

@@ -19,7 +19,7 @@ test("fixed acceptance bypasses NVS and detection and retries clean startup afte
   const finish = body(main, "static board_detect::detect_outcome_t construct_and_adopt(");
   const find = body(registry, "const board_entry_t* find_board(");
   const start = main.indexOf("    _detect_started = true;", main.indexOf("bool M5GFX::init_impl("));
-  const end = main.indexOf("\n#if defined (M5GFX_HAS_BOARD_DETECT)\n    static constexpr char NVS_KEY", start);
+  const end = main.indexOf("\n#if defined (M5GFX_HAS_BOARD_DETECT)\n    const std::uint32_t hint_board", start);
   assert.ok(end > start, "fixed startup prefix ends before the guarded NVS path");
   const prefix = main.slice(start, end);
   const getterSource = await fs.readFile(path.join(src, "M5GFX.h"), "utf8");
