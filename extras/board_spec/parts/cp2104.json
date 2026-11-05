@@ -1,0 +1,6 @@
+{
+  "id": "cp2104", "name": "CP2104", "kind": "usb_uart", "vendor": "Silicon Labs",
+  "bus": { "kind": "uart" },
+  "signals": { "required": ["boot"], "optional": [] },
+  "spec_keys": { "auto_reset": { "type": "boolean", "required": true } }
+}

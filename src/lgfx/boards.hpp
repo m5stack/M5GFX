@@ -29,7 +29,10 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5AtomS3R = 18
     , board_M5PaperS3 = 19
     , board_M5CoreMP135 = 20
-    , board_M5StampPLC = 21
+    , board_M5StamPLC = 21
+    // The product is named StamPLC. The old spelling stays as a deprecated alias
+    // with the same value, so a board identity stored in NVS still resolves.
+    , board_M5StampPLC __attribute__ ((deprecated("Use board_M5StamPLC"))) = board_M5StamPLC
     , board_M5Tab5 = 22
     , board_ArduinoNessoN1 = 23
     , board_M5CardputerADV = 24
@@ -79,6 +82,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5StampC6 = 154
     , board_M5StampS3Mini = 155
     , board_M5StampP4X = 156
+    , board_M5StampP4XHub = 157
+    , board_M5StamP4XHub = board_M5StampP4XHub // same board, alternate spelling
 
 /// external displays
     , board_M5AtomDisplay = 192
@@ -91,7 +96,8 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5UnitRCA = 198
     , board_M5ModuleDisplay = 199
     , board_M5ModuleRCA = 200
-    , board_M5UnitPoEP4HDMI = 201
+    , board_M5UnitPoEP4DisplayOut = 201
+    , board_M5UnitPoEP4HDMI __attribute__ ((deprecated)) = board_M5UnitPoEP4DisplayOut
 
     , board_FrameBuffer = 512
     };

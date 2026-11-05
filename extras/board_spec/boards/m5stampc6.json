@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "m5stampc6",
+  "name": "M5StampC6",
+  "official_name": "M5Stack StampC6",
+  "legacy_board_id": 154,
+  "chip": "esp32c6",
+  "pins": {},
+  "buses": {},
+  "devices": {}
+}

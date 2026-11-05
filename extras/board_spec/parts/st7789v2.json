@@ -1,0 +1,17 @@
+{
+  "id": "st7789v2", "name": "ST7789V2", "kind": "display", "vendor": "Sitronix",
+  "bus": { "kind": "spi" }, "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight", "power"] },
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "offset_x": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
+    "offset_y": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
+    "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
+    "invert": { "type": "boolean", "x-cpp-type": "int" },
+    "readable": { "type": "boolean", "x-cpp-type": "int" },
+    "three_wire": { "type": "boolean" },
+    "panel_type": { "type": "string" }
+  },
+  "id_probe": { "reg": "0x04", "mask": "0xFB", "value": "0x81" },
+  "verified": { "signals": null, "id_probe": "generated" }
+}

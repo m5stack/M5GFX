@@ -22,8 +22,8 @@ M5GFX display;
 //#include <M5AtomDisplay.h>
 //M5AtomDisplay display;
 
-//#include <M5UnitPoEP4HDMI.h>
-//M5UnitPoEP4HDMI display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+//#include <M5UnitPoEP4DisplayOut.h>
+//M5UnitPoEP4DisplayOut display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
 
 M5Canvas canvas[2];
 

@@ -1,0 +1,220 @@
+{
+  "m5gfx_board_desc": {
+    "emit": "m5gfx_desc",
+    "boards": {
+      "m5station": {
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp"
+      },
+      "m5stack_core2": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "probe_pins": [12, 32, 33],
+        "options": [
+          { "name": "new_pmic", "bit": 0, "select": { "pmic": "axp2101" } },
+          { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
+        ]
+      },
+      "m5tough": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "probe_pins": [12, 32, 33],
+        "options": [
+          { "name": "reserved", "bit": 0 },
+          { "name": "lcd_e", "bit": 1, "select": { "lcd": "ili9342e" } }
+        ]
+      },
+      "m5stack": {
+        "wiring_fields": ["display", "shared_sd", "hold"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp",
+        "options": [{ "name": "ips", "bit": 0, "select": { "lcd": "ips" } }]
+      },
+      "m5paper": {
+        "wiring_fields": ["display", "shared_sd", "power", "hold"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp"
+      },
+      "m5stickc": {
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp", "probe_parts": []
+      },
+      "m5stickcplus": {
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp"
+      },
+      "m5stack_coreink": {
+        "wiring_fields": ["display", "power", "hold"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp",
+        "options": [{ "name": "m09", "bit": 0, "select": { "epd": "gdew0154m09" } }]
+      },
+      "m5stickcplus2": {
+        "wiring_fields": ["display", "power", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32_d0wdq6_wiring.hpp", "specs_output": "esp32_d0wdq6_specs.hpp"
+      },
+      "m5atom_psram": {},
+      "m5atomlite": {
+        "wiring_fields": [], "probe_pins": [2, 12, 13, 18, 23, 27, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp"
+      },
+      "m5atomu": { "wiring_fields": [], "probe_pins": [2, 12, 13, 18, 23, 27, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp" },
+      "m5stamppico": {},
+      "m5atommatrix": { "wiring_fields": [], "probe_pins": [2, 12, 13, 18, 21, 23, 25, 27, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp" },
+      "m5atomvoice": { "wiring_fields": [], "probe_pins": [2, 18, 23, 34], "wiring_output": "esp32_d0wdq6_wiring.hpp" },
+      "m5timercam": {
+        "wiring_fields": ["i2c", "power"], "desc_internal_i2c": true, "wiring_output": "esp32_d0wdq6_wiring.hpp"
+      },
+      "m5nanoc6": {
+        "wiring_fields": [], "probe_pins": [3], "wiring_output": "esp32c6_wiring.hpp"
+      },
+      "m5nanoh2": {
+        "wiring_fields": [], "probe_pins": [3], "wiring_output": "esp32h2_wiring.hpp"
+      },
+      "m5stampc5": {},
+      "m5stampc3": {
+        "wiring_fields": [], "probe_pins": [20], "wiring_output": "esp32c3_wiring.hpp"
+      },
+      "m5stampc3u": {
+        "wiring_fields": [], "wiring_output": "esp32c3_wiring.hpp"
+      },
+      "m5stampc6": {},
+      "m5stack_cores3": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold", "touch", "camera"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander", "camera"],
+        "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "internal_camera_confirmed", "bit": 1 }, { "name": "lcd_e", "bit": 2 }],
+        "release_probe": { "pins": ["dev:camera.href", "dev:camera.d0", "dev:camera.d1", "dev:camera.d2", "dev:camera.d3", "dev:camera.vsync", "dev:camera.d7", "dev:camera.d6"], "reads": 256, "samples": 9, "settle_us": 10, "short_max_ns": 260, "long_min_ns": 330 }
+      },
+      "m5stack_cores3se": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander"], "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "reserved", "bit": 1 }, { "name": "lcd_e", "bit": 2 }]
+      },
+      "m5stack_stackchan": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp", "identity_devices": ["io_expander", "camera", "stackchan_ioe"], "options": [{ "name": "vbus_5v", "bit": 0 }, { "name": "reserved", "bit": 1 }, { "name": "lcd_e", "bit": 2 }]
+      },
+      "m5atoms3": {
+        "wiring_fields": ["display", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }]
+      },
+      "m5atoms3lite": {"wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp", "probe_pins": [4, 12, 16, 41]},
+      "m5atoms3u": {"wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp", "probe_pins": [4, 12, 16, 41]},
+      "m5capsule": {"wiring_fields": ["i2c", "power"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5powerhub": {"wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5dualkey": {"wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp", "probe_pins": [17, 21, 38, 39]},
+      "m5stamps3": {"wiring_fields": [], "wiring_output": "esp32s3_wiring.hpp"},
+      "m5atoms3rcam": {"wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true, "probe_pins": [9, 12, 18, 21]},
+      "m5atoms3rext": {"wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true, "probe_pins": [9, 12, 18, 21]},
+      "m5atomvoices3r": {"wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5stamps3bat": {"wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5stamps3mini": {"wiring_fields": ["i2c"], "wiring_output": "esp32s3_wiring.hpp", "desc_internal_i2c": true},
+      "m5atoms3r": {
+        "wiring_fields": ["display", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "gc9107", "bit": 0, "select": { "lcd": "gc9107" } }]
+      },
+      "m5dial": {
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "touch", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5dinmeter": {
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5airq": {
+        "wiring_fields": ["display", "hold", "power"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "m09", "bit": 0, "select": { "epd": "gdew0154m09" } }]
+      },
+      "m5stamplc": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5cardputer": {
+        "wiring_fields": ["display", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "cardputer_subdivision": {
+          "sense_i2c_from_boards": ["m5cardputer_adv", "m5vameter"],
+          "vameter_board": "m5vameter",
+          "vameter_i2c_devices": ["probe_device_0", "probe_device_1"]
+        }
+      },
+      "m5cardputer_adv": {
+        "cpp_namespace": "cardputer_adv",
+        "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5vameter": {
+        "wiring_fields": ["display", "i2c", "hold", "backlight"], "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5sticks3": {
+        "wiring_fields": ["display", "i2c", "hold", "backlight", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5stopwatch": {
+        "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "touch_cst9217", "bit": 0, "select": { "touch": "cst9217" } }]
+      },
+      "m5papermono": {
+        "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5chaincaptain": {
+        "wiring_fields": ["display", "i2c", "hold"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5papercolor": {
+        "wiring_fields": ["display", "shared_sd", "i2c", "hold"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5papers3": {
+        "wiring_fields": ["display", "i2c", "power", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5paperdiy": {
+        "wiring_fields": ["display", "i2c"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
+        "specs_output": "esp32s3_specs.hpp"
+      },
+      "m5toughc5": {
+        "wiring_fields": ["display", "i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32c5_wiring.hpp",
+        "specs_output": "esp32c5_specs.hpp"
+      },
+      "m5unit_c6l": {
+        "wiring_fields": ["display", "i2c", "hold", "power"], "desc_internal_i2c": true, "reset": "display_rst", "wiring_output": "esp32c6_wiring.hpp", "specs_output": "esp32c6_specs.hpp", "identity_devices": ["ioe"]
+      },
+      "arduino_nesso_n1": {
+        "cpp_namespace": "nesson1",
+        "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32c6_wiring.hpp", "specs_output": "esp32c6_specs.hpp", "identity_devices": ["pi4io2", "pi4io1"]
+      },
+      "m5stack_corematrix": {
+        "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32c61_wiring.hpp",
+        "specs_output": "esp32c61_specs.hpp"
+      },
+      "m5stack_corep4x": {
+        "wiring_fields": ["i2c"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
+        "specs_output": "esp32p4_specs.hpp"
+      },
+      "m5unitpoep4": {"wiring_fields": [], "wiring_output": "esp32p4_wiring.hpp"},
+      "m5stampp4": {},
+      "m5stampp4x": {},
+      "m5stack_tab5": {
+        "wiring_fields": ["i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
+        "specs_output": "esp32p4_specs.hpp",
+        "options": [
+          { "name": "st7121", "bit": 0, "select": { "lcd": "st7121" } },
+          { "name": "st7123", "bit": 1, "select": { "lcd": "st7123" } }
+        ]
+      },
+      "m5stack_tab5x": {
+        "wiring_fields": ["i2c", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32p4_wiring.hpp",
+        "options": [
+          { "name": "st7121", "bit": 0, "select": { "lcd": "st7121" } },
+          { "name": "st7123", "bit": 1, "select": { "lcd": "st7123" } }
+        ]
+      }
+    }
+  },
+  "m5unified_pin_table": {
+    "emit": "m5unified_pin_table",
+    "allow_origins": ["official", "third_party"],
+    "compositions": {
+      "m5stack_core2": { "default": { "accessories": [
+        { "id": "m5go_bottom2" }, { "id": "extport_core2", "use": ["port_d", "port_e"] }
+      ] } },
+      "m5stack": { "default": { "accessories": [
+        { "id": "m5go_bottom" }, { "id": "m5basic_base_lite", "use": ["port_d", "port_e"] }
+      ] } },
+      "m5tough": { "default": { "accessories": [{ "id": "tough_subboard" }] } }
+    }
+  }
+}

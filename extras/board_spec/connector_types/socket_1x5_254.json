@@ -1,0 +1,39 @@
+{
+  "id": "socket_1x5_254",
+  "name": "1x5 pin socket (2.54 mm)",
+  "layout": {
+    "rows": 5,
+    "cols": 1,
+    "pitch_mm": 2.54,
+    "numbering": "row_major",
+    "key": "none",
+    "view": "mating_face"
+  },
+  "positions": [
+    {
+      "id": "1",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "2",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "3",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "4",
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "5",
+      "row": 4,
+      "col": 0
+    }
+  ]
+}

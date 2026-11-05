@@ -1,0 +1,50 @@
+{
+  "id": "qwiic_4p",
+  "name": "4-pin Qwiic (logical port order)",
+  "layout": {
+    "rows": 4,
+    "cols": 1,
+    "pitch_mm": null,
+    "numbering": "custom",
+    "key": "none",
+    "view": "component_side"
+  },
+  "positions": [
+    {
+      "id": "1",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "2",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "3",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "4",
+      "row": 3,
+      "col": 0
+    }
+  ],
+  "fixed_positions": {
+    "4": "pwr:gnd"
+  },
+  "default_positions": {
+    "3": "pwr:3v3"
+  },
+  "standards": {
+    "port_i2c": {
+      "1": "scl",
+      "2": "sda"
+    }
+  },
+  "note": "Logical port order, not manufacturer pin numbering or physical placement. Qwiic uses a JST SH 1.0mm-pitch connector; physical layout is not represented. See the board note for physical pin numbers.",
+  "verified": {
+    "layout": null
+  }
+}

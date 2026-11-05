@@ -1,0 +1,12 @@
+{
+  "id": "sp485e", "name": "SP485EEN-L/TR", "kind": "transceiver", "vendor": "MaxLinear",
+  "bus": { "kind": "uart" },
+  "pins": {
+    "a": { "cap": ["output", "input"] }, "b": { "cap": ["output", "input"] },
+    "ro": { "cap": ["output"] }, "di": { "cap": ["input"] },
+    "de": { "cap": ["input"] }, "re": { "cap": ["input"] }
+  },
+  "signals": { "required": [], "optional": ["de", "re"] },
+  "note": "Tough subboard uses an automatic half-duplex direction circuit: DI is tied to GND and GPIO19 drives the combined DE/RE node through Q1.",
+  "verified": { "pins": "datasheet", "note": "datasheet" }
+}

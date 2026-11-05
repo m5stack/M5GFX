@@ -1,0 +1,20 @@
+{
+  "id": "st7735s", "name": "ST7735S", "kind": "display", "vendor": "Sitronix",
+  "bus": { "kind": "spi", "modes": ["3wire"] },
+  "signals": { "required": ["cs", "dc", "rst"], "optional": ["backlight"] },
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "memory_width": { "type": "integer", "minimum": 1, "maximum": 4096, "default": 132, "x-cpp-type": "int" },
+    "memory_height": { "type": "integer", "minimum": 1, "maximum": 4096, "default": 162, "x-cpp-type": "int" },
+    "offset_x": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
+    "offset_y": { "type": "integer", "minimum": -4096, "maximum": 4096, "x-cpp-type": "int" },
+    "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" },
+    "invert": { "type": "boolean", "x-cpp-type": "int" },
+    "readable": { "type": "boolean", "x-cpp-type": "int" },
+    "three_wire": { "type": "boolean", "x-cpp-type": "int" },
+    "panel_type": { "type": "string", "const": "st7735s" }
+  },
+  "id_probe": { "reg": "0x04", "mask": "0xFFFF", "values": ["0x7683", "0x897C"] },
+  "verified": { "id_probe": "generated" }
+}

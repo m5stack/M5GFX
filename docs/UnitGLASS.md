@@ -19,8 +19,8 @@ void setup(void)
 
 // Set the display orientation
 // ディスプレイの向きを設定
-// 0 = 270 deg / 1 = normal / 2 = 90 deg / 3 = 180 deg / 4~7 = upside down
-  display.setRotation(1);
+// 0 = normal / 1 = 90 deg / 2 = 180 deg / 3 = 270 deg / 4~7 = mirrored
+  display.setRotation(0);
 
   display.startWrite();
   for (int y = 0; y < display.height(); ++y)

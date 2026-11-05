@@ -1,0 +1,15 @@
+{
+  "id": "esp32h2",
+  "soc": "esp32h2",
+  "package": "generic",
+  "gpio_count": 28,
+  "absent": [],
+  "input_only": [],
+  "strapping": [8, 9],
+  "no_internal_pull": [],
+  "reserved": [],
+  "reserved_conditional": {},
+  "spi_hosts": 1,
+  "i2c_hosts": 2,
+  "i2s_ports": 1
+}

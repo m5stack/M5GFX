@@ -1,0 +1,12 @@
+{
+  "name": "m5-board-spec",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node cli/spec.js check",
+    "bundle": "node build/bundle.js"
+  },
+  "dependencies": {}
+}

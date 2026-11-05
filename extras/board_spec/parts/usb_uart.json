@@ -1,0 +1,6 @@
+{
+  "id": "usb_uart", "name": "Unspecified USB-UART bridge", "kind": "usb_uart",
+  "bus": { "kind": "uart" },
+  "signals": { "required": ["boot"], "optional": [] },
+  "spec_keys": { "auto_reset": { "type": "boolean", "required": true } }
+}

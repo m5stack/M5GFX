@@ -39,6 +39,15 @@ Supported device
 - [AtomDisplay](docs/ATOMDisplay.md) / ModuleDisplay
 
 
+Documentation
+----------------
+- [Documentation index](docs/README.md)
+- [Getting started](docs/getting-started/README.md)
+- [API reference](docs/api/README.md)
+- [Device guides](docs/devices/README.md)
+- [Examples](docs/examples/README.md)
+
+
 Notes
 ----------------
 ### Arduino as an ESP-IDF component

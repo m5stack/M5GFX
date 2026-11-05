@@ -1,0 +1,6 @@
+{
+  "id": "ch552", "name": "CH552", "kind": "usb_uart", "vendor": "WCH",
+  "bus": { "kind": "uart" },
+  "signals": { "required": ["boot"], "optional": [] },
+  "spec_keys": { "auto_reset": { "type": "boolean", "required": true } }
+}

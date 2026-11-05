@@ -1,0 +1,13 @@
+{
+  "id": "tm1680",
+  "name": "TM1680",
+  "kind": "display",
+  "vendor": "Titan Micro",
+  "bus": { "kind": "i2c" },
+  "i2c_addr": ["0x72"],
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 24, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 16, "required": true, "x-cpp-type": "int" },
+    "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" }
+  }
+}

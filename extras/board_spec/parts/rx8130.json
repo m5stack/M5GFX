@@ -1,0 +1,5 @@
+{
+  "id": "rx8130", "name": "RX8130", "kind": "rtc",
+  "bus": { "kind": "i2c" }, "i2c_addr": ["0x32"],
+  "signals": { "required": [], "optional": ["int"] }
+}

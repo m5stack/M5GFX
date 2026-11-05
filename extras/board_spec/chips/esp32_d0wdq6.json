@@ -1,0 +1,32 @@
+{
+  "id": "esp32_d0wdq6",
+  "soc": "esp32",
+  "package": "d0wdq6",
+  "gpio_count": 40,
+  "absent": [20, 24, 28, 29, 30, 31],
+  "input_only": [34, 35, 36, 37, 38, 39],
+  "strapping": [0, 2, 5, 12, 15],
+  "no_internal_pull": [34, 35, 36, 37, 38, 39],
+  "reserved": [6, 7, 8, 10, 11],
+  "psram": {
+    "quad": { "cs": 16, "clk": 17 }
+  },
+  "packages": {
+    "pico_v3_02": {
+      "absent": [24, 28, 29, 30, 31],
+      "reserved": [6, 7, 8, 9, 10, 11],
+      "psram": {
+        "quad": { "cs": 9, "clk": 10 }
+      }
+    }
+  },
+  "sdmmc": {
+    "gpio_matrix": false,
+    "slots": [
+      {
+        "id": 1,
+        "pins": { "clk": 14, "cmd": 15, "d0": 2, "d1": 4, "d2": 12, "d3": 13 }
+      }
+    ]
+  }
+}

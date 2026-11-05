@@ -20,8 +20,8 @@ M5GFX display;
 //M5AtomDisplay display;  // default setting
 //M5AtomDisplay display ( 320, 180 ); // width, height
 
-// #include <M5UnitPoEP4HDMI.h>
-// M5UnitPoEP4HDMI display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
+// #include <M5UnitPoEP4DisplayOut.h>
+// M5UnitPoEP4DisplayOut display; // 1280x720@60 or 1920x1080@30 only; default 1280x720@60
 
 
 static constexpr float deg_to_rad = 0.017453292519943295769236907684886;

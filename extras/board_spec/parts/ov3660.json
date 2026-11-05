@@ -1,0 +1,5 @@
+{
+  "id": "ov3660", "name": "OV3660", "kind": "camera", "bus": { "kind": "any" },
+  "signals": { "required": [], "optional": ["pwdn", "reset", "xclk", "vsync", "href", "pclk", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"] },
+  "verified": { "signals": null }
+}

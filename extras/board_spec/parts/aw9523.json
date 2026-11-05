@@ -1,0 +1,5 @@
+{
+  "id": "aw9523", "name": "AW9523B", "kind": "io_expander", "vendor": "AWINIC",
+  "bus": { "kind": "i2c" }, "i2c_addr": ["0x58"],
+  "id_probe": { "reg": "0x10", "value": "0x23" }, "pins": {}
+}

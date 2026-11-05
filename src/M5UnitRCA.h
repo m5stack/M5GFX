@@ -154,11 +154,10 @@ public:
       pnl_cfg.memory_height = _cfg.memory_height;
       pnl_cfg.panel_height = _cfg.panel_height;
       pnl_cfg.bus_shared = false;
-      pnl_cfg.offset_rotation = 3;
+      pnl_cfg.offset_rotation = 0;
       p->config(pnl_cfg);
       p->setWindowTitle("UnitRCA");
       p->setScaling(864/_cfg.panel_width, 576/_cfg.panel_height);
-      p->setRotation(1);
       setPanel(p);
       _panel_last.reset(p);
     }
@@ -211,12 +210,11 @@ public:
     }
 #endif
 
-    _cfg.offset_rotation = 3;
+    _cfg.offset_rotation = 0;
     _cfg.bus_shared = false;
 
     p->config_detail(_cfg_detail);
     p->config(_cfg);
-    p->setRotation(1);
     setPanel(p);
 
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear))

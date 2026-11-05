@@ -1,0 +1,11 @@
+{
+  "id": "m5ioe1", "name": "M5 IOE1", "kind": "io_expander",
+  "bus": { "kind": "i2c" }, "i2c_addr": ["0x4F"],
+  "id_probe": { "reg": "0x00", "value": "0x00", "match": "ack_only" },
+  "spec_keys": {
+    "probe_freq": { "type": "integer", "minimum": 10000, "maximum": 1000000 },
+    "firmware_reg": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "firmware_min": { "type": "integer", "minimum": 0, "maximum": 255 }
+  },
+  "pins": {}
+}

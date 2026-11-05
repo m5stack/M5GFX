@@ -1,0 +1,75 @@
+{
+  "id": "ed047tc1",
+  "name": "ED047TC1",
+  "kind": "display",
+  "bus": {
+    "kind": "parallel_epd"
+  },
+  "signals": {
+    "required": [],
+    "optional": []
+  },
+  "spec_keys": {
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096,
+      "required": true,
+      "x-cpp-type": "int"
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096,
+      "required": true,
+      "x-cpp-type": "int"
+    },
+    "memory_width": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4096,
+      "x-cpp-type": "int"
+    },
+    "memory_height": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4096,
+      "x-cpp-type": "int"
+    },
+    "offset_x": {
+      "type": "integer",
+      "minimum": -4096,
+      "maximum": 4096,
+      "x-cpp-type": "int"
+    },
+    "offset_y": {
+      "type": "integer",
+      "minimum": -4096,
+      "maximum": 4096,
+      "x-cpp-type": "int"
+    },
+    "rotation_offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7,
+      "x-cpp-type": "int"
+    },
+    "invert": {
+      "type": "boolean",
+      "x-cpp-type": "int"
+    },
+    "readable": {
+      "type": "boolean",
+      "x-cpp-type": "int"
+    },
+    "line_padding": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "x-cpp-type": "std::uint8_t"
+    }
+  },
+  "verified": {
+    "signals": null
+  }
+}

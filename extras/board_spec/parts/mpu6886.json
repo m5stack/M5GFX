@@ -1,0 +1,4 @@
+{
+  "id": "mpu6886", "name": "MPU6886", "kind": "imu", "bus": { "kind": "i2c" },
+  "i2c_addr": ["0x68"], "signals": { "required": [], "optional": ["int"] }, "verified": { "i2c_addr": null }
+}

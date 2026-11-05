@@ -1,0 +1,8 @@
+{
+  "id": "transceiver", "name": "Unspecified transceiver", "kind": "transceiver", "bus": { "kind": "uart" },
+  "pins": {
+    "a": { "cap": ["output", "input"] }, "b": { "cap": ["output", "input"] },
+    "de": { "cap": ["input"] }, "re": { "cap": ["input"] }
+  },
+  "signals": { "required": [], "optional": ["de", "re"] }
+}

@@ -84,7 +84,7 @@ public:
       cfg.memory_height = 64;
       cfg.panel_height  = 64;
       cfg.bus_shared = false;
-      cfg.offset_rotation = 3;
+      cfg.offset_rotation = 0;
       p->config(cfg);
       uint_fast8_t scale = 2;
 #if defined (M5GFX_SCALE)
@@ -95,7 +95,6 @@ public:
       p->setScaling(scale, scale);
       p->setWindowTitle("UnitGLASS2");
       p->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {
@@ -167,9 +166,8 @@ public:
       p->bus(b);
       auto cfg = p->config();
       cfg.bus_shared = false;
-      cfg.offset_rotation = 1;
+      cfg.offset_rotation = 2;
       p->config(cfg);
-      p->setRotation(1);
     }
     setPanel(p);
     if (lgfx::LGFX_Device::init_impl(use_reset, use_clear)) {

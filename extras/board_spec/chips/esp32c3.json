@@ -1,0 +1,16 @@
+{
+  "id": "esp32c3",
+  "soc": "esp32c3",
+  "package": "generic",
+  "gpio_count": 22,
+  "absent": [],
+  "input_only": [],
+  "strapping": [2, 8, 9],
+  "no_internal_pull": [],
+  "reserved": [12, 13, 14, 15, 16, 17],
+  "reserved_conditional": {},
+  "usb": { "dn": 18, "dp": 19 },
+  "spi_hosts": 1,
+  "i2c_hosts": 1,
+  "i2s_ports": 1
+}

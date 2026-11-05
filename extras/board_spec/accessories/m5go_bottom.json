@@ -1,0 +1,15 @@
+{
+  "schema_version": 1, "id": "m5go_bottom", "name": "M5GO Bottom", "origin": "official",
+  "attaches": { "connector_type": "mbus", "occupies": "bottom" }, "compatible_with": ["m5stack"],
+  "host_pins": {
+    "mbus.4": { "roles": ["conn:port_b.1"] }, "mbus.10": { "roles": ["conn:port_b.2"] },
+    "mbus.15": { "roles": ["conn:port_c.1"] }, "mbus.16": { "roles": ["conn:port_c.2"] },
+    "mbus.23": { "roles": ["dev:rgb_led.data"] }
+  },
+  "connectors": {
+    "port_b": { "type": "hy2_4p", "standard": "port_io" },
+    "port_c": { "type": "hy2_4p", "standard": "port_uart" }
+  },
+  "devices": { "rgb_led": { "kind": "led_strip", "part": "sk6812", "spec": { "count": 10 }, "verified": { "part": "datasheet" } } },
+  "verified": { "host_pins": "datasheet" }
+}

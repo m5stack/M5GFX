@@ -1,0 +1,26 @@
+name: Board detection host tests
+
+on:
+  push:
+    paths:
+      - 'src/board_detect/**'
+      - 'src/M5GFX.cpp'
+      - 'src/lgfx/boards.hpp'
+      - 'test/board_detect/**'
+      - '.github/workflows/BoardDetect.yml'
+  pull_request:
+    paths:
+      - 'src/board_detect/**'
+      - 'src/M5GFX.cpp'
+      - 'src/lgfx/boards.hpp'
+      - 'test/board_detect/**'
+      - '.github/workflows/BoardDetect.yml'
+  workflow_dispatch:
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compile and run C++11 detection tests
+        run: sh test/board_detect/run.sh

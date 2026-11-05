@@ -1,0 +1,5 @@
+{
+  "id": "regulator", "name": "Unspecified regulator", "kind": "regulator", "bus": { "kind": "none" },
+  "pins": { "vin": { "cap": ["output", "input"] }, "vout": { "cap": ["rail"] }, "en": { "cap": ["input"] } },
+  "signals": { "required": [], "optional": ["en"] }
+}

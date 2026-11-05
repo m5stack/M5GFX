@@ -1,0 +1,4 @@
+{
+  "id": "ns4168", "name": "NS4168", "kind": "speaker", "bus": { "kind": "i2s" },
+  "signals": { "required": [], "optional": ["enable"] }, "verified": { "signals": null }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "it8951", "name": "IT8951", "kind": "display", "vendor": "ITE",
+  "bus": { "kind": "spi" }, "signals": { "required": ["cs", "rst", "busy"], "optional": [] },
+  "spec_keys": {
+    "width": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "height": { "type": "integer", "minimum": 1, "maximum": 4096, "required": true, "x-cpp-type": "int" },
+    "rotation_offset": { "type": "integer", "minimum": 0, "maximum": 7, "x-cpp-type": "int" }
+  }, "verified": { "signals": null }
+}
