@@ -1,3 +1,4 @@
+import { mergeChoice } from "../choices.js";
 import { assertM5GFXSentinelTypes, DEVICE_KIND_SPEC_KEYS } from "../parts.js";
 
 const SPI_HOSTS = { SPI1_HOST: 0, SPI2_HOST: 1, SPI3_HOST: 2 };
@@ -122,7 +123,9 @@ export function emitM5GFXSpecs(board, resolvedVariants, parts, mapping) {
       idValue: hex(pmicPart?.id_probe?.value, `${board.id}.${pmicDevice.part}.id_probe.value`),
     }),
   } : null;
-  const touchDevice = Object.values(board.devices ?? {}).find((device) => device.kind === "touch" && board.buses?.[device.bus]?.kind === "i2c");
+  // A runtime touch choice emits the default part; the construction code owns the others.
+  const touchSlot = Object.values(board.devices ?? {}).find((device) => device.kind === "touch" && board.buses?.[device.bus]?.kind === "i2c");
+  const touchDevice = touchSlot?.choices ? mergeChoice(touchSlot, touchSlot.default) : touchSlot;
   const touchPart = parts[touchDevice?.part];
   const touchBus = board.buses?.[touchDevice?.bus];
   const touchSpec = touchDevice?.spec ?? {};

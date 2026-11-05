@@ -481,6 +481,10 @@ namespace airq {
   constexpr std::uint32_t m09 = 1u << 0;
   static const char* const names[] = { "m09" };
 } // namespace airq
+namespace stopwatch {
+  constexpr std::uint32_t touch_cst9217 = 1u << 0;
+  static const char* const names[] = { "touch_cst9217" };
+} // namespace stopwatch
 } // namespace generated_options
 
 } } } // namespace m5gfx::board_detect::m5
