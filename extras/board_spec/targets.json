@@ -142,7 +142,8 @@
       },
       "m5stopwatch": {
         "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",
-        "specs_output": "esp32s3_specs.hpp"
+        "specs_output": "esp32s3_specs.hpp",
+        "options": [{ "name": "touch_cst9217", "bit": 0, "select": { "touch": "cst9217" } }]
       },
       "m5papermono": {
         "wiring_fields": ["display", "i2c", "hold", "touch"], "desc_internal_i2c": true, "wiring_output": "esp32s3_wiring.hpp",

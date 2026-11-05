@@ -546,7 +546,7 @@ namespace m5
         return "DXFU"[sample];
       };
       const char g12 = classify(12), g13 = classify(13);
-      ESP_LOGD("board_detect_m5", "PM1 attempt=%u touch15=%u touch38=%u G12=%c G13=%c",
+      ESP_LOGD("board_detect_m5", "PM1 attempt=%u stopwatch_touch=%u papermono_touch=%u G12=%c G13=%c",
                ctx.attempt, stopwatch_touch, papermono_touch, g12, g13);
       // Both members carry NFC at 0x50; its ACK cannot exclude StopWatch.
       if (stopwatch_touch != papermono_touch)

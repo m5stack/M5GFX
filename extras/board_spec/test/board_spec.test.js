@@ -627,10 +627,10 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   assert.match(defaults, /get_pkg_ver\(\) == 1\) \{ return board_t::board_M5StampS3Mini; \}/);
 });
 
-test("all 87 revision and runtime combinations validate in memory", () => {
+test("all 88 revision and runtime combinations validate in memory", () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 87);
-  assert.equal(new Set(outputs.map((output) => output.filename)).size, 87);
+  assert.equal(outputs.length, 88);
+  assert.equal(new Set(outputs.map((output) => output.filename)).size, 88);
   for (const output of outputs) {
     const issues = validateBoard(output.board, {
       ...context, chip: chips[output.board.chip], resolved: true,

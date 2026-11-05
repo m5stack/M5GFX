@@ -322,6 +322,7 @@ namespace lgfx
 
     void Touch_CST9217::wakeup(void)
     {
+      if (_cfg.pin_rst >= 0) init();
       _inited = false;
       _check_init();
     }
@@ -329,6 +330,8 @@ namespace lgfx
 
     void Touch_CST9217::sleep(void)
     {
+      // Deep sleep ends only with a reset pulse.
+      if (_cfg.pin_rst < 0) return;
       _write_reg16(0xD101);
       lgfx::delay(10);
       _write_reg16(0xD105);
@@ -352,6 +355,7 @@ namespace lgfx
       const bool read_ok = _read_reg16(0xD000, data, sizeof(data));
       _ack_read();
       if (!read_ok || data[6] != 0xAB || data[0] == 0xAB || data[0] == 0) {
+        _wait_cycle = 16;
         return 0;
       }
 
