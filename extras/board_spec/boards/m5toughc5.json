@@ -34,9 +34,18 @@
     }
   },
   "pins": {
+    "0": {
+      "roles": [
+        "conn:mbus.2"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
     "1": {
       "roles": [
-        "conn:port_b.1"
+        "conn:port_b.1",
+        "conn:mbus.4"
       ],
       "verified": {
         "roles": "generated"
@@ -47,7 +56,9 @@
         "bus:internal_i2c.sda",
         "bus:touch_i2c.sda",
         "bus:port_a_i2c.sda",
-        "conn:port_a.2"
+        "conn:port_a.2",
+        "conn:mbus.17",
+        "conn:mbus.19"
       ],
       "verified": {
         "roles": "generated"
@@ -58,7 +69,26 @@
         "bus:internal_i2c.scl",
         "bus:touch_i2c.scl",
         "bus:port_a_i2c.scl",
-        "conn:port_a.1"
+        "conn:port_a.1",
+        "conn:mbus.18",
+        "conn:mbus.20"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "4": {
+      "roles": [
+        "dev:pmic.int",
+        "conn:mbus.8"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "5": {
+      "roles": [
+        "conn:mbus.26"
       ],
       "verified": {
         "roles": "generated"
@@ -66,7 +96,8 @@
     },
     "6": {
       "roles": [
-        "conn:port_b.2"
+        "conn:port_b.2",
+        "conn:mbus.10"
       ],
       "verified": {
         "roles": "generated"
@@ -75,7 +106,8 @@
     "7": {
       "roles": [
         "bus:main_spi.mosi",
-        "dev:sd.cmd"
+        "dev:sd.cmd",
+        "conn:mbus.7"
       ],
       "verified": {
         "roles": "generated"
@@ -84,7 +116,8 @@
     "8": {
       "roles": [
         "bus:main_spi.miso",
-        "dev:sd.d0"
+        "dev:sd.d0",
+        "conn:mbus.9"
       ],
       "verified": {
         "roles": "generated"
@@ -93,7 +126,8 @@
     "9": {
       "roles": [
         "bus:main_spi.sclk",
-        "dev:sd.clk"
+        "dev:sd.clk",
+        "conn:mbus.11"
       ],
       "verified": {
         "roles": "generated"
@@ -109,7 +143,9 @@
     },
     "11": {
       "roles": [
-        "conn:port_c.2"
+        "conn:port_c.2",
+        "conn:mbus.14",
+        "conn:mbus.16"
       ],
       "verified": {
         "roles": "generated"
@@ -117,7 +153,25 @@
     },
     "12": {
       "roles": [
-        "conn:port_c.1"
+        "conn:port_c.1",
+        "conn:mbus.13",
+        "conn:mbus.15"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "23": {
+      "roles": [
+        "conn:mbus.21"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "24": {
+      "roles": [
+        "conn:mbus.22"
       ],
       "verified": {
         "roles": "generated"
@@ -132,6 +186,22 @@
       "roles": [
         "dev:lcd.dc"
       ]
+    },
+    "27": {
+      "roles": [
+        "conn:mbus.23"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "28": {
+      "roles": [
+        "conn:mbus.24"
+      ],
+      "verified": {
+        "roles": "generated"
+      }
     }
   },
   "buses": {
@@ -277,6 +347,16 @@
       "type": "hy2_4p",
       "standard": "port_uart",
       "note": "User wiring connector on the internal expansion board; cables route through the M12 housing cable holes. The holes are not electrical M12 pin connectors. The official color table lists white GPIO11/yellow GPIO12. The existing port_c terminal contract remains 1=GPIO12/2=GPIO11 for compatibility with the library pin table; terminal order is logical."
+    },
+    "mbus": {
+      "type": "mbus",
+      "note": "G2, G3, G27 and G28 reach the M-Bus through level shifters powered from 5V_INOUT. Position 8 is G4, which the PM1 IRQ output drives.",
+      "shared_gpio": [
+        "15",
+        "16",
+        "19",
+        "20"
+      ]
     }
   }
 }
