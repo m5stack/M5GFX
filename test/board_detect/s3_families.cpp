@@ -19,7 +19,8 @@ static probe_ctx_t context() {
 }
 
 static void pm1_table() {
-  for (int sw = 0; sw < 2; ++sw)
+  // 0 = no StopWatch touch, 1 = CST820 at 0x15, 2 = CST9217 at 0x5A.
+  for (int sw = 0; sw < 3; ++sw)
     for (int pm = 0; pm < 2; ++pm)
       for (int g12 = 0; g12 < 4; ++g12)
         for (int g13 = 0; g13 < 4; ++g13)
@@ -53,8 +54,10 @@ static void pm1_table() {
                     return true;
                   }
                   ++reads;
-                  assert(addr == 0x15 || addr == 0x38);
-                  return bool(addr == 0x15 ? sw : pm);
+                  assert(addr == 0x15 || addr == 0x38 || addr == 0x5A);
+                  if (addr == 0x15) return sw == 1;
+                  if (addr == 0x5A) return sw == 2;
+                  return bool(pm);
                 };
                 auto ctx = context();
                 ctx.final_attempt = final;
@@ -63,17 +66,18 @@ static void pm1_table() {
                 ctx.hint = hint;
                 board_result_t r;
                 bool ok = pm1_family_detector.confirm(ctx, &r);
-                assert(reads == 2 && ctx.family_identified && writes == 0);
+                assert(reads == (sw == 1 ? 2 : 3) && ctx.family_identified && writes == 0);
+                const bool stopwatch_touch = sw != 0;
                 board_id_t expected = 0;
                 bool provisional = false, refine = false;
-                if (sw != pm)
-                  expected = sw ? desc_stopwatch.def.id : desc_papermono.def.id;
-                else if (!sw && ((g12 == 0 && g13 == 0) || (g12 == 3 && g13 == 3))) {
+                if (stopwatch_touch != pm)
+                  expected = stopwatch_touch ? desc_stopwatch.def.id : desc_papermono.def.id;
+                else if (!stopwatch_touch && ((g12 == 0 && g13 == 0) || (g12 == 3 && g13 == 3))) {
                   expected = desc_papermono.def.id;
                   refine = true;
                 } else if (final) {
                   provisional = true;
-                  if (!sw && (g12 == 2 || (g12 == 0 && g13 == 3)))
+                  if (!stopwatch_touch && (g12 == 2 || (g12 == 0 && g13 == 3)))
                     expected = desc_stopwatch.def.id;
                   else
                     expected =
