@@ -82,6 +82,7 @@ namespace lgfx // This should not be changed to "m5gfx"
     , board_M5StampC6 = 154
     , board_M5StampS3Mini = 155
     , board_M5StampP4X = 156
+    , board_M5StamP4XHub = 157
 
 /// external displays
     , board_M5AtomDisplay = 192
