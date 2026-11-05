@@ -418,22 +418,38 @@ namespace m5
   static constexpr i2c_touch_desc_t touch_stopwatch_cst9217 =
     touch_stopwatch.with_addr(stopwatch_cst9217_addr).with_range(0, 466, 0, 466);
 
-  static bool stopwatch_has_touch_at(const i2c_touch_desc_t& desc, std::uint8_t addr)
+#if !defined(M5GFX_AUTODETECT_TEST_STOPWATCH_NO_DISPLAY)
+  static bool stopwatch_touch_is_cst9217(void)
   {
+    static constexpr std::uint32_t probe_freq = 100000;
+    const auto& cst820 = touch_stopwatch;
+    const auto& cst9217 = touch_stopwatch_cst9217;
     // Keep the hardware I2C port owned by its consumers. As during detection,
-    // probe on the software port and restore the pins afterwards.
-    if (!io::i2c_open(detection_i2c_port, desc.sda, desc.scl)) return false;
+    // probe on the software port and restore the pins afterwards: an application
+    // may already have this bus open, and it is shared as it stands from here on.
+    io::pin_state_t saved_sda, saved_scl;
+    saved_sda.save(cst820.sda);
+    saved_scl.save(cst820.scl);
+    if (!io::i2c_open(detection_i2c_port, cst820.sda, cst820.scl)) return false;
     // The board power sequence only waits 2 ms after releasing touch reset;
-    // CST9217 needs up to 50 ms before it answers. Probe immediately first so
-    // CST820 boards do not pay that boot delay.
-    bool found = false;
-    for (int retry = 0; retry < 6 && !found; ++retry) {
-      found = io::i2c_ack(detection_i2c_port, addr, desc.freq, true);
-      if (!found) io::delay_ms(10);
+    // CST9217 needs up to 50 ms before it answers. Stop at the first answer
+    // from either address so CST820 boards do not pay that wait.
+    bool answered = false;
+    bool is_cst9217 = false;
+    for (int retry = 0; retry < 8 && !answered; ++retry) {
+      if (retry) io::delay_ms(10);
+      answered = io::i2c_ack(detection_i2c_port, cst820.addr, probe_freq, true);
+      if (!answered) {
+        is_cst9217 = answered = io::i2c_ack(detection_i2c_port, cst9217.addr, probe_freq, true);
+      }
     }
     io::i2c_close(detection_i2c_port);
-    return found;
+    saved_sda.restore();
+    saved_scl.restore();
+    if (!answered) { ESP_LOGW("M5GFX", "M5StopWatch: touch controller did not answer; using CST820"); }
+    return is_cst9217;
   }
+#endif
 
   construct_status_t construct_stopwatch(const board_result_t&, display_parts_t* parts)
   {
@@ -448,7 +464,7 @@ namespace m5
     out.bus.reset(make_spi_bus(bus_stopwatch));
     out.panel.reset(make_panel<Panel_StopWatch>(panel_stopwatch, out.bus.get()));
     lgfx::pinMode(stopwatch_te_pin, lgfx::pin_mode_t::input_pullup);
-    if (stopwatch_has_touch_at(touch_stopwatch_cst9217, stopwatch_cst9217_addr))
+    if (stopwatch_touch_is_cst9217())
     {
       out.touch.reset(make_i2c_touch<lgfx::Touch_CST9217>(touch_stopwatch_cst9217));
     }
