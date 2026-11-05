@@ -298,15 +298,18 @@ namespace m5
     return construct_status_t::no_display;
 #else
     const int touch_fw_version = stampp4xhub_reset_and_read_touch();
-    const bool hit_st7121 = (touch_fw_version == 1);
     if (touch_fw_version < 0)
     {
-      ESP_LOGW(LIBRARY_NAME, "M5StamP4XHub touch firmware version read failed; assuming ST7123");
+      // No answer from the panel's touch controller: there is no way to tell an
+      // ST7121 from an ST7123, and starting DSI at the wrong rate leaves the host
+      // waiting on a panel that is not driving the bus (a detached screen hangs
+      // the boot). Adopt the identity only, so Power / Grove / LED still come up
+      // on a headless board.
+      ESP_LOGW(LIBRARY_NAME, "M5StamP4XHub touch firmware version read failed; no display");
+      return construct_status_t::no_display;
     }
-    else
-    {
-      ESP_LOGI(LIBRARY_NAME, "M5StamP4XHub touch firmware version %d", touch_fw_version);
-    }
+    const bool hit_st7121 = (touch_fw_version == 1);
+    ESP_LOGI(LIBRARY_NAME, "M5StamP4XHub touch firmware version %d", touch_fw_version);
 
     const dsi_bus_desc_t bus_stampp4xhub =
       dsi_bus(specs::stampp4xhub::bus_id, specs::stampp4xhub::bus_lane_num,
