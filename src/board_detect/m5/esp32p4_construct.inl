@@ -260,12 +260,16 @@ namespace m5
 #if CONFIG_SPIRAM
   // Releases the shared LCD_RST / TP_RST line and returns the touch firmware
   // version, which selects the display controller (-1 when it stays silent).
+  // The panel stays powered across a warm reset (its 3.3 V rail is VSYS_3V3),
+  // so this pulse is the only thing that returns it to a known state; the
+  // factory test holds it low for 100 ms, and a shorter pulse leaves a
+  // warm-booted panel uninitialised.
   static int stampp4xhub_reset_and_read_touch(void)
   {
     constexpr int reset = stampp4xhub_detail::reset;
     lgfx::pinMode(reset, lgfx::pin_mode_t::output);
     lgfx::gpio_lo(reset);
-    lgfx::delay(10);
+    lgfx::delay(100);
     lgfx::gpio_hi(reset);
 
     if (!lgfx::i2c::init(stampp4xhub_detail::i2c_port,
@@ -286,6 +290,12 @@ namespace m5
                                           fw_reg, sizeof(fw_reg), &version, 1,
                                           specs::stampp4xhub::touch::i2c_freq).has_value())
       {
+        // The display controller is slower than the touch controller to come
+        // out of reset. The factory test waits 500 ms after releasing the
+        // shared line before it starts the display; with a warm-booted panel,
+        // a shorter wait drops the DCS init list and the panel stays dark
+        // while the backlight is on.
+        lgfx::delay(500);
         return version;
       }
     }
