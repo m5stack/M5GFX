@@ -32,7 +32,6 @@ static constexpr detector_order_edge_t detector_order_edges[] = {
   { 153, 33 }, // stampc5_detector (board_M5StampC5) before toughc5_detector (board_M5ToughC5): StampC5 eFuse flash and PSRAM gate must precede ToughC5 I2C GPIO probing even with an NVS hint
   { 154, 140 }, // stampc6_detector (board_M5StampC6) before nanoc6_detector (board_M5NanoC6): StampC6 eFuse capacity must precede NanoC6 G3 probing because G3 is a StampC6 user pin
   { 31, 22 }, // corep4x_detector (board_M5CoreP4X) before tab5_family_detector (board_M5Tab5, board_M5Tab5X): Probe the CoreP4X internal devices before Tab5
-  { 157, 22 }, // stampp4xhub_detector (board_M5StamP4XHub) before tab5_family_detector (board_M5Tab5, board_M5Tab5X): Probe the Hub PM1 on its own bus before the Tab5 family
   { 157, 148 }, // stampp4xhub_detector (board_M5StamP4XHub) before unitpoep4_detector (board_M5UnitPoEP4): Probe the Hub PM1 and IOE1 before driving Ethernet management pins
   { 22, 148 }, // tab5_family_detector (board_M5Tab5, board_M5Tab5X) before unitpoep4_detector (board_M5UnitPoEP4): Probe Tab5 internal devices before driving Ethernet management pins
 };

@@ -257,6 +257,7 @@ namespace m5
                   specs::stampp4xhub::touch::y_min, specs::stampp4xhub::touch::y_max)
       .with_rotation(specs::stampp4xhub::touch::rotation_offset);
 
+#if CONFIG_SPIRAM
   // Releases the shared LCD_RST / TP_RST line and returns the touch firmware
   // version, which selects the display controller (-1 when it stays silent).
   static int stampp4xhub_reset_and_read_touch(void)
@@ -290,6 +291,7 @@ namespace m5
     }
     return -1;
   }
+#endif
 
   construct_status_t construct_stampp4xhub(const board_result_t&, display_parts_t* parts)
   {

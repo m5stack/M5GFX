@@ -116,13 +116,18 @@ public:
   {
     if (result == nullptr) { return false; }
     std::uint8_t id[2] = {};
+    // G0/G1 also carry the internal bus of UnitPoEP4, which runs this detector on
+    // every boot. The PM1 powers this chip, so it needs only a short wait.
     if (!probe_i2c_read(ctx, stampp4xhub_detail::sda, stampp4xhub_detail::scl,
                         pmic_ops::pm1_i2c_addr, 0, id, sizeof(id),
-                        stampp4xhub_detail::i2c_freq, 200)
+                        stampp4xhub_detail::i2c_freq, 20)
      || (static_cast<std::uint16_t>(id[1]) << 8 | id[0]) != pmic_ops::pm1_device_id)
     {
       return false;
     }
+    // IOE1 boots later than the PM1. While waiting for it the detectors of the
+    // other boards must not run: UnitPoEP4 drives G31 and G52, the PHY pins here.
+    ctx.family_identified = true;
     if (!probe_i2c_read(ctx, stampp4xhub_detail::sda, stampp4xhub_detail::scl,
                         pmic_ops::ioe1_i2c_addr, 0, id, 1,
                         stampp4xhub_detail::i2c_freq, 200))
