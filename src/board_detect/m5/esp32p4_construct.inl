@@ -211,7 +211,7 @@ namespace m5
   }
 
   // ST7121 units need 900 Mbps on the same two lanes; the catalog value is
-  // what the ST7123 (and the fallback) uses.
+  // what the ST7123 uses.
   static constexpr std::uint16_t stampp4xhub_st7121_lane_mbps = 900;
   static constexpr std::uint8_t stampp4xhub_touch_addr = 0x55;
 
@@ -259,11 +259,12 @@ namespace m5
 
 #if CONFIG_SPIRAM
   // Releases the shared LCD_RST / TP_RST line and returns the touch firmware
-  // version, which selects the display controller (-1 when it stays silent).
+  // version, which selects the display controller. Returns the last value read
+  // when none is known, or -1 when no version could be read.
   // The panel stays powered across a warm reset (its 3.3 V rail is VSYS_3V3),
-  // so this pulse is the only thing that returns it to a known state; the
-  // factory test holds it low for 100 ms, and a shorter pulse leaves a
-  // warm-booted panel uninitialised.
+  // so this pulse is the only thing that returns it to a known state. The
+  // factory test holds it low for 100 ms, while 10 ms left a warm-booted panel
+  // uninitialised.
   static int stampp4xhub_reset_and_read_touch(void)
   {
     constexpr int reset = stampp4xhub_detail::reset;
@@ -279,7 +280,9 @@ namespace m5
       return -1;
     }
     // The touch controller needs a few hundred milliseconds after a shared
-    // reset before its firmware registers answer.
+    // reset before its firmware registers answer. Keep reading until the
+    // version is a known one, as Tab5 does.
+    int last_version = -1;
     for (int retry = 0; retry < 50; ++retry)
     {
       lgfx::delay(20);
@@ -290,16 +293,20 @@ namespace m5
                                           fw_reg, sizeof(fw_reg), &version, 1,
                                           specs::stampp4xhub::touch::i2c_freq).has_value())
       {
-        // The display controller is slower than the touch controller to come
-        // out of reset. The factory test waits 500 ms after releasing the
-        // shared line before it starts the display; with a warm-booted panel,
-        // a shorter wait drops the DCS init list and the panel stays dark
-        // while the backlight is on.
-        lgfx::delay(500);
-        return version;
+        last_version = version;
+        if (version == 1 || version == 3)
+        {
+          // The display controller is slower than the touch controller to
+          // come out of reset. The factory test waits 500 ms from the release
+          // of the shared line; this counts from the touch answer, so it is
+          // never shorter. With a warm-booted panel, too short a wait drops
+          // the DCS init list and the panel stays dark with the backlight on.
+          lgfx::delay(500);
+          return version;
+        }
       }
     }
-    return -1;
+    return last_version;
   }
 #endif
 
@@ -320,10 +327,9 @@ namespace m5
       ESP_LOGW(LIBRARY_NAME, "M5StamP4XHub touch firmware version read failed; no display");
       return construct_status_t::no_display;
     }
-    // 1 = ST7121, 3 = ST7123. Any other value is not a panel this board ships
-    // with, and guessing one starts DSI at a lane rate the panel may not
-    // answer, which hangs the boot. Adopt the identity only instead, as for a
-    // silent touch controller.
+    // 1 = ST7121 and 3 = ST7123 are the known versions. Guessing a panel for
+    // any other value starts DSI at a lane rate it may not answer, so adopt the
+    // identity only, as for a silent touch controller.
     const bool hit_st7121 = (touch_fw_version == 1);
     if (!hit_st7121 && touch_fw_version != 3)
     {
