@@ -320,7 +320,17 @@ namespace m5
       ESP_LOGW(LIBRARY_NAME, "M5StamP4XHub touch firmware version read failed; no display");
       return construct_status_t::no_display;
     }
+    // 1 = ST7121, 3 = ST7123. Any other value is not a panel this board ships
+    // with, and guessing one starts DSI at a lane rate the panel may not
+    // answer, which hangs the boot. Adopt the identity only instead, as for a
+    // silent touch controller.
     const bool hit_st7121 = (touch_fw_version == 1);
+    if (!hit_st7121 && touch_fw_version != 3)
+    {
+      ESP_LOGW(LIBRARY_NAME, "M5StamP4XHub touch firmware version %d is not a known panel; no display",
+               touch_fw_version);
+      return construct_status_t::no_display;
+    }
     ESP_LOGI(LIBRARY_NAME, "M5StamP4XHub touch firmware version %d", touch_fw_version);
 
     const dsi_bus_desc_t bus_stampp4xhub =
