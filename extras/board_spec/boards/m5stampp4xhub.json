@@ -433,12 +433,12 @@
     "grove9": {
       "type": "hy2_4p",
       "standard": "port_io",
-      "note": "5V rail switched by M5IOE1 IOEG9."
+      "note": "5V rail switched by M5IOE1 IOEG13."
     },
     "grove10": {
       "type": "hy2_4p",
       "standard": "port_io",
-      "note": "5V rail switched by M5IOE1 IOEG13."
+      "note": "5V rail switched by M5IOE1 IOEG9."
     },
     "grove11": {
       "type": "hy2_4p",
