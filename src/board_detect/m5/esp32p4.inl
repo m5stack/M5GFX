@@ -71,6 +71,80 @@ const board_def_t* const corep4x_detector_t::members_[2] = { &desc_corep4x.def, 
 static const corep4x_detector_t corep4x_detector;
 
 construct_status_t construct_corep4x(const board_result_t&, display_parts_t*);
+
+namespace stampp4xhub_detail
+{
+  constexpr int sda = wiring::stampp4xhub::internal_i2c_sda;
+  constexpr int scl = wiring::stampp4xhub::internal_i2c_scl;
+  constexpr int reset = wiring::stampp4xhub::reset_gpio;
+  constexpr int touch_int = wiring::stampp4xhub::touch_int;
+  constexpr int_fast16_t i2c_port = io::i2c_port_1;
+  constexpr std::uint32_t i2c_freq = pmic_ops::pm1_i2c_freq;
+  // The PM1 and IOE1 rails are up as soon as the module is powered, so
+  // detection only needs the identity probe (no power writes).
+  static const pmic_variant_t power_variants[] = {
+    pmic_variant_ack_only(pmic_ops::pm1_i2c_addr, 0,
+                          { nullptr, 0 },
+                          reg_bit(0, 0), reg_bit(0, 0),
+                          { nullptr, 0 }, { nullptr, 0 }, 0),
+  };
+}
+
+static constexpr board_desc_t desc_stampp4xhub = {
+  { static_cast<board_id_t>(lgfx::board_M5StamP4XHub), "M5StamP4XHub", 0 },
+  i2c_power_confirmed(stampp4xhub_detail::i2c_freq, stampp4xhub_detail::power_variants,
+                      pmic_ops::pm1_family_devices),
+  // LCD_RST is shared with TP_RST. The generated wiring carries the pin, but
+  // construction drives it once itself; a description-level reset would tie it
+  // to a display signal this DSI board does not describe.
+  no_reset(),
+  no_shared_sd(), no_display_pins(), no_pins(),
+  internal_i2c(stampp4xhub_detail::sda, stampp4xhub_detail::scl,
+               stampp4xhub_detail::i2c_port),
+  no_options(), no_pins(),
+  };
+
+class stampp4xhub_detector_t final : public board_detector_t
+{
+public:
+  stampp4xhub_detector_t() : board_detector_t(members_) {}
+  bool signature(probe_ctx_t& ctx) const override
+  {
+    return probe_i2c_bus_present(ctx, stampp4xhub_detail::sda, stampp4xhub_detail::scl);
+  }
+  bool confirm(probe_ctx_t& ctx, board_result_t* result) const override
+  {
+    if (result == nullptr) { return false; }
+    std::uint8_t id[2] = {};
+    // G0/G1 also carry the internal bus of UnitPoEP4, which runs this detector on
+    // every boot. The PM1 powers this chip, so it needs only a short wait.
+    if (!probe_i2c_read(ctx, stampp4xhub_detail::sda, stampp4xhub_detail::scl,
+                        pmic_ops::pm1_i2c_addr, 0, id, sizeof(id),
+                        stampp4xhub_detail::i2c_freq, 20)
+     || (static_cast<std::uint16_t>(id[1]) << 8 | id[0]) != pmic_ops::pm1_device_id)
+    {
+      return false;
+    }
+    // IOE1 boots later than the PM1. While waiting for it the detectors of the
+    // other boards must not run: UnitPoEP4 drives G31 and G52, the PHY pins here.
+    ctx.family_identified = true;
+    if (!probe_i2c_read(ctx, stampp4xhub_detail::sda, stampp4xhub_detail::scl,
+                        pmic_ops::ioe1_i2c_addr, 0, id, 1,
+                        stampp4xhub_detail::i2c_freq, 200))
+    {
+      return false;
+    }
+    result->assign(&desc_stampp4xhub);
+    return true;
+  }
+private:
+  static const board_def_t* const members_[2];
+  };
+const board_def_t* const stampp4xhub_detector_t::members_[2] = { &desc_stampp4xhub.def, nullptr };
+static const stampp4xhub_detector_t stampp4xhub_detector;
+
+construct_status_t construct_stampp4xhub(const board_result_t&, display_parts_t*);
+
 namespace tab5_detail
 {
   constexpr int sda = wiring::tab5::internal_i2c_sda;
@@ -346,6 +420,7 @@ static constexpr board_desc_t desc_stampp4 = {
 #include "generated/esp32p4_detector_order.hpp"
 static const board_entry_t esp32p4_boards[] = {
   { &desc_corep4x, construct_corep4x, "board_M5CoreP4X", nullptr },
+  { &desc_stampp4xhub, construct_stampp4xhub, "board_M5StamP4XHub", nullptr },
   { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr, tab5_detail::fixed_prepare },
   { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr, tab5_detail::fixed_prepare },
   { &desc_unitpoep4, construct_displayless, "board_M5UnitPoEP4", nullptr },

@@ -209,5 +209,136 @@ namespace m5
     return construct_status(out.release_to(parts));
 #endif
   }
+
+  // ST7121 units need 900 Mbps on the same two lanes; the catalog value is
+  // what the ST7123 (and the fallback) uses.
+  static constexpr std::uint16_t stampp4xhub_st7121_lane_mbps = 900;
+  static constexpr std::uint8_t stampp4xhub_touch_addr = 0x55;
+
+  static constexpr panel_desc_t panel_stampp4xhub_base =
+    panel().with_size(specs::stampp4xhub::panel_st7123::width,
+                      specs::stampp4xhub::panel_st7123::height)
+      .with_memory(specs::stampp4xhub::panel_st7123::memory_width,
+                   specs::stampp4xhub::panel_st7123::memory_height)
+      // LCD_RST is shared with TP_RST and driven once before construction;
+      // letting the panel reset again would restart the touch controller.
+      .with_offset(0, 0).with_pins(GPIO_NUM_NC, GPIO_NUM_NC)
+      .with_rotation(specs::stampp4xhub::panel_st7123::rotation_offset)
+      .with_readable(specs::stampp4xhub::panel_st7123::readable)
+      .with_bus_shared(false)
+      .with_rgb_order(specs::stampp4xhub::panel_st7123::rgb_order);
+
+  static constexpr dsi_panel_desc_t panel_stampp4xhub_st7121 =
+    dsi_panel(panel_stampp4xhub_base,
+              specs::stampp4xhub::panel_st7121::dpi_freq_mhz,
+              specs::stampp4xhub::panel_st7121::hsync_back_porch,
+              specs::stampp4xhub::panel_st7121::hsync_pulse_width,
+              specs::stampp4xhub::panel_st7121::hsync_front_porch,
+              specs::stampp4xhub::panel_st7121::vsync_back_porch,
+              specs::stampp4xhub::panel_st7121::vsync_pulse_width,
+              specs::stampp4xhub::panel_st7121::vsync_front_porch);
+  static constexpr dsi_panel_desc_t panel_stampp4xhub_st7123 =
+    dsi_panel(panel_stampp4xhub_base,
+              specs::stampp4xhub::panel_st7123::dpi_freq_mhz,
+              specs::stampp4xhub::panel_st7123::hsync_back_porch,
+              specs::stampp4xhub::panel_st7123::hsync_pulse_width,
+              specs::stampp4xhub::panel_st7123::hsync_front_porch,
+              specs::stampp4xhub::panel_st7123::vsync_back_porch,
+              specs::stampp4xhub::panel_st7123::vsync_pulse_width,
+              specs::stampp4xhub::panel_st7123::vsync_front_porch);
+
+  static constexpr i2c_touch_desc_t touch_stampp4xhub =
+    i2c_touch(specs::stampp4xhub::touch::i2c_addr)
+      .with_port(stampp4xhub_detail::i2c_port)
+      .with_pins(stampp4xhub_detail::sda, stampp4xhub_detail::scl,
+                 specs::stampp4xhub::touch::int_pin)
+      .with_freq(specs::stampp4xhub::touch::i2c_freq)
+      .with_range(specs::stampp4xhub::touch::x_min, specs::stampp4xhub::touch::x_max,
+                  specs::stampp4xhub::touch::y_min, specs::stampp4xhub::touch::y_max)
+      .with_rotation(specs::stampp4xhub::touch::rotation_offset);
+
+#if CONFIG_SPIRAM
+  // Releases the shared LCD_RST / TP_RST line and returns the touch firmware
+  // version, which selects the display controller (-1 when it stays silent).
+  static int stampp4xhub_reset_and_read_touch(void)
+  {
+    constexpr int reset = stampp4xhub_detail::reset;
+    lgfx::pinMode(reset, lgfx::pin_mode_t::output);
+    lgfx::gpio_lo(reset);
+    lgfx::delay(10);
+    lgfx::gpio_hi(reset);
+
+    if (!lgfx::i2c::init(stampp4xhub_detail::i2c_port,
+                         stampp4xhub_detail::sda,
+                         stampp4xhub_detail::scl).has_value())
+    {
+      return -1;
+    }
+    // The touch controller needs a few hundred milliseconds after a shared
+    // reset before its firmware registers answer.
+    for (int retry = 0; retry < 50; ++retry)
+    {
+      lgfx::delay(20);
+      static constexpr std::uint8_t fw_reg[2] = { 0, 0 };
+      std::uint8_t version = 0;
+      if (lgfx::i2c::transactionWriteRead(stampp4xhub_detail::i2c_port,
+                                          stampp4xhub_touch_addr,
+                                          fw_reg, sizeof(fw_reg), &version, 1,
+                                          specs::stampp4xhub::touch::i2c_freq).has_value())
+      {
+        return version;
+      }
+    }
+    return -1;
+  }
+#endif
+
+  construct_status_t construct_stampp4xhub(const board_result_t&, display_parts_t* parts)
+  {
+#if !CONFIG_SPIRAM
+    ESP_LOGE(LIBRARY_NAME, "M5StamP4XHub needs PSRAM enabled");
+    return construct_status_t::no_display;
+#else
+    const int touch_fw_version = stampp4xhub_reset_and_read_touch();
+    if (touch_fw_version < 0)
+    {
+      // No answer from the panel's touch controller: there is no way to tell an
+      // ST7121 from an ST7123, and starting DSI at the wrong rate leaves the host
+      // waiting on a panel that is not driving the bus (a detached screen hangs
+      // the boot). Adopt the identity only, so Power / Grove / LED still come up
+      // on a headless board.
+      ESP_LOGW(LIBRARY_NAME, "M5StamP4XHub touch firmware version read failed; no display");
+      return construct_status_t::no_display;
+    }
+    const bool hit_st7121 = (touch_fw_version == 1);
+    ESP_LOGI(LIBRARY_NAME, "M5StamP4XHub touch firmware version %d", touch_fw_version);
+
+    const dsi_bus_desc_t bus_stampp4xhub =
+      dsi_bus(specs::stampp4xhub::bus_id, specs::stampp4xhub::bus_lane_num,
+              hit_st7121 ? stampp4xhub_st7121_lane_mbps : specs::stampp4xhub::bus_lane_mbps,
+              specs::stampp4xhub::bus_ldo_chan_id, specs::stampp4xhub::bus_ldo_voltage_mv);
+    display_parts_owner_t out;
+    auto* bus_dsi = make_dsi_bus(bus_stampp4xhub);
+    out.bus.reset(bus_dsi);
+    if (!bus_dsi->init()) { return construct_status_t::no_display; }
+
+    out.touch.reset(make_i2c_touch<lgfx::Touch_ST7123>(touch_stampp4xhub));
+    if (hit_st7121)
+    {
+      out.panel.reset(make_dsi_panel<lgfx::Panel_ST7121>(panel_stampp4xhub_st7121, bus_dsi));
+    }
+    else
+    {
+      out.panel.reset(make_dsi_panel<lgfx::Panel_ST7123>(panel_stampp4xhub_st7123, bus_dsi));
+    }
+    out.panel->setTouch(out.touch.get());
+    out.light.reset(new Light_M5StamP4XHub(stampp4xhub_detail::i2c_port,
+                                           stampp4xhub_detail::sda,
+                                           stampp4xhub_detail::scl,
+                                           pmic_ops::pm1_i2c_addr,
+                                           stampp4xhub_detail::i2c_freq));
+    return construct_status(out.release_to(parts));
+#endif
+  }
 }
 }

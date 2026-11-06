@@ -4,6 +4,7 @@
 
 static const board_detector_t* const esp32p4_detectors[] = {
   &corep4x_detector, // board_M5CoreP4X
+  &stampp4xhub_detector, // board_M5StamP4XHub
   &tab5_family_detector, // board_M5Tab5, board_M5Tab5X
   &unitpoep4_detector, // board_M5UnitPoEP4
   nullptr,

@@ -1,0 +1,469 @@
+{
+  "schema_version": 1,
+  "id": "m5stampp4xhub",
+  "name": "M5StamP4XHub",
+  "official_name": "M5Stack StampP4X Hub",
+  "aliases": [
+    "stampp4x hub",
+    "stampp4xhub",
+    "stamp p4x hub"
+  ],
+  "legacy_board_id": 157,
+  "chip": "esp32p4",
+  "spec": {
+    "display": {
+      "resolution": [
+        720,
+        1280
+      ],
+      "touch": true
+    },
+    "storage": {
+      "psram_mb": 32,
+      "psram_mode": "opi",
+      "flash_mb": 16
+    },
+    "power": {
+      "pmic_part": "M5PM1"
+    }
+  },
+  "pins": {
+    "0": {
+      "roles": [
+        "bus:internal_i2c.sda",
+        "bus:touch_i2c.sda",
+        "conn:grove13.2"
+      ],
+      "pull": "up",
+      "note": "Main I2C SDA (R42 2.2K to VSYS_3V3); shared by PM1, IOE1, INA226, touch and Grove13.",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "1": {
+      "roles": [
+        "bus:internal_i2c.scl",
+        "bus:touch_i2c.scl",
+        "conn:grove13.1"
+      ],
+      "pull": "up",
+      "note": "Main I2C SCL (R43 2.2K to VSYS_3V3); shared by PM1, IOE1, INA226, touch and Grove13.",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "2": {
+      "roles": [
+        "dev:touch.int",
+        "conn:grove15.2"
+      ],
+      "note": "Touch TP_INT through R68 0R; also Grove15 signal B."
+    },
+    "3": {
+      "roles": [
+        "dev:lcd.rst",
+        "conn:grove15.1"
+      ],
+      "note": "Shared LCD_RST / TP_RST through R71/R67 0R; also Grove15 signal A."
+    },
+    "4": {
+      "roles": [
+        "conn:grove10.1"
+      ]
+    },
+    "5": {
+      "roles": [
+        "conn:grove10.2"
+      ]
+    },
+    "6": {
+      "roles": [
+        "conn:grove3.2"
+      ]
+    },
+    "7": {
+      "roles": [
+        "conn:grove6.2"
+      ]
+    },
+    "8": {
+      "roles": [
+        "conn:grove2.2"
+      ]
+    },
+    "9": {
+      "roles": [
+        "conn:grove4.2"
+      ]
+    },
+    "10": {
+      "roles": [
+        "conn:grove9.2"
+      ]
+    },
+    "11": {
+      "roles": [
+        "conn:grove8.2"
+      ]
+    },
+    "12": {
+      "roles": [
+        "conn:grove0.2"
+      ]
+    },
+    "13": {
+      "roles": [
+        "conn:grove7.2"
+      ]
+    },
+    "14": {
+      "roles": [
+        "conn:grove5.2"
+      ]
+    },
+    "15": {
+      "roles": [
+        "conn:grove1.2"
+      ]
+    },
+    "16": {
+      "roles": [
+        "conn:grove2.1"
+      ]
+    },
+    "17": {
+      "roles": [
+        "conn:grove4.1"
+      ]
+    },
+    "18": {
+      "roles": [
+        "conn:grove9.1"
+      ]
+    },
+    "19": {
+      "roles": [
+        "conn:grove8.1"
+      ]
+    },
+    "20": {
+      "roles": [
+        "conn:grove0.1"
+      ]
+    },
+    "21": {
+      "roles": [
+        "conn:grove7.1"
+      ]
+    },
+    "22": {
+      "roles": [
+        "conn:grove5.1"
+      ]
+    },
+    "23": {
+      "roles": [
+        "conn:grove1.1"
+      ]
+    },
+    "26": {
+      "roles": [
+        "conn:grove14.2"
+      ],
+      "note": "USB1 D- (module G26_USB1_N); Grove14 signal B."
+    },
+    "27": {
+      "roles": [
+        "conn:grove14.1"
+      ],
+      "note": "USB1 D+ (module G27_USB1_P); Grove14 signal A."
+    },
+    "28": {
+      "roles": [],
+      "note": "Ethernet RMII RXDV (IP101GRI PHY address 1)."
+    },
+    "29": {
+      "roles": [],
+      "note": "Ethernet RMII RXD0."
+    },
+    "30": {
+      "roles": [],
+      "note": "Ethernet RMII RXD1."
+    },
+    "31": {
+      "roles": [],
+      "note": "Ethernet RMII MDC."
+    },
+    "32": {
+      "roles": [],
+      "note": "Ethernet RMII REF_CLK (50 MHz)."
+    },
+    "33": {
+      "roles": [],
+      "note": "Ethernet RMII TX_EN."
+    },
+    "34": {
+      "roles": [
+        "conn:grove11.1"
+      ]
+    },
+    "35": {
+      "roles": [],
+      "note": "Ethernet RMII TXD1; also a boot strapping pin."
+    },
+    "36": {
+      "roles": [],
+      "note": "Ethernet RMII MDIO (1.5K pull-up to PHY_3V3)."
+    },
+    "37": {
+      "roles": [
+        "conn:grove12.2"
+      ],
+      "note": "UART0 TX; Grove12 signal A."
+    },
+    "38": {
+      "roles": [
+        "conn:grove12.1"
+      ],
+      "note": "UART0 RX; Grove12 signal B."
+    },
+    "39": {
+      "roles": [
+        "conn:grove11.2"
+      ]
+    },
+    "41": {
+      "roles": [],
+      "note": "Ethernet RMII TXD0."
+    },
+    "49": {
+      "roles": [
+        "conn:grove3.1"
+      ]
+    },
+    "50": {
+      "roles": [
+        "conn:grove6.1"
+      ]
+    },
+    "52": {
+      "roles": [],
+      "note": "IP101GRI PHY reset."
+    }
+  },
+  "buses": {
+    "display_dsi": {
+      "kind": "dsi",
+      "signals": [],
+      "preferred_host": 0,
+      "lane_num": 2,
+      "freq": 1040,
+      "ldo_chan_id": 3,
+      "ldo_voltage_mv": 2500,
+      "fixed": true
+    },
+    "internal_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 100000,
+      "fixed": true,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    },
+    "touch_i2c": {
+      "kind": "i2c",
+      "signals": [
+        "sda",
+        "scl"
+      ],
+      "preferred_host": 1,
+      "freq": 400000,
+      "fixed": true,
+      "verified": {
+        "signals": "generated",
+        "preferred_host": "generated",
+        "freq": "generated"
+      }
+    }
+  },
+  "devices": {
+    "lcd": {
+      "kind": "display",
+      "bus": "display_dsi",
+      "selected_by": "runtime",
+      "default": "st7123",
+      "choices": {
+        "st7121": {
+          "part": "st7121",
+          "spec": {
+            "width": 720,
+            "height": 1280,
+            "memory_width": 720,
+            "memory_height": 1280,
+            "rotation_offset": 0,
+            "readable": true,
+            "rgb_order": true,
+            "dpi_freq_mhz": 70,
+            "hsync_back_porch": 40,
+            "hsync_pulse_width": 2,
+            "hsync_front_porch": 40,
+            "vsync_back_porch": 24,
+            "vsync_pulse_width": 20,
+            "vsync_front_porch": 200
+          }
+        },
+        "st7123": {
+          "part": "st7123",
+          "spec": {
+            "width": 720,
+            "height": 1280,
+            "memory_width": 720,
+            "memory_height": 1280,
+            "rotation_offset": 0,
+            "readable": true,
+            "rgb_order": true,
+            "dpi_freq_mhz": 80,
+            "hsync_back_porch": 40,
+            "hsync_pulse_width": 2,
+            "hsync_front_porch": 40,
+            "vsync_back_porch": 8,
+            "vsync_pulse_width": 2,
+            "vsync_front_porch": 220
+          }
+        }
+      }
+    },
+    "touch": {
+      "kind": "touch",
+      "part": "st7123_touch",
+      "bus": "touch_i2c",
+      "i2c_addr": "0x55",
+      "spec": {
+        "x_max": 719,
+        "y_max": 1279,
+        "rotation_offset": 0
+      }
+    },
+    "backlight": {
+      "kind": "backlight",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x6E",
+      "note": "LCD backlight enable is PM1 GPIO3 (PWM channel 0, 5 kHz, 12-bit); the PM1 is addressed on the internal bus."
+    },
+    "pmic": {
+      "kind": "pmic",
+      "part": "m5pm1",
+      "bus": "internal_i2c",
+      "note": "PM1 also drives the RGB LED, Grove15 5V, USB-A 5V and the CHIP_EN gate."
+    },
+    "ioe": {
+      "kind": "io_expander",
+      "part": "m5ioe1",
+      "bus": "internal_i2c",
+      "note": "IOE1 switches the 5V rail of Grove0-11, 13 and 14."
+    },
+    "ina226": {
+      "kind": "sensor",
+      "bus": "internal_i2c",
+      "i2c_addr": "0x40",
+      "note": "INA226 with 5 mOhm shunt on the Grove 5V rail (A0/A1 grounded)."
+    },
+    "rgb_led": {
+      "kind": "led",
+      "note": "RGB LED behind the PM1: red on LED_EN (active high), green on PM1 GPIO4, blue on PM1 GPIO0 (both active low)."
+    },
+    "psram": {
+      "kind": "psram",
+      "part": "psram"
+    }
+  },
+  "connectors": {
+    "grove0": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG6."
+    },
+    "grove1": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG7."
+    },
+    "grove2": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG14."
+    },
+    "grove3": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG1."
+    },
+    "grove4": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG5."
+    },
+    "grove5": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG10."
+    },
+    "grove6": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG12."
+    },
+    "grove7": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG11."
+    },
+    "grove8": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG4."
+    },
+    "grove9": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG9."
+    },
+    "grove10": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG13."
+    },
+    "grove11": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "5V rail switched by M5IOE1 IOEG2."
+    },
+    "grove12": {
+      "type": "hy2_4p",
+      "standard": "port_uart",
+      "note": "UART0 console on signal A (TX, GPIO37) and signal B (RX, GPIO38). The 5V rail is the PM1 CHG_EN output and has no separate software enable."
+    },
+    "grove13": {
+      "type": "hy2_4p",
+      "standard": "port_i2c",
+      "note": "External I2C on the system bus (SCL GPIO1, SDA GPIO0, 2.2K pull-ups). Signal A is SDA and signal B is SCL; the 5V rail is switched by M5IOE1 IOEG3 and also feeds the I2C level shifter."
+    },
+    "grove14": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "USB1 D+ / D-; do not use as GPIO while USB1 is active. 5V rail switched by M5IOE1 IOEG8."
+    },
+    "grove15": {
+      "type": "hy2_4p",
+      "standard": "port_io",
+      "note": "Shared with LCD_RST/TP_RST (signal A, GPIO3) and TP_INT (signal B, GPIO2); using this port can reset the panel or lose touch. 5V rail switched by PM1 GPIO2."
+    }
+  }
+}

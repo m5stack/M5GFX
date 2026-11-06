@@ -121,9 +121,78 @@ static unsigned tab5_observations() {
         }
   return cases;
 }
+// Detection must confirm the Hub without touching a display part, and must
+// leave every probed GPIO as it found it.
+static unsigned hub_identity_cases() {
+  host_hardware::reset();
+  host_probes::reset();
+  host_dsi::reset(false);
+  bool pins_ok = false;
+  unsigned pm1_reads = 0, ioe_reads = 0, stray = 0;
+  bool ioe_silent = false;
+  host_probes::expected_i2c = [&](int sda, int scl, std::uint8_t) {
+    pins_ok = (sda == wiring::stampp4xhub::internal_i2c_sda
+            && scl == wiring::stampp4xhub::internal_i2c_scl);
+  };
+  host_hardware::wire = [&](int addr, int reg, std::uint8_t *data,
+                            std::size_t len, bool write) {
+    // Other detectors probe their own pin pairs; only this board's bus may answer.
+    if (!pins_ok) { return false; }
+    if (write) { ++stray; return false; }
+    if (reg == -1) { return addr == pmic_ops::pm1_i2c_addr || addr == pmic_ops::ioe1_i2c_addr; }
+    if (addr == pmic_ops::pm1_i2c_addr) {
+      if (reg != 0 || len == 0 || len > 2) { ++stray; return false; }
+      data[0] = 0x50;
+      if (len == 2) { data[1] = 0x20; }
+      ++pm1_reads;
+      return true;
+    }
+    if (addr == pmic_ops::ioe1_i2c_addr) {
+      if (ioe_silent) { return false; }
+      if (reg != 0 || len != 1) { ++stray; return false; }
+      *data = 0;
+      ++ioe_reads;
+      return true;
+    }
+    ++stray;
+    return false;
+  };
+  const auto caller_ports = host_hardware::ports;
+  auto detect = [](board_id_t hint) {
+    detection_transaction_t transaction(no_pins(), no_pins(), false);
+    probe_ctx_t ctx;
+    ctx.transaction = &transaction;
+    return detect_board(esp32p4_detectors, hint, ctx);
+  };
+  const auto result = detect(0);
+  assert(result.def != nullptr && result.def->id == 157);
+  // The detector read the PM1 ID and IOE1 once, with no writes anywhere.
+  assert(pm1_reads == 1 && ioe_reads == 1 && stray == 0);
+  assert(host_dsi::id_reads == 0);
+  assert(host_hardware::ports == caller_ports);
+  // A Tab5 hint puts that family first, but a wrong one does not hide the Hub.
+  pm1_reads = ioe_reads = 0;
+  host_probes::pulls = [](std::uint64_t, std::uint32_t) { return pin_pull_result_t{}; };
+  const auto hinted = detect(static_cast<board_id_t>(lgfx::board_M5Tab5));
+  assert(hinted.def != nullptr && hinted.def->id == 157);
+  assert(pm1_reads == 1 && ioe_reads == 1 && stray == 0);
+  assert(host_hardware::ports == caller_ports);
+  // The PM1 answers but IOE1 has not booted: the other boards' detectors stay out.
+  ioe_silent = true;
+  unsigned other_probes = 0;
+  host_probes::pulls = [&](std::uint64_t, std::uint32_t) {
+    ++other_probes;
+    return pin_pull_result_t{};
+  };
+  const auto booting = detect(0);
+  assert(booting.def->id == board_id_unknown && other_probes == 0 && stray == 0);
+  return 3;
+}
+
 int main() {
   host_snapshot::check("p4", esp32p4_boards);
   unsigned cases = tab5_observations();
+  cases += hub_identity_cases();
   for (bool weak : {false, true})
     for (int revision : {0, 300}) {
       host_hardware::reset();

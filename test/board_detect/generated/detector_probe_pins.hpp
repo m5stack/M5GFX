@@ -80,6 +80,7 @@ static const expected_detector_pins_t expected_detector_pins[] = {
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
 static const expected_detector_pins_t expected_detector_pins[] = {
   { &corep4x_detector, "corep4x_detector", { 9, 11 }, { 31 } },
+  { &stampp4xhub_detector, "stampp4xhub_detector", { 0, 1, 2, 3 }, { 157 } },
   { &tab5_family_detector, "tab5_family_detector", { 22, 23, 31, 32 }, { 22, 35 } },
   { &unitpoep4_detector, "unitpoep4_detector", { 31, 32, 52 }, { 148 } },
 };
