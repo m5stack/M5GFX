@@ -32,7 +32,7 @@
       "roles": [
         "bus:internal_i2c.sda",
         "bus:touch_i2c.sda",
-        "conn:grove13.2"
+        "conn:grove13.1"
       ],
       "pull": "up",
       "note": "Main I2C SDA (R42 2.2K to VSYS_3V3); shared by PM1, IOE1, INA226, touch and Grove13.",
@@ -44,7 +44,7 @@
       "roles": [
         "bus:internal_i2c.scl",
         "bus:touch_i2c.scl",
-        "conn:grove13.1"
+        "conn:grove13.2"
       ],
       "pull": "up",
       "note": "Main I2C SCL (R43 2.2K to VSYS_3V3); shared by PM1, IOE1, INA226, touch and Grove13.",
@@ -168,15 +168,15 @@
     },
     "26": {
       "roles": [
-        "conn:grove14.2"
+        "conn:grove14.1"
       ],
-      "note": "USB1 D- (module G26_USB1_N); Grove14 signal B."
+      "note": "USB1 D- (module G26_USB1_N); Grove14 signal A."
     },
     "27": {
       "roles": [
-        "conn:grove14.1"
+        "conn:grove14.2"
       ],
-      "note": "USB1 D+ (module G27_USB1_P); Grove14 signal A."
+      "note": "USB1 D+ (module G27_USB1_P); Grove14 signal B."
     },
     "28": {
       "roles": [],
@@ -217,13 +217,13 @@
     },
     "37": {
       "roles": [
-        "conn:grove12.2"
+        "conn:grove12.1"
       ],
       "note": "UART0 TX; Grove12 signal A."
     },
     "38": {
       "roles": [
-        "conn:grove12.1"
+        "conn:grove12.2"
       ],
       "note": "UART0 RX; Grove12 signal B."
     },
