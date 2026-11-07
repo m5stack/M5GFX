@@ -39,7 +39,7 @@ test("fixed acceptance bypasses NVS and detection and retries clean startup afte
 using namespace m5gfx;
 enum class board_t:std::uint32_t {board_unknown=0,member=1,unsupported=2};
 int warnings,nvs_calls,detect_calls,construct_calls,adopt_calls,finish_calls,rollback_calls,commit_calls,start_calls;
-bool prepare_ok,construct_ok,adopt_ok,displayless;
+bool prepare_ok,construct_ok,adopt_ok,displayless,panel_ok=true;
 bool opi_active=false,description_ok=true,capture_ok=true;int captures;
 bool conditional_detection_pins_unavailable(){return opi_active;}
 std::vector<bool> reset_flags;int startup_countdown=0;
@@ -102,29 +102,35 @@ template<class Adopt> board_detect::detect_outcome_t run_fixed_startup_session(c
 const board_detect::m5::board_entry_t* select_fixed_board(board_t board) ${select}
 bool reject_detected_setup(board_t){return false;}
 struct M5GFX {
+ static board_t _detected_board;
  bool _detect_started=false;
  board_t _board=board_t::board_unknown,_board_candidate=board_t::member,_fixed_board=board_t::board_unknown;
  struct {board_t fixed_board=board_t::board_unknown,fallback_board=board_t::board_unknown;} _detect_config;
  board_t getBoard() const {return _board;}
  board_t getFixedBoard() const ${fixedGetter}
  bool _adopt_detected_parts(int*,int*,int*,int*){++adopt_calls;return adopt_ok;}
- bool _init_adopted_panel(bool){++finish_calls;return true;}
+ bool _init_adopted_panel(bool){++finish_calls;return panel_ok;}
  bool init(bool use_reset=true,bool use_clear=true) {
  ${prefix}
  ++nvs_calls;++detect_calls;return false;
  }
 };
+board_t M5GFX::_detected_board=board_t::board_unknown;
 int main() {
  using namespace board_detect;
  using board_detect::m5::desc;
  prepare_ok=construct_ok=adopt_ok=true;
  M5GFX unsupported;unsupported._detect_config.fixed_board=board_t::unsupported;
+ M5GFX::_detected_board=board_t::member;
  assert(!unsupported.init()&&unsupported.getFixedBoard()==board_t::board_unknown);
+ assert(M5GFX::_detected_board==board_t::board_unknown);
  assert(nvs_calls==0&&detect_calls==0&&start_calls==0);
  for(int failure=0;failure<3;++failure) {
  M5GFX gfx;gfx._detect_config.fixed_board=board_t::member;
  prepare_ok=failure!=0;construct_ok=failure!=1;adopt_ok=failure!=2;
  assert(!gfx.init());assert(gfx.getBoard()==board_t::board_unknown&&gfx.getFixedBoard()==board_t::member);
+ assert(M5GFX::_detected_board==board_t::member);
+ M5GFX accessory;assert(M5GFX::_detected_board==board_t::member);
  prepare_ok=construct_ok=adopt_ok=true;
  assert(gfx.init());assert(gfx.getBoard()==board_t::member&&gfx.getFixedBoard()==board_t::member);
  assert(gfx._board_candidate==board_t::board_unknown);
@@ -159,8 +165,13 @@ int main() {
  assert(no_display.init()&&no_display.getBoard()==board_t::member&&no_display.getFixedBoard()==board_t::member);
  M5GFX initialized;initialized._board=board_t::member;initialized._detect_config.fixed_board=board_t::unsupported;
  const int before=start_calls;assert(initialized.init()&&initialized.getFixedBoard()==board_t::board_unknown&&start_calls==before);
+ assert(M5GFX::_detected_board==board_t::member);
+ M5GFX panel_failure;panel_failure._detect_config.fixed_board=board_t::member;panel_ok=false;
+ assert(!panel_failure.init()&&panel_failure.getBoard()==board_t::member);
+ assert(M5GFX::_detected_board==board_t::member);panel_ok=true;
  assert(nvs_calls==0&&detect_calls==0);
  M5GFX auto_gfx;assert(!auto_gfx.init());assert(nvs_calls==1&&detect_calls==1);
+ assert(M5GFX::_detected_board==board_t::board_unknown);
 }
 `, "fixed entry and startup");
 });

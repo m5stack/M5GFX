@@ -67,6 +67,9 @@ public:
     uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W;
     uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H;
     uint32_t pixel_clock    = M5MODULEDISPLAY_PIXELCLOCK;
+    // ESP32-P4 wiring selection only; board_unknown uses the board detected by M5GFX,
+    // or Tab5 wiring if detection has not run.
+    lgfx::board_t board = lgfx::board_t::board_unknown;
   };
 
   config_t config(void) const { return config_t(); }
@@ -127,6 +130,7 @@ public:
 
 #if defined (CONFIG_IDF_TARGET_ESP32P4)
  #define M5GFX_SPI_HOST SPI2_HOST
+    const auto board = _config.board != lgfx::board_t::board_unknown ? _config.board : _detected_board;
     // for Tab5
     int i2c_port = 1;
     int i2c_sda  = GPIO_NUM_31;
@@ -135,6 +139,17 @@ public:
     int spi_mosi = GPIO_NUM_18;
     int spi_miso = GPIO_NUM_19;
     int spi_sclk = GPIO_NUM_5;
+
+    if (board == lgfx::board_t::board_M5CoreP4X)
+    { // for CoreP4X
+      i2c_port = 1;
+      i2c_sda  = GPIO_NUM_11;
+      i2c_scl  = GPIO_NUM_9;
+      spi_cs   = GPIO_NUM_12;
+      spi_mosi = GPIO_NUM_7;
+      spi_miso = GPIO_NUM_8;
+      spi_sclk = GPIO_NUM_10;
+    }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
  #define M5GFX_SPI_HOST SPI2_HOST
@@ -183,6 +198,13 @@ public:
     if (!p) {
       return false;
     }
+
+#if defined (CONFIG_IDF_TARGET_ESP32P4)
+    if (board == lgfx::board_t::board_M5CoreP4X)
+    {
+      p->setTransmitterWriteOnly(true);
+    }
+#endif
 
     auto bus_spi = new lgfx::Bus_SPI();
     {
