@@ -110,6 +110,7 @@ namespace m5gfx
   static constexpr char LIBRARY_NAME[] = "M5GFX";
 
   M5GFX* M5GFX::_instance = nullptr;
+  board_t M5GFX::_detected_board = board_t::board_unknown;
 
   M5GFX::M5GFX(void) : LGFX_Device()
   {
@@ -897,9 +898,11 @@ namespace m5gfx
     _board_candidate = board_t::board_unknown;
     if (getBoard() != board_t::board_unknown)
     {
+      _detected_board = _fixed_board != board_t::board_unknown ? _fixed_board : getBoard();
       return true;
     }
 
+    _detected_board = board_t::board_unknown;
     _fixed_board = board_t::board_unknown;
     if (_detect_config.fixed_board != board_t::board_unknown)
     {
@@ -909,6 +912,8 @@ namespace m5gfx
       {
         // Acceptance is independent of display construction; a failed init may retry.
         _fixed_board = _detect_config.fixed_board;
+        // Accessories need the accepted identity even if display startup fails.
+        _detected_board = _fixed_board;
         const auto outcome = run_fixed_startup_session(*entry, use_reset,
           [this](board_detect::m5::display_parts_t& parts, board_t representative_board)
           {
@@ -1010,6 +1015,7 @@ namespace m5gfx
     if (outcome.result.candidate != nullptr)
     { _board_candidate = static_cast<board_t>(outcome.result.candidate->id); }
     _board = board;
+    _detected_board = board;
     if (board != board_t::board_unknown) { _board_candidate = board_t::board_unknown; }
 
 #if defined ( ARDUINO_M5STACK_ATOM ) || defined ( ARDUINO_M5Stack_ATOM )
@@ -1280,6 +1286,7 @@ namespace m5gfx
     panel(_panel_last.get());
 
     _board = board;
+    _detected_board = board;
     return LGFX_Device::init_impl(use_reset, use_clear);
   }
 

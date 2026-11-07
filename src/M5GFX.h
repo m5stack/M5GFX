@@ -192,6 +192,7 @@ namespace m5gfx
   {
   protected:
     static M5GFX* _instance;
+    static board_t _detected_board;
 
     struct DisplayState
     {

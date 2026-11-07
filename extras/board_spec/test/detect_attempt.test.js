@@ -66,11 +66,13 @@ const int detection_i2c_port=0;
 template<class Adopt> board_detect::detect_outcome_t construct_and_adopt(board_detect::board_result_t& result, board_detect::detect_outcome_t outcome, board_detect::detection_transaction_t& transaction, board_t representative_board, Adopt adopt) ${finish}
 template<class Adopt> board_detect::detect_outcome_t run_detection_attempt(const board_detect::board_detector_t* const* detectors, const board_detect::detect_request_t& request, bool final_attempt, Adopt adopt) ${attempt}
 struct M5GFX {
+ static board_t _detected_board;
  board_t _board=board_t::board_unknown,_board_candidate=board_t::board_unknown;
  board_t getBoard() const {return _board;}
  board_t getCandidateBoard() const ${candidateGetter}
  void project(const board_detect::detect_outcome_t& outcome) { ${projection} }
 };
+board_t M5GFX::_detected_board=board_t::board_unknown;
 int main() {
  using namespace board_detect;
  const board_desc_t desc={{1,"member",0},{-1},{nullptr,0}};
@@ -90,6 +92,7 @@ int main() {
   const bool success=failure==0 && !yields;
   M5GFX standalone;standalone.project(out);
   assert(standalone.getBoard()==(success?board_t::member:board_t::board_unknown));
+  assert(M5GFX::_detected_board==standalone.getBoard());
   assert(standalone.getCandidateBoard()==(provisional&&!success?board_t::member:board_t::board_unknown));
   assert(out.adopted==success);
   assert(out.verdict==(provisional ? verdict_t::candidate : verdict_t::confirmed));
