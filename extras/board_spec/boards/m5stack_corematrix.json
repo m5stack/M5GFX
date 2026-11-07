@@ -64,6 +64,24 @@
         "roles": "generated"
       }
     },
+    "5": {
+      "roles": [
+        "conn:mbus.8"
+      ],
+      "note": "DAC on the official M5-Bus pin map.",
+      "verified": {
+        "roles": "generated"
+      }
+    },
+    "6": {
+      "roles": [
+        "conn:mbus.10"
+      ],
+      "note": "DAC on the official M5-Bus pin map.",
+      "verified": {
+        "roles": "generated"
+      }
+    },
     "7": {
       "roles": [
         "conn:mbus.15"
@@ -132,7 +150,7 @@
       "roles": [
         "bus:sdmmc.clk",
         "dev:sd.clk",
-        "conn:mbus.12"
+        "conn:mbus.11"
       ],
       "verified": {
         "roles": "generated"
@@ -142,7 +160,7 @@
       "roles": [
         "bus:sdmmc.d0",
         "dev:sd.d0",
-        "conn:mbus.10"
+        "conn:mbus.9"
       ],
       "verified": {
         "roles": "generated"
@@ -152,7 +170,7 @@
       "roles": [
         "bus:sdmmc.cmd",
         "dev:sd.cmd",
-        "conn:mbus.8"
+        "conn:mbus.7"
       ],
       "verified": {
         "roles": "generated"
@@ -326,11 +344,6 @@
     },
     "mbus": {
       "type": "mbus",
-      "positions": {
-        "7": "nc",
-        "9": "nc",
-        "11": "nc"
-      },
       "shared_gpio": [
         "19",
         "20"
