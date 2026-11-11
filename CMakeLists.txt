@@ -25,10 +25,11 @@ set(SRCS
      )
 set(COMPONENT_SRCS ${SRCS})
 
+# esp_psram (ESP-IDF 5 and later): <esp_psram.h> is included for ESP32-S3 with octal PSRAM (CONFIG_SPIRAM_MODE_OCT).
 if (IDF_VERSION_MAJOR GREATER_EQUAL 6)
-    set(COMPONENT_REQUIRES nvs_flash efuse esp_lcd driver esp_timer esp_mm esp_driver_ledc esp_driver_i2s hal)
+    set(COMPONENT_REQUIRES nvs_flash efuse esp_lcd driver esp_timer esp_mm esp_driver_ledc esp_driver_i2s hal esp_psram)
 elseif (IDF_VERSION_MAJOR GREATER_EQUAL 5)
-    set(COMPONENT_REQUIRES nvs_flash efuse driver esp_timer esp_lcd)
+    set(COMPONENT_REQUIRES nvs_flash efuse driver esp_timer esp_lcd esp_psram)
     if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.1")
         list(APPEND COMPONENT_REQUIRES esp_mm)
     endif()
