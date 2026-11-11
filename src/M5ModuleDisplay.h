@@ -24,7 +24,7 @@
 #include "lgfx/v1/panel/Panel_M5HDMI.hpp"
 #include "M5GFX.h"
 
-#if defined (SDL_h_) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32) || !defined (CONFIG_IDF_TARGET) 
+#if defined (SDL_h_) || defined (CONFIG_IDF_TARGET_ESP32P4) || defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32) || !defined (CONFIG_IDF_TARGET) 
 #define M5MODULEDISPLAY_ENABLED
 #endif
 
@@ -67,8 +67,8 @@ public:
     uint_fast8_t scale_w    = M5MODULEDISPLAY_SCALE_W;
     uint_fast8_t scale_h    = M5MODULEDISPLAY_SCALE_H;
     uint32_t pixel_clock    = M5MODULEDISPLAY_PIXELCLOCK;
-    // ESP32-P4 wiring selection only; board_unknown uses the board detected by M5GFX,
-    // or Tab5 wiring if detection has not run.
+    // Wiring selection on ESP32-P4 only; board_unknown uses the board detected by M5GFX,
+    // or Tab5 wiring if detection has not run. ESP32-C61 always uses the CoreMatrix wiring.
     lgfx::board_t board = lgfx::board_t::board_unknown;
   };
 
@@ -151,6 +151,17 @@ public:
       spi_sclk = GPIO_NUM_10;
     }
 
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+ #define M5GFX_SPI_HOST SPI2_HOST
+    // for CoreMatrix (the only ESP32-C61 host with an M-Bus)
+    int i2c_port = 0;
+    int i2c_sda  = GPIO_NUM_0;
+    int i2c_scl  = GPIO_NUM_1;
+    int spi_cs   = GPIO_NUM_22;
+    int spi_mosi = GPIO_NUM_27;
+    int spi_miso = GPIO_NUM_26;
+    int spi_sclk = GPIO_NUM_25;
+
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
  #define M5GFX_SPI_HOST SPI2_HOST
 
@@ -204,6 +215,9 @@ public:
     {
       p->setTransmitterWriteOnly(true);
     }
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+    // Register reads from the transmitter fail on CoreMatrix (its ACK was measured at about half of VDD).
+    p->setTransmitterWriteOnly(true);
 #endif
 
     auto bus_spi = new lgfx::Bus_SPI();
