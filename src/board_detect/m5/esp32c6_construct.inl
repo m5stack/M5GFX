@@ -49,7 +49,7 @@ static constexpr i2c_touch_desc_t touch_nesson1 =
     .with_range(specs::nesson1::touch::x_min, specs::nesson1::touch::x_max,
                 specs::nesson1::touch::y_min, specs::nesson1::touch::y_max)
     .with_rotation(specs::nesson1::touch::rotation_offset)
-    .with_bus_shared(true);
+    .with_bus_shared(false);
 
 construct_status_t construct_unitc6l(const board_result_t&, display_parts_t* parts)
 {
