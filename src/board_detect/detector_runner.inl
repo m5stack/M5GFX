@@ -50,6 +50,7 @@
       }
       const char* family = (detector->members && detector->members[0])
                          ? detector->members[0]->name : "empty";
+      (void)family; // counts as a use when ESP_LOGD args are compiled out
       const bool enter_confirm = detector->signature(ctx);
       ESP_LOGD(tag, "stage=1 family=%s detector=%p match=%d", family,
                static_cast<const void*>(detector), enter_confirm);
