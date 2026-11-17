@@ -35,6 +35,7 @@ required. `BoardDetect.yml` runs the same command independently of catalog CI.
 | `construction_c61.cpp` | CoreMatrix ACK success/failure and unavailable I2C; the temporary hardware port is closed before either successful construction or rejection |
 | `construction_p4.cpp` | Tab5/Tab5X post-power software-I2C observations through real construction: ST firmware 1/3/unknown, GT911, silent touch with DSI ID fallback, retained power failures, DSI lane rate and display-part ownership |
 | `ops_host.cpp` | Typed operation validation/execution, retry, dedicated-release summaries and I2C bus recovery policy |
+| `held_sda_release.cpp` | Real `release_held_sda()` against a peripheral left inside a byte by a reset: every held position of the UnitNFC bytes and others, a receiver in its acknowledge slot, a peripheral that never lets go (exactly 10 pulses, then failure), SCL held low and an idle bus; at most 10 SCL pulses |
 | `detect_class_host.cpp`, `detect_session_host.cpp` | Detect-class matching and session verdict/preference/candidate/persistence rules |
 
 The fixtures record the complete semantic fields
