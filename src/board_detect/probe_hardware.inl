@@ -19,29 +19,26 @@
     io::delay_us(10);
 
     // A reset of this MCU during a transfer can leave a peripheral holding
-    // SDA low while it waits for more clocks. Clock it out (up to 9 bits) and
-    // finish with STOP. Input mode is open drain with the output latch high.
+    // SDA low while it waits for more clocks. SDA going high only means the
+    // peripheral sent a 1 bit, and it takes SDA again for its next 0 bit. So
+    // each clock ends with a STOP attempt, repeated until one holds: at the
+    // latest in the acknowledge slot. A peripheral receiving a write holds
+    // SDA in its own acknowledge slot, so one clock beyond the 9 bits of a
+    // byte is allowed. Input mode is open drain with the output latch high.
     bool bus_released = io::pin_read(pin_scl);
     if (bus_released && !io::pin_read(pin_sda))
     {
-      for (int i = 0; i < 9 && !io::pin_read(pin_sda); ++i)
+      int i = 0;
+      do
       {
         io::pin_low(pin_scl);
         io::delay_us(5);
-        if (!wait_i2c_scl_high(pin_scl)) { bus_released = false; break; }
-      }
-      if (bus_released)
-      {
-        io::pin_low(pin_scl);
         io::pin_low(pin_sda);
         io::delay_us(5);
-        bus_released = wait_i2c_scl_high(pin_scl);
-        if (bus_released)
-        {
-          io::pin_high(pin_sda);
-          io::delay_us(10);
-        }
-      }
+        if (!wait_i2c_scl_high(pin_scl)) { bus_released = false; break; }
+        io::pin_high(pin_sda);
+        io::delay_us(10);
+      } while (!io::pin_read(pin_sda) && ++i < 10);
     }
     const bool released = bus_released && io::pin_read(pin_sda) && io::pin_read(pin_scl);
     return released;
