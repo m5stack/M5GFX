@@ -192,6 +192,7 @@ Contributors:
 // lp_gpio_connect_*_signal(): routing an LP I2C port through the LP GPIO matrix (ESP32-P4)
 #if defined ( SOC_LP_GPIO_MATRIX_SUPPORTED ) && SOC_LP_GPIO_MATRIX_SUPPORTED && __has_include(<driver/lp_io.h>)
  #include <driver/lp_io.h>
+ #define LGFX_LP_GPIO_MATRIX 1
 #endif
 
 #if defined (SOC_GDMA_SUPPORTED)  // for C3/S3
@@ -1848,7 +1849,10 @@ namespace lgfx
 #endif
     }
 
-#if LGFX_LP_I2C_NUM > 0 && SOC_RTCIO_INPUT_OUTPUT_SUPPORTED
+// Without driver/lp_io.h, a chip that routes LP I2C through the LP GPIO matrix keeps the pads
+// on the LP side, as before.
+#if LGFX_LP_I2C_NUM > 0 && SOC_RTCIO_INPUT_OUTPUT_SUPPORTED \
+ && (!(defined ( SOC_LP_GPIO_MATRIX_SUPPORTED ) && SOC_LP_GPIO_MATRIX_SUPPORTED) || defined ( LGFX_LP_GPIO_MATRIX ))
  #define LGFX_LP_I2C_LEND_PADS 1
     /// Hands the pads of an open low power port back to the low power I2C controller after
     /// i2c_stop() borrowed them. Same steps as the ESP-IDF LP pin setup, ordered like init():
@@ -1866,7 +1870,7 @@ namespace lgfx
       rtc_gpio_set_level(sda, 1);
       rtc_gpio_set_level(scl, 1);
       rtc_gpio_init(sda);
- #if SOC_LP_GPIO_MATRIX_SUPPORTED
+ #if defined ( LGFX_LP_GPIO_MATRIX )
       // The LP IO function selected above is the LP GPIO matrix: route the controller through it.
       const auto& sig = i2c_periph_signal[i2c_port];
       lp_gpio_connect_out_signal(sda, sig.sda_out_sig, false, false);
