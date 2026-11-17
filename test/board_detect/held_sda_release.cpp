@@ -107,6 +107,9 @@ int main()
     assert(run({bits, 8, false, false}, &pulses));
     assert(pulses <= 10);
   }
+  // A peripheral that never lets go of SDA, not even for a STOP: the clocking is bounded.
+  assert(!run({std::vector<bool>(9, false), 0, false, false}, &pulses));
+  assert(pulses == 10);
   // SCL held low by someone else: give up instead of clocking.
   assert(!run({byte_bits(0x00), 0, true, true}, &pulses));
   assert(pulses == 0);
