@@ -1552,6 +1552,19 @@ namespace lgfx
 #endif
     }
 
+#if LGFX_LP_I2C_NUM > 0
+    /// Resets the low power I2C controller. The HP reset cannot do it: i2c_ll_reset_register()
+    /// indexes the PCR I2C array by port number on some SoCs (e.g. ESP32-C5), which is out of
+    /// range for the LP port, and periph_module_reset() only knows the HP controllers.
+    static void lp_i2c_periph_reset(int i2c_num)
+    {
+      LGFX_RCC_NO_ATOMIC() {
+        lp_i2c_ll_reset_register(i2c_num - LGFX_HP_I2C_NUM);
+        (void)__DECLARE_RCC_ATOMIC_ENV;
+      }
+    }
+#endif
+
 #if defined ( I2C_CLOCK_SRC_ATOMIC )
     __attribute__ ((unused))
     static void i2c_periph_enable(int i2c_num)
@@ -1585,15 +1598,7 @@ namespace lgfx
     static void i2c_periph_reset(int i2c_num)
     {
 #if LGFX_LP_I2C_NUM > 0
-      if (isLpPort(i2c_num))
-      { // The HP i2c_ll_reset_register() indexes the PCR I2C array by port number on some SoCs
-        // (e.g. ESP32-C5), which is out of range for the LP port, so use the LP-specific function
-        LGFX_RCC_NO_ATOMIC() {
-          lp_i2c_ll_reset_register(i2c_num - LGFX_HP_I2C_NUM);
-          (void)__DECLARE_RCC_ATOMIC_ENV;
-        }
-        return;
-      }
+      if (isLpPort(i2c_num)) { lp_i2c_periph_reset(i2c_num); return; }
 #endif
       I2C_RCC_ATOMIC() {
         i2c_ll_reset_register(i2c_num);
@@ -1618,6 +1623,9 @@ namespace lgfx
     __attribute__ ((unused))
     static void i2c_periph_reset(int i2c_num)
     {
+#if LGFX_LP_I2C_NUM > 0
+      if (isLpPort(i2c_num)) { lp_i2c_periph_reset(i2c_num); return; }
+#endif
       auto mod = getPeriphModule(i2c_num);
       periph_module_reset(mod);
     }
