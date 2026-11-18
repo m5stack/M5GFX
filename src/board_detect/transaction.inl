@@ -55,7 +55,6 @@
       ESP_LOGE("board_detect", "restore_to_snapshot missing pin list");
       return;
     }
-    bool missing = false;
     int missing_pin = -1;
     for (std::size_t requested = 0; requested < count; ++requested)
     {
@@ -69,7 +68,7 @@
           if (saved_[index - 1].pin() == pin) { found = true; break; }
         }
       }
-      if (!found && !missing) { missing = true; missing_pin = pin; }
+      if (!found && missing_pin < 0) { missing_pin = pin; }
     }
     // Match full rollback ordering while restoring each captured pin at most once.
     for (std::size_t index = count_; index != 0; --index)
@@ -84,7 +83,7 @@
         }
       }
     }
-    if (missing)
+    if (missing_pin >= 0)
     {
       ESP_LOGE("board_detect", "restore_to_snapshot pin=%d is absent from snapshot", missing_pin);
     }
