@@ -1556,9 +1556,10 @@ namespace lgfx
     /// Resets the low power I2C controller. The HP reset cannot do it: i2c_ll_reset_register()
     /// indexes the PCR I2C array by port number on some SoCs (e.g. ESP32-C5), which is out of
     /// range for the LP port, and periph_module_reset() only knows the HP controllers.
+    /// The reset register is shared with other LP peripherals, so take the lock as ESP-IDF does.
     static void lp_i2c_periph_reset(int i2c_num)
     {
-      LGFX_RCC_NO_ATOMIC() {
+      PERIPH_RCC_ATOMIC() {
         lp_i2c_ll_reset_register(i2c_num - LGFX_HP_I2C_NUM);
         (void)__DECLARE_RCC_ATOMIC_ENV;
       }
