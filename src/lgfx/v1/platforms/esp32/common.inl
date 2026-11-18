@@ -2046,9 +2046,9 @@ namespace lgfx
 
       if (flg_stop || res.has_error())
       {
-        // A read is normally closed by i2c_stop(), which drives the pins through the GPIO
-        // matrix. The pads of a low power port are routed through the low power IO domain
-        // instead, where that STOP never reaches the bus, so the controller sends it there.
+        // A read is normally closed by i2c_stop(), which ends it with a STOP driven through the
+        // GPIO. On a low power port the controller sends that STOP instead: i2c_stop() would
+        // first have to take its pads from the low power IO domain and hand them back after.
         const bool force_stop_read = (i2c_context[i2c_port].state == i2c_context_t::state_read) && !isLpPort(i2c_port);
         // After an error the peripheral may already be force-stopped; a normal STOP command then
         // never raises the completion interrupt and waits until the timeout, so take the force-stop path
