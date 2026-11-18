@@ -1468,6 +1468,9 @@ namespace lgfx
       if (isLpPort(i2c_port)) { return SOC_LP_I2C_FIFO_LEN; }
 #elif LGFX_LP_I2C_NUM > 0 && defined ( I2C_LL_LP_FIFO_LEN )
       if (isLpPort(i2c_port)) { return I2C_LL_LP_FIFO_LEN; }
+#elif LGFX_LP_I2C_NUM > 0
+      // Falling back to the HP depth would overrun the shallower LP FIFO without any error.
+ #error "LP I2C FIFO depth is unknown: neither SOC_LP_I2C_FIFO_LEN nor I2C_LL_LP_FIFO_LEN is defined"
 #else
       (void)i2c_port;
 #endif
