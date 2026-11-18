@@ -2313,10 +2313,11 @@ namespace lgfx
       }
 
 #if defined ( LGFX_LP_I2C_LEND_PADS )
-      if (isLpPort(i2c_port))
+      if (isLpPort(i2c_port) && rtc_gpio_is_valid_gpio(pin_sda) && rtc_gpio_is_valid_gpio(pin_scl))
       { // The routing of a previous run survives a reset and keeps the bus clearing below off
         // the pads, while a peripheral cut off inside a byte may still hold SDA. The pads are
-        // routed to the controller again below. (see gpio::release_lp_pad)
+        // routed to the controller again below. Other pins are left to the backup in
+        // i2c_stop(): the driver refuses them, and their routing must survive. (see gpio::release_lp_pad)
         gpio::release_lp_pad(pin_sda);
         gpio::release_lp_pad(pin_scl);
         pinMode(pin_sda, pin_mode_t::input_pullup);  // selects the GPIO function of the pads
