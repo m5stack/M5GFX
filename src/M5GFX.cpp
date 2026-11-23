@@ -922,6 +922,7 @@ namespace m5gfx
           });
         if (!outcome.adopted) { return false; }
         _board = _fixed_board;
+        wait_panel_ready();
         return _init_adopted_panel(use_clear);
       }
 #endif
@@ -1035,6 +1036,7 @@ namespace m5gfx
         nvs_close(nvs_handle);
       }
     }
+    if (outcome.adopted) { wait_panel_ready(); }
 
 #else
     // Unsupported chips return an unknown board; build hints are ignored.

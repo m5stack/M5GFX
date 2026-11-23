@@ -19,6 +19,26 @@
 
   namespace prepare_detail
   {
+    // reset_panel_reload state for the panel on the internal display bus. It
+    // outlives detection attempts: an attempt that fails after a reset must not
+    // let the next one take the reloading panel for one found in Sleep In.
+    struct panel_reload_t
+    {
+      // Observations of the panel no longer count: a reset_panel_reload reset was
+      // tried, or the power list released a panel held in reset.
+      bool reset_seen = false;
+      bool sleep_in = false;    // Seen in Sleep In before any such reset.
+      bool pending = false;     // The init sequence waits for ready_ms.
+      std::uint32_t ready_ms = 0;
+    };
+    // 120 ms by the datasheet, plus margin for the truncated millis().
+    constexpr std::int32_t panel_reload_ms = 122;
+    inline panel_reload_t& panel_reload()
+    {
+      static panel_reload_t state;
+      return state;
+    }
+
     class retry_budget_t
     {
     public:
@@ -235,6 +255,10 @@
                                                             variant->power_on,
                                                             desc.op_gpio_pins,
                                                             &retry_policy);
+    // A powered panel held in reset is released by this list, even when the list
+    // stops later, so a reload may be running when it is next observed.
+    if (reset_was_low && !power_was_off && (desc.reset.flags & reset_panel_reload))
+    { prepare_detail::panel_reload().reset_seen = true; }
     if (power_result.status != ops::op_status_t::ok)
     {
       if (!retain_confirmed_board) { return false; }
@@ -340,6 +364,10 @@
                 && !((has_variants || desc.reset.kind == reset_kind_t::i2c_regs)
                      && (desc.internal_i2c.sda < 0 || desc.internal_i2c.scl < 0))
                 && !(desc.reset.kind == reset_kind_t::custom && desc.reset.custom == nullptr)
+                // reset_panel_reload is implemented for the full i2c_regs reset only.
+                && !((desc.reset.flags & reset_panel_reload)
+                  && (desc.reset.kind != reset_kind_t::i2c_regs
+                   || (desc.reset.flags & reset_hold_when_skipped)))
                 && pin_list_valid(desc.hold_high_pins)
                 && list_valid(desc.option_names)
                 && pin_list_valid(desc.op_gpio_pins);
@@ -484,6 +512,7 @@
         i2c_port, desc.power, variant->reset_assert, desc.op_gpio_pins,
         &assert_policy);
       ok = assert_result.status == ops::op_status_t::ok;
+      if (reset.flags & reset_panel_reload) { prepare_detail::panel_reload().reset_seen = true; }
       if (!ok && retain_confirmed_board)
       {
         ESP_LOGW("board_detect",
@@ -506,6 +535,17 @@
                    "reset_release stopped after board confirmation: op=%u status=%u native=%d",
                    static_cast<unsigned>(release_result.failed_index),
                    static_cast<unsigned>(release_result.status), 0);
+        }
+        if (reset.flags & reset_panel_reload)
+        {
+          // Also after a failed release: part of it may have released the panel.
+          auto& reload = prepare_detail::panel_reload();
+          if (!reload.sleep_in)
+          {
+            reload.ready_ms = io::millis() + prepare_detail::panel_reload_ms;
+            reload.pending = true;
+          }
+          reload.sleep_in = false;
         }
         if (ok || retain_confirmed_board) { io::delay_ms(reset.post_ms); }
       }

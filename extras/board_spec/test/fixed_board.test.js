@@ -101,6 +101,7 @@ template<class Adopt> board_detect::detect_outcome_t run_fixed_startup(const boa
 template<class Adopt> board_detect::detect_outcome_t run_fixed_startup_session(const board_detect::m5::board_entry_t& entry,bool allow_reset,Adopt adopt) ${session}
 const board_detect::m5::board_entry_t* select_fixed_board(board_t board) ${select}
 bool reject_detected_setup(board_t){return false;}
+void wait_panel_ready(){}
 struct M5GFX {
  static board_t _detected_board;
  bool _detect_started=false;

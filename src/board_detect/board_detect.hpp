@@ -166,6 +166,12 @@ namespace board_detect
     reset_no_flags = 0,
     reset_always = 1 << 0,
     reset_hold_when_skipped = 1 << 1,
+    // i2c_regs only. A panel reset in Sleep Out reloads its registers for up to
+    // 120 ms, and an init sequence sent meanwhile is lost (the panel stays in
+    // Sleep In); answering commands again does not mean the reload has ended.
+    // Unless the panel was seen in Sleep In, hold the init until 120 ms after
+    // the release (prepare_detail::panel_reload()).
+    reset_panel_reload = 1 << 2,
   };
 
   struct reset_desc_t
