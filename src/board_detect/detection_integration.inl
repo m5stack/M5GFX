@@ -223,6 +223,21 @@
                                   static_cast<board_t>(desc.def.id), adopt);
   }
 
+  // Hold the panel init sequence until a panel reset during preparation has
+  // finished reloading (reset_panel_reload).
+  static void wait_panel_ready()
+  {
+    auto& reload = board_detect::prepare_detail::panel_reload();
+    // The init sequence takes the panel out of Sleep In.
+    reload.sleep_in = false;
+    if (!reload.pending) { return; }
+    reload.pending = false;
+    // A deadline left by a failed init long ago is ignored.
+    const auto left = static_cast<std::int32_t>(reload.ready_ms - board_detect::io::millis());
+    if (left > 0 && left <= board_detect::prepare_detail::panel_reload_ms)
+    { board_detect::io::delay_ms(static_cast<std::uint32_t>(left)); }
+  }
+
   template <class Adopt>
   static board_detect::detect_outcome_t run_fixed_startup_session(
     const board_detect::m5::board_entry_t& entry, bool allow_reset, Adopt adopt)

@@ -57,7 +57,7 @@ namespace m5
   };
   static constexpr board_desc_t desc_core2 = {
     { id(lgfx::board_M5StackCore2), "M5StackCore2", 0 },
-    i2c_power(400000, core_pmic_variants, pmic_ops::core2_devices, 5, 20), i2c_reset(1, 10),
+    i2c_power(400000, core_pmic_variants, pmic_ops::core2_devices, 5, 20), i2c_reset(1, 10, reset_panel_reload),
     shared_sd(wiring::core2::shared_sd_sclk, wiring::core2::shared_sd_mosi,
               wiring::core2::shared_sd_miso, wiring::core2::shared_sd_sd_cs,
               wiring::core2::shared_sd_other_cs),
@@ -72,7 +72,7 @@ namespace m5
   };
   static constexpr board_desc_t desc_tough = {
     { id(lgfx::board_M5Tough), "M5Tough", 0 },
-    i2c_power(400000, core_pmic_variants, pmic_ops::core2_devices, 5, 20), i2c_reset(1, 10),
+    i2c_power(400000, core_pmic_variants, pmic_ops::core2_devices, 5, 20), i2c_reset(1, 10, reset_panel_reload),
     shared_sd(wiring::tough::shared_sd_sclk, wiring::tough::shared_sd_mosi,
               wiring::tough::shared_sd_miso, wiring::tough::shared_sd_sd_cs,
               wiring::tough::shared_sd_other_cs),
@@ -495,6 +495,12 @@ construct_status_t construct_atompsram(const board_result_t&, display_parts_t*);
       // Without reset, leave the same 120 ms window for a waking panel.
       variant = identify_panel_variant(bus, display.cs, keys,
                                             ctx.allow_reset ? 1 : 120);
+      // A panel found in Sleep In before any reset has no long register reload
+      // after the reset (reset_panel_reload). Once reset, a panel still reloading
+      // also reads as Sleep In, so only an observation before the first reset counts.
+      auto& reload = prepare_detail::panel_reload();
+      if (!reload.reset_seen)
+      { reload.sleep_in = variant != panel_variant_t::unknown && panel_sleep_in(bus, display.cs); }
       if (ctx.allow_reset)
       {
         prepare_detail::i2c_scope_t i2c(*ctx.transaction, ctx.probe_port,

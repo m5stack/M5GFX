@@ -119,6 +119,28 @@ static void axp_table() {
   board_result_t r;
   assert(!axp_family_detector.confirm(ctx, &r) && !ctx.family_identified);
 }
+// reset_panel_reload: RDDPM is read only before the first such reset, and only a
+// Sleep In reading (Normal Mode On, Sleep Out clear) counts.
+static void core_panel_sleep_in() {
+  struct case_t { std::uint32_t rddpm; bool reset_seen, sleep_in; unsigned reads; };
+  for (const auto& c : {case_t{16, false, true, 3}, case_t{56, false, false, 3},
+                        case_t{0, false, false, 3}, case_t{16, true, false, 2}}) {
+    host_hardware::reset();
+    host_probes::reset();
+    prepare_detail::panel_reload() = prepare_detail::panel_reload_t{};
+    prepare_detail::panel_reload().reset_seen = c.reset_seen;
+    host_probes::expected_sda = 21;
+    host_probes::expected_scl = 22;
+    host_hardware::wire = [](int addr, int, std::uint8_t *, std::size_t, bool) { return addr == 0x38; };
+    host_probes::spi_data = {2, 56, c.rddpm};
+    host_probes::on_read = []() { assert(host_probes::transfers > 0); };
+    auto ctx = context();
+    board_result_t r;
+    r.assign(&desc_core2);
+    assert(detail::refine_core_family(r, ctx));
+    assert(host_probes::reads == c.reads && prepare_detail::panel_reload().sleep_in == c.sleep_in);
+  }
+}
 static void core_refinement() {
   for (bool new_pmic : {false, true})
     for (bool core : {false, true})
@@ -130,6 +152,7 @@ static void core_refinement() {
                                     desc_station.def.id, board_id_t(65535)}) {
               host_hardware::reset();
               host_probes::reset();
+              prepare_detail::panel_reload() = prepare_detail::panel_reload_t{};
               host_probes::expected_sda = 21;
               host_probes::expected_scl = 22;
               unsigned core_reads = 0, tough_reads = 0;
@@ -143,7 +166,8 @@ static void core_refinement() {
                 ++tough_reads;
                 return tough;
               };
-              host_probes::spi_data = {2, 56};
+              // ILI9342E keys (DDh 01, CBh 1C), then RDDPM in Sleep In (Normal Mode On).
+              host_probes::spi_data = {2, 56, 16};
               host_probes::on_read = []() { assert(host_probes::transfers > 0); };
               auto ctx = context();
               ctx.final_attempt = final;
@@ -155,8 +179,9 @@ static void core_refinement() {
               bool ok = detail::refine_core_family(r, ctx),
                    contradiction = (core && tough) || (new_pmic && tough);
               assert(ok == (!contradiction && (core || tough || final)));
-              assert(core_reads == tough_reads && core_reads > 0 && host_probes::reads == 2 &&
+              assert(core_reads == tough_reads && core_reads > 0 && host_probes::reads == 3 &&
                      host_probes::transfers > 0);
+              assert(prepare_detail::panel_reload().sleep_in && !prepare_detail::panel_reload().reset_seen);
               if (ok) {
                 auto possible = [&](board_id_t id) {
                   return id == desc_core2.def.id || (id == desc_tough.def.id && !new_pmic);
@@ -407,6 +432,7 @@ int main() {
   tx = &transaction;
   axp_table();
   core_refinement();
+  core_panel_sleep_in();
   atom_and_stack();
   stack_confirmation();
   fixed_core();

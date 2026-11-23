@@ -120,9 +120,8 @@ namespace m5
       bus.endTransaction();
     }
 
-    std::uint8_t read_parameter(soft_spi_t& bus, int pin_cs, std::uint8_t cmd, std::uint8_t index)
+    std::uint8_t read_byte(soft_spi_t& bus, int pin_cs, std::uint8_t cmd)
     {
-      write8(bus, pin_cs, 0xD9, 0x10 | index);
       bus.beginTransaction();
       io::pin_low(pin_cs);
       bus.writeCommand(cmd, 8);
@@ -137,6 +136,17 @@ namespace m5
       bus.endTransaction();
       return (value >> 1) & 0x7F;
     }
+
+    std::uint8_t read_parameter(soft_spi_t& bus, int pin_cs, std::uint8_t cmd, std::uint8_t index)
+    {
+      write8(bus, pin_cs, 0xD9, 0x10 | index);
+      return read_byte(bus, pin_cs, cmd);
+    }
+
+    // RDDPM (0Ah) as read by read_byte() (D6..D0): Normal Mode On (D3) with
+    // Sleep Out (D4) clear. A zero read is not taken as Sleep In.
+    bool panel_sleep_in(soft_spi_t& bus, int pin_cs)
+    { return (read_byte(bus, pin_cs, 0x0A) & 0x18) == 0x08; }
 
     panel_variant_t probe_panel_variant(soft_spi_t& bus, int pin_cs,
                                         std::uint32_t keys[4], bool try_c_key)
