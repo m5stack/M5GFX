@@ -98,8 +98,10 @@ namespace pmic_ops
     // IOE1 boots later than PM1. This power-stage wait starts a relative
     // 500 ms deadline for new probes; an in-flight I2C call may overrun it.
     ops::i2c_wait_ready(1, 500, 1),
-    ops::i2c_write8(1, 0x23, 0x00), ops::i2c_bit_off(1, 0x13, 0x9D),
-    ops::i2c_bit_on(1, 0x03, 0x9D), ops::i2c_bit_on(1, 0x05, 0x99),
+    ops::i2c_write8(1, 0x23, 0x00),
+    // Leave G1 unchanged until the touch model selects the USB destination.
+    ops::i2c_bit_off(1, 0x13, 0x9C),
+    ops::i2c_bit_on(1, 0x03, 0x9C), ops::i2c_bit_on(1, 0x05, 0x98),
     ops::delay_ms(10), ops::i2c_bit_off(1, 0x05, 0x18), ops::delay_ms(8),
     ops::i2c_bit_on(1, 0x05, 0x18), ops::delay_ms(2),
     ops::i2c_bit_off(1, 0x14, 0x02), ops::i2c_bit_on(1, 0x04, 0x02),

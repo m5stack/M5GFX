@@ -443,10 +443,22 @@ namespace m5
         is_cst9217 = answered = io::i2c_ack(detection_i2c_port, cst9217.addr, probe_freq, true);
       }
     }
+    // CST820 keeps rear USB high; CST9217 selects the built-in Type-C low.
+    const auto set_g1 = [&](std::uint8_t reg, bool high)
+    {
+      std::uint8_t value = 0;
+      return io::i2c_read_reg8(detection_i2c_port, pmic_ops::ioe1_i2c_addr, reg, &value, probe_freq)
+          && io::i2c_write_reg8(detection_i2c_port, pmic_ops::ioe1_i2c_addr, reg,
+                               static_cast<std::uint8_t>((value & 0xFE) | high), probe_freq);
+    };
+    const bool mux_ok = set_g1(0x05, !is_cst9217)
+                     && set_g1(0x13, false)
+                     && set_g1(0x03, true);
     io::i2c_close(detection_i2c_port);
     saved_sda.restore();
     saved_scl.restore();
     if (!answered) { ESP_LOGW("M5GFX", "M5StopWatch: touch controller did not answer; using CST820"); }
+    if (!mux_ok) { ESP_LOGW("M5GFX", "M5StopWatch: failed to select the USB connector"); }
     return is_cst9217;
   }
 #endif
