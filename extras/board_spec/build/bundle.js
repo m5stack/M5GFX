@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, "\\u003c");
+  // One space per level: a catalog change shows up as the changed lines only.
+  return JSON.stringify(value, null, 1).replace(/</g, "\\u003c");
 }
 
 function safeScript(source) {
