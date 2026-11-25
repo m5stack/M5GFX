@@ -375,6 +375,12 @@ static constexpr board_desc_t desc_unitpoep4 = {
   no_internal_i2c(), no_options(), pins(unitpoep4_detail::gpio_pins),
   };
 
+static constexpr board_desc_t desc_unitpoep4x = {
+  { static_cast<board_id_t>(lgfx::board_M5UnitPoEP4X), "M5UnitPoEP4X", 0 },
+  no_power(), no_reset(), no_shared_sd(), no_display_pins(), no_pins(),
+  no_internal_i2c(), no_options(), pins(unitpoep4_detail::gpio_pins),
+  };
+
 class unitpoep4_detector_t final : public board_detector_t
 {
 public:
@@ -400,13 +406,34 @@ public:
     ctx.transaction->restore_to_snapshot(unitpoep4_detail::gpio_pins,
                                    sizeof(unitpoep4_detail::gpio_pins));
     if (id1 != 0x0243 || id2 != 0x0C54) { return false; }
-    result->assign(&desc_unitpoep4);
+    // PoE-P4X upgrades the P4 silicon revision; saved hints cannot identify it.
+    const auto* desc = revision_desc();
+    warn_hint_mismatch(ctx, &desc->def);
+    result->assign(desc);
     return true;
   }
 private:
-  static const board_def_t* const members_[2];
+  static const board_desc_t* revision_desc()
+  {
+    return io::chip_revision() >= 300 ? &desc_unitpoep4x : &desc_unitpoep4;
+  }
+  static void warn_hint_mismatch(const probe_ctx_t& ctx, const board_def_t* def)
+  {
+    if (ctx.attempt == 0
+     && (ctx.hint == desc_unitpoep4.def.id || ctx.hint == desc_unitpoep4x.def.id)
+     && ctx.hint != def->id)
+    {
+      const auto revision = io::chip_revision();
+      ESP_LOGW("M5GFX", "[Autodetect] Unit PoE-P4 hint:%u disagrees with chip revision:%u; using %s",
+               static_cast<unsigned>(ctx.hint), static_cast<unsigned>(revision),
+               def->name);
+    }
+  }
+  static const board_def_t* const members_[3];
 };
-const board_def_t* const unitpoep4_detector_t::members_[2] = { &desc_unitpoep4.def, nullptr };
+const board_def_t* const unitpoep4_detector_t::members_[3] = {
+  &desc_unitpoep4.def, &desc_unitpoep4x.def, nullptr
+};
 static const unitpoep4_detector_t unitpoep4_detector;
 
 // No detector: selectable only through fixed_board.
@@ -424,6 +451,7 @@ static const board_entry_t esp32p4_boards[] = {
   { &desc_tab5, construct_tab5, "board_M5Tab5", nullptr, tab5_detail::fixed_prepare },
   { &desc_tab5x, construct_tab5, "board_M5Tab5X", nullptr, tab5_detail::fixed_prepare },
   { &desc_unitpoep4, construct_displayless, "board_M5UnitPoEP4", nullptr },
+  { &desc_unitpoep4x, construct_displayless, "board_M5UnitPoEP4X", nullptr },
   { &desc_stampp4, construct_displayless, "board_M5StampP4", nullptr },
 };
 success_log_t success_log(const board_result_t& result) { return success_log(esp32p4_boards, result); }

@@ -185,6 +185,7 @@
         "specs_output": "esp32p4_specs.hpp"
       },
       "m5unitpoep4": {"wiring_fields": [], "wiring_output": "esp32p4_wiring.hpp"},
+      "m5unitpoep4x": {"wiring_fields": [], "wiring_output": "esp32p4_wiring.hpp"},
       "m5stampp4": {},
       "m5stampp4x": {},
       "m5stampp4xhub": {

@@ -215,7 +215,7 @@ test("only catalog names confirmed against official sources carry the verified f
     m5vameter: "VAMeter",
   };
   const unverified = catalogBoards.filter((item) => item.official_name_verified !== true).map((item) => item.id).sort();
-  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stampp4xhub", "m5stamps3mini", "m5station"]);
+  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stampp4xhub", "m5stamps3mini", "m5station", "m5unitpoep4x"]);
   const verified = catalogBoards.filter((item) => item.official_name_verified === true).map((item) => item.id).sort();
   assert.deepEqual(verified, Object.keys(documentedProductNames).sort());
   for (const source of catalogBoards.filter((item) => item.official_name_verified === true)) {
@@ -391,7 +391,7 @@ test("valid Core2 has only the expected target warning", () => {
 });
 
 test("all catalog boards validate against their chip tables", () => {
-  assert.deepEqual(catalogFiles, ["arduino_nesso_n1.json", "m5airq.json", "m5atom_psram.json", "m5atomlite.json", "m5atommatrix.json", "m5atoms3.json", "m5atoms3lite.json", "m5atoms3r.json", "m5atoms3rcam.json", "m5atoms3rext.json", "m5atoms3u.json", "m5atomu.json", "m5atomvoice.json", "m5atomvoices3r.json", "m5capsule.json", "m5cardputer.json", "m5cardputer_adv.json", "m5chaincaptain.json", "m5dial.json", "m5dinmeter.json", "m5dualkey.json", "m5nanoc6.json", "m5nanoh2.json", "m5paper.json", "m5papercolor.json", "m5paperdiy.json", "m5papermono.json", "m5papers3.json", "m5powerhub.json", "m5stack.json", "m5stack_core2.json", "m5stack_coreink.json", "m5stack_corematrix.json", "m5stack_corep4x.json", "m5stack_cores3.json", "m5stack_cores3se.json", "m5stack_stackchan.json", "m5stack_tab5.json", "m5stack_tab5x.json", "m5stampc3.json", "m5stampc3u.json", "m5stampc5.json", "m5stampc6.json", "m5stamplc.json", "m5stampp4.json", "m5stampp4x.json", "m5stampp4xhub.json", "m5stamppico.json", "m5stamps3.json", "m5stamps3bat.json", "m5stamps3mini.json", "m5station.json", "m5stickc.json", "m5stickcplus.json", "m5stickcplus2.json", "m5sticks3.json", "m5stopwatch.json", "m5timercam.json", "m5tough.json", "m5toughc5.json", "m5unit_c6l.json", "m5unitpoep4.json", "m5vameter.json"]);
+  assert.deepEqual(catalogFiles, ["arduino_nesso_n1.json", "m5airq.json", "m5atom_psram.json", "m5atomlite.json", "m5atommatrix.json", "m5atoms3.json", "m5atoms3lite.json", "m5atoms3r.json", "m5atoms3rcam.json", "m5atoms3rext.json", "m5atoms3u.json", "m5atomu.json", "m5atomvoice.json", "m5atomvoices3r.json", "m5capsule.json", "m5cardputer.json", "m5cardputer_adv.json", "m5chaincaptain.json", "m5dial.json", "m5dinmeter.json", "m5dualkey.json", "m5nanoc6.json", "m5nanoh2.json", "m5paper.json", "m5papercolor.json", "m5paperdiy.json", "m5papermono.json", "m5papers3.json", "m5powerhub.json", "m5stack.json", "m5stack_core2.json", "m5stack_coreink.json", "m5stack_corematrix.json", "m5stack_corep4x.json", "m5stack_cores3.json", "m5stack_cores3se.json", "m5stack_stackchan.json", "m5stack_tab5.json", "m5stack_tab5x.json", "m5stampc3.json", "m5stampc3u.json", "m5stampc5.json", "m5stampc6.json", "m5stamplc.json", "m5stampp4.json", "m5stampp4x.json", "m5stampp4xhub.json", "m5stamppico.json", "m5stamps3.json", "m5stamps3bat.json", "m5stamps3mini.json", "m5station.json", "m5stickc.json", "m5stickcplus.json", "m5stickcplus2.json", "m5sticks3.json", "m5stopwatch.json", "m5timercam.json", "m5tough.json", "m5toughc5.json", "m5unit_c6l.json", "m5unitpoep4.json", "m5unitpoep4x.json", "m5vameter.json"]);
   assert.deepEqual(validateCatalog(catalogBoards, (item) => ({ ...context, chip: chips[item.chip] })).filter((item) => item.severity !== "warning"), []);
 });
 
@@ -407,7 +407,7 @@ test("catalog button devices match M5Unified GPIO, expander, and PMIC inputs", (
     m5dinmeter: { btn_a: 42, btn_b: 0 }, m5sticks3: { btn_a: 11, btn_b: 12 },
     m5paperdiy: { btn_a: 4, btn_b: 3 }, m5papercolor: { btn_a: 10, btn_b: 9, btn_c: 1 },
     m5chaincaptain: { btn_a: 1, btn_b: 4, btn_c: 5 }, m5papermono: { btn_a: 2, btn_b: 3 },
-    m5stopwatch: { btn_a: 2, btn_b: 1 }, m5unitpoep4: { btn_a: 45 }, m5dualkey: { btn_a: 0, btn_b: 17 },
+    m5stopwatch: { btn_a: 2, btn_b: 1 }, m5unitpoep4: { btn_a: 45 }, m5unitpoep4x: { btn_a: 45 }, m5dualkey: { btn_a: 0, btn_b: 17 },
   };
   const ownedButtons = {
     m5stamplc: { btn_a: "pin:ioe.p2", btn_b: "pin:ioe.p1", btn_c: "pin:ioe.p0" },
@@ -628,10 +628,10 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   assert.match(defaults, /get_pkg_ver\(\) == 1\) \{ return board_t::board_M5StampS3Mini; \}/);
 });
 
-test("all 90 revision and runtime combinations validate in memory", () => {
+test("all 91 revision and runtime combinations validate in memory", () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 90);
-  assert.equal(new Set(outputs.map((output) => output.filename)).size, 90);
+  assert.equal(outputs.length, 91);
+  assert.equal(new Set(outputs.map((output) => output.filename)).size, 91);
   for (const output of outputs) {
     const issues = validateBoard(output.board, {
       ...context, chip: chips[output.board.chip], resolved: true,
@@ -949,7 +949,7 @@ test("M5Unified live pin tables match generated values", async (t) => {
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
   const compared = spawnSync(process.execPath, ["cli/spec.js", "compare-pintable", "--m5unified", m5unified], { cwd: root, encoding: "utf8" });
   assert.equal(compared.status, 0, compared.stderr || compared.stdout);
-  assert.match(compared.stdout, /comparison passed: 55 board\(s\), 2750 value\(s\), 4 target\(s\)/);
+  assert.match(compared.stdout, /comparison passed: 56 board\(s\), 2800 value\(s\), 4 target\(s\)/);
 });
 
 test("M5GFX wiring emitter maps every board-description GPIO", () => {
