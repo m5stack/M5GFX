@@ -834,8 +834,8 @@
   "m5paperdiy": {
     "in_i2c_scl": 42,
     "in_i2c_sda": 41,
-    "port_a_pin1": 42,
-    "port_a_pin2": 41,
+    "port_a_pin1": 255,
+    "port_a_pin2": 255,
     "port_b_pin1": 255,
     "port_b_pin2": 255,
     "port_c_pin1": 255,

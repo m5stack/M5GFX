@@ -16,7 +16,7 @@
 { board_t::board_M5DinMeter, 12, 11, 15, 13 },
 { board_t::board_M5DualKey, 255, 255, 255, 255 },
 { board_t::board_M5PaperColor, 2, 3, 5, 4 },
-{ board_t::board_M5PaperDIY, 42, 41, 42, 41 },
+{ board_t::board_M5PaperDIY, 42, 41, 255, 255 },
 { board_t::board_M5PaperMono, 48, 47, 255, 255 },
 { board_t::board_M5PaperS3, 42, 41, 1, 2 },
 { board_t::board_M5PowerHub, 48, 45, 16, 15 },

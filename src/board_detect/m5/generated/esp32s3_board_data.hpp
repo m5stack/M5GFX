@@ -434,7 +434,7 @@ namespace paperdiy {
   constexpr std::int8_t display_spv = 17;
   constexpr std::int8_t display_ckv = 18;
   constexpr std::int8_t display_sph = 13;
-  constexpr std::int8_t display_oe = 45;
+  constexpr std::int8_t display_oe = -1;
   constexpr std::int8_t display_le = 15;
   constexpr std::int8_t display_cl = 16;
   constexpr std::int8_t internal_i2c_sda = 41;
