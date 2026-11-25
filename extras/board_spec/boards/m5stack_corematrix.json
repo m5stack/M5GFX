@@ -3,6 +3,7 @@
   "id": "m5stack_corematrix",
   "name": "M5CoreMatrix",
   "official_name": "M5Stack CoreMatrix",
+  "official_name_verified": true,
   "aliases": [
     "corematrix",
     "core matrix"
@@ -19,6 +20,14 @@
     },
     "storage": {
       "sd": true
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/core/CoreMatrix",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1274/CoreMatrix_V0.7_SCH_PDF_20260609.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
