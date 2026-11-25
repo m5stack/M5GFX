@@ -86,7 +86,7 @@ namespace pmic_ops
   };
   static constexpr ops::op_t sticks3_power_on[] = {
     ops::i2c_write8(0, 0x09, 0x00),
-    ops::i2c_bit_off(0, 0x16, 0x04),
+    ops::i2c_bit_off(0, 0x16, 0x30), // gpio2 function (2 bits per pin): gpio
     ops::i2c_bit_on(0, 0x10, 0x04),
     ops::i2c_bit_off(0, 0x13, 0x04),
     ops::i2c_bit_on(0, 0x11, 0x04),
