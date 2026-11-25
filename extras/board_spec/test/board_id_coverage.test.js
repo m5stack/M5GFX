@@ -77,36 +77,50 @@ async function readTree(dir) {
 test("every board_t value has a catalog entry and a board definition", async (t) => {
   const names = parseBoardEnum(await fs.readFile(path.join(src, "lgfx/boards.hpp"), "utf8"));
 
-  const catalog = new Set();
+  // board id -> chips the catalog gives for it
+  const catalog = new Map();
   const boardDir = path.join(specRoot, "boards");
   for (const f of (await fs.readdir(boardDir)).filter((f) => f.endsWith(".json"))) {
-    const id = JSON.parse(await fs.readFile(path.join(boardDir, f), "utf8")).legacy_board_id;
-    if (id !== undefined) catalog.add(id);
+    const { legacy_board_id: id, chip } = JSON.parse(await fs.readFile(path.join(boardDir, f), "utf8"));
+    if (id === undefined) continue;
+    assert.ok(typeof chip === "string", `${f}: no chip`);
+    if (!catalog.has(id)) catalog.set(id, new Set());
+    catalog.get(id).add(chip);
   }
 
-  const detected = new Set();
-  // A board definition is a board_desc_t whose address is listed in one of the
-  // board_entry_t <chip>_boards[] tables, which select_fixed_board() searches.
+  // board id -> chips whose table defines it.
+  // A board definition is a board_desc_t whose address is listed in the
+  // board_entry_t <chip>_boards[] table that select_fixed_board() searches on
+  // that chip; <chip> must match the catalog chip of the board.
+  const detected = new Map();
   const detect = stripCode(await readTree(path.join(src, "board_detect/m5")));
   const descId = new Map();
   for (const m of detect.matchAll(/\bboard_desc_t\s+(desc_\w+)\s*=\s*\{\s*\{\s*(?:id|static_cast\s*<\s*board_id_t\s*>)\s*\(\s*lgfx::(board_\w+)\s*\)/g)) {
     assert.ok(names.has(m[2]), `${m[1]} refers to unknown ${m[2]}`);
     descId.set(m[1], names.get(m[2]));
   }
-  const tables = [...detect.matchAll(/\bboard_entry_t\s+\w+_boards\s*\[\s*\]\s*=\s*\{([\s\S]*?)\n\s*\}\s*;/g)];
+  const tables = [...detect.matchAll(/\bboard_entry_t\s+(\w+)_boards\s*\[\s*\]\s*=\s*\{([\s\S]*?)\n\s*\}\s*;/g)];
   assert.ok(tables.length > 0, "no board_entry_t tables found");
   for (const table of tables) {
-    for (const m of table[1].matchAll(/\{\s*&\s*(\w+)\s*,/g)) {
+    for (const m of table[2].matchAll(/\{\s*&\s*(\w+)\s*,/g)) {
       assert.ok(descId.has(m[1]), `cannot find the board id of ${m[1]}`);
-      detected.add(descId.get(m[1]));
+      const id = descId.get(m[1]);
+      if (!detected.has(id)) detected.set(id, new Set());
+      detected.get(id).add(table[1]);
     }
   }
 
   const missing = [];
   const stale = [];
+  const wrongChip = [];
   for (const value of new Set(names.values())) {
     const label = [...names].filter(([, v]) => v === value).map(([n]) => n).join(" / ");
     const lacks = [!catalog.has(value) && "catalog", !detected.has(value) && "definition"].filter(Boolean);
+    if (catalog.has(value) && detected.has(value)) {
+      const want = [...catalog.get(value)].sort().join(", ");
+      const have = [...detected.get(value)].sort().join(", ");
+      if (want !== have) wrongChip.push(`${value} ${label}: catalog chip [${want}], defined in the tables of [${have}]`);
+    }
     const listed = NOT_COVERED.get(value) ?? PRE_RELEASE.get(value);
     const expected = listed ? listed.lacks : NONE;
     if (lacks.join() === expected.join()) continue;
@@ -125,4 +139,5 @@ test("every board_t value has a catalog entry and a board definition", async (t)
 
   assert.deepEqual(missing, [], "add the catalog entry / board definition, or list the board with what it lacks and a reason");
   assert.deepEqual(stale, [], "update the exclusion lists to match");
+  assert.deepEqual(wrongChip, [], "define the board in the table of its catalog chip");
 });
