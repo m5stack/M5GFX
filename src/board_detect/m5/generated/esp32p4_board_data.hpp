@@ -20,6 +20,10 @@ namespace unitpoep4 {
   constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
 } // namespace unitpoep4
 
+namespace unitpoep4x {
+  constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
+} // namespace unitpoep4x
+
 namespace stampp4xhub {
   constexpr std::int8_t internal_i2c_sda = 0;
   constexpr std::int8_t internal_i2c_scl = 1;
