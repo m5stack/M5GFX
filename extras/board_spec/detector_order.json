@@ -148,7 +148,8 @@
       {
         "detector": "unitpoep4_detector",
         "boards": [
-          "m5unitpoep4"
+          "m5unitpoep4",
+          "m5unitpoep4x"
         ]
       }
     ],

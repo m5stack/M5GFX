@@ -1142,6 +1142,7 @@ namespace m5gfx
     case board_M5Tab5:         title = "M5Tab5";         break;
     case board_M5Tab5X:        title = "M5Tab5X";        break;
     case board_M5UnitPoEP4:    title = "M5UnitPoEP4";    break;
+    case board_M5UnitPoEP4X:   title = "M5UnitPoEP4X";   break;
     case board_ArduinoNessoN1: title = "ArduinoNessoN1"; break;
     default:                   title = "M5GFX";          break;
     }
