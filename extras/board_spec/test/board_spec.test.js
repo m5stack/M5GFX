@@ -197,6 +197,7 @@ test("only catalog names confirmed against official sources carry the verified f
     m5papers3: "PaperS3",
     m5stack_core2: "Core2",
     m5stack_coreink: "CoreInk",
+    m5stack_corematrix: "CoreMatrix",
     m5stack_corep4x: "CoreP4X",
     m5stack_cores3: "CoreS3",
     m5stack_cores3se: "CoreS3-SE",
@@ -214,7 +215,7 @@ test("only catalog names confirmed against official sources carry the verified f
     m5vameter: "VAMeter",
   };
   const unverified = catalogBoards.filter((item) => item.official_name_verified !== true).map((item) => item.id).sort();
-  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_corematrix", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stampp4xhub", "m5stamps3mini", "m5station"]);
+  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stampp4xhub", "m5stamps3mini", "m5station"]);
   const verified = catalogBoards.filter((item) => item.official_name_verified === true).map((item) => item.id).sort();
   assert.deepEqual(verified, Object.keys(documentedProductNames).sort());
   for (const source of catalogBoards.filter((item) => item.official_name_verified === true)) {

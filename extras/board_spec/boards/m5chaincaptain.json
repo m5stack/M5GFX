@@ -22,6 +22,14 @@
     "storage": {
       "psram_mb": 8,
       "psram_mode": "opi"
+    },
+    "links": {
+      "product": "https://docs.m5stack.com/en/chain/Chain_Captain",
+      "schematic": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1295/Chain_Captain_V0.6_SCH_PDF_20261104.pdf",
+      "verified": {
+        "product": "datasheet",
+        "schematic": "datasheet"
+      }
     }
   },
   "pins": {
