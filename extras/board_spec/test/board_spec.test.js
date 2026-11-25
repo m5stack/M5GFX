@@ -2381,10 +2381,11 @@ test("PaperS3 and PaperDIY generated setup preserves the legacy fields", async (
     pwr: 46, spv: 17, ckv: 18, sph: 13, oe: 45, le: 15, cl: 16 };
   const epdPanel = { width: 960, height: 540, memoryWidth: 960, memoryHeight: 540, offsetX: 0, offsetY: 0,
     rotationOffset: 3, invert: null, readable: null, linePadding: 8 };
-  for (const [specs, wiring] of [[s3Specs, s3Wiring], [diySpecs, diyWiring]]) {
+  // PaperDIY ties the panel XOE to EPD_PWR (PMIC G2); G45 is MCLK on its FPC-I2S, not OE.
+  for (const [specs, wiring, pins] of [[s3Specs, s3Wiring, epdPins], [diySpecs, diyWiring, { ...epdPins, oe: -1 }]]) {
     assert.deepEqual(specs.bus, { kind: "parallel_epd", speed: 16000000, width: 8 });
     assert.deepEqual(specs.panels.ed047tc1, epdPanel);
-    assert.deepEqual(wiring.display, epdPins);
+    assert.deepEqual(wiring.display, pins);
     assert.deepEqual(wiring.i2c, { sda: 41, scl: 42, port: 1 });
     assert.deepEqual(wiring.hold, []);
     assert.equal(wiring.sharedSd, null);
