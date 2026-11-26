@@ -24,7 +24,7 @@ export function renderDetectorProbePins(entries, groups) {
   }
   const lines = [
     "// Generated from extras/board_spec; do not edit by hand.",
-    "// Regenerate in extras/board_spec: node cli/spec.js emit-wiring",
+    "// Regenerate in extras/board_spec: npm run generate",
     "#pragma once", "#include <set>", "#include <vector>", "",
     "struct expected_detector_pins_t {",
     "  const board_detector_t* detector;",

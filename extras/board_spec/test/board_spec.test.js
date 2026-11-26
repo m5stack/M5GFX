@@ -6,6 +6,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { compilerAvailable } from "./detect_host_helpers.js";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
@@ -19,7 +20,7 @@ import { validateChoices } from "../lib/choices.js";
 import { compose, validateAccessory, validateComposition } from "../lib/compose.js";
 import { isCompatible, validateConnectorTypes } from "../lib/ctypes.js";
 import { deriveSd } from "../lib/derive/sd.js";
-import { consumesPinTableRole, emitPinTable, PIN_NAMES, pinNameForRole, pinTableAssignments } from "../lib/emit/m5unified_pin_table.js";
+import { consumesPinTableRole, emitPinTable, PIN_NAMES, PIN_TABLE_TARGETS, pinNameForRole, pinTableAssignments } from "../lib/emit/m5unified_pin_table.js";
 import { detectionPinsForEntries, emitM5GFXWiring, emitM5GFXWiringForMapping, m5gfxBoardMapping, partitionDetectionPins, renderM5GFXWiringHeader, selectM5GFXWiringBoards, validateDetectionPins, wiringAssignments, wiringFieldsForRole } from "../lib/emit/m5gfx_board_wiring.js";
 import { emitM5GFXSpecs, renderM5GFXSpecsHeader } from "../lib/emit/m5gfx_board_specs.js";
 import { formatBoard } from "../lib/format.js";
@@ -29,7 +30,7 @@ import { validateOwners } from "../lib/owners.js";
 import { validatePartCatalog, validateParts } from "../lib/parts.js";
 import { resolveAll, resolveBoard, resolvedFilename } from "../lib/resolve.js";
 import { validateSchema } from "../lib/schema.js";
-import { validateTarget, validateTargets, validateBoardEnums } from "../lib/targets.js";
+import { resolveTargetBoard, validateTarget, validateTargets, validateBoardEnums } from "../lib/targets.js";
 import { validateBoard, validateCatalog, validateFormat, validateResolvedVariants } from "../lib/validate.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -214,10 +215,8 @@ test("only catalog names confirmed against official sources carry the verified f
     m5unit_c6l: "Unit C6L",
     m5vameter: "VAMeter",
   };
-  const unverified = catalogBoards.filter((item) => item.official_name_verified !== true).map((item) => item.id).sort();
-  assert.deepEqual(unverified, ["m5atom_psram", "m5paperdiy", "m5stack", "m5stack_tab5x", "m5stampc6", "m5stampp4x", "m5stampp4xhub", "m5stamps3mini", "m5station", "m5unitpoep4x"]);
   const verified = catalogBoards.filter((item) => item.official_name_verified === true).map((item) => item.id).sort();
-  assert.deepEqual(verified, Object.keys(documentedProductNames).sort());
+  assert.deepEqual(verified, Object.keys(documentedProductNames).sort(), "When copying a board, remove inherited official_name_verified until the new product name is confirmed; then record the spelling in documentedProductNames. See README.md, Adding a board.");
   for (const source of catalogBoards.filter((item) => item.official_name_verified === true)) {
     const productName = source.official_name.replace(/^M5Stack /, "");
     assert.equal(productName, documentedProductNames[source.id], source.id);
@@ -391,8 +390,99 @@ test("valid Core2 has only the expected target warning", () => {
 });
 
 test("all catalog boards validate against their chip tables", () => {
-  assert.deepEqual(catalogFiles, ["arduino_nesso_n1.json", "m5airq.json", "m5atom_psram.json", "m5atomlite.json", "m5atommatrix.json", "m5atoms3.json", "m5atoms3lite.json", "m5atoms3r.json", "m5atoms3rcam.json", "m5atoms3rext.json", "m5atoms3u.json", "m5atomu.json", "m5atomvoice.json", "m5atomvoices3r.json", "m5capsule.json", "m5cardputer.json", "m5cardputer_adv.json", "m5chaincaptain.json", "m5dial.json", "m5dinmeter.json", "m5dualkey.json", "m5nanoc6.json", "m5nanoh2.json", "m5paper.json", "m5papercolor.json", "m5paperdiy.json", "m5papermono.json", "m5papers3.json", "m5powerhub.json", "m5stack.json", "m5stack_core2.json", "m5stack_coreink.json", "m5stack_corematrix.json", "m5stack_corep4x.json", "m5stack_cores3.json", "m5stack_cores3se.json", "m5stack_stackchan.json", "m5stack_tab5.json", "m5stack_tab5x.json", "m5stampc3.json", "m5stampc3u.json", "m5stampc5.json", "m5stampc6.json", "m5stamplc.json", "m5stampp4.json", "m5stampp4x.json", "m5stampp4xhub.json", "m5stamppico.json", "m5stamps3.json", "m5stamps3bat.json", "m5stamps3mini.json", "m5station.json", "m5stickc.json", "m5stickcplus.json", "m5stickcplus2.json", "m5sticks3.json", "m5stopwatch.json", "m5timercam.json", "m5tough.json", "m5toughc5.json", "m5unit_c6l.json", "m5unitpoep4.json", "m5unitpoep4x.json", "m5vameter.json"]);
+  assert.equal(new Set(catalogBoards.map((item) => item.id)).size, catalogBoards.length, "catalog IDs are unique");
+  for (const [index, source] of catalogBoards.entries()) assert.equal(catalogFiles[index], `${source.id}.json`);
   assert.deepEqual(validateCatalog(catalogBoards, (item) => ({ ...context, chip: chips[item.chip] })).filter((item) => item.severity !== "warning"), []);
+});
+
+function assertCatalogIds(ids) {
+  for (const id of ids) assert.ok(catalogBoards.some((item) => item.id === id), `${id}: expectation has no catalog board`);
+}
+
+function assertDeviceEndpoints(board, device, label) {
+  for (const endpoint of Object.values(device.signals ?? {})) {
+    const gpio = /^gpio:(\d+)$/.exec(endpoint);
+    const owned = /^pin:([a-z][a-z0-9_]*)\.([a-z0-9_]+)$/.exec(endpoint);
+    assert.match(endpoint, new RegExp(schema.definitions.endpoint.pattern), `${label}: invalid endpoint ${endpoint}`);
+    if (gpio) assert.ok(board.pins[gpio[1]], `${label}: missing GPIO ${endpoint}`);
+    if (owned) assert.ok(owned[1] === "soc" ? board.pins[owned[2]] : board.devices[owned[1]]?.pins?.[owned[2]], `${label}: missing pin ${endpoint}`);
+  }
+}
+
+test("device endpoint checks accept every schema endpoint form", () => {
+  const board = { pins: { 3: {} }, devices: { ioe: { pins: { p0: {} } } } };
+  for (const endpoint of ["gpio:3", "pin:soc.3", "pin:ioe.p0", "fixed:usb.dn", "pwr:3v3", "chip:usb_dn", "nc", "none"]) {
+    assertDeviceEndpoints(board, { signals: { in: endpoint } }, endpoint);
+  }
+  for (const endpoint of ["invalid", "gpio:99", "pin:missing.p0"]) {
+    assert.throws(() => assertDeviceEndpoints(board, { signals: { in: endpoint } }, endpoint));
+  }
+});
+
+test("existing boards preserve recorded device absences", () => {
+  // Fixed expectations for existing IDs only; a new board needs no list edit.
+  const absent = {
+    button: [
+      "m5atomlite", "m5atommatrix", "m5atoms3rcam", "m5atoms3rext",
+      "m5atomu", "m5atomvoice", "m5atomvoices3r", "m5capsule",
+      "m5nanoc6", "m5nanoh2", "m5papers3", "m5powerhub",
+      "m5stack_corep4x", "m5stack_tab5", "m5stack_tab5x", "m5stampc3",
+      "m5stampc3u", "m5stampc5", "m5stampc6", "m5stampp4",
+      "m5stampp4x", "m5stampp4xhub", "m5stamppico", "m5stamps3",
+      "m5stamps3bat", "m5stamps3mini", "m5timercam",
+    ],
+    usb_uart: [
+      "arduino_nesso_n1", "m5airq", "m5atomlite", "m5atommatrix",
+      "m5atoms3", "m5atoms3lite", "m5atoms3r", "m5atoms3rcam",
+      "m5atoms3rext", "m5atoms3u", "m5atomu", "m5atomvoice",
+      "m5atomvoices3r", "m5capsule", "m5cardputer", "m5cardputer_adv",
+      "m5chaincaptain", "m5dial", "m5dinmeter", "m5dualkey",
+      "m5nanoc6", "m5nanoh2", "m5papercolor", "m5paperdiy",
+      "m5papermono", "m5papers3", "m5powerhub", "m5stack_corematrix",
+      "m5stack_corep4x", "m5stack_cores3", "m5stack_cores3se", "m5stack_stackchan",
+      "m5stack_tab5", "m5stack_tab5x", "m5stampc3", "m5stampc3u",
+      "m5stampc5", "m5stampc6", "m5stamplc", "m5stampp4",
+      "m5stampp4x", "m5stampp4xhub", "m5stamppico", "m5stamps3",
+      "m5stamps3bat", "m5stamps3mini", "m5sticks3", "m5stopwatch",
+      "m5toughc5", "m5unit_c6l", "m5unitpoep4", "m5unitpoep4x",
+      "m5vameter",
+    ],
+    psram: [
+      "arduino_nesso_n1", "m5airq", "m5atomlite", "m5atommatrix",
+      "m5atoms3", "m5atoms3lite", "m5atoms3rcam", "m5atoms3rext",
+      "m5atoms3u", "m5atomu", "m5atomvoice", "m5atomvoices3r",
+      "m5capsule", "m5cardputer", "m5cardputer_adv", "m5dial",
+      "m5dinmeter", "m5dualkey", "m5nanoc6", "m5nanoh2",
+      "m5powerhub", "m5stack_coreink", "m5stack_corematrix", "m5stampc3",
+      "m5stampc3u", "m5stampc5", "m5stampc6", "m5stamplc",
+      "m5stampp4", "m5stampp4x", "m5stamppico", "m5stamps3",
+      "m5stamps3bat", "m5stamps3mini", "m5station", "m5stickc",
+      "m5stickcplus", "m5unit_c6l", "m5unitpoep4", "m5unitpoep4x",
+      "m5vameter",
+    ],
+    sd: [
+      "arduino_nesso_n1", "m5airq", "m5atom_psram", "m5atomlite",
+      "m5atommatrix", "m5atoms3", "m5atoms3lite", "m5atoms3r",
+      "m5atoms3rcam", "m5atoms3rext", "m5atoms3u", "m5atomu",
+      "m5atomvoice", "m5atomvoices3r", "m5chaincaptain", "m5dial",
+      "m5dinmeter", "m5dualkey", "m5nanoc6", "m5nanoh2",
+      "m5powerhub", "m5stack_coreink", "m5stampc3", "m5stampc3u",
+      "m5stampc5", "m5stampc6", "m5stampp4", "m5stampp4x",
+      "m5stampp4xhub", "m5stamppico", "m5stamps3", "m5stamps3bat",
+      "m5stamps3mini", "m5station", "m5stickc", "m5stickcplus",
+      "m5stickcplus2", "m5sticks3", "m5stopwatch", "m5timercam",
+      "m5unit_c6l", "m5unitpoep4", "m5unitpoep4x", "m5vameter",
+    ],
+  };
+  for (const [kind, ids] of Object.entries(absent)) {
+    assertCatalogIds(ids);
+    for (const id of ids) {
+      const source = catalogBoards.find((item) => item.id === id);
+      for (const { board: resolved } of resolveCatalog(source)) {
+        assert.equal(Object.values(resolved.devices).some((device) => device.kind === kind), false, `${id}: recorded as having no ${kind} device`);
+      }
+    }
+  }
 });
 
 test("catalog button devices match M5Unified GPIO, expander, and PMIC inputs", () => {
@@ -420,7 +510,16 @@ test("catalog button devices match M5Unified GPIO, expander, and PMIC inputs", (
     "m5stack_corematrix", "m5stack_cores3", "m5stack_cores3se", "m5stack_stackchan",
     "m5stickc", "m5stickcplus", "m5sticks3", "m5stopwatch", "m5tough", "m5toughc5",
   ]);
+  const recordedBoards = new Set([...Object.keys(gpioButtons), ...Object.keys(ownedButtons), ...pmicPowerBoards]);
+  assertCatalogIds(recordedBoards);
   for (const source of catalogBoards) for (const { board: resolved } of resolveCatalog(source)) {
+    for (const [id, device] of Object.entries(resolved.devices).filter(([, device]) => device.kind === "button")) {
+      assert.equal(device.part, "button", `${source.id}.${id}.part`);
+      assert.ok(device.signals?.in, `${source.id}.${id}.in`);
+      assertDeviceEndpoints(resolved, device, `${source.id}.${id}`);
+    }
+    // Positive expectations apply here; the absence table protects known boards without buttons.
+    if (!recordedBoards.has(source.id)) continue;
     const expected = Object.fromEntries(Object.entries(gpioButtons[source.id] ?? {}).map(([id, gpio]) => [id, `gpio:${gpio}`]));
     Object.assign(expected, ownedButtons[source.id] ?? {});
     if (pmicPowerBoards.has(source.id)) expected.btn_pwr = "pin:pmic.pwrkey";
@@ -441,8 +540,16 @@ test("ESP32 USB-UART bridges use fixed UART0 wiring and automatic boot control",
     m5stickcplus2: "ch9102", m5timercam: "ch552", m5tough: "ch9102",
   };
   const expectedBoards = new Set([...Object.keys(expectedParts), "m5stack", "m5stack_core2"]);
-  const actualBoards = new Set(catalogBoards.filter((item) => item.devices.usb_serial).map((item) => item.id));
-  assert.deepEqual(actualBoards, expectedBoards);
+  assertCatalogIds(expectedBoards);
+  // Common rules cover new IDs; separate tables preserve known USB presence and absence.
+  for (const source of catalogBoards) for (const { board: resolved } of resolveCatalog(source)) {
+    const device = resolved.devices.usb_serial;
+    if (!device) continue;
+    assert.equal(device.kind, "usb_uart", source.id);
+    assert.equal(resolved.buses[device.bus]?.kind, "uart", source.id);
+    assert.ok(parts[device.part], source.id);
+    assertDeviceEndpoints(resolved, device, `${source.id}.usb_serial`);
+  }
   for (const source of catalogBoards.filter((item) => expectedBoards.has(item.id))) {
     assert.deepEqual(source.buses.console_uart, {
       kind: "uart", signals: ["tx", "rx"], preferred_host: 0, fixed: true,
@@ -471,7 +578,14 @@ test("catalog PSRAM devices match storage metadata and chip pin definitions", ()
     m5stack_cores3: [8, "quad"], m5stack_cores3se: [8, "quad"], m5stack_stackchan: [8, "quad"],
     m5sticks3: [8, "opi"], m5stack_corep4x: [32, "opi"], m5stack_tab5: [32, "opi"],
     m5stack_tab5x: [32, "opi"], m5toughc5: [8, "quad"],
+    m5stopwatch: [8, "opi"], m5stampp4xhub: [32, "opi"],
   };
+  assertCatalogIds(Object.keys(fixed));
+  for (const source of catalogBoards) for (const { board: resolved } of resolveCatalog(source)) {
+    if (!resolved.devices.psram) continue;
+    assert.equal(resolved.devices.psram.part, "psram", source.id);
+    assertDeviceEndpoints(resolved, resolved.devices.psram, `${source.id}.psram`);
+  }
   for (const [id, [size, mode]] of Object.entries(fixed)) {
     const source = catalogBoards.find((item) => item.id === id);
     assert.equal(source.spec.storage.psram_mb, size, id);
@@ -628,10 +742,39 @@ test("explicit fallback takes precedence over detector candidates", async (t) =>
   assert.match(defaults, /get_pkg_ver\(\) == 1\) \{ return board_t::board_M5StampS3Mini; \}/);
 });
 
-test("all 91 revision and runtime combinations validate in memory", () => {
+test("catalog choice expansions preserve each recorded filename set", () => {
+  const expected = {
+    m5airq: ["m5airq+epd=gdew0154d67.json", "m5airq+epd=gdew0154m09.json"],
+    m5atoms3: ["m5atoms3+lcd=gc9107.json", "m5atoms3+lcd=st7735s.json"],
+    m5atoms3r: ["m5atoms3r+lcd=gc9107.json", "m5atoms3r+lcd=st7735s.json"],
+    m5stack: [
+      "m5stack@from_2020_04_to_v2_5_fire+lcd=ips.json", "m5stack@from_2020_04_to_v2_5_fire+lcd=tn.json",
+      "m5stack@pre_2020_04_fire+lcd=ips.json", "m5stack@pre_2020_04_fire+lcd=tn.json",
+      "m5stack@pre_v2_6_basic+lcd=ips.json", "m5stack@pre_v2_6_basic+lcd=tn.json",
+      "m5stack@pre_v2_6_gray+lcd=ips.json", "m5stack@pre_v2_6_gray+lcd=tn.json",
+      "m5stack@v2_6_plus_basic+lcd=ips.json", "m5stack@v2_6_plus_basic+lcd=tn.json",
+      "m5stack@v2_6_plus_fire+lcd=ips.json", "m5stack@v2_6_plus_fire+lcd=tn.json",
+      "m5stack@v2_6_plus_gray+lcd=ips.json", "m5stack@v2_6_plus_gray+lcd=tn.json",
+    ],
+    m5stack_core2: ["m5stack_core2@v1_0.json", "m5stack_core2@v1_1.json", "m5stack_core2@v1_2.json", "m5stack_core2@v1_3.json"],
+    m5stack_coreink: ["m5stack_coreink+epd=gdew0154d67.json", "m5stack_coreink+epd=gdew0154m09.json"],
+    m5stack_tab5: ["m5stack_tab5+lcd=ili9881c.json", "m5stack_tab5+lcd=st7121.json", "m5stack_tab5+lcd=st7123.json"],
+    m5stack_tab5x: ["m5stack_tab5x+lcd=ili9881c.json", "m5stack_tab5x+lcd=st7121.json", "m5stack_tab5x+lcd=st7123.json"],
+    m5stampp4xhub: ["m5stampp4xhub+lcd=st7121.json", "m5stampp4xhub+lcd=st7123.json"],
+    m5stopwatch: ["m5stopwatch+touch=cst816s.json", "m5stopwatch+touch=cst9217.json"],
+    m5tough: ["m5tough+lcd=ili9342c.json", "m5tough+lcd=ili9342e.json"],
+  };
+  assertCatalogIds(Object.keys(expected));
+  for (const source of catalogBoards) {
+    const filenames = resolveCatalog(source).map((output) => output.filename).sort();
+    if (Object.hasOwn(expected, source.id)) assert.deepEqual(filenames, expected[source.id], `${source.id}: review changes to its recorded revision/runtime filename set`);
+    else assert.equal(filenames.length, 1, `${source.id}: add a handwritten filename set here when adding a board with revision/runtime choices; ordinary boards must expand exactly once`);
+  }
+});
+
+test("all catalog revision and runtime combinations validate in memory", () => {
   const outputs = catalogBoards.flatMap(resolveCatalog);
-  assert.equal(outputs.length, 91);
-  assert.equal(new Set(outputs.map((output) => output.filename)).size, 91);
+  assert.equal(new Set(outputs.map((output) => output.filename)).size, outputs.length);
   for (const output of outputs) {
     const issues = validateBoard(output.board, {
       ...context, chip: chips[output.board.chip], resolved: true,
@@ -702,8 +845,9 @@ test("resolve --out writes only the requested directory and rejects incomplete o
   }
 });
 
-test("standalone editor bundle embeds the catalog and valid scripts", async () => {
+test("standalone editor bundle can be generated in memory with catalog and valid scripts", async () => {
   const html = await renderBundle();
+  assert.equal(typeof html, "string");
   assert.equal(html.includes("<!-- @inline"), false);
   for (const id of ["board-spec-schema", "board-spec-chips", "board-spec-connector-types", "board-spec-parts", "board-spec-accessories", "board-spec-targets", "board-spec-boards"]) {
     const match = new RegExp(`<script type="application/json" id="${id}">(.*?)</script>`, "s").exec(html);
@@ -852,7 +996,22 @@ test("shared SD SPI modes and pin-table values stay stable", () => {
     m5tough: { sd_mmc_clk: 18, sd_mmc_cmd: 23, sd_mmc_d0: 38, sd_mmc_d3: 4 },
     m5toughc5: { sd_mmc_clk: 9, sd_mmc_cmd: 7, sd_mmc_d0: 8, sd_mmc_d3: 10 },
   };
+  assertCatalogIds(Object.keys(expected));
+  for (const id of Object.keys(expected)) assert.ok(catalogBoards.find((item) => item.id === id).devices.sd, `${id}.sd`);
   for (const source of catalogBoards.filter((item) => item.devices.sd)) {
+    for (const { board: resolved } of resolveCatalog(source)) {
+      const device = resolved.devices.sd;
+      assert.equal(device.kind, "sd", source.id);
+      assert.ok(resolved.buses[device.bus], source.id);
+      assertDeviceEndpoints(resolved, device, `${source.id}.sd`);
+      assert.ok(Array.isArray(device.derived.modes), source.id);
+      for (const mode of device.derived.modes) assert.ok(["spi", "sdio1", "sdio4"].includes(mode), source.id);
+      if (device.derived.modes.includes("spi")) {
+        assert.equal(device.derived.bus, device.bus, source.id);
+        assert.equal(device.derived.cs, device.signals.d3, source.id);
+      }
+    }
+    if (!Object.hasOwn(expected, source.id)) continue;
     const actual = Object.fromEntries(Object.entries(pintableAssignments(source)).filter(([name]) => name.startsWith("sd_mmc_")));
     assert.deepEqual(actual, expected[source.id], source.id);
     for (const output of resolveCatalog(source)) {
@@ -942,14 +1101,15 @@ test("AtomS3 runtime panels resolve to both probed display parts", () => {
 
 test("M5Unified live pin tables match generated values", async (t) => {
   const compiler = process.env.CXX || "c++";
-  const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") return t.skip(`C++ compiler not found (${compiler})`);
+  if (!compilerAvailable(t)) return;
   const m5unified = process.env.M5UNIFIED_PATH || path.resolve(root, "../../../M5Unified");
   try { await fs.access(path.join(m5unified, "src/M5Unified.inl")); }
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
   const compared = spawnSync(process.execPath, ["cli/spec.js", "compare-pintable", "--m5unified", m5unified], { cwd: root, encoding: "utf8" });
   assert.equal(compared.status, 0, compared.stderr || compared.stdout);
-  assert.match(compared.stdout, /comparison passed: 56 board\(s\), 2800 value\(s\), 4 target\(s\)/);
+  const targetSocs = new Set(Object.values(PIN_TABLE_TARGETS).map((item) => item.soc));
+  const count = catalogBoards.filter((item) => targetSocs.has(chips[item.chip].soc)).length;
+  assert.ok(compared.stdout.includes(`comparison passed: ${count} board(s), ${count * PIN_NAMES.length} value(s), ${Object.keys(PIN_TABLE_TARGETS).length} target(s)`), compared.stdout);
 });
 
 test("M5GFX wiring emitter maps every board-description GPIO", () => {
@@ -1468,7 +1628,7 @@ test("variant validation reports wiring assignment failures as diagnostics", () 
 });
 
 test("M5GFX wiring catalog requires every mapped board exactly once", () => {
-  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id))).filter(Boolean);
+  const mappings = catalogBoards.map((board) => m5gfxBoardMapping(target, board)).filter(Boolean);
   assert.throws(() => selectM5GFXWiringBoards(catalogBoards.filter((item) => item.id !== "m5paper"), mappings), /m5paper.*found 0/);
   const paper = catalogBoards.find((item) => item.id === "m5paper");
   assert.throws(() => selectM5GFXWiringBoards([...catalogBoards, clone(paper)], mappings), /m5paper.*found 2/);
@@ -1508,7 +1668,7 @@ test("M5GFX generated I2C host is an integer in the supported range", () => {
 });
 
 test("M5GFX generated namespaces contain only fields consumed by their descriptor", () => {
-  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id))).filter(Boolean);
+  const mappings = catalogBoards.map((board) => m5gfxBoardMapping(target, board)).filter(Boolean);
   const entries = selectM5GFXWiringBoards(catalogBoards, mappings).map((source) => ({
     board: source,
     chip: chips[source.chip],
@@ -1562,8 +1722,7 @@ test("ESP32-S3 detector filters hinted and OPI-conflicting candidates per model"
 
 test("generated wiring header links from two translation units", async (t) => {
   const compiler = process.env.CXX || "c++";
-  const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") return t.skip(`C++ compiler not found (${compiler})`);
+  if (!compilerAvailable(t)) return;
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-wiring-odr-"));
   const include = 'enum { SPI2_HOST = 1, SPI3_HOST = 2 };\n#include "src/board_detect/m5/generated/esp32_d0wdq6_board_data.hpp"\n';
   try {
@@ -1874,16 +2033,16 @@ test("release probe target requires exactly eight valid ESP32-S3 GPIO pins", () 
 
 test("target output filenames cannot collide across output kinds", () => {
   const withinBoard = clone(target);
-  withinBoard.boards.m5atoms3.specs_output = withinBoard.boards.m5atoms3.wiring_output;
+  withinBoard.boards.m5atoms3.specs_output = resolveTargetBoard(catalogBoards.find((item) => item.id === "m5atoms3"), withinBoard).wiring_output;
   assert.ok(validateTarget(catalogBoards.find((item) => item.id === "m5atoms3"), withinBoard)
     .some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 
   const acrossBoards = clone(target);
-  acrossBoards.boards.m5dial.specs_output = acrossBoards.boards.m5station.wiring_output;
+  acrossBoards.boards.m5dial.specs_output = resolveTargetBoard(catalogBoards.find((item) => item.id === "m5station"), acrossBoards).wiring_output;
   assert.ok(validateTargets(catalogBoards, acrossBoards).some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 
   const acrossChips = clone(target);
-  acrossChips.boards.m5atoms3.wiring_output = acrossChips.boards.m5station.wiring_output;
+  acrossChips.boards.m5atoms3.wiring_output = resolveTargetBoard(catalogBoards.find((item) => item.id === "m5station"), acrossChips).wiring_output;
   assert.ok(validateTargets(catalogBoards, acrossChips).some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 });
 
@@ -2479,27 +2638,27 @@ test("detect classes include only explicit pins and retain 64-bit GPIO masks", (
   assert.doesNotMatch(renderM5GFXWiringHeader([{ board: source, chip: chips[source.chip], emitted: without }]), /detect_class_/);
 });
 
-test("detect classes reject pins without internal pulls in board and choices", () => {
+test("detect classes require internal pulls and board-wide placement", () => {
   const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
   const noPullChip = { ...chipS3, no_internal_pull: [2] };
   const validate = () => validateBoard(source, { ...context, chip: noPullChip });
   assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_NO_PULL" && issue.path === "/pins/2/detect_class"));
   delete source.pins["2"].detect_class;
   source.devices.epd.choices.gdew0154d67.soc_pins = { "2": { roles: ["dev:epd.rst"], detect_class: "fixed" } };
-  assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_NO_PULL" && issue.path === "/devices/epd/choices/gdew0154d67/soc_pins/2/detect_class"));
-  const valid = validateBoard(source, { ...context, chip: chipS3 });
-  assert.equal(valid.some((issue) => issue.id === "E_SCHEMA" || issue.id === "E_DETECT_CLASS_NO_PULL"), false);
+  assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_CHOICE" && issue.path === "/devices/epd/choices/gdew0154d67/soc_pins/2/detect_class"));
+  const withPulls = validateBoard(source, { ...context, chip: chipS3 });
+  assert.equal(withPulls.some((issue) => issue.id === "E_SCHEMA" || issue.id === "E_DETECT_CLASS_NO_PULL"), false);
   source.devices.epd.choices.gdew0154d67.soc_pins["2"].detect_class = "X";
   assert.ok(validateBoard(source, { ...context, chip: chipS3 }).some((issue) => issue.path.endsWith("/detect_class")));
 });
 
-test("choice detect_class does not become a board-wide exclusion gate", () => {
+test("choice detect_class is rejected before board-wide generation", () => {
   const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
   delete source.pins["2"].detect_class;
   source.devices.epd.choices.gdew0154d67.soc_pins = { "2": { roles: ["dev:epd.rst"], detect_class: "fixed" } };
-  const emitted = emitM5GFXWiring(resolveCatalog(source)[0].board, parts, target);
-  const header = renderM5GFXWiringHeader([{ board: source, chip: chipS3, emitted }]);
-  assert.doesNotMatch(header, /detect_class_/);
+  const issue = validateBoard(source, { ...context, chip: chipS3 }).find((issue) => issue.id === "E_DETECT_CLASS_CHOICE");
+  assert.ok(issue);
+  assert.match(issue.message, /top-level pins/);
 });
 
 test("detect-only pins participate in capture, reservations and conditional touch flags", () => {
@@ -2941,10 +3100,12 @@ test("descriptor fixtures agree with target internal-I2C metadata", async () => 
       }
     }
   }
-  for (const [name, mapping] of Object.entries(target.boards)) {
+  for (const board of catalogBoards) {
+    const name = board.id;
+    const mapping = resolveTargetBoard(board, target);
     if (!mapping.wiring_output) continue;
-    const id = catalogBoards.find((board) => board.id === name).legacy_board_id;
-    assert.ok(observed.has(id), `${name} descriptor fixture`);
+    const id = board.legacy_board_id;
+    assert.ok(observed.has(id), `${name} descriptor fixture missing. For a new board, follow extras/board_spec/README.md (Adding a board, step 5): from the repository root run M5GFX_UPDATE_SNAPSHOTS=1 sh test/board_detect/run.sh, then review git diff -- test/board_detect/fixtures.`);
     assert.equal(observed.get(id), mapping.desc_internal_i2c ?? false, name);
   }
 });

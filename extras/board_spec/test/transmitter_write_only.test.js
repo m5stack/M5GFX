@@ -3,11 +3,12 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { body, compileRun } from "./detect_host_helpers.js";
+import { body, compilerAvailable, compileRun } from "./detect_host_helpers.js";
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../src");
 const readPanel = () => fs.readFile(path.join(src, "lgfx/v1/panel/Panel_M5HDMI.cpp"), "utf8");
 
-test("write-only init propagates transfer failures from reset and init without truncating writes", async () => {
+test("write-only init propagates transfer failures from reset and init without truncating writes", async (t) => {
+  if (!compilerAvailable(t)) return;
   const source = await readPanel();
   const method = (name) => body(source, `Panel_M5HDMI::HDMI_Trans::${name}(`);
   await compileRun(`
@@ -68,7 +69,8 @@ int main() {
 `, "transmitter transfer failures");
 });
 
-test("connection check reads IDCODE without programming or status retries", async () => {
+test("connection check reads IDCODE without programming or status retries", async (t) => {
+  if (!compilerAvailable(t)) return;
   const source = await readPanel();
   const method = (name) => body(source, `Panel_M5HDMI::LOAD_FPGA::${name}(`);
   await compileRun(`

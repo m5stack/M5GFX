@@ -1,8 +1,8 @@
-import { targetCppNamespace } from "../targets.js";
+import { resolveTargetBoard, targetCppNamespace } from "../targets.js";
 
 export function m5gfxBoardMapping(target, board) {
   const boardId = board.id;
-  const source = target.boards?.[boardId];
+  const source = resolveTargetBoard(board, target);
   if (!source?.wiring_output) return null;
   return {
     boardId,
@@ -258,7 +258,7 @@ export function renderM5GFXWiringHeader(entries, preamble = true) {
   const partitioned = partitionDetectionPins(entries, chip);
   const lines = preamble ? [
     "// Generated from extras/board_spec; do not edit by hand.",
-    "// Regenerate in extras/board_spec: node cli/spec.js emit-wiring",
+    "// Regenerate in extras/board_spec: npm run generate",
     "// Unspecified values use target-specific unknown or sentinel values.",
     "// Precedence: board value > part default > panel-class default.",
     "#pragma once",

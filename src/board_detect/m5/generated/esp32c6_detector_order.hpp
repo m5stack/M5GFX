@@ -1,5 +1,5 @@
 // Generated from extras/board_spec; do not edit by hand.
-// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
+// Regenerate in extras/board_spec: npm run generate
 #pragma once
 
 static const board_detector_t* const esp32c6_detectors_qfn40[] = {

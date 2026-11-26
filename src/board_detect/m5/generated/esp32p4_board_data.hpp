@@ -1,5 +1,5 @@
 // Generated from extras/board_spec; do not edit by hand.
-// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
+// Regenerate in extras/board_spec: npm run generate
 // Unspecified values use target-specific unknown or sentinel values.
 // Precedence: board value > part default > panel-class default.
 #pragma once
@@ -15,14 +15,6 @@ namespace corep4x {
   constexpr std::int8_t internal_i2c_scl = 9;
   constexpr std::int8_t internal_i2c_port = 1;
 } // namespace corep4x
-
-namespace unitpoep4 {
-  constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
-} // namespace unitpoep4
-
-namespace unitpoep4x {
-  constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
-} // namespace unitpoep4x
 
 namespace stampp4xhub {
   constexpr std::int8_t internal_i2c_sda = 0;
@@ -47,6 +39,14 @@ namespace tab5x {
   constexpr std::int8_t internal_i2c_port = 1;
   constexpr std::int8_t touch_int = 23;
 } // namespace tab5x
+
+namespace unitpoep4 {
+  constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
+} // namespace unitpoep4
+
+namespace unitpoep4x {
+  constexpr detect_class_expected_t detect_class_expected = { 0x10000180000000ULL, 0x10000080000000ULL, 0x0ULL, 0x100000000ULL, 0x0ULL };
+} // namespace unitpoep4x
 
 namespace detection {
   constexpr std::int8_t unconditional_pins[] = { 0, 1, 2, 3, 9, 11, 22, 23, 31, 32, 52 };

@@ -3,14 +3,15 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { body, compileRun } from "./detect_host_helpers.js";
+import { body, compilerAvailable, compileRun } from "./detect_host_helpers.js";
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../src");
 // Public-API tests use the original fixtures.
 async function readMain() {
   return (await Promise.all(["M5GFX.cpp", "board_detect/detection_package.inl", "board_detect/detection_integration.inl"].map((name) => fs.readFile(path.join(src, name), "utf8")))).join("\n");
 }
 
-test("fixed acceptance bypasses NVS and detection and retries clean startup after failure", async () => {
+test("fixed acceptance bypasses NVS and detection and retries clean startup after failure", async (t) => {
+  if (!compilerAvailable(t)) return;
   const main = await readMain();
   const registry = await fs.readFile(path.join(src, "board_detect/m5/board_registry.inl"), "utf8");
   const fixed = body(main, "static board_detect::detect_outcome_t run_fixed_startup(");
@@ -178,6 +179,7 @@ int main() {
 });
 
 test("M5Unified BOARD_ID guard accepts positive values without M5GFX_BOARD and fixed selection wins", async (t) => {
+  if (!compilerAvailable(t)) return;
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
  let header;try{header=await fs.readFile(path.join(unified,"src/M5Unified.hpp"),"utf8");}catch{return t.skip("M5Unified checkout absent");}
  const guard=[...header.matchAll(/#if defined \(BOARD_ID\) && \(\(BOARD_ID \+ 0\) > 0\)[\s\S]*?#endif/g)].map(m=>m[0]).find(s=>s.includes("detect_config.fixed_board"));
@@ -225,6 +227,7 @@ int main(){for(int fixed=0;fixed<2;++fixed)for(int adopted=0;adopted<2;++adopted
 });
 
 test("fixed GPIO46 pre-hold follows the existing power pin table", async (t) => {
+  if (!compilerAvailable(t)) return;
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
  let header, impl;
  try {

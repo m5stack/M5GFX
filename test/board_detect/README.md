@@ -113,6 +113,9 @@ git diff -- test/board_detect/fixtures
 sh test/board_detect/run.sh
 ```
 
+For the complete catalog and descriptor contribution workflow, see
+[Adding a board](../../extras/board_spec/README.md#adding-a-board).
+
 The runner rejects snapshot updates whenever `CI` is nonempty, including when
 the update variable is set to an empty value.
 

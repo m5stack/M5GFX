@@ -399,7 +399,14 @@ export function validateBoard(board, { schema, chip, connectorTypes = {}, parts 
   checkDetectClasses(board.pins, "/pins");
   for (const [id, device] of Object.entries(board.devices ?? {})) {
     for (const [index, choice] of Object.entries(device.choices ?? {})) {
-      checkDetectClasses(choice.soc_pins, `/devices/${id}/choices/${index}/soc_pins`);
+      // Detection headers consume only board-wide pins, not resolved choices;
+      // reject annotations that generation would otherwise silently omit.
+      for (const [gpio, pin] of Object.entries(choice.soc_pins ?? {})) {
+        if (pin.detect_class !== undefined) {
+          errors.push(error("E_DETECT_CLASS_CHOICE", `/devices/${id}/choices/${index}/soc_pins/${gpio}/detect_class`,
+            "declare detect_class in the board's top-level pins, not in a device choice"));
+        }
+      }
     }
   }
 

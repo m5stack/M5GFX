@@ -3,10 +3,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { body, compileRun } from "./detect_host_helpers.js";
+import { body, compilerAvailable, compileRun } from "./detect_host_helpers.js";
 const src=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../../src");
 
-test("Unified defaults preserve build selections and supported package defaults only", async(t)=>{
+test("Unified defaults preserve build selections and supported package defaults only", async (t) => {
+  if (!compilerAvailable(t)) return;
  const unified=process.env.M5UNIFIED_PATH||path.resolve(src,"../../M5Unified");
  let impl;
  try { impl=await fs.readFile(path.join(unified,"src/M5Unified.inl"),"utf8"); }

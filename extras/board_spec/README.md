@@ -7,14 +7,61 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 - `accessories/`: bases, bottoms and modules that attach to a board (see "Accessories")
 - `connector_types/`: physical and logical connector layouts (see "Connector types")
 - `schema/`: JSON schemas for boards, accessories, connector types and `detector_order.json`
-- `targets.json`: generator-specific option-bit to board-choice mappings
+- `targets.json`: C++ descriptor/panel output fields, probe pins, option mappings and overrides
 - `detector_order.json`: which catalog boards each package's detector families cover
 - `lib/`, `cli/`: browser-safe model logic and the Node command wrapper
 - `generated/docs/`: revision and composition tables rendered from the catalog
 - `generated/m5unified_pin_table/`: the M5Unified external pin tables, per SoC
 - `editor/`, `build/`: editor sources and the dependency-free bundler
-- `dist/board_spec_editor.html`: standalone editor; open it directly with `file://`
+- `dist/`: locally generated optional editor (ignored by git)
 - `test/`: Node tests and the C++ host tests that compile the generated detection data
+
+## Adding a board
+
+Choose the selection path before changing the detection code:
+
+| Selection path | What to implement |
+|---|---|
+| BOARD_ID / fixed board only, without automatic detection | Add a `board_desc_t` (`desc_*`) and an entry in `<chip>_boards[]` in `src/board_detect/m5/<chip>.inl`. M5Unified passes `BOARD_ID` as `fixed_board`; standalone M5GFX uses `setDetectConfig` with `fixed_board`. |
+| A variant handled by an existing detector | Add the descriptor/table entry above, then add the board to both the family's `boards` in `detector_order.json` and the detector's C++ `members_` list. |
+| A new detector | Add the descriptor/table entry, implement its detector and C++ `members_`, and declare the family, boards and ordering constraints in `detector_order.json`. |
+
+1. Obtain a BID from [m5stack-board-id](https://github.com/m5stack/m5stack-board-id/blob/main/board.csv).
+   Add it to `src/lgfx/boards.hpp`; keep all existing IDs unchanged.
+2. Copy the closest `boards/<id>.json`. Set its `id`, `name`, `official_name`,
+   `legacy_board_id` and `chip`, then describe the actual wiring and devices.
+   Remove or recheck copied `official_name_verified`, `spec.links`, `measured_by`,
+   `detect_class` and any other claims not verified on this board. Omit
+   `official_name_verified` until the product name has been checked.
+3. Configure the C++ output in `targets.json` when needed. If the C++ descriptor
+   reads display or detection pins through generated `wiring::<namespace>::*`
+   constants, declare the consumed `wiring_fields`. When adding a panel constructor,
+   also request `specs_output`. Copy the closest existing board's target entry,
+   adjust the differences, and omit values that match the defaults (see the field
+   table below). Display boards normally need this metadata; a board needing no
+   output fields or overrides can omit it. Implement the C++ entries and any
+   detector changes from the selection table above. `wiring_output` selects the
+   combined output file (`<chip>_wiring.hpp` becomes `<chip>_board_data.hpp`).
+   `specs_output` enables specifications in that file; its value is used only
+   for output-name collision checks.
+4. In `extras/board_spec`, run `npm run generate`, then `npm run verify`.
+   These format all boards, regenerate docs/wiring/pin tables, check freshness,
+   and run Node and C++ host tests. A missing C++ compiler is reported as skipped;
+   run the host tests with a compiler before submitting. CI always requires a
+   compiler, and an explicit `CXX` that cannot be found is an error locally too.
+5. If a descriptor snapshot differs, inspect the first mismatching line. Only
+   when the diff contains the intended new board's rows, update it from the
+   repository root with `M5GFX_UPDATE_SNAPSHOTS=1 sh test/board_detect/run.sh`.
+   Review `git diff -- test/board_detect/fixtures`, then rerun `npm run verify`
+   in `extras/board_spec`. Do not update fixtures to hide unrelated changes.
+6. Commit the JSON together with generated docs, M5GFX headers, M5Unified pin
+   tables and any reviewed descriptor fixtures. Do not commit resolved exports.
+7. For `esp32`, `esp32s3`, `esp32c5` and `esp32p4`, include the new row from
+   `generated/m5unified_pin_table/<soc>.inl` in the companion M5Unified PR.
+   Other chips do not have a generated M5Unified pin table. Record hardware
+   checks and differences from the closest existing board in the PR description.
+
+## Commands
 
 ```sh
 node cli/spec.js validate boards/m5stack_core2.json      # schema and catalog rules (all boards when no file is given)
@@ -25,19 +72,22 @@ node cli/spec.js emit-docs                              # generated/docs/ (all b
 node cli/spec.js emit-wiring                             # src/board_detect/m5/generated/ (detection wiring, specs, detector order)
 node cli/spec.js emit-pintable                           # generated/m5unified_pin_table/<soc>.{json,inl}
 node cli/spec.js compare-pintable --m5unified <path>     # compile the generated tables against M5Unified's src/M5Unified.inl
-node build/bundle.js                                     # dist/board_spec_editor.html
-node cli/spec.js check                                   # everything below; CI runs this
+npm run editor                                           # optional editor in dist/ (do not commit)
+npm run generate                                         # format boards and regenerate docs, wiring and pin tables
+npm run verify                                           # check, Node tests, and C++ host tests
+node cli/spec.js check                                   # validate and check generated output freshness
 npm test                                                 # test/*.test.js (the C++ host tests are skipped without a compiler)
 ```
 
 `check` validates the connector types, parts, accessories and every board, requires
 every board file to be in canonical format, and fails when any generated output
-(docs, pin tables, detection wiring, the editor bundle) is missing, stale or
+(docs, pin tables, detection wiring) is missing, stale or
 unexpected. Every revision/runtime combination is expanded and validated in
 memory; resolved exports are not build inputs or freshness-check fixtures.
-After editing a board, run `emit-docs`, `emit-wiring`, `emit-pintable` and
-`build/bundle.js`, then `check` and `npm test`, and commit those generated files
-with the source. Do not commit resolved exports.
+`npm run generate` also removes obsolete `.md` files from `generated/docs/`
+and `.hpp` files from `src/board_detect/m5/generated/`. Other directories and
+file extensions are left alone.
+For the contribution workflow, see [Adding a board](#adding-a-board).
 
 Inspect resolved boards with `resolve` (one JSON array of `{combination, board}`
 entries on stdout), or select a revision in the editor's read-only view.
@@ -57,6 +107,46 @@ An absent flag means that the spelling has not been verified.
 SD wiring uses card terminal names (`clk`, `cmd`, `d0` through `d3`). The
 `sd_slot` part defines their SPI aliases, and resolved boards report usable
 `spi`, `sdio1`, and `sdio4` modes in `devices.sd.derived`.
+
+M5GFX target metadata in `targets.json` selects the catalog fields consumed by
+C++ descriptors and panel constructors, plus target-specific overrides. Display
+boards normally need `wiring_fields` and, for a new panel constructor,
+`specs_output`. Copy the closest existing target entry and adjust its differences.
+If a descriptor reads display or detection pins through `wiring::<namespace>::*`,
+request the corresponding fields below; declaring a display device in the catalog
+alone does not select them. A constructor other than `construct_displayless` must
+declare nonempty `wiring_fields` even if `detect_class` already infers a wiring
+output, except for the explicitly documented legacy no-panel constructor.
+
+| `wiring_fields` value | Generated constants |
+|---|---|
+| `display` | `display_*` bus and control pins (including parallel EPD signals) |
+| `shared_sd` | `shared_sd_*` pins when the SD card shares the display's SPI bus |
+| `i2c` | `internal_i2c_sda`, `internal_i2c_scl`, `internal_i2c_port` |
+| `power` | `power_gpio` for GPIO power hold |
+| `backlight` | `backlight_gpio` for PWM backlight control |
+| `touch` | `touch_int` |
+| `camera` | `camera_*` signal pins |
+| `hold` | `hold[]` containing display and shared-SD chip-select pins |
+
+Other controls include `reset: "display_rst"` for `reset_gpio`, and `probe_pins`
+for pads touched by detection but not covered by an emitted field. Set
+`desc_internal_i2c: true` alongside the `i2c` field when the C++ descriptor uses
+that internal I2C bus. Review every copied field against the new descriptor.
+
+Omit a board entry only when it needs no output fields or overrides. Empty
+entries, unknown keys and explicit default values are rejected. Missing
+`wiring_fields`, `probe_pins`, `options` and `identity_devices` mean empty lists,
+and `desc_internal_i2c` defaults to false. If a board has `probe_pins`,
+`detect_class` or nonempty `wiring_fields`, its default `wiring_output` is
+`<chip>_wiring.hpp`; do not repeat that filename. A board without those facts can
+still explicitly request wiring output. `wiring_output` determines the combined
+output filename by replacing the trailing `_wiring.hpp` with `_board_data.hpp`.
+`specs_output` enables specification emission into that same file, rather than
+selecting another output file. It requires a wiring output (normally inferred
+from `wiring_fields`); its value, for example `<chip>_specs.hpp`, is used only for
+output-name collision checks. Generated declarations follow the entry order in
+`targets.json`; boards without an entry follow in catalog ID order.
 
 M5GFX target metadata derives `chip` and `legacy_board_id` from the board
 catalog and `board_enum` as `board_<name>`. Descriptor names remain a handwritten
@@ -183,8 +273,11 @@ data lines share the flash-only pads represented by the chip's reserved GPIOs.
 
 ## Editor
 
-`dist/board_spec_editor.html` is a single file with all catalog boards, parts,
-chip data, connector types and accessories bundled in; open it with `file://`.
+The editor is an optional viewing tool under development. Run `npm run editor`
+to generate `dist/board_spec_editor.html` locally, then open it with `file://`.
+Do not commit `dist/`; it is not part of contribution generation or freshness
+checks. The single file embeds all catalog boards, parts, chip data, connector
+types and accessories.
 The left navigation lists the catalog pages of the selected board (board, GPIO,
 connectors, one page per connector, owners, revisions) and a validation page with
 the current error count. A connector page shows the connector as a table in its
@@ -193,10 +286,14 @@ undone. The editor can also open or accept dragged
 board JSON files, keeps best-effort drafts in `localStorage`, and exports
 canonical formatted JSON. Selecting a revision shows the resolved board read-only;
 clear the revision selection to resume editing the base board. Exporting does not
-touch the repository: replace `boards/<id>.json`, run `node cli/spec.js check`,
-then review and commit.
+touch the repository: replace `boards/<id>.json`, run `npm run generate`, then
+`npm run verify`, review the diff and commit.
 
 ## Pin detection classes (`detect_class`)
+
+`detect_class` must be declared in the board's top-level `pins`, not inside
+`devices.<id>.choices.<choice>.soc_pins`. Generation reads the board-wide pin
+classes, so choice-specific detection annotations are rejected.
 
 `detect_class` on a GPIO entry states how that pin reads when detection samples it
 with the internal pulls. A detector checks it in its signature, so the candidate's own

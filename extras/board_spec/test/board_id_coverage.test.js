@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { resolveTargetBoard } from "../lib/targets.js";
 import { fileURLToPath } from "node:url";
 
 // Every lgfx::board_t value must have a catalog entry (boards/*.json legacy_board_id)
@@ -30,6 +31,12 @@ const NOT_COVERED = new Map([
 // add what they lack once released.
 const PRE_RELEASE = new Map([
   [156, { lacks: ["definition"], reason: "M5StampP4X: no board definition in M5GFX yet" }],
+]);
+
+// Custom constructors normally require catalog-derived wiring. Keep the legacy
+// no-panel constructor explicit rather than inferring intent from display data.
+const NO_WIRING_OUTPUT = new Map([
+  ["m5atom_psram", "construct_atompsram returns no_display, creates no panel and consumes no generated wiring"],
 ]);
 
 // Remove comments and string / character literals so that only code is matched.
@@ -79,9 +86,13 @@ test("every board_t value has a catalog entry and a board definition", async (t)
 
   // board id -> chips the catalog gives for it
   const catalog = new Map();
+  const boardById = new Map();
+  const target = JSON.parse(await fs.readFile(path.join(specRoot, "targets.json"), "utf8")).m5gfx_board_desc;
   const boardDir = path.join(specRoot, "boards");
   for (const f of (await fs.readdir(boardDir)).filter((f) => f.endsWith(".json"))) {
-    const { legacy_board_id: id, chip } = JSON.parse(await fs.readFile(path.join(boardDir, f), "utf8"));
+    const board = JSON.parse(await fs.readFile(path.join(boardDir, f), "utf8"));
+    const { legacy_board_id: id, chip } = board;
+    boardById.set(id, board);
     if (id === undefined) continue;
     assert.ok(typeof chip === "string", `${f}: no chip`);
     if (!catalog.has(id)) catalog.set(id, new Set());
@@ -101,13 +112,26 @@ test("every board_t value has a catalog entry and a board definition", async (t)
   }
   const tables = [...detect.matchAll(/\bboard_entry_t\s+(\w+)_boards\s*\[\s*\]\s*=\s*\{([\s\S]*?)\n\s*\}\s*;/g)];
   assert.ok(tables.length > 0, "no board_entry_t tables found");
+  const missingWiring = new Set();
+  const usedWiringExceptions = new Set();
   for (const table of tables) {
-    for (const m of table[2].matchAll(/\{\s*&\s*(\w+)\s*,/g)) {
+    for (const m of table[2].matchAll(/\{\s*&\s*(\w+)\s*,\s*([A-Za-z_][\w:]*)\s*,/g)) {
       assert.ok(descId.has(m[1]), `cannot find the board id of ${m[1]}`);
       const id = descId.get(m[1]);
       if (!detected.has(id)) detected.set(id, new Set());
       detected.get(id).add(table[1]);
+      const board = boardById.get(id);
+      const constructor = m[2].split("::").at(-1);
+      if (board && constructor !== "construct_displayless" && !(resolveTargetBoard(board, target).wiring_fields?.length > 0)) {
+        if (NO_WIRING_OUTPUT.has(board.id)) usedWiringExceptions.add(board.id);
+        else missingWiring.add(`${board.id}: ${constructor} requires nonempty wiring_fields in targets.json describing the C++ descriptor reads; inferred wiring output alone is insufficient (see README.md, Adding a board)`);
+      }
     }
+  }
+
+  assert.deepEqual([...missingWiring], [], "display constructors need nonempty wiring_fields describing the C++ descriptor reads");
+  for (const [id, reason] of NO_WIRING_OUTPUT) {
+    assert.ok(usedWiringExceptions.has(id), `${id}: remove the stale NO_WIRING_OUTPUT exception (${reason})`);
   }
 
   const missing = [];
@@ -137,7 +161,7 @@ test("every board_t value has a catalog entry and a board definition", async (t)
   }
   for (const [value, { reason }] of PRE_RELEASE) t.diagnostic(`pre-release ${value}: ${reason}`);
 
-  assert.deepEqual(missing, [], "add the catalog entry / board definition, or list the board with what it lacks and a reason");
+  assert.deepEqual(missing, [], "Missing catalog: add boards/<id>.json. Missing definition: add desc_* and an entry in <chip>_boards[] in src/board_detect/m5/<chip>.inl. Unreleased: list what it lacks and a reason in PRE_RELEASE in test/board_id_coverage.test.js. See extras/board_spec/README.md, Adding a board.");
   assert.deepEqual(stale, [], "update the exclusion lists to match");
-  assert.deepEqual(wrongChip, [], "define the board in the table of its catalog chip");
+  assert.deepEqual(wrongChip, [], "define desc_* in src/board_detect/m5/<chip>.inl and list it in <chip>_boards[] for its catalog chip; see extras/board_spec/README.md, Adding a board");
 });

@@ -7,6 +7,7 @@ namespace lgfx // This should not be changed to "m5gfx"
   { // Board IDs are canonically assigned in the m5stack-board-id repository.
     // https://github.com/m5stack/m5stack-board-id/blob/main/board.csv
     // When adding a new board, obtain its BID there first; never renumber existing entries.
+    // Then add its catalog entry and board descriptor: see extras/board_spec/README.md ("Adding a board").
     enum board_t
     { board_unknown = 0
     , board_M5Stack = 1
