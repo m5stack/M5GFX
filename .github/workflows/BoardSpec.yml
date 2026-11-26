@@ -6,17 +6,21 @@ on:
     paths:
       - 'extras/board_spec/**'
       - 'test/board_detect/fixtures/**'
+      - 'test/board_detect/generated/**'
       - 'src/board_detect/**'
       - 'src/M5GFX.cpp'
       - 'src/M5GFX.h'
+      - 'src/lgfx/boards.hpp'
       - '.github/workflows/BoardSpec.yml'
   pull_request:
     paths:
       - 'extras/board_spec/**'
       - 'test/board_detect/fixtures/**'
+      - 'test/board_detect/generated/**'
       - 'src/board_detect/**'
       - 'src/M5GFX.cpp'
       - 'src/M5GFX.h'
+      - 'src/lgfx/boards.hpp'
       - '.github/workflows/BoardSpec.yml'
   workflow_dispatch:
 
@@ -39,5 +43,6 @@ jobs:
         run: npm test
 
       - name: Check catalog and generated sources
+        if: success() || failure()
         working-directory: extras/board_spec
         run: node cli/spec.js check

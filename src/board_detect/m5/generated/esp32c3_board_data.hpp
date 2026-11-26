@@ -1,5 +1,5 @@
 // Generated from extras/board_spec; do not edit by hand.
-// Regenerate in extras/board_spec: node cli/spec.js emit-wiring
+// Regenerate in extras/board_spec: npm run generate
 // Unspecified values use target-specific unknown or sentinel values.
 // Precedence: board value > part default > panel-class default.
 #pragma once

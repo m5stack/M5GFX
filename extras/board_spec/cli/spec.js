@@ -177,11 +177,13 @@ async function writePinTableOutputs() {
   console.log(`generated M5Unified pin tables for ${count} board(s) across ${Object.keys(PIN_TABLE_TARGETS).length} target(s)`);
 }
 
-async function assertGeneratedFile(filename, expected) {
+const regenerateHint = 'Run "npm run generate" in extras/board_spec, then "npm run verify".';
+
+async function assertGeneratedFile(filename, expected, failures) {
   let actual;
   try { actual = await fs.readFile(filename, "utf8"); }
-  catch { throw new Error(`missing generated artifact: ${path.relative(root, filename)}`); }
-  if (actual !== expected) throw new Error(`stale generated artifact: ${path.relative(root, filename)}`);
+  catch { failures.push(`missing generated artifact: ${path.relative(root, filename)}`); return; }
+  if (actual !== expected) failures.push(`stale generated artifact: ${path.relative(root, filename)}`);
 }
 
 function wiringEntries(boards, connectorTypes, contexts, mappings, target) {
@@ -231,7 +233,7 @@ function specsEntries(boards, connectorTypes, contexts, mappings) {
   });
 }
 
-async function writeWiringOutput() {
+async function writeWiringOutput(clean = false) {
   const schema = await loadSchema();
   const connectorTypes = await loadConnectorTypes();
   const parts = await loadParts();
@@ -244,12 +246,14 @@ async function writeWiringOutput() {
   await validateGenerationInputs(boards, contexts, connectorTypes, parts, targets, accessories);
   const directory = path.resolve(root, "../../src/board_detect/m5/generated");
   await fs.mkdir(directory, { recursive: true });
-  for (const [filename, output] of await boardDataOutputs(boards, connectorTypes, contexts, targets)) {
+  const outputs = new Map([
+    ...await boardDataOutputs(boards, connectorTypes, contexts, targets),
+    ...renderDetectorOrderHeaders(boards, detectorOrder),
+  ]);
+  for (const [filename, output] of outputs) {
     await fs.writeFile(safeOutputPath(directory, filename), output);
   }
-  for (const [filename, output] of renderDetectorOrderHeaders(boards, detectorOrder)) {
-    await fs.writeFile(safeOutputPath(directory, filename), output);
-  }
+  if (clean) await removeUnexpectedGeneratedFiles(directory, ".hpp", new Set(outputs.keys()));
   const hostDirectory = path.resolve(root, "../../test/board_detect/generated");
   await fs.mkdir(hostDirectory, { recursive: true });
   await fs.writeFile(path.join(hostDirectory, "detector_probe_pins.hpp"),
@@ -327,19 +331,34 @@ async function resolveFile(filename, outputDir) {
   console.log(`resolved ${outputs.length} combination(s)`);
 }
 
-async function writeDocs(files) {
+function boardDocs(board, ctx) {
+  return [
+    [`${board.id}_revisions.md`, renderRevisionDoc(board, ctx.target)],
+    [`${board.id}_composition.md`, renderCompositionDoc(board, ctx.composition, ctx.accessories)],
+  ].filter(([, text]) => text);
+}
+
+async function removeUnexpectedGeneratedFiles(directory, extension, expected) {
+  for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+    if ((entry.isFile() || entry.isSymbolicLink()) && entry.name.endsWith(extension) && !expected.has(entry.name)) {
+      await fs.unlink(safeOutputPath(directory, entry.name));
+      console.log(`removed obsolete generated artifact: ${path.relative(root, path.join(directory, entry.name))}`);
+    }
+  }
+}
+
+async function writeDocs(files, clean = false) {
+  const expected = new Set();
+  const directory = path.join(root, "generated/docs");
+  await fs.mkdir(directory, { recursive: true });
   for (const filename of files) {
     const { board, ctx } = await loadValidatedBoard(filename);
-    const docs = [
-      [`${board.id}_revisions.md`, renderRevisionDoc(board, ctx.target)],
-      [`${board.id}_composition.md`, renderCompositionDoc(board, ctx.composition, ctx.accessories)],
-    ];
-    for (const [name, text] of docs) if (text) {
-      const directory = path.join(root, "generated/docs");
-      await fs.mkdir(directory, { recursive: true });
+    for (const [name, text] of boardDocs(board, ctx)) {
+      expected.add(name);
       await fs.writeFile(safeOutputPath(directory, name), text);
     }
   }
+  if (clean) await removeUnexpectedGeneratedFiles(directory, ".md", expected);
   console.log(`generated docs for ${files.length} board(s)`);
 }
 
@@ -369,65 +388,56 @@ async function check() {
 
   // validateResolvedVariants above checks every expansion in memory; there is
   // no resolved-file cache to maintain or compare with the source catalog.
-  let combinations = 0;
   for (let index = 0; index < boards.length; index += 1) {
     const source = await fs.readFile(files[index], "utf8");
-    if (source !== formatBoard(boards[index])) throw new Error(`${path.relative(root, files[index])} is not formatted`);
+    if (source !== formatBoard(boards[index])) throw new Error(`${path.relative(root, files[index])} is not formatted\n${regenerateHint}`);
+  }
+  const failures = [];
+  let combinations = 0;
+  for (let index = 0; index < boards.length; index += 1) {
     const ctx = contexts.get(boards[index].id);
     combinations += resolveAll(boards[index], connectorTypes, resolveCatalogs(ctx)).length;
-    const revisionDoc = renderRevisionDoc(boards[index], ctx.target);
-    if (revisionDoc) {
-      const filename = path.join(root, "generated/docs", `${boards[index].id}_revisions.md`);
-      let actual;
-      try { actual = await fs.readFile(filename, "utf8"); }
-      catch { throw new Error(`missing revision doc: ${path.relative(root, filename)}`); }
-      if (actual !== revisionDoc) throw new Error(`stale revision doc: ${path.relative(root, filename)}`);
-    }
-    const compositionDoc = renderCompositionDoc(boards[index], ctx.composition, accessories);
-    if (compositionDoc) {
-      const filename = path.join(root, "generated/docs", `${boards[index].id}_composition.md`);
-      let actual;
-      try { actual = await fs.readFile(filename, "utf8"); }
-      catch { throw new Error(`missing composition doc: ${path.relative(root, filename)}`); }
-      if (actual !== compositionDoc) throw new Error(`stale composition doc: ${path.relative(root, filename)}`);
+    for (const [name, text] of boardDocs(boards[index], ctx)) {
+      await assertGeneratedFile(path.join(root, "generated/docs", name), text, failures);
     }
   }
-  const expectedDocs = new Set([
-    ...boards.filter((board) => board.revisions?.length).map((board) => `${board.id}_revisions.md`),
-    ...boards.filter((board) => contexts.get(board.id).composition).map((board) => `${board.id}_composition.md`),
-  ]);
-  const actualDocs = (await fs.readdir(path.join(root, "generated/docs"))).filter((name) => name.endsWith(".md"));
+  const expectedDocs = new Set(boards.flatMap((board) => boardDocs(board, contexts.get(board.id)).map(([name]) => name)));
+  const actualDocs = (await fs.readdir(path.join(root, "generated/docs")).catch((error) => {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  })).filter((name) => name.endsWith(".md"));
   const unexpectedDocs = actualDocs.filter((name) => !expectedDocs.has(name));
-  if (unexpectedDocs.length) throw new Error(`unexpected revision doc(s): ${unexpectedDocs.join(", ")}`);
+  for (const filename of unexpectedDocs) failures.push(`unexpected revision doc: generated/docs/${filename}`);
 
   const pinTableDir = path.join(root, "generated/m5unified_pin_table");
   for (const targetId of Object.keys(PIN_TABLE_TARGETS)) {
     const selected = pinTableBoards(boards, contexts, targetId);
     const pinTables = await pinTableOutputs(selected, connectorTypes, contexts, targets, targetId);
-    await assertGeneratedFile(path.join(pinTableDir, `${targetId}.json`), pinTables.json);
-    await assertGeneratedFile(path.join(pinTableDir, `${targetId}.inl`), pinTables.inl);
+    await assertGeneratedFile(path.join(pinTableDir, `${targetId}.json`), pinTables.json, failures);
+    await assertGeneratedFile(path.join(pinTableDir, `${targetId}.inl`), pinTables.inl, failures);
   }
   const wiringDirectory = path.resolve(root, "../../src/board_detect/m5/generated");
   const detectionOutputs = new Map([
     ...await boardDataOutputs(boards, connectorTypes, contexts, targets),
     ...renderDetectorOrderHeaders(boards, detectorOrder),
   ]);
-  for (const filename of await fs.readdir(wiringDirectory)) {
+  for (const filename of await fs.readdir(wiringDirectory).catch((error) => {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  })) {
     if (filename.endsWith(".hpp") && !detectionOutputs.has(filename)) {
-      throw new Error(`obsolete generated artifact: ${filename}`);
+      failures.push(`obsolete generated artifact: ${path.relative(root, path.join(wiringDirectory, filename))}`);
     }
   }
   for (const [filename, output] of detectionOutputs) {
-    await assertGeneratedFile(path.join(wiringDirectory, filename), output);
+    await assertGeneratedFile(path.join(wiringDirectory, filename), output, failures);
   }
   await assertGeneratedFile(path.resolve(root, "../../test/board_detect/generated/detector_probe_pins.hpp"),
-    detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder));
+    detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder), failures);
 
   const distFilename = path.join(root, "dist/board_spec_editor.html");
-  let dist;
-  try { dist = await fs.readFile(distFilename, "utf8"); }
-  catch { throw new Error(`missing editor bundle: ${path.relative(root, distFilename)}`); }
-  if (dist !== await renderBundle()) throw new Error(`stale editor bundle: ${path.relative(root, distFilename)}`);
+  await assertGeneratedFile(distFilename, await renderBundle(), failures);
+  if (failures.length) throw new Error(`${failures.join("\n")}\n${regenerateHint}`);
   console.log(`check passed: ${boards.length} board(s), ${combinations} resolved combination(s)`);
 }
 
@@ -573,8 +583,15 @@ async function main() {
     if (args.length !== 2 || args[0] !== "--m5unified") throw new Error("compare-pintable requires --m5unified <path>");
     return comparePinTable(path.resolve(args[1]));
   }
+  if (command === "generate") {
+    const files = await boardFiles();
+    await formatFiles(files, true);
+    await writeDocs(files, true);
+    await writeWiringOutput(true);
+    return writePinTableOutputs();
+  }
   if (command === "check") return check();
-  throw new Error("usage: spec.js validate <file...> | format <file...> [--write] | resolve <file> [--out <dir>] | emit-docs [file...] | emit-pintable | emit-wiring | compare-pintable --m5unified <path> | check");
+  throw new Error("usage: spec.js validate <file...> | format <file...> [--write] | resolve <file> [--out <dir>] | emit-docs [file...] | emit-pintable | emit-wiring | compare-pintable --m5unified <path> | generate | check");
 }
 
 main().catch((failure) => {

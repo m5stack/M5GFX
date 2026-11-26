@@ -137,7 +137,7 @@ test("every board_t value has a catalog entry and a board definition", async (t)
   }
   for (const [value, { reason }] of PRE_RELEASE) t.diagnostic(`pre-release ${value}: ${reason}`);
 
-  assert.deepEqual(missing, [], "add the catalog entry / board definition, or list the board with what it lacks and a reason");
+  assert.deepEqual(missing, [], "Missing catalog: add boards/<id>.json. Missing definition: add desc_* and an entry in <chip>_boards[] in src/board_detect/m5/<chip>.inl. Unreleased: list what it lacks and a reason in PRE_RELEASE in test/board_id_coverage.test.js. See extras/board_spec/README.md, Adding a board.");
   assert.deepEqual(stale, [], "update the exclusion lists to match");
-  assert.deepEqual(wrongChip, [], "define the board in the table of its catalog chip");
+  assert.deepEqual(wrongChip, [], "define desc_* in src/board_detect/m5/<chip>.inl and list it in <chip>_boards[] for its catalog chip; see extras/board_spec/README.md, Adding a board");
 });

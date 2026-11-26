@@ -6,6 +6,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { compilerAvailable } from "./detect_host_helpers.js";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
@@ -942,8 +943,7 @@ test("AtomS3 runtime panels resolve to both probed display parts", () => {
 
 test("M5Unified live pin tables match generated values", async (t) => {
   const compiler = process.env.CXX || "c++";
-  const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") return t.skip(`C++ compiler not found (${compiler})`);
+  if (!compilerAvailable(t)) return;
   const m5unified = process.env.M5UNIFIED_PATH || path.resolve(root, "../../../M5Unified");
   try { await fs.access(path.join(m5unified, "src/M5Unified.inl")); }
   catch { return t.skip(`M5Unified checkout not found (${m5unified})`); }
@@ -1562,8 +1562,7 @@ test("ESP32-S3 detector filters hinted and OPI-conflicting candidates per model"
 
 test("generated wiring header links from two translation units", async (t) => {
   const compiler = process.env.CXX || "c++";
-  const probe = spawnSync(compiler, ["--version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") return t.skip(`C++ compiler not found (${compiler})`);
+  if (!compilerAvailable(t)) return;
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "m5gfx-wiring-odr-"));
   const include = 'enum { SPI2_HOST = 1, SPI3_HOST = 2 };\n#include "src/board_detect/m5/generated/esp32_d0wdq6_board_data.hpp"\n';
   try {
@@ -2944,7 +2943,7 @@ test("descriptor fixtures agree with target internal-I2C metadata", async () => 
   for (const [name, mapping] of Object.entries(target.boards)) {
     if (!mapping.wiring_output) continue;
     const id = catalogBoards.find((board) => board.id === name).legacy_board_id;
-    assert.ok(observed.has(id), `${name} descriptor fixture`);
+    assert.ok(observed.has(id), `${name} descriptor fixture missing. For a new board, follow extras/board_spec/README.md (Adding a board, step 5): from the repository root run M5GFX_UPDATE_SNAPSHOTS=1 sh test/board_detect/run.sh, then review git diff -- test/board_detect/fixtures.`);
     assert.equal(observed.get(id), mapping.desc_internal_i2c ?? false, name);
   }
 });

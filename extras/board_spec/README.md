@@ -16,6 +16,44 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 - `dist/board_spec_editor.html`: standalone editor; open it directly with `file://`
 - `test/`: Node tests and the C++ host tests that compile the generated detection data
 
+## Adding a board
+
+Choose the selection path before changing the detection code:
+
+| Selection path | What to implement |
+|---|---|
+| BOARD_ID / fixed board only, without automatic detection | Add a `board_desc_t` (`desc_*`) and an entry in `<chip>_boards[]` in `src/board_detect/m5/<chip>.inl`. M5Unified passes `BOARD_ID` as `fixed_board`; standalone M5GFX uses `setDetectConfig` with `fixed_board`. |
+| A variant handled by an existing detector | Add the descriptor/table entry above, then add the board to both the family's `boards` in `detector_order.json` and the detector's C++ `members_` list. |
+| A new detector | Add the descriptor/table entry, implement its detector and C++ `members_`, and declare the family, boards and ordering constraints in `detector_order.json`. |
+
+1. Obtain a BID from [m5stack-board-id](https://github.com/m5stack/m5stack-board-id/blob/main/board.csv).
+   Add it to `src/lgfx/boards.hpp`; keep all existing IDs unchanged.
+2. Copy the closest `boards/<id>.json`. Set its `id`, `name`, `official_name`,
+   `legacy_board_id` and `chip`, then describe the actual wiring and devices.
+   Remove or recheck copied `official_name_verified`, `spec.links`, `measured_by`,
+   `detect_class` and any other claims not verified on this board. Omit
+   `official_name_verified` until the product name has been checked.
+3. Add the board's generator metadata to `targets.json` (see target metadata below).
+   Implement the C++ entries and any detector changes from the table above.
+4. In `extras/board_spec`, run `npm run generate`, then `npm run verify`.
+   These format all boards, regenerate docs/wiring/pin tables, check freshness,
+   and run Node and C++ host tests. A missing C++ compiler is reported as skipped;
+   run the host tests with a compiler before submitting. CI always requires a
+   compiler, and an explicit `CXX` that cannot be found is an error locally too.
+5. If a descriptor snapshot differs, inspect the first mismatching line. Only
+   when the diff contains the intended new board's rows, update it from the
+   repository root with `M5GFX_UPDATE_SNAPSHOTS=1 sh test/board_detect/run.sh`.
+   Review `git diff -- test/board_detect/fixtures`, then rerun `npm run verify`
+   in `extras/board_spec`. Do not update fixtures to hide unrelated changes.
+6. Commit the JSON together with generated docs, M5GFX headers, M5Unified pin
+   tables and any reviewed descriptor fixtures. Do not commit resolved exports.
+7. For `esp32`, `esp32s3`, `esp32c5` and `esp32p4`, include the new row from
+   `generated/m5unified_pin_table/<soc>.inl` in the companion M5Unified PR.
+   Other chips do not have a generated M5Unified pin table. Record hardware
+   checks and differences from the closest existing board in the PR description.
+
+## Commands
+
 ```sh
 node cli/spec.js validate boards/m5stack_core2.json      # schema and catalog rules (all boards when no file is given)
 node cli/spec.js format boards/m5stack_core2.json --write # canonical formatting (without --write: report only)
@@ -26,7 +64,9 @@ node cli/spec.js emit-wiring                             # src/board_detect/m5/g
 node cli/spec.js emit-pintable                           # generated/m5unified_pin_table/<soc>.{json,inl}
 node cli/spec.js compare-pintable --m5unified <path>     # compile the generated tables against M5Unified's src/M5Unified.inl
 node build/bundle.js                                     # dist/board_spec_editor.html
-node cli/spec.js check                                   # everything below; CI runs this
+npm run generate                                         # format boards and regenerate docs, wiring and pin tables
+npm run verify                                           # check, Node tests, and C++ host tests
+node cli/spec.js check                                   # validate and check generated output freshness
 npm test                                                 # test/*.test.js (the C++ host tests are skipped without a compiler)
 ```
 
@@ -35,9 +75,10 @@ every board file to be in canonical format, and fails when any generated output
 (docs, pin tables, detection wiring, the editor bundle) is missing, stale or
 unexpected. Every revision/runtime combination is expanded and validated in
 memory; resolved exports are not build inputs or freshness-check fixtures.
-After editing a board, run `emit-docs`, `emit-wiring`, `emit-pintable` and
-`build/bundle.js`, then `check` and `npm test`, and commit those generated files
-with the source. Do not commit resolved exports.
+`npm run generate` also removes obsolete `.md` files from `generated/docs/`
+and `.hpp` files from `src/board_detect/m5/generated/`. Other directories and
+file extensions are left alone.
+For the contribution workflow, see [Adding a board](#adding-a-board).
 
 Inspect resolved boards with `resolve` (one JSON array of `{combination, board}`
 entries on stdout), or select a revision in the editor's read-only view.

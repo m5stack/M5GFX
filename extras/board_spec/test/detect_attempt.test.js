@@ -11,9 +11,10 @@ const src = path.resolve(here, "../../../src");
 async function readMain() {
   return (await Promise.all(["M5GFX.cpp", "board_detect/detection_package.inl", "board_detect/detection_integration.inl"].map((name) => fs.readFile(path.join(src, name), "utf8")))).join("\n");
 }
-import { body, compileRun } from "./detect_host_helpers.js";
+import { body, compilerAvailable, compileRun } from "./detect_host_helpers.js";
 
-test("production attempt yields before construction and preserves adoption and rollback semantics", async () => {
+test("production attempt yields before construction and preserves adoption and rollback semantics", async (t) => {
+  if (!compilerAvailable(t)) return;
   const main = await readMain();
   const attempt = body(main, "static board_detect::detect_outcome_t run_detection_attempt(");
   const finish = body(main, "static board_detect::detect_outcome_t construct_and_adopt(");
@@ -137,7 +138,8 @@ int main() {
 `, "attempt");
 });
 
-test("public config stores the next preference and warns after either successful or failed init", async () => {
+test("public config stores the next preference and warns after either successful or failed init", async (t) => {
+  if (!compilerAvailable(t)) return;
  const main=await readMain();
  const header=await fs.readFile(path.join(src,"M5GFX.h"),"utf8");
  const setter=body(main,"void M5GFX::setDetectConfig(");
@@ -167,7 +169,8 @@ int main(){M5GFX gfx;detect_config_t cfg;assert(gfx.getDetectConfig().fallback_b
 `,"public config");
 });
 
-test("production init restores panel according to adoption independently of verdict", async () => {
+test("production init restores panel according to adoption independently of verdict", async (t) => {
+  if (!compilerAvailable(t)) return;
   const main = await readMain();
   const start = main.indexOf("        if (!package.keep_panel_during_attempt ||");
   assert.ok(start >= 0);
@@ -192,7 +195,8 @@ test("production init restores panel according to adoption independently of verd
   ].join("\n"), "panel restoration");
 });
 
-test("setup rejection lists preserve all historical board groups", async () => {
+test("setup rejection lists preserve all historical board groups", async (t) => {
+  if (!compilerAvailable(t)) return;
   const reject = body(await readMain(), "static bool reject_detected_setup(");
   const groups = [
     ["board_M5StickCPlus"],

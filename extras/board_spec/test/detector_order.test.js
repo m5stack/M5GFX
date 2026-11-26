@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { compilerAvailable } from "./detect_host_helpers.js";
 import { fileURLToPath } from "node:url";
 
 import { detectorPriority, hasGpioPowerHold, renderDetectorOrderHeaders } from "../lib/emit/m5gfx_detector_order.js";
@@ -105,7 +106,7 @@ test("generated detector arrays follow catalog priority on every chip and packag
 
 test("generated detector count accepts the limit and rejects an overflowing list", (t) => {
   const compiler = process.env.CXX || "c++";
-  if (spawnSync(compiler, ["--version"]).error?.code === "ENOENT") return t.skip("C++ compiler unavailable");
+  if (!compilerAvailable(t)) return;
   const board = { id: "board", name: "Board", chip: "test", legacy_board_id: 1 };
   const groups = { test_detectors: { chip: "test", output: "test_order.hpp", families: [
     { detector: "first", boards: ["board"] }, { detector: "second", boards: ["board"] },

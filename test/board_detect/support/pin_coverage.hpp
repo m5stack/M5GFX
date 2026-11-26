@@ -31,7 +31,7 @@ static void check_members(const board_detector_t& detector) {
   for (auto id : actual) std::fprintf(stderr, " %u", unsigned(id));
   std::fprintf(stderr, "; expected:");
   for (auto id : expected.members) std::fprintf(stderr, " %u", unsigned(id));
-  std::fprintf(stderr, "\n");
+  std::fprintf(stderr, "\nAlign this family\'s boards in extras/board_spec/detector_order.json with C++ members_, then run npm run generate in extras/board_spec.\n");
 }
 struct confirmation_count_t {
   const board_detector_t* detector;

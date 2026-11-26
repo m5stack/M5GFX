@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { hasGpioPowerHold } from "../lib/emit/m5gfx_detector_order.js";
-import { compileRun } from "./detect_host_helpers.js";
+import { compilerAvailable, compileRun } from "./detect_host_helpers.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const src = path.resolve(root, "../../src");
@@ -26,7 +26,8 @@ function referenceOrder(list, families, edges, hint) {
   return tried;
 }
 
-test("production detector order matches the reference for every package and board hint", async t => {
+test("production detector order matches the reference for every package and board hint", async (t) => {
+  if (!compilerAvailable(t)) return;
   const filenames = (await fs.readdir(path.join(root, "boards"))).filter(n => n.endsWith(".json"));
   const boards = await Promise.all(filenames.map(async name =>
     JSON.parse(await fs.readFile(path.join(root, "boards", name), "utf8"))));

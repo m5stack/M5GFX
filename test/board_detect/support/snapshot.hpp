@@ -110,7 +110,25 @@ void check(const char *name, const m5gfx::board_detect::m5::board_entry_t (&entr
   assert(file.good());
   std::string expected((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   if (expected != out.str()) {
-    std::cerr << "Descriptor snapshot mismatch: " << name << '\n';
+    std::istringstream expected_lines(expected), actual_lines(out.str());
+    std::string expected_line, actual_line;
+    unsigned line = 0;
+    while (true) {
+      const bool have_expected = bool(std::getline(expected_lines, expected_line));
+      const bool have_actual = bool(std::getline(actual_lines, actual_line));
+      ++line;
+      if (!have_expected || !have_actual || expected_line != actual_line
+       || expected_lines.eof() != actual_lines.eof()) {
+        std::cerr << "Descriptor snapshot mismatch: " << path << ':' << line << '\n'
+                  << "expected: " << (have_expected ? expected_line : "<end of file>")
+                  << (have_expected && expected_lines.eof() ? " <no newline>" : "") << '\n'
+                  << "actual:   " << (have_actual ? actual_line : "<end of file>")
+                  << (have_actual && actual_lines.eof() ? " <no newline>" : "") << '\n';
+        break;
+      }
+    }
+    std::cerr << "If the change is intended: M5GFX_UPDATE_SNAPSHOTS=1 sh test/board_detect/run.sh, "
+                 "then review git diff -- test/board_detect/fixtures\n";
     std::abort();
   }
   std::cout << name << ": " << N << " full descriptions match\n";
