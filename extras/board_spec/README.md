@@ -13,7 +13,7 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 - `generated/docs/`: revision and composition tables rendered from the catalog
 - `generated/m5unified_pin_table/`: the M5Unified external pin tables, per SoC
 - `editor/`, `build/`: editor sources and the dependency-free bundler
-- `dist/board_spec_editor.html`: standalone editor; open it directly with `file://`
+- `dist/`: locally generated optional editor (ignored by git)
 - `test/`: Node tests and the C++ host tests that compile the generated detection data
 
 ## Adding a board
@@ -63,7 +63,7 @@ node cli/spec.js emit-docs                              # generated/docs/ (all b
 node cli/spec.js emit-wiring                             # src/board_detect/m5/generated/ (detection wiring, specs, detector order)
 node cli/spec.js emit-pintable                           # generated/m5unified_pin_table/<soc>.{json,inl}
 node cli/spec.js compare-pintable --m5unified <path>     # compile the generated tables against M5Unified's src/M5Unified.inl
-node build/bundle.js                                     # dist/board_spec_editor.html
+npm run editor                                           # optional editor in dist/ (do not commit)
 npm run generate                                         # format boards and regenerate docs, wiring and pin tables
 npm run verify                                           # check, Node tests, and C++ host tests
 node cli/spec.js check                                   # validate and check generated output freshness
@@ -72,7 +72,7 @@ npm test                                                 # test/*.test.js (the C
 
 `check` validates the connector types, parts, accessories and every board, requires
 every board file to be in canonical format, and fails when any generated output
-(docs, pin tables, detection wiring, the editor bundle) is missing, stale or
+(docs, pin tables, detection wiring) is missing, stale or
 unexpected. Every revision/runtime combination is expanded and validated in
 memory; resolved exports are not build inputs or freshness-check fixtures.
 `npm run generate` also removes obsolete `.md` files from `generated/docs/`
@@ -224,8 +224,11 @@ data lines share the flash-only pads represented by the chip's reserved GPIOs.
 
 ## Editor
 
-`dist/board_spec_editor.html` is a single file with all catalog boards, parts,
-chip data, connector types and accessories bundled in; open it with `file://`.
+The editor is an optional viewing tool under development. Run `npm run editor`
+to generate `dist/board_spec_editor.html` locally, then open it with `file://`.
+Do not commit `dist/`; it is not part of contribution generation or freshness
+checks. The single file embeds all catalog boards, parts, chip data, connector
+types and accessories.
 The left navigation lists the catalog pages of the selected board (board, GPIO,
 connectors, one page per connector, owners, revisions) and a validation page with
 the current error count. A connector page shows the connector as a table in its
@@ -234,8 +237,8 @@ undone. The editor can also open or accept dragged
 board JSON files, keeps best-effort drafts in `localStorage`, and exports
 canonical formatted JSON. Selecting a revision shows the resolved board read-only;
 clear the revision selection to resume editing the base board. Exporting does not
-touch the repository: replace `boards/<id>.json`, run `node cli/spec.js check`,
-then review and commit.
+touch the repository: replace `boards/<id>.json`, run `npm run generate`, then
+`npm run verify`, review the diff and commit.
 
 ## Pin detection classes (`detect_class`)
 

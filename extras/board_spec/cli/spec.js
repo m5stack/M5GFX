@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { renderBundle } from "../build/bundle.js";
 import { renderCompositionDoc, validateAccessory } from "../lib/compose.js";
 import { validateConnectorTypes } from "../lib/ctypes.js";
 import { validatePartCatalog } from "../lib/parts.js";
@@ -435,8 +434,6 @@ async function check() {
   await assertGeneratedFile(path.resolve(root, "../../test/board_detect/generated/detector_probe_pins.hpp"),
     detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder), failures);
 
-  const distFilename = path.join(root, "dist/board_spec_editor.html");
-  await assertGeneratedFile(distFilename, await renderBundle(), failures);
   if (failures.length) throw new Error(`${failures.join("\n")}\n${regenerateHint}`);
   console.log(`check passed: ${boards.length} board(s), ${combinations} resolved combination(s)`);
 }

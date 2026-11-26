@@ -703,8 +703,9 @@ test("resolve --out writes only the requested directory and rejects incomplete o
   }
 });
 
-test("standalone editor bundle embeds the catalog and valid scripts", async () => {
+test("standalone editor bundle can be generated in memory with catalog and valid scripts", async () => {
   const html = await renderBundle();
+  assert.equal(typeof html, "string");
   assert.equal(html.includes("<!-- @inline"), false);
   for (const id of ["board-spec-schema", "board-spec-chips", "board-spec-connector-types", "board-spec-parts", "board-spec-accessories", "board-spec-targets", "board-spec-boards"]) {
     const match = new RegExp(`<script type="application/json" id="${id}">(.*?)</script>`, "s").exec(html);

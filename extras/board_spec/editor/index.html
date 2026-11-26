@@ -41,7 +41,7 @@
       <li><strong>1</strong><span data-i18n="onboarding.step1">Choose a board.</span></li>
       <li><strong>2</strong><span data-i18n="onboarding.step2">Click a GPIO row to inspect or edit its roles.</span></li>
       <li><strong>3</strong><span data-i18n="onboarding.step3">Changes stay as a draft only in this browser and are removed when the board is removed.</span></li>
-      <li class="onboarding-export"><strong>4</strong><div><span data-i18n="onboarding.step4">Export the JSON, then update the repository yourself.</span><details><summary data-i18n="repository.showSteps">Repository steps</summary><ol><li data-i18n="repository.replaceGeneric">Replace extras/board_spec/boards/&lt;id&gt;.json.</li><li><code>node cli/spec.js check</code></li><li data-i18n="repository.commit">Review the diff, then commit and open a PR.</li></ol><p data-i18n="repository.notAutomatic">Downloading does not modify the repository.</p></details></div></li>
+      <li class="onboarding-export"><strong>4</strong><div><span data-i18n="onboarding.step4">Export the JSON, then update the repository yourself.</span><details><summary data-i18n="repository.showSteps">Repository steps</summary><ol><li data-i18n="repository.replaceGeneric">Replace extras/board_spec/boards/&lt;id&gt;.json.</li><li><code>npm run generate</code></li><li><code>npm run verify</code></li><li data-i18n="repository.commit">Review the diff, then commit and open a PR.</li></ol><p data-i18n="repository.notAutomatic">Downloading does not modify the repository.</p></details></div></li>
     </ol>
   </dialog>
 
@@ -166,7 +166,6 @@
     "repository.showSteps": { "en": "Repository steps", "zh": "仓库更新步骤", "ja": "リポジトリ反映手順" },
     "repository.replaceGeneric": { "en": "Replace extras/board_spec/boards/<id>.json with the downloaded file.", "zh": "用下载的文件替换 extras/board_spec/boards/<id>.json。", "ja": "ダウンロードしたファイルで extras/board_spec/boards/<id>.json を置き換える。" },
     "repository.replace": { "en": "Replace extras/board_spec/boards/{file} with the downloaded file.", "zh": "用下载的文件替换 extras/board_spec/boards/{file}。", "ja": "ダウンロードしたファイルで extras/board_spec/boards/{file} を置き換える。" },
-    "repository.check": { "en": "Run node cli/spec.js check.", "zh": "运行 node cli/spec.js check。", "ja": "node cli/spec.js check を実行する。" },
     "repository.commit": { "en": "Review the diff, then commit and open a PR.", "zh": "检查差异，然后提交并创建 PR。", "ja": "差分を確認し、commit / PR する。" },
     "repository.notAutomatic": { "en": "Downloading does not modify the repository.", "zh": "下载不会自动修改仓库。", "ja": "ダウンロードしてもリポジトリは自動では変わりません。" },
     "repository.downloaded": { "en": "JSON exported: {file}", "zh": "已导出 JSON：{file}", "ja": "JSON を書き出しました: {file}" },

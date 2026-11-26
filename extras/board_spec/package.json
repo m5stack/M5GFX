@@ -8,7 +8,8 @@
     "check": "node cli/spec.js check",
     "bundle": "node build/bundle.js",
     "generate": "node cli/spec.js generate",
-    "verify": "node cli/verify.js"
+    "verify": "node cli/verify.js",
+    "editor": "node build/bundle.js"
   },
   "dependencies": {}
 }

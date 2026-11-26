@@ -1749,7 +1749,7 @@ function renderSaveState() {
 function renderRepositoryNext() {
   const file = state.lastExported;
   prepareMotionRegion(elements.repositoryNext);
-  if (file) elements.repositoryNext.querySelector(".motion-region-inner").innerHTML = `<div><strong>${escapeHtml(t("repository.downloaded", { file }))}</strong><button type="button" class="secondary" data-dismiss-export aria-label="${escapeHtml(t("repository.dismiss"))}">×</button><p>${escapeHtml(t("repository.notAutomatic"))}</p></div><ol><li>${escapeHtml(t("repository.replace", { file }))}</li><li><code>node cli/spec.js check</code></li><li>${escapeHtml(t("repository.commit"))}</li></ol>`;
+  if (file) elements.repositoryNext.querySelector(".motion-region-inner").innerHTML = `<div><strong>${escapeHtml(t("repository.downloaded", { file }))}</strong><button type="button" class="secondary" data-dismiss-export aria-label="${escapeHtml(t("repository.dismiss"))}">×</button><p>${escapeHtml(t("repository.notAutomatic"))}</p></div><ol><li>${escapeHtml(t("repository.replace", { file }))}</li><li><code>npm run generate</code></li><li><code>npm run verify</code></li><li>${escapeHtml(t("repository.commit"))}</li></ol>`;
   elements.repositoryNext.classList.toggle("is-open", Boolean(file));
   elements.repositoryNext.setAttribute("aria-hidden", String(!file));
   elements.repositoryNext.inert = !file;
