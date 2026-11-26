@@ -196,7 +196,12 @@ function wiringEntries(boards, connectorTypes, contexts, mappings, target) {
 async function boardDataOutputs(boards, connectorTypes, contexts, targets) {
   const outputs = new Map();
   const target = targets.m5gfx_board_desc ?? {};
-  const mappings = Object.keys(target.boards ?? {}).map((id) => m5gfxBoardMapping(target, boards.find((board) => board.id === id))).filter(Boolean);
+  // Boards with a target entry keep that entry order, so existing declarations
+  // do not move; boards relying on defaults follow in catalog ID order.
+  const rank = new Map(Object.keys(target.boards ?? {}).map((id, index) => [id, index]));
+  const order = (board) => rank.has(board.id) ? rank.get(board.id) : Infinity;
+  const mappings = [...boards].sort((a, b) => order(a) - order(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((board) => m5gfxBoardMapping(target, board)).filter(Boolean);
   for (const filename of new Set(mappings.map((mapping) => mapping.wiringOutput))) {
     const selected = mappings.filter((mapping) => mapping.wiringOutput === filename);
     const entries = wiringEntries(boards, connectorTypes, contexts, selected, target);
@@ -257,7 +262,7 @@ async function writeWiringOutput(clean = false) {
   await fs.mkdir(hostDirectory, { recursive: true });
   await fs.writeFile(path.join(hostDirectory, "detector_probe_pins.hpp"),
     detectorProbePins(boards, connectorTypes, contexts, targets, detectorOrder));
-  const count = Object.values(targets.m5gfx_board_desc?.boards ?? {}).filter((entry) => entry.wiring_output).length;
+  const count = boards.filter((board) => m5gfxBoardMapping(targets.m5gfx_board_desc ?? {}, board)).length;
   console.log(`generated M5GFX wiring for ${count} board(s)`);
 }
 

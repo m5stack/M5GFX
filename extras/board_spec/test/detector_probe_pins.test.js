@@ -1,23 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { renderDetectorProbePins } from "../lib/emit/m5gfx_detector_probe_pins.js";
-import { validateTarget } from "../lib/targets.js";
+import { resolveTargetBoard, validateTarget } from "../lib/targets.js";
 
-test("declared detection pins require generated wiring to reach the firmware snapshot", () => {
-  const board = { id: "board", name: "Board", pins: { 3: { roles: [] } } };
-  const target = { boards: { board: {} } };
-  const missingWiring = (value, mapping) => validateTarget(value, mapping)
-    .filter((issue) => issue.id === "E_TGT_DETECTION_WIRING");
-  assert.deepEqual(missingWiring(board, target), []);
+test("declared detection pins infer wiring so they reach the firmware snapshot", () => {
+  const board = { id: "board", name: "Board", chip: "esp32c6", pins: { 3: { roles: [] } } };
+  const target = { boards: {} };
+  assert.deepEqual(validateTarget(board, target), []);
+  assert.equal(resolveTargetBoard(board, target).wiring_output, undefined);
   for (const source of ["probe_pins", "detect_class"]) {
     const value = structuredClone(board), mapping = structuredClone(target);
-    if (source === "probe_pins") mapping.boards.board.probe_pins = [3];
+    if (source === "probe_pins") mapping.boards.board = { probe_pins: [3] };
     else value.pins[3].detect_class = "up";
-    assert.deepEqual(missingWiring(value, mapping).map((issue) => issue.path),
-      ["/targets/boards/board/wiring_output"], source);
-    mapping.boards.board.wiring_fields = [];
+    assert.deepEqual(validateTarget(value, mapping), [], source);
+    assert.equal(resolveTargetBoard(value, mapping).wiring_output, "esp32c6_wiring.hpp", source);
+    mapping.boards.board ??= {};
     mapping.boards.board.wiring_output = "test_wiring.hpp";
-    assert.deepEqual(missingWiring(value, mapping), [], source);
+    assert.deepEqual(validateTarget(value, mapping), [], source);
+    assert.equal(resolveTargetBoard(value, mapping).wiring_output, "test_wiring.hpp", source);
   }
 });
 

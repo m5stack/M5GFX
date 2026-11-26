@@ -1,6 +1,12 @@
 import { choiceSlots } from "./choices.js";
 
 const WIRING_FIELDS = new Set(["display", "shared_sd", "i2c", "power", "backlight", "touch", "camera", "hold"]);
+const TARGET_BOARD_FIELDS = new Set([
+  "wiring_fields", "probe_pins", "options", "identity_devices", "desc_internal_i2c",
+  "wiring_output", "specs_output", "reset", "cpp_namespace", "cardputer_subdivision",
+  "release_probe", "probe_parts",
+]);
+const DERIVED_TARGET_FIELDS = ["chip", "legacy_board_id", "board_enum", "desc_name"];
 const CPP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const CPP_KEYWORDS = new Set((
   "alignas alignof and and_eq asm auto bitand bitor bool break "
@@ -14,7 +20,22 @@ const CPP_KEYWORDS = new Set((
 const OUTPUT_FILENAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.hpp$/;
 
 export function targetBoard(target, boardId) {
-  return target.boards?.[boardId] ?? null;
+  return target.boards?.[boardId] ?? {};
+}
+
+function defaultWiringOutput(board, entry) {
+  const needsWiring = (entry.wiring_fields?.length ?? 0) > 0
+    || (entry.probe_pins?.length ?? 0) > 0
+    || Object.values(board.pins ?? {}).some((pin) => pin.detect_class !== undefined);
+  return needsWiring ? `${board.chip}_wiring.hpp` : undefined;
+}
+
+// Target metadata records exceptions; catalog detection facts alone are enough
+// to include a new board in its chip's wiring output and transaction snapshot.
+export function resolveTargetBoard(board, target = {}) {
+  const entry = targetBoard(target, board.id);
+  const wiringOutput = entry.wiring_output ?? defaultWiringOutput(board, entry);
+  return { ...entry, ...(wiringOutput !== undefined ? { wiring_output: wiringOutput } : {}) };
 }
 
 function derivedCppNamespace(board) {
@@ -32,23 +53,29 @@ export function targetOptions(target, boardId) {
 export function validateTarget(board, target = {}) {
   const issues = [];
   const issue = (id, path, message, severity) => issues.push({ id, path, message, ...(severity ? { severity } : {}) });
-  const boardTarget = targetBoard(target, board.id);
+  const explicitTarget = targetBoard(target, board.id);
+  const boardTarget = resolveTargetBoard(board, target);
   const boardPath = `/targets/boards/${board.id}`;
-  if (!boardTarget) {
-    issue("E_TGT_BOARD_MISSING", boardPath, "board has no target metadata");
-    return issues;
+  for (const field of Object.keys(explicitTarget)) {
+    if (!TARGET_BOARD_FIELDS.has(field) && !DERIVED_TARGET_FIELDS.includes(field)) {
+      issue("E_TGT_UNKNOWN_FIELD", `${boardPath}/${field}`, `unknown target field ${field}; see README.md, Adding a board`);
+    }
   }
-  for (const field of ["chip", "legacy_board_id", "board_enum", "desc_name"]) {
+  if (Object.hasOwn(target.boards ?? {}, board.id) && !Object.keys(explicitTarget).length) {
+    issue("E_TGT_REDUNDANT_BOARD", boardPath, "omit an empty target entry; catalog defaults already apply");
+  }
+  const defaults = { wiring_fields: [], probe_pins: [], options: [], identity_devices: [], desc_internal_i2c: false };
+  const wiringOutput = defaultWiringOutput(board, explicitTarget);
+  if (wiringOutput !== undefined) defaults.wiring_output = wiringOutput;
+  for (const [field, value] of Object.entries(defaults)) {
+    if (Object.hasOwn(explicitTarget, field) && JSON.stringify(explicitTarget[field]) === JSON.stringify(value)) {
+      issue("E_TGT_REDUNDANT_FIELD", `${boardPath}/${field}`, `omit ${field}; it matches the catalog default`);
+    }
+  }
+  for (const field of DERIVED_TARGET_FIELDS) {
     if (Object.hasOwn(boardTarget, field)) issue("E_TGT_DERIVED_FIELD", `${boardPath}/${field}`, `${field} is derived from the board catalog and cpp_namespace`);
   }
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(board.name)) issue("E_TGT_BOARD_NAME", "/name", "name must form a board_ C++ identifier");
-  // Without wiring_output these declared pins never enter the transaction snapshot.
-  const hasDetectionPins = (boardTarget.probe_pins?.length ?? 0) > 0
-    || Object.values(board.pins ?? {}).some((pin) => pin.detect_class !== undefined);
-  if (hasDetectionPins && !boardTarget.wiring_output) {
-    issue("E_TGT_DETECTION_WIRING", `${boardPath}/wiring_output`,
-          "probe_pins and detect_class require wiring_output to reach the detection snapshot");
-  }
   const overriddenNamespace = boardTarget.cpp_namespace !== undefined;
   if (overriddenNamespace && boardTarget.cpp_namespace === derivedCppNamespace(board)) {
     issue("E_TGT_REDUNDANT_NAMESPACE", `${boardPath}/cpp_namespace`, "cpp_namespace must only override a different derived namespace");
@@ -73,6 +100,12 @@ export function validateTarget(board, target = {}) {
   }
   for (const field of ["wiring_output", "specs_output"]) if (boardTarget[field] !== undefined && !OUTPUT_FILENAME.test(boardTarget[field])) {
     issue("E_TGT_OUTPUT", `${boardPath}/${field}`, `${field} must be a safe .hpp filename`);
+  }
+  // Specification emission is selected through the board's wiring mapping;
+  // reject an opt-in that would otherwise be silently dropped from generation.
+  if (boardTarget.specs_output !== undefined && !boardTarget.wiring_output) {
+    issue("E_TGT_SPECS_WIRING", `${boardPath}/specs_output`,
+          "specs_output requires wiring output; set the wiring_fields consumed by the C++ descriptor (see README.md, Adding a board)");
   }
   if (boardTarget.wiring_output && boardTarget.wiring_output === boardTarget.specs_output) {
     issue("E_TGT_OUTPUT_COLLISION", `${boardPath}/specs_output`, "wiring_output and specs_output must not use the same file");
@@ -179,11 +212,15 @@ export function validateTargets(boards, target = {}) {
   const enums = new Map();
   const namespaces = new Map();
   const outputs = new Map();
-  for (const [id, entry] of Object.entries(target.boards ?? {})) {
+  for (const id of Object.keys(target.boards ?? {})) {
+    if (!catalog.has(id)) issues.push({ id: "E_TGT_BOARD_UNKNOWN", path: `/targets/boards/${id}`, message: `${id} is not in the board catalog` });
+  }
+  for (const board of boards) {
+    const id = board.id;
+    const entry = resolveTargetBoard(board, target);
     const path = `/targets/boards/${id}`;
-    if (!catalog.has(id)) issues.push({ id: "E_TGT_BOARD_UNKNOWN", path, message: `${id} is not in the board catalog` });
     for (const [field, seen] of [["board_enum", enums], ["cpp_namespace", namespaces]]) {
-      const value = field === "board_enum" ? catalog.get(id)?.name : catalog.has(id) ? targetCppNamespace(catalog.get(id), target) : entry[field];
+      const value = field === "board_enum" ? board.name : targetCppNamespace(board, target);
       if (!value) continue;
       if (seen.has(value)) issues.push({ id: field === "board_enum" ? "E_TGT_BOARD_ENUM_DUP" : "E_TGT_NAMESPACE_DUP", path: `${path}/${field}`, message: `${value} is also used by ${seen.get(value)}` });
       else seen.set(value, id);
@@ -192,12 +229,12 @@ export function validateTargets(boards, target = {}) {
       const value = entry[field];
       if (!value) continue;
       const prior = outputs.get(value);
-      if (prior && (prior.field !== field || prior.chip !== catalog.get(id)?.chip)) {
+      if (prior && (prior.field !== field || prior.chip !== board.chip)) {
         issues.push({ id: "E_TGT_OUTPUT_COLLISION", path: `${path}/${field}`, message: `${value} is also ${prior.field} for ${prior.id} (${prior.chip})` });
-      } else if (!prior) outputs.set(value, { field, id, chip: catalog.get(id)?.chip });
+      } else if (!prior) outputs.set(value, { field, id, chip: board.chip });
     }
     for (const pin of entry.probe_pins ?? []) {
-      if (!Number.isInteger(pin) || !catalog.get(id)?.pins?.[pin]) {
+      if (!Number.isInteger(pin) || !board.pins?.[pin]) {
         issues.push({ id: "E_TGT_PROBE_PIN", path: `${path}/probe_pins`, message: `GPIO ${pin} is not a catalog pin on ${id}` });
       }
     }

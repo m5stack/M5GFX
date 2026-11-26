@@ -30,7 +30,7 @@ import { validateOwners } from "../lib/owners.js";
 import { validatePartCatalog, validateParts } from "../lib/parts.js";
 import { resolveAll, resolveBoard, resolvedFilename } from "../lib/resolve.js";
 import { validateSchema } from "../lib/schema.js";
-import { validateTarget, validateTargets, validateBoardEnums } from "../lib/targets.js";
+import { resolveTargetBoard, validateTarget, validateTargets, validateBoardEnums } from "../lib/targets.js";
 import { validateBoard, validateCatalog, validateFormat, validateResolvedVariants } from "../lib/validate.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1628,7 +1628,7 @@ test("variant validation reports wiring assignment failures as diagnostics", () 
 });
 
 test("M5GFX wiring catalog requires every mapped board exactly once", () => {
-  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id))).filter(Boolean);
+  const mappings = catalogBoards.map((board) => m5gfxBoardMapping(target, board)).filter(Boolean);
   assert.throws(() => selectM5GFXWiringBoards(catalogBoards.filter((item) => item.id !== "m5paper"), mappings), /m5paper.*found 0/);
   const paper = catalogBoards.find((item) => item.id === "m5paper");
   assert.throws(() => selectM5GFXWiringBoards([...catalogBoards, clone(paper)], mappings), /m5paper.*found 2/);
@@ -1668,7 +1668,7 @@ test("M5GFX generated I2C host is an integer in the supported range", () => {
 });
 
 test("M5GFX generated namespaces contain only fields consumed by their descriptor", () => {
-  const mappings = Object.keys(target.boards).map((id) => m5gfxBoardMapping(target, catalogBoards.find((board) => board.id === id))).filter(Boolean);
+  const mappings = catalogBoards.map((board) => m5gfxBoardMapping(target, board)).filter(Boolean);
   const entries = selectM5GFXWiringBoards(catalogBoards, mappings).map((source) => ({
     board: source,
     chip: chips[source.chip],
@@ -2033,16 +2033,16 @@ test("release probe target requires exactly eight valid ESP32-S3 GPIO pins", () 
 
 test("target output filenames cannot collide across output kinds", () => {
   const withinBoard = clone(target);
-  withinBoard.boards.m5atoms3.specs_output = withinBoard.boards.m5atoms3.wiring_output;
+  withinBoard.boards.m5atoms3.specs_output = resolveTargetBoard(catalogBoards.find((item) => item.id === "m5atoms3"), withinBoard).wiring_output;
   assert.ok(validateTarget(catalogBoards.find((item) => item.id === "m5atoms3"), withinBoard)
     .some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 
   const acrossBoards = clone(target);
-  acrossBoards.boards.m5dial.specs_output = acrossBoards.boards.m5station.wiring_output;
+  acrossBoards.boards.m5dial.specs_output = resolveTargetBoard(catalogBoards.find((item) => item.id === "m5station"), acrossBoards).wiring_output;
   assert.ok(validateTargets(catalogBoards, acrossBoards).some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 
   const acrossChips = clone(target);
-  acrossChips.boards.m5atoms3.wiring_output = acrossChips.boards.m5station.wiring_output;
+  acrossChips.boards.m5atoms3.wiring_output = resolveTargetBoard(catalogBoards.find((item) => item.id === "m5station"), acrossChips).wiring_output;
   assert.ok(validateTargets(catalogBoards, acrossChips).some((item) => item.id === "E_TGT_OUTPUT_COLLISION"));
 });
 
@@ -2638,27 +2638,27 @@ test("detect classes include only explicit pins and retain 64-bit GPIO masks", (
   assert.doesNotMatch(renderM5GFXWiringHeader([{ board: source, chip: chips[source.chip], emitted: without }]), /detect_class_/);
 });
 
-test("detect classes reject pins without internal pulls in board and choices", () => {
+test("detect classes require internal pulls and board-wide placement", () => {
   const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
   const noPullChip = { ...chipS3, no_internal_pull: [2] };
   const validate = () => validateBoard(source, { ...context, chip: noPullChip });
   assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_NO_PULL" && issue.path === "/pins/2/detect_class"));
   delete source.pins["2"].detect_class;
   source.devices.epd.choices.gdew0154d67.soc_pins = { "2": { roles: ["dev:epd.rst"], detect_class: "fixed" } };
-  assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_NO_PULL" && issue.path === "/devices/epd/choices/gdew0154d67/soc_pins/2/detect_class"));
-  const valid = validateBoard(source, { ...context, chip: chipS3 });
-  assert.equal(valid.some((issue) => issue.id === "E_SCHEMA" || issue.id === "E_DETECT_CLASS_NO_PULL"), false);
+  assert.ok(validate().some((issue) => issue.id === "E_DETECT_CLASS_CHOICE" && issue.path === "/devices/epd/choices/gdew0154d67/soc_pins/2/detect_class"));
+  const withPulls = validateBoard(source, { ...context, chip: chipS3 });
+  assert.equal(withPulls.some((issue) => issue.id === "E_SCHEMA" || issue.id === "E_DETECT_CLASS_NO_PULL"), false);
   source.devices.epd.choices.gdew0154d67.soc_pins["2"].detect_class = "X";
   assert.ok(validateBoard(source, { ...context, chip: chipS3 }).some((issue) => issue.path.endsWith("/detect_class")));
 });
 
-test("choice detect_class does not become a board-wide exclusion gate", () => {
+test("choice detect_class is rejected before board-wide generation", () => {
   const source = clone(catalogBoards.find((board) => board.id === "m5airq"));
   delete source.pins["2"].detect_class;
   source.devices.epd.choices.gdew0154d67.soc_pins = { "2": { roles: ["dev:epd.rst"], detect_class: "fixed" } };
-  const emitted = emitM5GFXWiring(resolveCatalog(source)[0].board, parts, target);
-  const header = renderM5GFXWiringHeader([{ board: source, chip: chipS3, emitted }]);
-  assert.doesNotMatch(header, /detect_class_/);
+  const issue = validateBoard(source, { ...context, chip: chipS3 }).find((issue) => issue.id === "E_DETECT_CLASS_CHOICE");
+  assert.ok(issue);
+  assert.match(issue.message, /top-level pins/);
 });
 
 test("detect-only pins participate in capture, reservations and conditional touch flags", () => {
@@ -3100,9 +3100,11 @@ test("descriptor fixtures agree with target internal-I2C metadata", async () => 
       }
     }
   }
-  for (const [name, mapping] of Object.entries(target.boards)) {
+  for (const board of catalogBoards) {
+    const name = board.id;
+    const mapping = resolveTargetBoard(board, target);
     if (!mapping.wiring_output) continue;
-    const id = catalogBoards.find((board) => board.id === name).legacy_board_id;
+    const id = board.legacy_board_id;
     assert.ok(observed.has(id), `${name} descriptor fixture missing. For a new board, follow extras/board_spec/README.md (Adding a board, step 5): from the repository root run M5GFX_UPDATE_SNAPSHOTS=1 sh test/board_detect/run.sh, then review git diff -- test/board_detect/fixtures.`);
     assert.equal(observed.get(id), mapping.desc_internal_i2c ?? false, name);
   }

@@ -1,8 +1,8 @@
-import { targetCppNamespace } from "../targets.js";
+import { resolveTargetBoard, targetCppNamespace } from "../targets.js";
 
 export function m5gfxBoardMapping(target, board) {
   const boardId = board.id;
-  const source = target.boards?.[boardId];
+  const source = resolveTargetBoard(board, target);
   if (!source?.wiring_output) return null;
   return {
     boardId,

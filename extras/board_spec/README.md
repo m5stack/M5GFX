@@ -7,7 +7,7 @@ facts in reviewable JSON. It is intentionally outside M5GFX's build inputs.
 - `accessories/`: bases, bottoms and modules that attach to a board (see "Accessories")
 - `connector_types/`: physical and logical connector layouts (see "Connector types")
 - `schema/`: JSON schemas for boards, accessories, connector types and `detector_order.json`
-- `targets.json`: generator-specific option-bit to board-choice mappings
+- `targets.json`: C++ descriptor/panel output fields, probe pins, option mappings and overrides
 - `detector_order.json`: which catalog boards each package's detector families cover
 - `lib/`, `cli/`: browser-safe model logic and the Node command wrapper
 - `generated/docs/`: revision and composition tables rendered from the catalog
@@ -33,8 +33,17 @@ Choose the selection path before changing the detection code:
    Remove or recheck copied `official_name_verified`, `spec.links`, `measured_by`,
    `detect_class` and any other claims not verified on this board. Omit
    `official_name_verified` until the product name has been checked.
-3. Add the board's generator metadata to `targets.json` (see target metadata below).
-   Implement the C++ entries and any detector changes from the table above.
+3. Configure the C++ output in `targets.json` when needed. If the C++ descriptor
+   reads display or detection pins through generated `wiring::<namespace>::*`
+   constants, declare the consumed `wiring_fields`. When adding a panel constructor,
+   also request `specs_output`. Copy the closest existing board's target entry,
+   adjust the differences, and omit values that match the defaults (see the field
+   table below). Display boards normally need this metadata; a board needing no
+   output fields or overrides can omit it. Implement the C++ entries and any
+   detector changes from the selection table above. `wiring_output` selects the
+   combined output file (`<chip>_wiring.hpp` becomes `<chip>_board_data.hpp`).
+   `specs_output` enables specifications in that file; its value is used only
+   for output-name collision checks.
 4. In `extras/board_spec`, run `npm run generate`, then `npm run verify`.
    These format all boards, regenerate docs/wiring/pin tables, check freshness,
    and run Node and C++ host tests. A missing C++ compiler is reported as skipped;
@@ -98,6 +107,46 @@ An absent flag means that the spelling has not been verified.
 SD wiring uses card terminal names (`clk`, `cmd`, `d0` through `d3`). The
 `sd_slot` part defines their SPI aliases, and resolved boards report usable
 `spi`, `sdio1`, and `sdio4` modes in `devices.sd.derived`.
+
+M5GFX target metadata in `targets.json` selects the catalog fields consumed by
+C++ descriptors and panel constructors, plus target-specific overrides. Display
+boards normally need `wiring_fields` and, for a new panel constructor,
+`specs_output`. Copy the closest existing target entry and adjust its differences.
+If a descriptor reads display or detection pins through `wiring::<namespace>::*`,
+request the corresponding fields below; declaring a display device in the catalog
+alone does not select them. A constructor other than `construct_displayless` must
+declare nonempty `wiring_fields` even if `detect_class` already infers a wiring
+output, except for the explicitly documented legacy no-panel constructor.
+
+| `wiring_fields` value | Generated constants |
+|---|---|
+| `display` | `display_*` bus and control pins (including parallel EPD signals) |
+| `shared_sd` | `shared_sd_*` pins when the SD card shares the display's SPI bus |
+| `i2c` | `internal_i2c_sda`, `internal_i2c_scl`, `internal_i2c_port` |
+| `power` | `power_gpio` for GPIO power hold |
+| `backlight` | `backlight_gpio` for PWM backlight control |
+| `touch` | `touch_int` |
+| `camera` | `camera_*` signal pins |
+| `hold` | `hold[]` containing display and shared-SD chip-select pins |
+
+Other controls include `reset: "display_rst"` for `reset_gpio`, and `probe_pins`
+for pads touched by detection but not covered by an emitted field. Set
+`desc_internal_i2c: true` alongside the `i2c` field when the C++ descriptor uses
+that internal I2C bus. Review every copied field against the new descriptor.
+
+Omit a board entry only when it needs no output fields or overrides. Empty
+entries, unknown keys and explicit default values are rejected. Missing
+`wiring_fields`, `probe_pins`, `options` and `identity_devices` mean empty lists,
+and `desc_internal_i2c` defaults to false. If a board has `probe_pins`,
+`detect_class` or nonempty `wiring_fields`, its default `wiring_output` is
+`<chip>_wiring.hpp`; do not repeat that filename. A board without those facts can
+still explicitly request wiring output. `wiring_output` determines the combined
+output filename by replacing the trailing `_wiring.hpp` with `_board_data.hpp`.
+`specs_output` enables specification emission into that same file, rather than
+selecting another output file. It requires a wiring output (normally inferred
+from `wiring_fields`); its value, for example `<chip>_specs.hpp`, is used only for
+output-name collision checks. Generated declarations follow the entry order in
+`targets.json`; boards without an entry follow in catalog ID order.
 
 M5GFX target metadata derives `chip` and `legacy_board_id` from the board
 catalog and `board_enum` as `board_<name>`. Descriptor names remain a handwritten
@@ -241,6 +290,10 @@ touch the repository: replace `boards/<id>.json`, run `npm run generate`, then
 `npm run verify`, review the diff and commit.
 
 ## Pin detection classes (`detect_class`)
+
+`detect_class` must be declared in the board's top-level `pins`, not inside
+`devices.<id>.choices.<choice>.soc_pins`. Generation reads the board-wide pin
+classes, so choice-specific detection annotations are rejected.
 
 `detect_class` on a GPIO entry states how that pin reads when detection samples it
 with the internal pulls. A detector checks it in its signature, so the candidate's own
